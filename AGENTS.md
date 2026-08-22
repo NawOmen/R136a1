@@ -4,7 +4,7 @@
 
 «Сборка B2B» — прототип B2B-маркетплейса.
 Основная продуктовая спецификация находится в
-`plan_sborka_b2b(2).md`.
+`plan_sborka_b2b.md`.
 
 ## Product boundaries
 
