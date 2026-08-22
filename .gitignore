@@ -1,0 +1,59 @@
+# Secrets
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+
+# Node / Next.js
+node_modules/
+.next/
+out/
+dist/
+coverage/
+*.tsbuildinfo
+npm-debug.log*
+pnpm-debug.log*
+yarn-error.log*
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# Tests
+playwright-report/
+test-results/
+
+# Local databases and object storage
+data/
+postgres-data/
+minio-data/
+nats-data/
+
+# Local AI models
+.ollama/
+models/
+*.gguf
+*.safetensors
+
+# Logs and temporary files
+*.log
+tmp/
+temp/
+.cache/
+
+# Editors and OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# Codex local logs
+.codex-log/
