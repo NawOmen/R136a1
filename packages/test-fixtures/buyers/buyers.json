@@ -1,0 +1,41 @@
+{
+  "meta": {
+    "title": "Запросы покупателей для демо «Сборка B2B»",
+    "note": "Все компании синтетические и созданы только для демонстрации."
+  },
+  "buyers": [
+    {
+      "id": "buyer-001",
+      "name": "ООО «Кофейный дом “Рассвет”»",
+      "role": "buyer",
+      "city": "Москва",
+      "need": {
+        "category": "стакан бумажный одноразовый для горячих напитков",
+        "volume_ml": 400,
+        "inner_coating": "PE",
+        "print": "полноцветная CMYK, 4+0",
+        "quantity_units": 120000,
+        "budget_rub": 1900000,
+        "lead_time_days": 10,
+        "delivery_city": "Москва"
+      },
+      "evidence_kit_path": "packages/test-fixtures/buyer-evidence/"
+    },
+    {
+      "id": "buyer-002",
+      "name": "ООО «Сеть кофеен “Северный Завтрак”»",
+      "role": "buyer",
+      "city": "Санкт-Петербург",
+      "need": {
+        "category": "стакан бумажный одноразовый для горячих напитков",
+        "volume_ml": 400,
+        "inner_coating": "PE",
+        "print": "полноцветная CMYK, логотип",
+        "quantity_units": 80000,
+        "budget_rub": 1400000,
+        "lead_time_days": 12,
+        "delivery_city": "Санкт-Петербург"
+      }
+    }
+  ]
+}
