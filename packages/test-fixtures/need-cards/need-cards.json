@@ -1,0 +1,135 @@
+{
+  "meta": {
+    "title": "Подтверждённые карточки потребностей для демо «Сборка B2B»",
+    "version": "1.1",
+    "schema_note": "Структура соответствует разделу 4.8 плана: карточка потребности со статусами, видимостью, сроком актуальности и причинами отсутствия подбора.",
+    "statuses": ["draft", "needs_clarification", "confirmed", "open_for_offers", "waiting_for_match", "coalition_candidate", "awaiting_approvals", "matched", "expired", "cancelled"],
+    "visibility_modes": ["open_anonymized", "selected_producers", "closed"]
+  },
+  "need_cards": [
+    {
+      "id": "need-001",
+      "buyer_id": "buyer-001",
+      "category": "стакан бумажный одноразовый для горячих напитков",
+      "result_description": "брендированные бумажные стаканы 400 мл с полноцветной печатью нового логотипа",
+      "requirements": {
+        "mandatory": {
+          "volume_ml": 400,
+          "inner_coating": "PE",
+          "body_material": "крафт-картон 300 г/м²",
+          "print": "полноцветная CMYK, 4+0",
+          "food_contact": true,
+          "tr_ts_005_2011": true
+        },
+        "optional": {
+          "top_diameter_mm": 90,
+          "bottom_diameter_mm": 60,
+          "height_mm": 130
+        }
+      },
+      "volume_units": 120000,
+      "volume_range_units": { "min": 100000, "max": 120000 },
+      "budget_rub": 1900000,
+      "budget_visible_for_matching": true,
+      "delivery": { "city": "Москва", "region": "г. Москва", "deadline_days": 10, "window_days": [8, 12] },
+      "documents_required": ["ТР ТС 005/2011"],
+      "allowed_analogues": [],
+      "individual_requirements": { "logo": "новый логотип по макету", "packaging": "гофрокороба по 500 шт." },
+      "evidence_summary": "объём 400 мл и покрытие PE подтверждены покупателем; материал и печать — по ТЗ; фото — гипотеза о крафтовом цвете",
+      "valid_until": "2026-11-15",
+      "visibility": "open_anonymized",
+      "status": "matched",
+      "no_match_reason": null
+    },
+    {
+      "id": "need-002",
+      "buyer_id": "buyer-002",
+      "category": "стакан бумажный одноразовый для горячих напитков",
+      "result_description": "брендированные бумажные стаканы 400 мл с полноцветной печатью",
+      "requirements": {
+        "mandatory": {
+          "volume_ml": 400,
+          "inner_coating": "PE",
+          "body_material": "крафт-картон 300 г/м²",
+          "print": "полноцветная CMYK",
+          "food_contact": true,
+          "tr_ts_005_2011": true
+        },
+        "optional": {}
+      },
+      "volume_units": 80000,
+      "volume_range_units": { "min": 60000, "max": 80000 },
+      "budget_rub": 1400000,
+      "budget_visible_for_matching": true,
+      "delivery": { "city": "Санкт-Петербург", "region": "г. Санкт-Петербург", "deadline_days": 12, "window_days": [10, 14] },
+      "documents_required": ["ТР ТС 005/2011"],
+      "allowed_analogues": [],
+      "individual_requirements": { "logo": "логотип «Северный Завтрак»", "packaging": "гофрокороба по 500 шт." },
+      "evidence_summary": "типоразмер и покрытие совпадают с need-001; отличается логотип и регион доставки",
+      "valid_until": "2026-11-20",
+      "visibility": "open_anonymized",
+      "status": "coalition_candidate",
+      "no_match_reason": null
+    },
+    {
+      "id": "need-003",
+      "buyer_id": "buyer-003",
+      "category": "стакан бумажный одноразовый для горячих напитков",
+      "result_description": "крафтовые бумажные стаканы 400 мл с простой печатью логотипа",
+      "requirements": {
+        "mandatory": {
+          "volume_ml": 400,
+          "inner_coating": "PE",
+          "body_material": "крафт-картон 300 г/м²",
+          "print": "2+0",
+          "food_contact": true,
+          "tr_ts_005_2011": true
+        },
+        "optional": {}
+      },
+      "volume_units": 5000,
+      "volume_range_units": { "min": 5000, "max": 8000 },
+      "budget_rub": 90000,
+      "budget_visible_for_matching": false,
+      "delivery": { "city": "Москва", "region": "г. Москва", "deadline_days": 14, "window_days": [10, 16] },
+      "documents_required": ["ТР ТС 005/2011"],
+      "allowed_analogues": ["объём 350–450 мл"],
+      "individual_requirements": { "logo": "логотип «Зёрнышко»", "packaging": "гофрокороба" },
+      "evidence_summary": "объём подтверждён покупателем; MOQ подходящего производителя (50 000 шт.) не достигнут",
+      "valid_until": "2026-11-30",
+      "visibility": "open_anonymized",
+      "status": "waiting_for_match",
+      "no_match_reason": "не достигнут минимальный объём производителя (MOQ 50 000 шт.)"
+    },
+    {
+      "id": "need-004",
+      "buyer_id": "buyer-004",
+      "category": "стакан бумажный одноразовый для горячих напитков",
+      "result_description": "брендированные бумажные стаканы 400 мл с полноцветной печатью",
+      "requirements": {
+        "mandatory": {
+          "volume_ml": 400,
+          "inner_coating": "PE",
+          "body_material": "крафт-картон 300 г/м²",
+          "print": "полноцветная CMYK",
+          "food_contact": true,
+          "tr_ts_005_2011": true
+        },
+        "optional": {}
+      },
+      "volume_units": 45000,
+      "volume_range_units": { "min": 40000, "max": 50000 },
+      "budget_rub": 620000,
+      "budget_visible_for_matching": true,
+      "delivery": { "city": "Казань", "region": "Республика Татарстан", "deadline_days": 12, "window_days": [10, 14] },
+      "documents_required": ["ТР ТС 005/2011"],
+      "allowed_analogues": [],
+      "individual_requirements": { "logo": "логотип «Быстрый кофе»", "packaging": "гофрокороба по 500 шт." },
+      "evidence_summary": "совместима с need-003 по общей производственной основе; вместе достигают MOQ 50 000 шт.",
+      "valid_until": "2026-11-25",
+      "visibility": "open_anonymized",
+      "status": "coalition_candidate",
+      "no_match_reason": null
+    }
+  ]
+}

@@ -1,0 +1,54 @@
+{
+  "meta": {
+    "title": "Лента рыночных возможностей для демо «Сборка B2B»",
+    "version": "1.1",
+    "note": "Соответствует разделу 4.9 плана. Числовой opportunity_score рассчитывается обычным кодом на этапе 5; здесь зафиксированы факторы и пример рекомендации."
+  },
+  "opportunity_score_factors": [
+    { "key": "confirmed_unmet_volume", "label": "объём подтверждённого незакрытого спроса", "weight": 0.25 },
+    { "key": "share_without_feasible_offer", "label": "доля спроса без выполнимого предложения", "weight": 0.20 },
+    { "key": "passport_match", "label": "соответствие Capability Passport производителя", "weight": 0.20 },
+    { "key": "moq_and_capacity", "label": "достижимость MOQ и наличие мощности", "weight": 0.15 },
+    { "key": "logistics", "label": "полная логистика по территории РФ", "weight": 0.10 },
+    { "key": "competition_and_saturation", "label": "конкуренция и риск перенасыщения", "weight": 0.05 },
+    { "key": "data_quality", "label": "актуальность и качество исходных данных", "weight": 0.05 }
+  ],
+  "demand_signals": {
+    "category": "крафтовые бумажные стаканы 400 мл, покрытие PE",
+    "confirmed_unmet_volume_units": 50000,
+    "independent_buyers": 2,
+    "reasons_unmet": [
+      "ниже MOQ большинства производителей",
+      "нет действующего предложения под этот объём"
+    ],
+    "delivery_regions": ["Москва", "Казань"],
+    "deadline": "2026-10-30",
+    "deduplication_note": "повторные и подозрительно похожие запросы дедуплицируются"
+  },
+  "supply_signals": {
+    "active_offers_count": 1,
+    "capable_producers_count": 3,
+    "competition": "низкая",
+    "saturation_risk": "низкий"
+  },
+  "opportunity": {
+    "id": "opp-001",
+    "target_producer_id": "mfr-011",
+    "title": "Партия 50 000 крафтовых стаканов 400 мл PE (объединение двух запросов)",
+    "explanation": {
+      "confirmed_unmet_volume_units": 50000,
+      "buyers_count": 2,
+      "reasons": ["запросы ниже MOQ отдельных производителей", "нет готового предложения под малый объём"],
+      "passport_match": "технологии, материалы, PE-покрытие и диапазон объёма соответствуют",
+      "moq_reachable": true,
+      "capacity_available": true,
+      "logistics": "Центральный ФО и Приволжский ФО",
+      "competition": "1 активное предложение, риск перенасыщения низкий",
+      "data_quality": "карточки подтверждены и не истекли",
+      "economics": "данные о себестоимости не предоставлены — показывается «рыночная возможность»"
+    },
+    "recommended_action": "Подготовить предложение (групповое, MOQ 50 000 шт.)",
+    "missing_data": ["себестоимость и маржа производителя"],
+    "label": "рыночная возможность"
+  }
+}

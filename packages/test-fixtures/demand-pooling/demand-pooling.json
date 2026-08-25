@@ -1,0 +1,102 @@
+{
+  "meta": {
+    "title": "Объединение спроса и групповые предложения для демо «Сборка B2B»",
+    "version": "1.1",
+    "note": "Соответствует разделу 4.8 плана: профиль совместимости (общая основа, индивидуальная часть, жёсткие ограничения, гибкие параметры) и групповое предложение производителя."
+  },
+  "compatibility_profiles": [
+    {
+      "id": "cp-001",
+      "pair": ["need-003", "need-004"],
+      "purpose": "достижение MOQ 50 000 шт. у производителя mfr-011",
+      "producer_id": "mfr-011",
+      "combined_volume_units": 50000,
+      "target_moq_units": 50000,
+      "common_production_base": {
+        "cup_volume_ml": 400,
+        "body_material": "крафт-картон 300 г/м²",
+        "inner_coating": "PE",
+        "top_diameter_mm": 90
+      },
+      "individual_part": [
+        { "need_id": "need-003", "logo": "логотип «Зёрнышко»", "print": "2+0", "packaging": "гофрокороба" },
+        { "need_id": "need-004", "logo": "логотип «Быстрый кофе»", "print": "4+0", "packaging": "гофрокороба по 500 шт." }
+      ],
+      "hard_constraints": ["пищевой контакт", "ТР ТС 005/2011", "внутреннее покрытие PE"],
+      "flexible_parameters": ["допуск объёма партии ±10%", "срок поставки +2 дня"],
+      "feasibility_checks": {
+        "moq_reached": true,
+        "capacity_sufficient": true,
+        "materials_compatible": true,
+        "per_participant_benefit": "рассчитывается отдельно для каждого покупателя"
+      }
+    },
+    {
+      "id": "cp-002",
+      "pair": ["need-001", "need-002"],
+      "purpose": "объединение спроса для объёмных скидок (200 000 шт.)",
+      "producer_id": null,
+      "combined_volume_units": 200000,
+      "target_moq_units": null,
+      "common_production_base": {
+        "cup_volume_ml": 400,
+        "body_material": "крафт-картон 300 г/м²",
+        "inner_coating": "PE",
+        "top_diameter_mm": 90
+      },
+      "individual_part": [
+        { "need_id": "need-001", "logo": "новый логотип «Рассвет»", "print": "4+0", "delivery": "Москва" },
+        { "need_id": "need-002", "logo": "логотип «Северный Завтрак»", "print": "4+0", "delivery": "Санкт-Петербург" }
+      ],
+      "hard_constraints": ["пищевой контакт", "ТР ТС 005/2011", "внутреннее покрытие PE"],
+      "flexible_parameters": ["объёмные скидки при достижении порогов", "раздельная логистика"],
+      "feasibility_checks": {
+        "moq_reached": true,
+        "capacity_sufficient": true,
+        "materials_compatible": true,
+        "per_participant_benefit": "рассчитывается отдельно для каждого покупателя"
+      }
+    }
+  ],
+  "group_offers": [
+    {
+      "id": "go-001",
+      "producer_id": "mfr-011",
+      "target_compatibility_profile_id": "cp-001",
+      "min_total_units": 50000,
+      "max_total_units": 60000,
+      "price_steps_rub": [
+        { "min_units": 50000, "unit_price_rub": 10.9 }
+      ],
+      "price_valid_until": "2026-11-01",
+      "production_window": { "start": "2026-10-21", "end": "2026-10-30" },
+      "per_buyer_terms": [
+        {
+          "need_id": "need-003",
+          "units": 5000,
+          "common_production_cost_rub": 54500,
+          "individual_operations_cost_rub": 8000,
+          "delivery_cost_rub": 3000,
+          "total_cost_rub": 65500,
+          "delivery_city": "Москва"
+        },
+        {
+          "need_id": "need-004",
+          "units": 45000,
+          "common_production_cost_rub": 490500,
+          "individual_operations_cost_rub": 15000,
+          "delivery_cost_rub": 12000,
+          "total_cost_rub": 517500,
+          "delivery_city": "Казань"
+        }
+      ],
+      "fill_deadline": "2026-10-25",
+      "non_fill_rules": [
+        "продлить набор с согласия участников",
+        "предложить пересчитанный вариант",
+        "закрыть кандидата без обязательств"
+      ],
+      "status": "preliminary"
+    }
+  ]
+}
