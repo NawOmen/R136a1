@@ -1,8 +1,0 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="240" height="260" viewBox="0 0 240 260">
-  <rect width="240" height="260" fill="#f4f4f0"/>
-  <path d="M60 60 L80 210 L160 210 L180 60 Z" fill="#c8a165" stroke="#a9854f" stroke-width="2"/>
-  <ellipse cx="120" cy="60" rx="60" ry="14" fill="#ffffff" stroke="#a9854f" stroke-width="2"/>
-  <circle cx="120" cy="135" r="30" fill="#ffffff" opacity="0.92"/>
-  <text x="120" y="145" font-family="Arial, sans-serif" font-size="22" font-weight="bold" text-anchor="middle" fill="#4a3b28">LOGO</text>
-  <text x="120" y="198" font-family="Arial, sans-serif" font-size="13" text-anchor="middle" fill="#4a3b28">400 ml</text>
-</svg>

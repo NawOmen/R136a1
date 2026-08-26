@@ -7,7 +7,7 @@
 | `main-scenario.md` | Основной сквозной сценарий демонстрации |
 | `failure-scenarios.md` | Три сценария сбоя (N-1, N-2, дефицит резерва) |
 | `reference-specification.md` | Эталонная спецификация (ground truth) |
-| `manufacturers.md` | Сводка по 10 синтетическим производителям |
+| `manufacturers.md` | Сводка по 11 синтетическим производителям |
 | `buyer-evidence-kit.md` | Комплект «улик» покупателя и противоречия |
 
 Машиночитаемые данные находятся в `packages/test-fixtures/`.

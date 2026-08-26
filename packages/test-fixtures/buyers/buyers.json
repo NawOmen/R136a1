@@ -34,8 +34,8 @@
         "volume_ml": 400,
         "inner_coating": "PE",
         "print": "полноцветная CMYK, логотип",
-        "quantity_units": 80000,
-        "budget_rub": 1400000,
+        "quantity_units": 30000,
+        "budget_rub": 420000,
         "lead_time_days": 12,
         "delivery_city": "Санкт-Петербург"
       }

@@ -3,6 +3,7 @@
     "title": "Подтверждённые карточки потребностей для демо «Сборка B2B»",
     "version": "1.1",
     "schema_note": "Структура соответствует разделу 4.8 плана: карточка потребности со статусами, видимостью, сроком актуальности и причинами отсутствия подбора.",
+    "timeline_note": "Данные фиксируют состояние «после» повторного подбора: need-003 и need-004 уже объединены (cp-001) и имеют групповое предложение (go-001). Состояние «до» (need-003 в waiting_for_match) зафиксировано в match_history и в эпизоде 5.1 сценария.",
     "statuses": ["draft", "needs_clarification", "confirmed", "open_for_offers", "waiting_for_match", "coalition_candidate", "awaiting_approvals", "matched", "expired", "cancelled"],
     "visibility_modes": ["open_anonymized", "selected_producers", "closed"]
   },
@@ -57,9 +58,9 @@
         },
         "optional": {}
       },
-      "volume_units": 80000,
-      "volume_range_units": { "min": 60000, "max": 80000 },
-      "budget_rub": 1400000,
+      "volume_units": 30000,
+      "volume_range_units": { "min": 20000, "max": 30000 },
+      "budget_rub": 420000,
       "budget_visible_for_matching": true,
       "delivery": { "city": "Санкт-Петербург", "region": "г. Санкт-Петербург", "deadline_days": 12, "window_days": [10, 14] },
       "documents_required": ["ТР ТС 005/2011"],
@@ -95,11 +96,16 @@
       "documents_required": ["ТР ТС 005/2011"],
       "allowed_analogues": ["объём 350–450 мл"],
       "individual_requirements": { "logo": "логотип «Зёрнышко»", "packaging": "гофрокороба" },
-      "evidence_summary": "объём подтверждён покупателем; MOQ подходящего производителя (50 000 шт.) не достигнут",
+      "evidence_summary": "объём подтверждён покупателем; первоначально не достигнут MOQ 50 000 шт., затем объединена с need-004",
       "valid_until": "2026-11-30",
       "visibility": "open_anonymized",
-      "status": "waiting_for_match",
-      "no_match_reason": "не достигнут минимальный объём производителя (MOQ 50 000 шт.)"
+      "status": "awaiting_approvals",
+      "no_match_reason": null,
+      "match_history": [
+        { "status": "waiting_for_match", "reason": "не достигнут минимальный объём производителя (MOQ 50 000 шт.)", "at": "первоначальный подбор" },
+        { "status": "coalition_candidate", "reason": "появилась совместимая потребность need-004 (45 000 шт.)", "at": "повторный подбор" },
+        { "status": "awaiting_approvals", "reason": "рассчитано групповое предложение go-001 (cp-001)", "at": "после создания cp-001 и go-001" }
+      ]
     },
     {
       "id": "need-004",
@@ -128,8 +134,12 @@
       "evidence_summary": "совместима с need-003 по общей производственной основе; вместе достигают MOQ 50 000 шт.",
       "valid_until": "2026-11-25",
       "visibility": "open_anonymized",
-      "status": "coalition_candidate",
-      "no_match_reason": null
+      "status": "awaiting_approvals",
+      "no_match_reason": null,
+      "match_history": [
+        { "status": "coalition_candidate", "reason": "совместима с need-003; вместе достигают MOQ 50 000 шт.", "at": "повторный подбор" },
+        { "status": "awaiting_approvals", "reason": "рассчитано групповое предложение go-001 (cp-001)", "at": "после создания cp-001 и go-001" }
+      ]
     }
   ]
 }

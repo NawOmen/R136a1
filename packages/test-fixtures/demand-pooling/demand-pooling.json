@@ -34,9 +34,9 @@
     {
       "id": "cp-002",
       "pair": ["need-001", "need-002"],
-      "purpose": "объединение спроса для объёмных скидок (200 000 шт.)",
+      "purpose": "объединение спроса для объёмных скидок (150 000 шт.)",
       "producer_id": null,
-      "combined_volume_units": 200000,
+      "combined_volume_units": 150000,
       "target_moq_units": null,
       "common_production_base": {
         "cup_volume_ml": 400,
@@ -69,7 +69,7 @@
         { "min_units": 50000, "unit_price_rub": 10.9 }
       ],
       "price_valid_until": "2026-11-01",
-      "production_window": { "start": "2026-10-21", "end": "2026-10-30" },
+      "production_window": { "start": "2026-10-23", "end": "2026-10-30" },
       "per_buyer_terms": [
         {
           "need_id": "need-003",
@@ -90,7 +90,8 @@
           "delivery_city": "Казань"
         }
       ],
-      "fill_deadline": "2026-10-25",
+      "fill_deadline": "2026-10-22",
+      "timing_note": "набор завершается 22 октября; производство (6 дней) и доставка (1 день) у mfr-011 выполняются в окне 23–30 октября и укладываются в срок",
       "non_fill_rules": [
         "продлить набор с согласия участников",
         "предложить пересчитанный вариант",
