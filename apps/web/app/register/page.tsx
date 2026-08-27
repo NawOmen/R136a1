@@ -50,12 +50,15 @@ export default function RegisterPage() {
     <div className="auth-page">
       <h1 className="page-title">Регистрация</h1>
       <p className="subtitle">Создайте аккаунт, чтобы начать работу</p>
+      <p className="hint" style={{ marginTop: -14, marginBottom: 16 }}>
+        Обязательные поля отмечены <span className="req">*</span>.
+      </p>
 
       {error && <div className="alert alert-error">{error}</div>}
 
       <form className="card" onSubmit={handleSubmit}>
         <div className="field">
-          <label htmlFor="last_name">Фамилия</label>
+          <label htmlFor="last_name">Фамилия<span className="req">*</span></label>
           <input
             id="last_name"
             type="text"
@@ -66,7 +69,7 @@ export default function RegisterPage() {
           />
         </div>
         <div className="field">
-          <label htmlFor="first_name">Имя</label>
+          <label htmlFor="first_name">Имя<span className="req">*</span></label>
           <input
             id="first_name"
             type="text"
@@ -77,7 +80,7 @@ export default function RegisterPage() {
           />
         </div>
         <div className="field">
-          <label htmlFor="middle_name">Отчество</label>
+          <label htmlFor="middle_name">Отчество<span className="opt">необязательно</span></label>
           <input
             id="middle_name"
             type="text"
@@ -87,7 +90,7 @@ export default function RegisterPage() {
           />
         </div>
         <div className="field">
-          <label htmlFor="email">Email</label>
+          <label htmlFor="email">Email<span className="req">*</span></label>
           <input
             id="email"
             type="email"
@@ -98,7 +101,7 @@ export default function RegisterPage() {
           />
         </div>
         <div className="field">
-          <label htmlFor="password">Пароль</label>
+          <label htmlFor="password">Пароль<span className="req">*</span></label>
           <input
             id="password"
             type="password"
@@ -111,7 +114,7 @@ export default function RegisterPage() {
           <p className="hint">Минимум 6 символов.</p>
         </div>
         <div className="field">
-          <label htmlFor="phone">Телефон</label>
+          <label htmlFor="phone">Телефон<span className="opt">необязательно</span></label>
           <input
             id="phone"
             type="tel"

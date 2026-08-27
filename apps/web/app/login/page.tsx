@@ -40,7 +40,7 @@ export default function LoginPage() {
 
       <form className="card" onSubmit={handleSubmit}>
         <div className="field">
-          <label htmlFor="email">Email</label>
+          <label htmlFor="email">Email<span className="req">*</span></label>
           <input
             id="email"
             type="email"
@@ -51,7 +51,7 @@ export default function LoginPage() {
           />
         </div>
         <div className="field">
-          <label htmlFor="password">Пароль</label>
+          <label htmlFor="password">Пароль<span className="req">*</span></label>
           <input
             id="password"
             type="password"

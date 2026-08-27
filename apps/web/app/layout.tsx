@@ -17,6 +17,9 @@ export default function RootLayout({ children }: Readonly<{ children: ReactNode 
           </div>
         </header>
         <main className="container main">{children}</main>
+        <footer className="site-footer">
+          <div className="container">© 2026 Сборка B2B · Прототип маркетплейса</div>
+        </footer>
       </body>
     </html>
   );

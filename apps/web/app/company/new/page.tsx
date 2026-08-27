@@ -63,12 +63,15 @@ export default function NewCompanyPage() {
     <div className="auth-page">
       <h1 className="page-title">Создание компании</h1>
       <p className="subtitle">Заполните реквизиты компании</p>
+      <p className="hint" style={{ marginTop: -14, marginBottom: 16 }}>
+        Обязательные поля отмечены <span className="req">*</span>.
+      </p>
 
       {error && <div className="alert alert-error">{error}</div>}
 
       <form className="card" onSubmit={handleSubmit}>
         <div className="field">
-          <label htmlFor="full_name">Полное название</label>
+          <label htmlFor="full_name">Полное название<span className="req">*</span></label>
           <input
             id="full_name"
             type="text"
@@ -78,7 +81,7 @@ export default function NewCompanyPage() {
           />
         </div>
         <div className="field">
-          <label htmlFor="display_name">Отображаемое название</label>
+          <label htmlFor="display_name">Отображаемое название<span className="req">*</span></label>
           <input
             id="display_name"
             type="text"
@@ -88,7 +91,7 @@ export default function NewCompanyPage() {
           />
         </div>
         <div className="field">
-          <label htmlFor="legal_form">Форма</label>
+          <label htmlFor="legal_form">Форма<span className="req">*</span></label>
           <select
             id="legal_form"
             value={legalForm}
@@ -99,7 +102,7 @@ export default function NewCompanyPage() {
           </select>
         </div>
         <div className="field">
-          <label htmlFor="inn">ИНН</label>
+          <label htmlFor="inn">ИНН<span className="req">*</span></label>
           <input
             id="inn"
             type="text"
@@ -109,7 +112,10 @@ export default function NewCompanyPage() {
           />
         </div>
         <div className="field">
-          <label htmlFor="ogrn">{legalForm === "ООО" ? "ОГРН" : "ОГРНИП"}</label>
+          <label htmlFor="ogrn">
+            {legalForm === "ООО" ? "ОГРН" : "ОГРНИП"}
+            <span className="opt">необязательно</span>
+          </label>
           <input
             id="ogrn"
             type="text"
@@ -120,7 +126,7 @@ export default function NewCompanyPage() {
           />
         </div>
         <div className="field">
-          <label htmlFor="kpp">КПП</label>
+          <label htmlFor="kpp">КПП<span className="opt">необязательно</span></label>
           <input
             id="kpp"
             type="text"
@@ -129,7 +135,7 @@ export default function NewCompanyPage() {
           />
         </div>
         <div className="field">
-          <label htmlFor="legal_address">Юридический адрес</label>
+          <label htmlFor="legal_address">Юридический адрес<span className="req">*</span></label>
           <input
             id="legal_address"
             type="text"
