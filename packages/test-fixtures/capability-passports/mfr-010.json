@@ -1,0 +1,100 @@
+{
+  "manufacturer_id": "mfr-010",
+  "manufacturer_name": "ООО «СибирьПак»",
+  "capability_passport": {
+    "manufacturer_id": "mfr-010",
+    "technologies": [
+      "высечка бумажных стаканов",
+      "ламинирование PE и PLA покрытием",
+      "флексографическая печать",
+      "термосварка бокового шва",
+      "загибка ободка"
+    ],
+    "equipment": [
+      "высекальный пресс",
+      "станок формовки стаканов",
+      "флексопечатная машина",
+      "ламинатор",
+      "установка ультразвуковой сварки"
+    ],
+    "materials": [
+      "картон с PE-покрытием",
+      "картон с PLA-покрытием",
+      "крафт-картон 260–320 г/м²"
+    ],
+    "size_ranges": {
+      "cup_volume_ml": [
+        150,
+        600
+      ],
+      "top_diameter_mm": [
+        60,
+        110
+      ],
+      "height_mm": [
+        60,
+        160
+      ]
+    },
+    "tolerances": "±0,5 мм по диаметру, ±1 мм по высоте, ±5% по вместимости",
+    "certifications": [
+      "Декларация соответствия ТР ТС 005/2011",
+      "ISO 9001:2015"
+    ],
+    "min_order_units": 12000,
+    "max_order_units": 38000,
+    "available_capacity_by_date": [
+      {
+        "date": "2026-10-21",
+        "available_units": 3800
+      },
+      {
+        "date": "2026-10-22",
+        "available_units": 3800
+      },
+      {
+        "date": "2026-10-23",
+        "available_units": 3800
+      },
+      {
+        "date": "2026-10-24",
+        "available_units": 3800
+      },
+      {
+        "date": "2026-10-25",
+        "available_units": 3800
+      },
+      {
+        "date": "2026-10-26",
+        "available_units": 3800
+      },
+      {
+        "date": "2026-10-27",
+        "available_units": 3800
+      },
+      {
+        "date": "2026-10-28",
+        "available_units": 3800
+      },
+      {
+        "date": "2026-10-29",
+        "available_units": 3800
+      },
+      {
+        "date": "2026-10-30",
+        "available_units": 3800
+      }
+    ],
+    "delivery_regions": [
+      "Сибирский ФО",
+      "Уральский ФО"
+    ],
+    "completed_order_types": [
+      "стаканы и упаковка для HoReCa",
+      "оптовые партии для дистрибьюторов"
+    ],
+    "confirmatory_documents": [
+      "Декларация ТР ТС 005/2011 № RU Д-RU.РА01.В.01010/26"
+    ]
+  }
+}

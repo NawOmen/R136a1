@@ -1,0 +1,36 @@
+{
+  "id": "ref-spec-001",
+  "title": "Эталонная спецификация демо-заказа",
+  "version": "1.0",
+  "buyer": {
+    "id": "buyer-001",
+    "name": "ООО «Кофейный дом “Рассвет”»"
+  },
+  "category": "стакан бумажный одноразовый для горячих напитков",
+  "attributes": {
+    "volume_ml": 400,
+    "body_material": "крафт-картон 300 г/м²",
+    "inner_coating": "PE",
+    "print": "полноцветная CMYK, 4+0",
+    "top_diameter_mm": 90,
+    "bottom_diameter_mm": 60,
+    "height_mm": 130,
+    "quantity_units": 120000,
+    "budget_rub": 1900000,
+    "lead_time_days": 10,
+    "delivery_city": "Москва",
+    "mandatory_requirements": ["пищевой контакт", "ТР ТС 005/2011"]
+  },
+  "expected_conflicts": [
+    {
+      "attribute": "volume_ml",
+      "sources": { "tz": 400, "nakladnaya": 350 },
+      "correct_answer": 400
+    },
+    {
+      "attribute": "inner_coating",
+      "sources": { "tz": "PE", "nakladnaya": "PLA" },
+      "correct_answer": "PE"
+    }
+  ]
+}

@@ -1,0 +1,78 @@
+{
+  "meta": {
+    "title": "Запросы покупателей для демо «Сборка B2B»",
+    "version": "1.1",
+    "note": "Все компании синтетические и созданы только для демонстрации."
+  },
+  "buyers": [
+    {
+      "id": "buyer-001",
+      "name": "ООО «Кофейный дом “Рассвет”»",
+      "form": "ООО",
+      "city": "Москва",
+      "need_card_id": "need-001",
+      "need": {
+        "category": "стакан бумажный одноразовый для горячих напитков",
+        "volume_ml": 400,
+        "inner_coating": "PE",
+        "print": "полноцветная CMYK, 4+0",
+        "quantity_units": 120000,
+        "budget_rub": 1900000,
+        "lead_time_days": 10,
+        "delivery_city": "Москва"
+      },
+      "evidence_kit_path": "packages/test-fixtures/buyer-evidence/"
+    },
+    {
+      "id": "buyer-002",
+      "name": "ООО «Сеть кофеен “Северный Завтрак”»",
+      "form": "ООО",
+      "city": "Санкт-Петербург",
+      "need_card_id": "need-002",
+      "need": {
+        "category": "стакан бумажный одноразовый для горячих напитков",
+        "volume_ml": 400,
+        "inner_coating": "PE",
+        "print": "полноцветная CMYK, логотип",
+        "quantity_units": 30000,
+        "budget_rub": 420000,
+        "lead_time_days": 12,
+        "delivery_city": "Санкт-Петербург"
+      }
+    },
+    {
+      "id": "buyer-003",
+      "name": "ИП Кузнецова А. С., кофейня «Зёрнышко»",
+      "form": "ИП",
+      "city": "Москва",
+      "need_card_id": "need-003",
+      "need": {
+        "category": "стакан бумажный одноразовый для горячих напитков",
+        "volume_ml": 400,
+        "inner_coating": "PE",
+        "print": "2+0, логотип «Зёрнышко»",
+        "quantity_units": 5000,
+        "budget_rub": 90000,
+        "lead_time_days": 14,
+        "delivery_city": "Москва"
+      }
+    },
+    {
+      "id": "buyer-004",
+      "name": "ООО «Сеть “Быстрый кофе”»",
+      "form": "ООО",
+      "city": "Казань",
+      "need_card_id": "need-004",
+      "need": {
+        "category": "стакан бумажный одноразовый для горячих напитков",
+        "volume_ml": 400,
+        "inner_coating": "PE",
+        "print": "полноцветная CMYK, логотип",
+        "quantity_units": 45000,
+        "budget_rub": 620000,
+        "lead_time_days": 12,
+        "delivery_city": "Казань"
+      }
+    }
+  ]
+}

@@ -1,0 +1,1680 @@
+{
+  "meta": {
+    "title": "Синтетические производители для демо «Сборка B2B»",
+    "category": "брендированные бумажные стаканы для горячих напитков",
+    "demo_order_window": {
+      "start": "2026-10-21",
+      "end": "2026-10-30",
+      "delivery_destination": "Москва"
+    },
+    "note": "Все компании, ИНН, ОГРН, адреса, контакты и документы являются синтетическими и созданы только для демонстрации."
+  },
+  "manufacturers": [
+    {
+      "id": "mfr-001",
+      "name": "ООО «УралГофроПак»",
+      "legal_name": "Общество с ограниченной ответственностью «УралГофроПак»",
+      "country": "RU",
+      "legal": {
+        "form": "ООО",
+        "inn": "6678912340",
+        "kpp": "667801001",
+        "ogrn": "1166600123458",
+        "ogrnip": null
+      },
+      "legal_address": "620041, Свердловская область, г. Екатеринбург, ул. Заводская, д. 14, стр. 2",
+      "okved": [
+        "17.29",
+        "22.22"
+      ],
+      "production_site": {
+        "address": "620017, Свердловская область, г. Екатеринбург, пер. Складской, д. 7",
+        "region": "Свердловская область",
+        "city": "Екатеринбург",
+        "federal_district": "Уральский",
+        "timezone": "UTC+5"
+      },
+      "contacts": {
+        "email": "sales@uralgofropak-demo.ru",
+        "phone": "+7 (343) 200-14-01"
+      },
+      "commercial": {
+        "currency": "RUB",
+        "unit_price_rub": 11.2,
+        "moq_units": 20000,
+        "volume_discounts": [
+          {
+            "min_units": 30000,
+            "discount_percent": 3
+          },
+          {
+            "min_units": 45000,
+            "discount_percent": 5
+          }
+        ],
+        "production_lead_time_days": 5,
+        "delivery_to_moscow_days": 4,
+        "total_lead_time_days": 9,
+        "capacity_units_10d": 48000,
+        "daily_capacity_units": 4800,
+        "reserve_readiness": "hot"
+      },
+      "documents": [
+        {
+          "type": "Декларация ТР ТС 005/2011 № RU Д-RU.РА01.В.00111/26"
+        },
+        {
+          "type": "Протокол испытаний на миграцию № 118-П/26"
+        }
+      ],
+      "capability_passport": {
+        "manufacturer_id": "mfr-001",
+        "technologies": [
+          "высечка бумажных стаканов",
+          "ламинирование барьерным PE-покрытием",
+          "флексографическая печать",
+          "термосварка бокового шва",
+          "загибка ободка (римовка)"
+        ],
+        "equipment": [
+          "высекальный пресс",
+          "станок формовки стаканов",
+          "флексопечатная машина",
+          "ламинатор",
+          "установка ультразвуковой сварки"
+        ],
+        "materials": [
+          "крафт-картон 260–320 г/м²",
+          "картон с PE-покрытием",
+          "пищевой PE 15–20 г/м²",
+          "водные флексокраски"
+        ],
+        "size_ranges": {
+          "cup_volume_ml": [
+            150,
+            600
+          ],
+          "top_diameter_mm": [
+            60,
+            110
+          ],
+          "height_mm": [
+            60,
+            160
+          ]
+        },
+        "tolerances": "±0,5 мм по диаметру, ±1 мм по высоте, ±5% по вместимости",
+        "certifications": [
+          "Декларация соответствия ТР ТС 005/2011",
+          "ISO 9001:2015"
+        ],
+        "min_order_units": 20000,
+        "max_order_units": 48000,
+        "available_capacity_by_date": [
+          {
+            "date": "2026-10-21",
+            "available_units": 4800
+          },
+          {
+            "date": "2026-10-22",
+            "available_units": 4800
+          },
+          {
+            "date": "2026-10-23",
+            "available_units": 4800
+          },
+          {
+            "date": "2026-10-24",
+            "available_units": 4800
+          },
+          {
+            "date": "2026-10-25",
+            "available_units": 4800
+          },
+          {
+            "date": "2026-10-26",
+            "available_units": 4800
+          },
+          {
+            "date": "2026-10-27",
+            "available_units": 4800
+          },
+          {
+            "date": "2026-10-28",
+            "available_units": 4800
+          },
+          {
+            "date": "2026-10-29",
+            "available_units": 4800
+          },
+          {
+            "date": "2026-10-30",
+            "available_units": 4800
+          }
+        ],
+        "delivery_regions": [
+          "Уральский ФО",
+          "Центральный ФО",
+          "Приволжский ФО"
+        ],
+        "completed_order_types": [
+          "стаканы под кофе 300–450 мл с печатью",
+          "крышки-держатели из картона",
+          "лотки для фастфуда"
+        ],
+        "confirmatory_documents": [
+          "Декларация ТР ТС 005/2011 № RU Д-RU.РА01.В.00111/26",
+          "Протокол испытаний на миграцию № 118-П/26"
+        ]
+      }
+    },
+    {
+      "id": "mfr-002",
+      "name": "ООО «Невская Упаковка»",
+      "legal_name": "Общество с ограниченной ответственностью «Невская Упаковка»",
+      "country": "RU",
+      "legal": {
+        "form": "ООО",
+        "inn": "7812345675",
+        "kpp": "780601001",
+        "ogrn": "1178100234564",
+        "ogrnip": null
+      },
+      "legal_address": "195027, г. Санкт-Петербург, Малоохтинский пр., д. 68, лит. А",
+      "okved": [
+        "17.29",
+        "17.21"
+      ],
+      "production_site": {
+        "address": "195027, г. Санкт-Петербург, Малоохтинский пр., д. 68, лит. А",
+        "region": "г. Санкт-Петербург",
+        "city": "Санкт-Петербург",
+        "federal_district": "Северо-Западный",
+        "timezone": "UTC+3"
+      },
+      "contacts": {
+        "email": "zakaz@nevpak-demo.ru",
+        "phone": "+7 (812) 640-22-02"
+      },
+      "commercial": {
+        "currency": "RUB",
+        "unit_price_rub": 12.5,
+        "moq_units": 20000,
+        "volume_discounts": [
+          {
+            "min_units": 30000,
+            "discount_percent": 2
+          },
+          {
+            "min_units": 45000,
+            "discount_percent": 4
+          }
+        ],
+        "production_lead_time_days": 5,
+        "delivery_to_moscow_days": 2,
+        "total_lead_time_days": 7,
+        "capacity_units_10d": 48000,
+        "daily_capacity_units": 4800,
+        "reserve_readiness": "hot"
+      },
+      "documents": [
+        {
+          "type": "Декларация ТР ТС 005/2011 № RU Д-RU.РА01.В.00222/26"
+        },
+        {
+          "type": "Сертификат ISO 9001:2015 № RU-QMS-7788"
+        }
+      ],
+      "capability_passport": {
+        "manufacturer_id": "mfr-002",
+        "technologies": [
+          "высечка бумажных стаканов",
+          "ламинирование барьерным PE-покрытием",
+          "флексографическая печать",
+          "термосварка бокового шва",
+          "загибка ободка (римовка)"
+        ],
+        "equipment": [
+          "высекальный пресс",
+          "станок формовки стаканов",
+          "флексопечатная машина",
+          "ламинатор",
+          "установка ультразвуковой сварки"
+        ],
+        "materials": [
+          "крафт-картон 260–320 г/м²",
+          "картон с PE-покрытием",
+          "пищевой PE 15–20 г/м²",
+          "водные флексокраски"
+        ],
+        "size_ranges": {
+          "cup_volume_ml": [
+            150,
+            600
+          ],
+          "top_diameter_mm": [
+            60,
+            110
+          ],
+          "height_mm": [
+            60,
+            160
+          ]
+        },
+        "tolerances": "±0,5 мм по диаметру, ±1 мм по высоте, ±5% по вместимости",
+        "certifications": [
+          "Декларация соответствия ТР ТС 005/2011",
+          "ISO 9001:2015"
+        ],
+        "min_order_units": 20000,
+        "max_order_units": 48000,
+        "available_capacity_by_date": [
+          {
+            "date": "2026-10-21",
+            "available_units": 4800
+          },
+          {
+            "date": "2026-10-22",
+            "available_units": 4800
+          },
+          {
+            "date": "2026-10-23",
+            "available_units": 4800
+          },
+          {
+            "date": "2026-10-24",
+            "available_units": 4800
+          },
+          {
+            "date": "2026-10-25",
+            "available_units": 4800
+          },
+          {
+            "date": "2026-10-26",
+            "available_units": 4800
+          },
+          {
+            "date": "2026-10-27",
+            "available_units": 4800
+          },
+          {
+            "date": "2026-10-28",
+            "available_units": 4800
+          },
+          {
+            "date": "2026-10-29",
+            "available_units": 4800
+          },
+          {
+            "date": "2026-10-30",
+            "available_units": 4800
+          }
+        ],
+        "delivery_regions": [
+          "Северо-Западный ФО",
+          "Центральный ФО"
+        ],
+        "completed_order_types": [
+          "брендированные стаканы для сетей кофеен",
+          "коробки для доставки",
+          "сувенирная упаковка"
+        ],
+        "confirmatory_documents": [
+          "Декларация ТР ТС 005/2011 № RU Д-RU.РА01.В.00222/26",
+          "Сертификат ISO 9001:2015 № RU-QMS-7788"
+        ]
+      }
+    },
+    {
+      "id": "mfr-003",
+      "name": "ООО «МосУпак»",
+      "legal_name": "Общество с ограниченной ответственностью «МосУпак»",
+      "country": "RU",
+      "legal": {
+        "form": "ООО",
+        "inn": "5034567894",
+        "kpp": "503601001",
+        "ogrn": "1150500345676",
+        "ogrnip": null
+      },
+      "legal_address": "142100, Московская область, г. Подольск, ул. Промышленная, д. 21",
+      "okved": [
+        "17.29"
+      ],
+      "production_site": {
+        "address": "142100, Московская область, г. Подольск, ул. Промышленная, д. 21",
+        "region": "Московская область",
+        "city": "Подольск",
+        "federal_district": "Центральный",
+        "timezone": "UTC+3"
+      },
+      "contacts": {
+        "email": "info@mospak-demo.ru",
+        "phone": "+7 (495) 300-45-03"
+      },
+      "commercial": {
+        "currency": "RUB",
+        "unit_price_rub": 13.4,
+        "moq_units": 15000,
+        "volume_discounts": [
+          {
+            "min_units": 30000,
+            "discount_percent": 2
+          }
+        ],
+        "production_lead_time_days": 6,
+        "delivery_to_moscow_days": 1,
+        "total_lead_time_days": 7,
+        "capacity_units_10d": 40000,
+        "daily_capacity_units": 4000,
+        "reserve_readiness": "warm"
+      },
+      "documents": [
+        {
+          "type": "Декларация ТР ТС 005/2011 № RU Д-RU.РА01.В.00333/26"
+        },
+        {
+          "type": "Протокол испытаний № 205-М/26"
+        }
+      ],
+      "capability_passport": {
+        "manufacturer_id": "mfr-003",
+        "technologies": [
+          "высечка бумажных стаканов",
+          "ламинирование барьерным PE-покрытием",
+          "флексографическая печать",
+          "термосварка бокового шва",
+          "загибка ободка (римовка)"
+        ],
+        "equipment": [
+          "высекальный пресс",
+          "станок формовки стаканов",
+          "флексопечатная машина",
+          "ламинатор",
+          "установка ультразвуковой сварки"
+        ],
+        "materials": [
+          "крафт-картон 260–320 г/м²",
+          "картон с PE-покрытием",
+          "пищевой PE 15–20 г/м²",
+          "водные флексокраски"
+        ],
+        "size_ranges": {
+          "cup_volume_ml": [
+            150,
+            600
+          ],
+          "top_diameter_mm": [
+            60,
+            110
+          ],
+          "height_mm": [
+            60,
+            160
+          ]
+        },
+        "tolerances": "±0,5 мм по диаметру, ±1 мм по высоте, ±5% по вместимости",
+        "certifications": [
+          "Декларация соответствия ТР ТС 005/2011",
+          "ISO 9001:2015"
+        ],
+        "min_order_units": 15000,
+        "max_order_units": 40000,
+        "available_capacity_by_date": [
+          {
+            "date": "2026-10-21",
+            "available_units": 4000
+          },
+          {
+            "date": "2026-10-22",
+            "available_units": 4000
+          },
+          {
+            "date": "2026-10-23",
+            "available_units": 4000
+          },
+          {
+            "date": "2026-10-24",
+            "available_units": 4000
+          },
+          {
+            "date": "2026-10-25",
+            "available_units": 4000
+          },
+          {
+            "date": "2026-10-26",
+            "available_units": 4000
+          },
+          {
+            "date": "2026-10-27",
+            "available_units": 4000
+          },
+          {
+            "date": "2026-10-28",
+            "available_units": 4000
+          },
+          {
+            "date": "2026-10-29",
+            "available_units": 4000
+          },
+          {
+            "date": "2026-10-30",
+            "available_units": 4000
+          }
+        ],
+        "delivery_regions": [
+          "Центральный ФО",
+          "Приволжский ФО"
+        ],
+        "completed_order_types": [
+          "стаканы 250–500 мл",
+          "крышки ПЭТ",
+          "промо-упаковка для сетей"
+        ],
+        "confirmatory_documents": [
+          "Декларация ТР ТС 005/2011 № RU Д-RU.РА01.В.00333/26",
+          "Протокол испытаний № 205-М/26"
+        ]
+      }
+    },
+    {
+      "id": "mfr-004",
+      "name": "ООО «ВолгаКартон»",
+      "legal_name": "Общество с ограниченной ответственностью «ВолгаКартон»",
+      "country": "RU",
+      "legal": {
+        "form": "ООО",
+        "inn": "5267890120",
+        "kpp": "526001001",
+        "ogrn": "1152600456788",
+        "ogrnip": null
+      },
+      "legal_address": "603032, Нижегородская область, г. Нижний Новгород, ул. Баумана, д. 40",
+      "okved": [
+        "17.29",
+        "17.21"
+      ],
+      "production_site": {
+        "address": "603032, Нижегородская область, г. Нижний Новгород, ул. Баумана, д. 40",
+        "region": "Нижегородская область",
+        "city": "Нижний Новгород",
+        "federal_district": "Приволжский",
+        "timezone": "UTC+3"
+      },
+      "contacts": {
+        "email": "sale@volgakarton-demo.ru",
+        "phone": "+7 (831) 260-33-04"
+      },
+      "commercial": {
+        "currency": "RUB",
+        "unit_price_rub": 11.8,
+        "moq_units": 10000,
+        "volume_discounts": [
+          {
+            "min_units": 25000,
+            "discount_percent": 3
+          }
+        ],
+        "production_lead_time_days": 5,
+        "delivery_to_moscow_days": 3,
+        "total_lead_time_days": 8,
+        "capacity_units_10d": 35000,
+        "daily_capacity_units": 3500,
+        "reserve_readiness": "hot"
+      },
+      "documents": [
+        {
+          "type": "Декларация ТР ТС 005/2011 № RU Д-RU.РА01.В.00444/26"
+        },
+        {
+          "type": "Сертификат ISO 9001:2015 № RU-QMS-5241"
+        }
+      ],
+      "capability_passport": {
+        "manufacturer_id": "mfr-004",
+        "technologies": [
+          "высечка бумажных стаканов",
+          "ламинирование барьерным PE-покрытием",
+          "флексографическая печать",
+          "термосварка бокового шва",
+          "загибка ободка (римовка)"
+        ],
+        "equipment": [
+          "высекальный пресс",
+          "станок формовки стаканов",
+          "флексопечатная машина",
+          "ламинатор",
+          "установка ультразвуковой сварки"
+        ],
+        "materials": [
+          "крафт-картон 260–320 г/м²",
+          "картон с PE-покрытием",
+          "пищевой PE 15–20 г/м²",
+          "водные флексокраски"
+        ],
+        "size_ranges": {
+          "cup_volume_ml": [
+            150,
+            600
+          ],
+          "top_diameter_mm": [
+            60,
+            110
+          ],
+          "height_mm": [
+            60,
+            160
+          ]
+        },
+        "tolerances": "±0,5 мм по диаметру, ±1 мм по высоте, ±5% по вместимости",
+        "certifications": [
+          "Декларация соответствия ТР ТС 005/2011",
+          "ISO 9001:2015"
+        ],
+        "min_order_units": 10000,
+        "max_order_units": 35000,
+        "available_capacity_by_date": [
+          {
+            "date": "2026-10-21",
+            "available_units": 3500
+          },
+          {
+            "date": "2026-10-22",
+            "available_units": 3500
+          },
+          {
+            "date": "2026-10-23",
+            "available_units": 3500
+          },
+          {
+            "date": "2026-10-24",
+            "available_units": 3500
+          },
+          {
+            "date": "2026-10-25",
+            "available_units": 3500
+          },
+          {
+            "date": "2026-10-26",
+            "available_units": 3500
+          },
+          {
+            "date": "2026-10-27",
+            "available_units": 3500
+          },
+          {
+            "date": "2026-10-28",
+            "available_units": 3500
+          },
+          {
+            "date": "2026-10-29",
+            "available_units": 3500
+          },
+          {
+            "date": "2026-10-30",
+            "available_units": 3500
+          }
+        ],
+        "delivery_regions": [
+          "Приволжский ФО",
+          "Центральный ФО"
+        ],
+        "completed_order_types": [
+          "бумажные стаканы",
+          "гофролотки",
+          "крафт-пакеты"
+        ],
+        "confirmatory_documents": [
+          "Декларация ТР ТС 005/2011 № RU Д-RU.РА01.В.00444/26",
+          "Сертификат ISO 9001:2015 № RU-QMS-5241"
+        ]
+      }
+    },
+    {
+      "id": "mfr-005",
+      "name": "ООО «БумКрафт Сибирь»",
+      "legal_name": "Общество с ограниченной ответственностью «БумКрафт Сибирь»",
+      "country": "RU",
+      "legal": {
+        "form": "ООО",
+        "inn": "5401234566",
+        "kpp": "540601001",
+        "ogrn": "1154000567896",
+        "ogrnip": null
+      },
+      "legal_address": "630024, Новосибирская область, г. Новосибирск, ул. Титова, д. 12",
+      "okved": [
+        "17.29"
+      ],
+      "production_site": {
+        "address": "630024, Новосибирская область, г. Новосибирск, ул. Титова, д. 12",
+        "region": "Новосибирская область",
+        "city": "Новосибирск",
+        "federal_district": "Сибирский",
+        "timezone": "UTC+7"
+      },
+      "contacts": {
+        "email": "opt@bumkraft-demo.ru",
+        "phone": "+7 (383) 250-55-05"
+      },
+      "commercial": {
+        "currency": "RUB",
+        "unit_price_rub": 10.4,
+        "moq_units": 15000,
+        "volume_discounts": [
+          {
+            "min_units": 30000,
+            "discount_percent": 4
+          },
+          {
+            "min_units": 40000,
+            "discount_percent": 6
+          }
+        ],
+        "production_lead_time_days": 4,
+        "delivery_to_moscow_days": 6,
+        "total_lead_time_days": 10,
+        "capacity_units_10d": 40000,
+        "daily_capacity_units": 4000,
+        "reserve_readiness": "warm"
+      },
+      "documents": [
+        {
+          "type": "Декларация ТР ТС 005/2011 № RU Д-RU.РА01.В.00555/26"
+        },
+        {
+          "type": "Протокол испытаний № 77-С/26"
+        }
+      ],
+      "capability_passport": {
+        "manufacturer_id": "mfr-005",
+        "technologies": [
+          "высечка бумажных стаканов",
+          "ламинирование барьерным PE-покрытием",
+          "флексографическая печать",
+          "термосварка бокового шва",
+          "загибка ободка (римовка)"
+        ],
+        "equipment": [
+          "высекальный пресс",
+          "станок формовки стаканов",
+          "флексопечатная машина",
+          "ламинатор",
+          "установка ультразвуковой сварки"
+        ],
+        "materials": [
+          "крафт-картон 260–320 г/м²",
+          "картон с PE-покрытием",
+          "пищевой PE 15–20 г/м²",
+          "водные флексокраски"
+        ],
+        "size_ranges": {
+          "cup_volume_ml": [
+            150,
+            600
+          ],
+          "top_diameter_mm": [
+            60,
+            110
+          ],
+          "height_mm": [
+            60,
+            160
+          ]
+        },
+        "tolerances": "±0,5 мм по диаметру, ±1 мм по высоте, ±5% по вместимости",
+        "certifications": [
+          "Декларация соответствия ТР ТС 005/2011",
+          "ISO 9001:2015"
+        ],
+        "min_order_units": 15000,
+        "max_order_units": 40000,
+        "available_capacity_by_date": [
+          {
+            "date": "2026-10-21",
+            "available_units": 4000
+          },
+          {
+            "date": "2026-10-22",
+            "available_units": 4000
+          },
+          {
+            "date": "2026-10-23",
+            "available_units": 4000
+          },
+          {
+            "date": "2026-10-24",
+            "available_units": 4000
+          },
+          {
+            "date": "2026-10-25",
+            "available_units": 4000
+          },
+          {
+            "date": "2026-10-26",
+            "available_units": 4000
+          },
+          {
+            "date": "2026-10-27",
+            "available_units": 4000
+          },
+          {
+            "date": "2026-10-28",
+            "available_units": 4000
+          },
+          {
+            "date": "2026-10-29",
+            "available_units": 4000
+          },
+          {
+            "date": "2026-10-30",
+            "available_units": 4000
+          }
+        ],
+        "delivery_regions": [
+          "Сибирский ФО",
+          "Уральский ФО"
+        ],
+        "completed_order_types": [
+          "стаканы объёмом до 500 мл",
+          "тарелки и контейнеры из картона"
+        ],
+        "confirmatory_documents": [
+          "Декларация ТР ТС 005/2011 № RU Д-RU.РА01.В.00555/26",
+          "Протокол испытаний № 77-С/26"
+        ]
+      }
+    },
+    {
+      "id": "mfr-006",
+      "name": "ООО «СтаканПак»",
+      "legal_name": "Общество с ограниченной ответственностью «СтаканПак»",
+      "country": "RU",
+      "legal": {
+        "form": "ООО",
+        "inn": "1656789013",
+        "kpp": "165501001",
+        "ogrn": "1116500678909",
+        "ogrnip": null
+      },
+      "legal_address": "420054, Республика Татарстан, г. Казань, ул. Тэцевская, д. 9",
+      "okved": [
+        "17.29"
+      ],
+      "production_site": {
+        "address": "420054, Республика Татарстан, г. Казань, ул. Тэцевская, д. 9",
+        "region": "Республика Татарстан",
+        "city": "Казань",
+        "federal_district": "Приволжский",
+        "timezone": "UTC+3"
+      },
+      "contacts": {
+        "email": "menedger@stakanpak-demo.ru",
+        "phone": "+7 (843) 210-66-06"
+      },
+      "commercial": {
+        "currency": "RUB",
+        "unit_price_rub": 12.9,
+        "moq_units": 8000,
+        "volume_discounts": [
+          {
+            "min_units": 20000,
+            "discount_percent": 2
+          }
+        ],
+        "production_lead_time_days": 5,
+        "delivery_to_moscow_days": 3,
+        "total_lead_time_days": 8,
+        "capacity_units_10d": 28000,
+        "daily_capacity_units": 2800,
+        "reserve_readiness": "warm"
+      },
+      "documents": [
+        {
+          "type": "Декларация ТР ТС 005/2011 № RU Д-RU.РА01.В.00666/26"
+        }
+      ],
+      "capability_passport": {
+        "manufacturer_id": "mfr-006",
+        "technologies": [
+          "высечка бумажных стаканов",
+          "ламинирование барьерным PE-покрытием",
+          "флексографическая печать",
+          "термосварка бокового шва",
+          "загибка ободка (римовка)"
+        ],
+        "equipment": [
+          "высекальный пресс",
+          "станок формовки стаканов",
+          "флексопечатная машина",
+          "ламинатор",
+          "установка ультразвуковой сварки"
+        ],
+        "materials": [
+          "крафт-картон 260–320 г/м²",
+          "картон с PE-покрытием",
+          "пищевой PE 15–20 г/м²",
+          "водные флексокраски"
+        ],
+        "size_ranges": {
+          "cup_volume_ml": [
+            150,
+            600
+          ],
+          "top_diameter_mm": [
+            60,
+            110
+          ],
+          "height_mm": [
+            60,
+            160
+          ]
+        },
+        "tolerances": "±0,5 мм по диаметру, ±1 мм по высоте, ±5% по вместимости",
+        "certifications": [
+          "Декларация соответствия ТР ТС 005/2011",
+          "ISO 9001:2015"
+        ],
+        "min_order_units": 8000,
+        "max_order_units": 28000,
+        "available_capacity_by_date": [
+          {
+            "date": "2026-10-21",
+            "available_units": 2800
+          },
+          {
+            "date": "2026-10-22",
+            "available_units": 2800
+          },
+          {
+            "date": "2026-10-23",
+            "available_units": 2800
+          },
+          {
+            "date": "2026-10-24",
+            "available_units": 2800
+          },
+          {
+            "date": "2026-10-25",
+            "available_units": 2800
+          },
+          {
+            "date": "2026-10-26",
+            "available_units": 2800
+          },
+          {
+            "date": "2026-10-27",
+            "available_units": 2800
+          },
+          {
+            "date": "2026-10-28",
+            "available_units": 2800
+          },
+          {
+            "date": "2026-10-29",
+            "available_units": 2800
+          },
+          {
+            "date": "2026-10-30",
+            "available_units": 2800
+          }
+        ],
+        "delivery_regions": [
+          "Приволжский ФО",
+          "Центральный ФО"
+        ],
+        "completed_order_types": [
+          "стаканы 200–400 мл",
+          "вкладыши и салфетки под бренд"
+        ],
+        "confirmatory_documents": [
+          "Декларация ТР ТС 005/2011 № RU Д-RU.РА01.В.00666/26"
+        ]
+      }
+    },
+    {
+      "id": "mfr-007",
+      "name": "ООО «ДонПак»",
+      "legal_name": "Общество с ограниченной ответственностью «ДонПак»",
+      "country": "RU",
+      "legal": {
+        "form": "ООО",
+        "inn": "6145678908",
+        "kpp": "616001001",
+        "ogrn": "1161400789010",
+        "ogrnip": null
+      },
+      "legal_address": "344002, Ростовская область, г. Ростов-на-Дону, ул. Вавилова, д. 58",
+      "okved": [
+        "17.29"
+      ],
+      "production_site": {
+        "address": "344002, Ростовская область, г. Ростов-на-Дону, ул. Вавилова, д. 58",
+        "region": "Ростовская область",
+        "city": "Ростов-на-Дону",
+        "federal_district": "Южный",
+        "timezone": "UTC+3"
+      },
+      "contacts": {
+        "email": "donpak@donpak-demo.ru",
+        "phone": "+7 (863) 240-77-07"
+      },
+      "commercial": {
+        "currency": "RUB",
+        "unit_price_rub": 12.0,
+        "moq_units": 8000,
+        "volume_discounts": [
+          {
+            "min_units": 20000,
+            "discount_percent": 3
+          }
+        ],
+        "production_lead_time_days": 5,
+        "delivery_to_moscow_days": 4,
+        "total_lead_time_days": 9,
+        "capacity_units_10d": 27000,
+        "daily_capacity_units": 2700,
+        "reserve_readiness": "cold"
+      },
+      "documents": [
+        {
+          "type": "Декларация ТР ТС 005/2011 № RU Д-RU.РА01.В.00777/26"
+        }
+      ],
+      "capability_passport": {
+        "manufacturer_id": "mfr-007",
+        "technologies": [
+          "высечка бумажных стаканов",
+          "ламинирование барьерным PE-покрытием",
+          "флексографическая печать",
+          "термосварка бокового шва",
+          "загибка ободка (римовка)"
+        ],
+        "equipment": [
+          "высекальный пресс",
+          "станок формовки стаканов",
+          "флексопечатная машина",
+          "ламинатор",
+          "установка ультразвуковой сварки"
+        ],
+        "materials": [
+          "крафт-картон 260–320 г/м²",
+          "картон с PE-покрытием",
+          "пищевой PE 15–20 г/м²",
+          "водные флексокраски"
+        ],
+        "size_ranges": {
+          "cup_volume_ml": [
+            150,
+            600
+          ],
+          "top_diameter_mm": [
+            60,
+            110
+          ],
+          "height_mm": [
+            60,
+            160
+          ]
+        },
+        "tolerances": "±0,5 мм по диаметру, ±1 мм по высоте, ±5% по вместимости",
+        "certifications": [
+          "Декларация соответствия ТР ТС 005/2011",
+          "ISO 9001:2015"
+        ],
+        "min_order_units": 8000,
+        "max_order_units": 27000,
+        "available_capacity_by_date": [
+          {
+            "date": "2026-10-21",
+            "available_units": 2700
+          },
+          {
+            "date": "2026-10-22",
+            "available_units": 2700
+          },
+          {
+            "date": "2026-10-23",
+            "available_units": 2700
+          },
+          {
+            "date": "2026-10-24",
+            "available_units": 2700
+          },
+          {
+            "date": "2026-10-25",
+            "available_units": 2700
+          },
+          {
+            "date": "2026-10-26",
+            "available_units": 2700
+          },
+          {
+            "date": "2026-10-27",
+            "available_units": 2700
+          },
+          {
+            "date": "2026-10-28",
+            "available_units": 2700
+          },
+          {
+            "date": "2026-10-29",
+            "available_units": 2700
+          },
+          {
+            "date": "2026-10-30",
+            "available_units": 2700
+          }
+        ],
+        "delivery_regions": [
+          "Южный ФО",
+          "Центральный ФО"
+        ],
+        "completed_order_types": [
+          "стаканы и контейнеры для HoReCa",
+          "упаковка для доставки еды"
+        ],
+        "confirmatory_documents": [
+          "Декларация ТР ТС 005/2011 № RU Д-RU.РА01.В.00777/26"
+        ]
+      }
+    },
+    {
+      "id": "mfr-008",
+      "name": "ООО «КраснодарПолимер»",
+      "legal_name": "Общество с ограниченной ответственностью «КраснодарПолимер»",
+      "country": "RU",
+      "legal": {
+        "form": "ООО",
+        "inn": "2323456789",
+        "kpp": "231001001",
+        "ogrn": "1123200890120",
+        "ogrnip": null
+      },
+      "legal_address": "350072, Краснодарский край, г. Краснодар, ул. Кубанская Набережная, д. 3",
+      "okved": [
+        "22.22",
+        "17.29"
+      ],
+      "production_site": {
+        "address": "350072, Краснодарский край, г. Краснодар, ул. Кубанская Набережная, д. 3",
+        "region": "Краснодарский край",
+        "city": "Краснодар",
+        "federal_district": "Южный",
+        "timezone": "UTC+3"
+      },
+      "contacts": {
+        "email": "opt@krasnodarpolimer-demo.ru",
+        "phone": "+7 (861) 270-88-08"
+      },
+      "commercial": {
+        "currency": "RUB",
+        "unit_price_rub": 11.5,
+        "moq_units": 10000,
+        "volume_discounts": [
+          {
+            "min_units": 25000,
+            "discount_percent": 2
+          }
+        ],
+        "production_lead_time_days": 6,
+        "delivery_to_moscow_days": 6,
+        "total_lead_time_days": 12,
+        "capacity_units_10d": 30000,
+        "daily_capacity_units": 3000,
+        "reserve_readiness": "cold"
+      },
+      "documents": [
+        {
+          "type": "Декларация ТР ТС 005/2011 № RU Д-RU.РА01.В.00888/26"
+        },
+        {
+          "type": "Сертификат EN 13432 № OK-2288"
+        }
+      ],
+      "capability_passport": {
+        "manufacturer_id": "mfr-008",
+        "technologies": [
+          "высечка бумажных стаканов",
+          "ламинирование PLA-покрытием (биоразлагаемое)",
+          "флексографическая печать",
+          "термосварка бокового шва",
+          "загибка ободка"
+        ],
+        "equipment": [
+          "высекальный пресс",
+          "станок формовки стаканов",
+          "флексопечатная машина",
+          "ламинатор",
+          "установка ультразвуковой сварки"
+        ],
+        "materials": [
+          "картон с PLA-покрытием (биоразлагаемое)",
+          "крафт-картон 260–320 г/м²",
+          "водные флексокраски"
+        ],
+        "size_ranges": {
+          "cup_volume_ml": [
+            150,
+            600
+          ],
+          "top_diameter_mm": [
+            60,
+            110
+          ],
+          "height_mm": [
+            60,
+            160
+          ]
+        },
+        "tolerances": "±0,5 мм по диаметру, ±1 мм по высоте, ±5% по вместимости",
+        "certifications": [
+          "Декларация соответствия ТР ТС 005/2011",
+          "Сертификат компостируемости EN 13432"
+        ],
+        "min_order_units": 10000,
+        "max_order_units": 30000,
+        "available_capacity_by_date": [
+          {
+            "date": "2026-10-21",
+            "available_units": 3000
+          },
+          {
+            "date": "2026-10-22",
+            "available_units": 3000
+          },
+          {
+            "date": "2026-10-23",
+            "available_units": 3000
+          },
+          {
+            "date": "2026-10-24",
+            "available_units": 3000
+          },
+          {
+            "date": "2026-10-25",
+            "available_units": 3000
+          },
+          {
+            "date": "2026-10-26",
+            "available_units": 3000
+          },
+          {
+            "date": "2026-10-27",
+            "available_units": 3000
+          },
+          {
+            "date": "2026-10-28",
+            "available_units": 3000
+          },
+          {
+            "date": "2026-10-29",
+            "available_units": 3000
+          },
+          {
+            "date": "2026-10-30",
+            "available_units": 3000
+          }
+        ],
+        "delivery_regions": [
+          "Южный ФО",
+          "Северо-Кавказский ФО"
+        ],
+        "completed_order_types": [
+          "биоразлагаемые стаканы",
+          "эко-упаковка HoReCa"
+        ],
+        "confirmatory_documents": [
+          "Декларация ТР ТС 005/2011 № RU Д-RU.РА01.В.00888/26",
+          "Сертификат EN 13432 № OK-2288"
+        ]
+      }
+    },
+    {
+      "id": "mfr-009",
+      "name": "ИП Григорьев А. В.",
+      "legal_name": "Индивидуальный предприниматель Григорьев Алексей Викторович",
+      "country": "RU",
+      "legal": {
+        "form": "ИП",
+        "inn": "637890123481",
+        "kpp": null,
+        "ogrn": null,
+        "ogrnip": "306637890123458"
+      },
+      "legal_address": "443080, Самарская область, г. Самара, Московское шоссе, д. 41",
+      "okved": [
+        "17.29"
+      ],
+      "production_site": {
+        "address": "443080, Самарская область, г. Самара, Московское шоссе, д. 41",
+        "region": "Самарская область",
+        "city": "Самара",
+        "federal_district": "Приволжский",
+        "timezone": "UTC+4"
+      },
+      "contacts": {
+        "email": "grigoriev@samaragofra-demo.ru",
+        "phone": "+7 (846) 220-99-09"
+      },
+      "commercial": {
+        "currency": "RUB",
+        "unit_price_rub": 13.0,
+        "moq_units": 5000,
+        "volume_discounts": [
+          {
+            "min_units": 15000,
+            "discount_percent": 2
+          }
+        ],
+        "production_lead_time_days": 5,
+        "delivery_to_moscow_days": 4,
+        "total_lead_time_days": 9,
+        "capacity_units_10d": 24000,
+        "daily_capacity_units": 2400,
+        "reserve_readiness": "cold"
+      },
+      "documents": [
+        {
+          "type": "Декларация ТР ТС 005/2011 № RU Д-RU.РА01.В.00999/26"
+        }
+      ],
+      "capability_passport": {
+        "manufacturer_id": "mfr-009",
+        "technologies": [
+          "высечка бумажных стаканов",
+          "ламинирование барьерным PE-покрытием",
+          "флексографическая печать",
+          "термосварка бокового шва",
+          "загибка ободка (римовка)"
+        ],
+        "equipment": [
+          "высекальный пресс",
+          "станок формовки стаканов",
+          "флексопечатная машина",
+          "ламинатор",
+          "установка ультразвуковой сварки"
+        ],
+        "materials": [
+          "крафт-картон 260–320 г/м²",
+          "картон с PE-покрытием",
+          "пищевой PE 15–20 г/м²",
+          "водные флексокраски"
+        ],
+        "size_ranges": {
+          "cup_volume_ml": [
+            150,
+            600
+          ],
+          "top_diameter_mm": [
+            60,
+            110
+          ],
+          "height_mm": [
+            60,
+            160
+          ]
+        },
+        "tolerances": "±0,5 мм по диаметру, ±1 мм по высоте, ±5% по вместимости",
+        "certifications": [
+          "Декларация соответствия ТР ТС 005/2011",
+          "ISO 9001:2015"
+        ],
+        "min_order_units": 5000,
+        "max_order_units": 24000,
+        "available_capacity_by_date": [
+          {
+            "date": "2026-10-21",
+            "available_units": 2400
+          },
+          {
+            "date": "2026-10-22",
+            "available_units": 2400
+          },
+          {
+            "date": "2026-10-23",
+            "available_units": 2400
+          },
+          {
+            "date": "2026-10-24",
+            "available_units": 2400
+          },
+          {
+            "date": "2026-10-25",
+            "available_units": 2400
+          },
+          {
+            "date": "2026-10-26",
+            "available_units": 2400
+          },
+          {
+            "date": "2026-10-27",
+            "available_units": 2400
+          },
+          {
+            "date": "2026-10-28",
+            "available_units": 2400
+          },
+          {
+            "date": "2026-10-29",
+            "available_units": 2400
+          },
+          {
+            "date": "2026-10-30",
+            "available_units": 2400
+          }
+        ],
+        "delivery_regions": [
+          "Приволжский ФО",
+          "Центральный ФО"
+        ],
+        "completed_order_types": [
+          "малосерийные брендированные стаканы",
+          "крафт-пакеты"
+        ],
+        "confirmatory_documents": [
+          "Декларация ТР ТС 005/2011 № RU Д-RU.РА01.В.00999/26"
+        ]
+      }
+    },
+    {
+      "id": "mfr-010",
+      "name": "ООО «СибирьПак»",
+      "legal_name": "Общество с ограниченной ответственностью «СибирьПак»",
+      "country": "RU",
+      "legal": {
+        "form": "ООО",
+        "inn": "2489012347",
+        "kpp": "246001001",
+        "ogrn": "1124800901235",
+        "ogrnip": null
+      },
+      "legal_address": "660049, Красноярский край, г. Красноярск, ул. Профсоюзов, д. 5",
+      "okved": [
+        "17.29",
+        "17.21"
+      ],
+      "production_site": {
+        "address": "660049, Красноярский край, г. Красноярск, ул. Профсоюзов, д. 5",
+        "region": "Красноярский край",
+        "city": "Красноярск",
+        "federal_district": "Сибирский",
+        "timezone": "UTC+7"
+      },
+      "contacts": {
+        "email": "sibirpak@sibirpak-demo.ru",
+        "phone": "+7 (391) 260-10-10"
+      },
+      "commercial": {
+        "currency": "RUB",
+        "unit_price_rub": 10.8,
+        "moq_units": 12000,
+        "volume_discounts": [
+          {
+            "min_units": 30000,
+            "discount_percent": 4
+          }
+        ],
+        "production_lead_time_days": 5,
+        "delivery_to_moscow_days": 8,
+        "total_lead_time_days": 13,
+        "capacity_units_10d": 38000,
+        "daily_capacity_units": 3800,
+        "reserve_readiness": "cold"
+      },
+      "documents": [
+        {
+          "type": "Декларация ТР ТС 005/2011 № RU Д-RU.РА01.В.01010/26"
+        }
+      ],
+      "capability_passport": {
+        "manufacturer_id": "mfr-010",
+        "technologies": [
+          "высечка бумажных стаканов",
+          "ламинирование PE и PLA покрытием",
+          "флексографическая печать",
+          "термосварка бокового шва",
+          "загибка ободка"
+        ],
+        "equipment": [
+          "высекальный пресс",
+          "станок формовки стаканов",
+          "флексопечатная машина",
+          "ламинатор",
+          "установка ультразвуковой сварки"
+        ],
+        "materials": [
+          "картон с PE-покрытием",
+          "картон с PLA-покрытием",
+          "крафт-картон 260–320 г/м²"
+        ],
+        "size_ranges": {
+          "cup_volume_ml": [
+            150,
+            600
+          ],
+          "top_diameter_mm": [
+            60,
+            110
+          ],
+          "height_mm": [
+            60,
+            160
+          ]
+        },
+        "tolerances": "±0,5 мм по диаметру, ±1 мм по высоте, ±5% по вместимости",
+        "certifications": [
+          "Декларация соответствия ТР ТС 005/2011",
+          "ISO 9001:2015"
+        ],
+        "min_order_units": 12000,
+        "max_order_units": 38000,
+        "available_capacity_by_date": [
+          {
+            "date": "2026-10-21",
+            "available_units": 3800
+          },
+          {
+            "date": "2026-10-22",
+            "available_units": 3800
+          },
+          {
+            "date": "2026-10-23",
+            "available_units": 3800
+          },
+          {
+            "date": "2026-10-24",
+            "available_units": 3800
+          },
+          {
+            "date": "2026-10-25",
+            "available_units": 3800
+          },
+          {
+            "date": "2026-10-26",
+            "available_units": 3800
+          },
+          {
+            "date": "2026-10-27",
+            "available_units": 3800
+          },
+          {
+            "date": "2026-10-28",
+            "available_units": 3800
+          },
+          {
+            "date": "2026-10-29",
+            "available_units": 3800
+          },
+          {
+            "date": "2026-10-30",
+            "available_units": 3800
+          }
+        ],
+        "delivery_regions": [
+          "Сибирский ФО",
+          "Уральский ФО"
+        ],
+        "completed_order_types": [
+          "стаканы и упаковка для HoReCa",
+          "оптовые партии для дистрибьюторов"
+        ],
+        "confirmatory_documents": [
+          "Декларация ТР ТС 005/2011 № RU Д-RU.РА01.В.01010/26"
+        ]
+      }
+    },
+    {
+      "id": "mfr-011",
+      "name": "ООО «СтаканОпт»",
+      "legal_name": "Общество с ограниченной ответственностью «СтаканОпт»",
+      "country": "RU",
+      "legal": {
+        "form": "ООО",
+        "inn": "5078901232",
+        "kpp": "504701001",
+        "ogrn": "1150470123451",
+        "ogrnip": null
+      },
+      "legal_address": "141402, Московская область, г. Химки, ул. Рабочая, д. 9",
+      "okved": [
+        "17.29",
+        "17.21"
+      ],
+      "production_site": {
+        "address": "141402, Московская область, г. Химки, ул. Рабочая, д. 9",
+        "region": "Московская область",
+        "city": "Химки",
+        "federal_district": "Центральный",
+        "timezone": "UTC+3"
+      },
+      "contacts": {
+        "email": "opt@stakanopt-demo.ru",
+        "phone": "+7 (495) 510-11-11"
+      },
+      "commercial": {
+        "currency": "RUB",
+        "unit_price_rub": 10.9,
+        "moq_units": 50000,
+        "volume_discounts": [
+          {
+            "min_units": 50000,
+            "discount_percent": 5
+          }
+        ],
+        "production_lead_time_days": 6,
+        "delivery_to_moscow_days": 1,
+        "total_lead_time_days": 7,
+        "capacity_units_10d": 60000,
+        "daily_capacity_units": 6000,
+        "reserve_readiness": "warm"
+      },
+      "documents": [
+        {
+          "type": "Декларация ТР ТС 005/2011 № RU Д-RU.РА01.В.01111/26"
+        },
+        {
+          "type": "Сертификат ISO 9001:2015 № RU-QMS-5047"
+        }
+      ],
+      "capability_passport": {
+        "manufacturer_id": "mfr-011",
+        "technologies": [
+          "высечка бумажных стаканов",
+          "ламинирование барьерным PE-покрытием",
+          "флексографическая печать",
+          "термосварка бокового шва",
+          "загибка ободка (римовка)"
+        ],
+        "equipment": [
+          "высекальный пресс",
+          "станок формовки стаканов",
+          "флексопечатная машина",
+          "ламинатор",
+          "установка ультразвуковой сварки"
+        ],
+        "materials": [
+          "крафт-картон 260–320 г/м²",
+          "картон с PE-покрытием",
+          "пищевой PE 15–20 г/м²",
+          "водные флексокраски"
+        ],
+        "size_ranges": {
+          "cup_volume_ml": [
+            150,
+            600
+          ],
+          "top_diameter_mm": [
+            60,
+            110
+          ],
+          "height_mm": [
+            60,
+            160
+          ]
+        },
+        "tolerances": "±0,5 мм по диаметру, ±1 мм по высоте, ±5% по вместимости",
+        "certifications": [
+          "Декларация соответствия ТР ТС 005/2011",
+          "ISO 9001:2015"
+        ],
+        "min_order_units": 50000,
+        "max_order_units": 60000,
+        "available_capacity_by_date": [
+          {
+            "date": "2026-10-21",
+            "available_units": 6000
+          },
+          {
+            "date": "2026-10-22",
+            "available_units": 6000
+          },
+          {
+            "date": "2026-10-23",
+            "available_units": 6000
+          },
+          {
+            "date": "2026-10-24",
+            "available_units": 6000
+          },
+          {
+            "date": "2026-10-25",
+            "available_units": 6000
+          },
+          {
+            "date": "2026-10-26",
+            "available_units": 6000
+          },
+          {
+            "date": "2026-10-27",
+            "available_units": 6000
+          },
+          {
+            "date": "2026-10-28",
+            "available_units": 6000
+          },
+          {
+            "date": "2026-10-29",
+            "available_units": 6000
+          },
+          {
+            "date": "2026-10-30",
+            "available_units": 6000
+          }
+        ],
+        "delivery_regions": [
+          "Центральный ФО",
+          "Приволжский ФО"
+        ],
+        "completed_order_types": [
+          "крупносерийные стаканы для федеральных сетей",
+          "оптовые партии от 50 000 шт."
+        ],
+        "confirmatory_documents": [
+          "Декларация ТР ТС 005/2011 № RU Д-RU.РА01.В.01111/26",
+          "Сертификат ISO 9001:2015 № RU-QMS-5047"
+        ]
+      }
+    }
+  ]
+}
