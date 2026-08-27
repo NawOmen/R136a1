@@ -1,7 +1,7 @@
 import uuid
 from typing import Literal
 
-from pydantic import BaseModel, ConfigDict, EmailStr, Field
+from pydantic import BaseModel, ConfigDict, EmailStr, Field, model_validator
 
 LegalForm = Literal["ООО", "ИП"]
 VerificationDecision = Literal["approve", "reject"]
@@ -62,6 +62,7 @@ class CompanyOut(BaseModel):
     legal_address: str
     country: str
     verification_status: str
+    rejection_reason: str | None = None
 
 
 class CompanyWithMembership(CompanyOut):
@@ -92,6 +93,11 @@ class CompanyPatch(BaseModel):
     legal_address: str | None = Field(default=None, min_length=5, max_length=500)
 
 
+class MembershipPatch(BaseModel):
+    can_buy: bool
+    can_sell: bool
+
+
 class MeOut(BaseModel):
     user: UserOut
     companies: list[CompanyWithMembership]
@@ -104,6 +110,12 @@ class AdminCompaniesOut(BaseModel):
 class AdminVerificationIn(BaseModel):
     decision: VerificationDecision
     reason: str | None = Field(default=None, max_length=500)
+
+    @model_validator(mode="after")
+    def require_reason_on_reject(self) -> "AdminVerificationIn":
+        if self.decision == "reject" and (self.reason is None or not self.reason.strip()):
+            raise ValueError("При отклонении необходимо указать причину")
+        return self
 
 
 class BlockIn(BaseModel):

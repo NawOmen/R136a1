@@ -230,6 +230,19 @@ export const api = {
     return request(`/api/v1/companies/${id}`, { method: "PATCH", token, body: JSON.stringify(input) });
   },
 
+  // 5.1 Изменение разрешений (режимы «Покупаю / Продаю»)
+  updateMembership(
+    token: string,
+    id: string,
+    input: { can_buy: boolean; can_sell: boolean },
+  ): Promise<Membership> {
+    return request(`/api/v1/companies/${id}/membership`, {
+      method: "PATCH",
+      token,
+      body: JSON.stringify(input),
+    });
+  },
+
   // 6. Отправка компании на проверку
   submitCompanyForReview(token: string, id: string): Promise<Company> {
     return request(`/api/v1/companies/${id}/submit-review`, { method: "POST", token });

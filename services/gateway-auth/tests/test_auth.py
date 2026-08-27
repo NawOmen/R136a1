@@ -65,3 +65,13 @@ async def test_password_is_hashed(client, db_session):
     user = result.scalar_one()
     assert user.password_hash != "secret123"
     assert user.password_hash.startswith("$2")
+
+
+async def test_api_does_not_return_password_hash(client):
+    r = await client.post("/api/v1/auth/register", json=REGISTER)
+    data = r.json()
+    assert "password_hash" not in data["user"]
+    assert "password" not in data["user"]
+
+    me = await client.get("/api/v1/auth/me", headers={"Authorization": f"Bearer {data['access_token']}"})
+    assert "password_hash" not in me.json()["user"]

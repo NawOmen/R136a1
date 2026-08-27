@@ -35,9 +35,17 @@ async def verify_company(
     if company is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, detail="Компания не найдена")
 
+    # Допустимы только переходы pending_review -> verified / rejected.
+    if company.verification_status != "pending_review":
+        raise HTTPException(
+            status.HTTP_409_CONFLICT,
+            detail="Решение можно принять только для компании в статусе pending_review",
+        )
+
     from_status = company.verification_status
     to_status = "verified" if data.decision == "approve" else "rejected"
     company.verification_status = to_status
+    company.rejection_reason = (data.reason or "").strip() if data.decision == "reject" else None
 
     event = CompanyVerificationEvent(
         company_id=company.id,

@@ -50,6 +50,7 @@ class Company(Base):
     verification_status: Mapped[str] = mapped_column(
         String(16), nullable=False, default="draft", server_default="draft"
     )
+    rejection_reason: Mapped[str | None] = mapped_column(String(500), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, server_default=func.now(), onupdate=func.now()

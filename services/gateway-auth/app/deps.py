@@ -62,7 +62,11 @@ async def require_company_admin(company_id: uuid.UUID, user: User, db: AsyncSess
 
 
 async def require_verified_company(company_id: uuid.UUID, user: User, db: AsyncSession) -> Company:
-    """Защита публикации: действовать может только проверенная компания."""
+    """Защита публикации: действовать может только проверенная компания.
+
+    Будущие endpoint'ы публикации потребностей, товаров и предложений обязаны
+    использовать этот guard (см. docs/api/auth-api.md).
+    """
     await get_membership(company_id, user, db)
     company = await db.get(Company, company_id)
     if company is None:
@@ -73,3 +77,19 @@ async def require_verified_company(company_id: uuid.UUID, user: User, db: AsyncS
             detail="Компания не проверена: публикация и подтверждение обязательств запрещены",
         )
     return company
+
+
+async def require_company_buyer(company_id: uuid.UUID, user: User, db: AsyncSession) -> CompanyMember:
+    """Действие покупателя: компания должна иметь разрешение can_buy."""
+    membership = await get_membership(company_id, user, db)
+    if not membership.can_buy:
+        raise HTTPException(status.HTTP_403_FORBIDDEN, detail="У компании нет разрешения на покупку")
+    return membership
+
+
+async def require_company_seller(company_id: uuid.UUID, user: User, db: AsyncSession) -> CompanyMember:
+    """Действие производителя: компания должна иметь разрешение can_sell."""
+    membership = await get_membership(company_id, user, db)
+    if not membership.can_sell:
+        raise HTTPException(status.HTTP_403_FORBIDDEN, detail="У компании нет разрешения на продажу")
+    return membership

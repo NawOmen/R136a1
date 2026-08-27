@@ -80,3 +80,52 @@ async def test_non_member_cannot_patch(client):
 
     r = await client.patch(f"/api/v1/companies/{c['id']}", json={"display_name": "ООО «Изменено»"}, headers=_auth(token_b))
     assert r.status_code == 404
+
+
+async def test_enable_second_permission(client):
+    token = await _token(client)
+    c = (await client.post("/api/v1/companies", json={**COMPANY, "can_sell": False}, headers=_auth(token))).json()
+    assert c["membership"]["can_sell"] is False
+
+    r = await client.patch(
+        f"/api/v1/companies/{c['id']}/membership",
+        json={"can_buy": True, "can_sell": True},
+        headers=_auth(token),
+    )
+    assert r.status_code == 200
+    assert r.json()["can_buy"] is True
+    assert r.json()["can_sell"] is True
+
+    me = await client.get("/api/v1/auth/me", headers=_auth(token))
+    assert me.json()["companies"][0]["membership"]["can_buy"] is True
+    assert me.json()["companies"][0]["membership"]["can_sell"] is True
+
+
+async def test_cannot_disable_both_permissions(client):
+    token = await _token(client)
+    c = (await client.post("/api/v1/companies", json=COMPANY, headers=_auth(token))).json()
+
+    r = await client.patch(
+        f"/api/v1/companies/{c['id']}/membership",
+        json={"can_buy": False, "can_sell": False},
+        headers=_auth(token),
+    )
+    assert r.status_code == 400
+
+
+async def test_non_admin_cannot_change_membership(client):
+    token_a = await _token(client)
+    c = (await client.post("/api/v1/companies", json=COMPANY, headers=_auth(token_a))).json()
+
+    other = await client.post(
+        "/api/v1/auth/register",
+        json={"last_name": "Сидоров", "first_name": "Сидор", "email": "other@demo.ru", "password": "secret123"},
+    )
+    token_b = other.json()["access_token"]
+
+    r = await client.patch(
+        f"/api/v1/companies/{c['id']}/membership",
+        json={"can_buy": True, "can_sell": False},
+        headers=_auth(token_b),
+    )
+    assert r.status_code == 404

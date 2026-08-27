@@ -12,6 +12,7 @@ from ..schemas import (
     CompanyPatch,
     CompanyWithMembership,
     MembershipOut,
+    MembershipPatch,
 )
 
 router = APIRouter(prefix="/companies", tags=["companies"])
@@ -55,6 +56,7 @@ async def create_company(
         legal_address=company.legal_address,
         country=company.country,
         verification_status=company.verification_status,
+        rejection_reason=None,
         membership=MembershipOut(can_buy=data.can_buy, can_sell=data.can_sell, is_admin=True),
     )
 
@@ -95,6 +97,27 @@ async def submit_review(
         raise HTTPException(status.HTTP_400_BAD_REQUEST, detail="Компания уже на проверке или проверена")
 
     company.verification_status = "pending_review"
+    company.rejection_reason = None
     await db.commit()
     await db.refresh(company)
     return company
+
+
+@router.patch("/{company_id}/membership", response_model=MembershipOut)
+async def update_membership(
+    company_id: uuid.UUID,
+    data: MembershipPatch,
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    if not data.can_buy and not data.can_sell:
+        raise HTTPException(
+            status.HTTP_400_BAD_REQUEST,
+            detail="Хотя бы одно разрешение («Покупаю» или «Продаю») должно быть включено",
+        )
+    membership = await require_company_admin(company_id, user, db)
+    membership.can_buy = data.can_buy
+    membership.can_sell = data.can_sell
+    await db.commit()
+    await db.refresh(membership)
+    return membership

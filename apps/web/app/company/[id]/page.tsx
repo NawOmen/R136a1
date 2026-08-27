@@ -24,6 +24,9 @@ export default function CompanyPage() {
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [submittingReview, setSubmittingReview] = useState(false);
+  const [canBuy, setCanBuy] = useState(false);
+  const [canSell, setCanSell] = useState(false);
+  const [savingPermissions, setSavingPermissions] = useState(false);
 
   // Форма редактирования
   const [fullName, setFullName] = useState("");
@@ -69,6 +72,8 @@ export default function CompanyPage() {
       setOgrnip(company.ogrnip ?? "");
       setKpp(company.kpp ?? "");
       setLegalAddress(company.legal_address);
+      setCanBuy(company.membership?.can_buy ?? false);
+      setCanSell(company.membership?.can_sell ?? false);
       initializedRef.current = true;
     }
   }, [company]);
@@ -103,6 +108,21 @@ export default function CompanyPage() {
       setError(err instanceof ApiError ? err.message : "Не удалось сохранить изменения.");
     } finally {
       setSaving(false);
+    }
+  }
+
+  async function handleSavePermissions() {
+    const token = getToken();
+    if (!token || !company) return;
+    setSavingPermissions(true);
+    setError(null);
+    try {
+      await api.updateMembership(token, company.id, { can_buy: canBuy, can_sell: canSell });
+      await load();
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : "Не удалось сохранить режимы.");
+    } finally {
+      setSavingPermissions(false);
     }
   }
 
@@ -206,6 +226,43 @@ export default function CompanyPage() {
           </div>
         </dl>
       </section>
+
+      {isAdmin && (
+        <section className="card">
+          <h2>Режимы работы</h2>
+          <p className="hint mode-hint">
+            Один аккаунт может и покупать, и продавать — включите нужные режимы.
+          </p>
+          <label className="checkbox">
+            <input
+              type="checkbox"
+              checked={canBuy}
+              onChange={(event) => setCanBuy(event.target.checked)}
+              disabled={savingPermissions}
+            />
+            Покупаю
+          </label>
+          <label className="checkbox">
+            <input
+              type="checkbox"
+              checked={canSell}
+              onChange={(event) => setCanSell(event.target.checked)}
+              disabled={savingPermissions}
+            />
+            Продаю
+          </label>
+          <div className="actions">
+            <button
+              type="button"
+              className="btn btn-primary btn-sm"
+              disabled={savingPermissions || (!canBuy && !canSell)}
+              onClick={() => void handleSavePermissions()}
+            >
+              {savingPermissions ? "Сохраняем..." : "Сохранить режимы"}
+            </button>
+          </div>
+        </section>
+      )}
 
       {canEdit && (
         <section className="card">

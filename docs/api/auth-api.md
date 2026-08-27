@@ -41,13 +41,15 @@
   "kpp": "123456789",
   "legal_address": "г. Москва, ул. Примерная, д. 1",
   "country": "RU",
-  "verification_status": "draft"
+  "verification_status": "draft",
+  "rejection_reason": null
 }
 ```
 
 - `legal_form`: `ООО` | `ИП`.
 - `ogrn`, `ogrnip`, `kpp` могут быть `null` (для ИП — `ogrnip`, для ООО — `ogrn`).
 - `verification_status`: `draft` | `pending_review` | `verified` | `rejected`.
+- `rejection_reason`: актуальная причина отклонения; заполняется только при статусе `rejected`, в остальных статусах — `null`.
 
 ### Membership (членство пользователя в компании)
 
@@ -120,6 +122,7 @@
       "legal_address": "...",
       "country": "RU",
       "verification_status": "draft",
+      "rejection_reason": null,
       "membership": { "can_buy": true, "can_sell": true, "is_admin": true }
     }
   ]
@@ -153,9 +156,21 @@
 
 Требует Bearer и права администратора компании. Обновляет поля профиля (допустимо в статусах `draft` и `rejected`). Ответ `200` — обновлённая компания.
 
+### `PATCH /api/v1/companies/{company_id}/membership`
+
+Требует Bearer и права администратора компании. Изменяет разрешения `can_buy` и `can_sell` — позволяет включить второй режим без нового аккаунта.
+
+Запрос:
+
+```json
+{ "can_buy": true, "can_sell": true }
+```
+
+Ответ `200` — обновлённое членство `{ "can_buy": true, "can_sell": true, "is_admin": true }`. Ошибка `400`, если оба флага `false`; `404` для чужой компании.
+
 ### `POST /api/v1/companies/{company_id}/submit-review`
 
-Требует Bearer и права администратора компании. Переводит компанию в `pending_review` (из `draft` или `rejected`). Ответ `200` — компания.
+Требует Bearer и права администратора компании. Переводит компанию в `pending_review` (из `draft` или `rejected`) и очищает актуальную причину отклонения. Ответ `200` — компания.
 
 ### `GET /api/v1/admin/companies?status=pending_review`
 
@@ -167,7 +182,7 @@
 
 ### `POST /api/v1/admin/companies/{company_id}/verification`
 
-Требует Bearer и `is_marketplace_admin = true`. Записывает решение в журнал проверок.
+Требует Bearer и `is_marketplace_admin = true`. Записывает решение в журнал проверок. Решение можно принять только для компании в статусе `pending_review` (иначе `409`).
 
 Запрос:
 
@@ -175,7 +190,14 @@
 { "decision": "approve", "reason": "реквизиты корректны" }
 ```
 
-`decision`: `approve` | `reject`. Ответ `200` — компания со статусом `verified` или `rejected`.
+`decision`: `approve` | `reject`. При `reject` поле `reason` обязательно (непустая строка, иначе `422`). Ответ `200` — компания со статусом `verified` или `rejected`; при отклонении в `rejection_reason` записывается причина.
+
+Допустимые переходы статусов:
+
+- `draft → pending_review`;
+- `rejected → pending_review`;
+- `pending_review → verified`;
+- `pending_review → rejected`.
 
 ### `POST /api/v1/admin/users/{user_id}/block`
 
@@ -183,7 +205,15 @@
 
 ## Ошибки
 
-Единый формат ошибки: `{"detail": "текст ошибки"}`. Коды: `401` — нет/неверный токен; `403` — недостаточно прав; `404` — не найдено; `409` — конфликт (например, занятый email).
+Единый формат ошибки: `{"detail": "текст ошибки"}`. Коды: `401` — нет/неверный токен; `403` — недостаточно прав; `404` — не найдено; `409` — конфликт (например, занятый email или недопустимый переход статуса проверки); `422` — ошибка валидации входных данных.
+
+## Guard'ы для публикации (этап 3)
+
+Будущие endpoint'ы публикации обязаны использовать переиспользуемые зависимости:
+
+- `require_verified_company` — компания должна быть в статусе `verified`;
+- `require_company_buyer` — компания должна иметь `can_buy = true` (действия покупателя);
+- `require_company_seller` — компания должна иметь `can_sell = true` (действия производителя).
 
 ## Версионирование
 
