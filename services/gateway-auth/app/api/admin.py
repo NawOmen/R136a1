@@ -1,6 +1,7 @@
 import uuid
+from typing import Literal
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -14,7 +15,9 @@ router = APIRouter(prefix="/admin", tags=["admin"])
 
 @router.get("/companies", response_model=AdminCompaniesOut)
 async def list_companies(
-    status_filter: str = "pending_review",
+    status_filter: Literal["draft", "pending_review", "verified", "rejected"] = Query(
+        "pending_review", alias="status"
+    ),
     admin: User = Depends(require_admin),
     db: AsyncSession = Depends(get_db),
 ):

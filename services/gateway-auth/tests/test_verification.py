@@ -298,3 +298,52 @@ async def test_buyer_seller_guards(client, db_session):
 
     membership = await require_company_seller(cid, user, db_session)
     assert membership.can_sell is True
+
+
+# ---------- Фильтрация компаний администратором ----------
+
+
+async def test_admin_filter_companies(client, db_session):
+    admin_token = await _make_admin(client, db_session)
+    user_token = await _register(client, USER_EMAIL)
+
+    draft = await _create_company(client, user_token)
+
+    pending = await _create_company(client, user_token)
+    await _submit(client, user_token, pending["id"])
+
+    verified = await _create_company(client, user_token)
+    await _submit(client, user_token, verified["id"])
+    await client.post(
+        f"/api/v1/admin/companies/{verified['id']}/verification",
+        json={"decision": "approve"},
+        headers=_auth(admin_token),
+    )
+
+    rejected = await _create_company(client, user_token)
+    await _submit(client, user_token, rejected["id"])
+    await client.post(
+        f"/api/v1/admin/companies/{rejected['id']}/verification",
+        json={"decision": "reject", "reason": "плохие реквизиты"},
+        headers=_auth(admin_token),
+    )
+
+    async def ids(status_param: str | None = None) -> set[str]:
+        url = "/api/v1/admin/companies"
+        if status_param is not None:
+            url += f"?status={status_param}"
+        r = await client.get(url, headers=_auth(admin_token))
+        assert r.status_code == 200
+        return {c["id"] for c in r.json()["companies"]}
+
+    assert await ids() == {pending["id"]}  # по умолчанию pending_review
+    assert await ids("pending_review") == {pending["id"]}
+    assert await ids("verified") == {verified["id"]}
+    assert await ids("rejected") == {rejected["id"]}
+    assert await ids("draft") == {draft["id"]}
+
+
+async def test_admin_filter_invalid_status(client, db_session):
+    admin_token = await _make_admin(client, db_session)
+    r = await client.get("/api/v1/admin/companies?status=whatever", headers=_auth(admin_token))
+    assert r.status_code == 422

@@ -81,6 +81,12 @@ class CompanyIn(BaseModel):
     can_buy: bool = False
     can_sell: bool = False
 
+    @model_validator(mode="after")
+    def require_at_least_one_mode(self) -> "CompanyIn":
+        if not self.can_buy and not self.can_sell:
+            raise ValueError("Выберите хотя бы один режим: «Покупаю» или «Продаю»")
+        return self
+
 
 class CompanyPatch(BaseModel):
     full_name: str | None = Field(default=None, min_length=2, max_length=255)

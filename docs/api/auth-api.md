@@ -152,6 +152,8 @@
 
 Ответ `201` — объект компании (см. Company) с полем `membership`.
 
+Хотя бы одно из разрешений `can_buy`/`can_sell` должно быть `true` (иначе `422`). Допустимо создать компанию только с покупкой, только с продажей или с обоими режимами.
+
 ### `PATCH /api/v1/companies/{company_id}`
 
 Требует Bearer и права администратора компании. Обновляет поля профиля (допустимо в статусах `draft` и `rejected`). Ответ `200` — обновлённая компания.
@@ -174,7 +176,7 @@
 
 ### `GET /api/v1/admin/companies?status=pending_review`
 
-Требует Bearer и `is_marketplace_admin = true`. Ответ `200`:
+Требует Bearer и `is_marketplace_admin = true`. Query-параметр `status` принимает только `draft`, `pending_review`, `verified`, `rejected` (по умолчанию `pending_review`); недопустимое значение возвращает `422`. Ответ `200`:
 
 ```json
 { "companies": [ { "...": "см. Company" } ] }

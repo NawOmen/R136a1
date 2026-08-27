@@ -161,9 +161,12 @@ export default function NewCompanyPage() {
           />
           Продаю
         </label>
+        {!canBuy && !canSell && (
+          <p className="hint mode-hint">Выберите хотя бы один режим: «Покупаю» или «Продаю».</p>
+        )}
 
         <div className="actions">
-          <button type="submit" className="btn btn-primary" disabled={submitting}>
+          <button type="submit" className="btn btn-primary" disabled={submitting || (!canBuy && !canSell)}>
             {submitting ? "Создаём..." : "Создать компанию"}
           </button>
           <Link href="/dashboard" className="btn btn-secondary">

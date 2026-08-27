@@ -129,3 +129,37 @@ async def test_non_admin_cannot_change_membership(client):
         headers=_auth(token_b),
     )
     assert r.status_code == 404
+
+
+async def test_create_company_without_modes_fails(client):
+    token = await _token(client)
+    r = await client.post(
+        "/api/v1/companies",
+        json={**COMPANY, "can_buy": False, "can_sell": False},
+        headers=_auth(token),
+    )
+    assert r.status_code == 422
+
+
+async def test_create_company_only_buyer(client):
+    token = await _token(client)
+    r = await client.post(
+        "/api/v1/companies",
+        json={**COMPANY, "can_buy": True, "can_sell": False},
+        headers=_auth(token),
+    )
+    assert r.status_code == 201
+    assert r.json()["membership"]["can_buy"] is True
+    assert r.json()["membership"]["can_sell"] is False
+
+
+async def test_create_company_only_seller(client):
+    token = await _token(client)
+    r = await client.post(
+        "/api/v1/companies",
+        json={**COMPANY, "can_buy": False, "can_sell": True},
+        headers=_auth(token),
+    )
+    assert r.status_code == 201
+    assert r.json()["membership"]["can_buy"] is False
+    assert r.json()["membership"]["can_sell"] is True
