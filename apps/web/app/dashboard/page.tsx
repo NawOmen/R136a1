@@ -13,6 +13,7 @@ import {
   User,
   VERIFICATION_STATUS_LABELS,
 } from "../lib/api";
+import { marketplace } from "../lib/marketplace";
 
 type Mode = "buy" | "sell" | null;
 
@@ -23,6 +24,7 @@ export default function DashboardPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [mode, setMode] = useState<Mode>(null);
+  const [unreadCount, setUnreadCount] = useState(0);
 
   useEffect(() => {
     const token = getToken();
@@ -35,6 +37,12 @@ export default function DashboardPage() {
       .then((result) => {
         setUser(result.user);
         setCompanies(result.companies);
+        marketplace
+          .getNotifications(token)
+          .then((list) => setUnreadCount(list.filter((item) => !item.is_read).length))
+          .catch(() => {
+            // счётчик уведомлений не критичен для дашборда
+          });
       })
       .catch((err: unknown) => {
         setError(err instanceof ApiError ? err.message : "Не удалось загрузить данные аккаунта.");
@@ -76,6 +84,9 @@ export default function DashboardPage() {
           </p>
         </div>
         <div className="actions">
+          <Link href="/notifications" className="btn btn-secondary">
+            Уведомления{unreadCount > 0 ? ` (${unreadCount})` : ""}
+          </Link>
           {user.is_marketplace_admin && (
             <Link href="/admin" className="btn btn-secondary">
               Панель администратора
@@ -109,12 +120,72 @@ export default function DashboardPage() {
             Продаю
           </button>
         </div>
-        {mode && (
-          <p className="hint mode-hint">
-            {mode === "buy"
-              ? "Интерфейс покупки появится на этапе 3."
-              : "Интерфейс продажи появится на этапе 3."}
-          </p>
+        {mode === "buy" && (
+          <ul className="company-list">
+            <li>
+              <Link href="/catalog" className="company-item">
+                <span className="company-item__name">Каталог товаров</span>
+                <span className="company-meta">Публичный каталог производителей</span>
+              </Link>
+            </li>
+            <li>
+              <Link href="/needs/new" className="company-item">
+                <span className="company-item__name">Создать потребность</span>
+                <span className="company-meta">Опишите, что нужно купить</span>
+              </Link>
+            </li>
+            <li>
+              <Link href="/needs" className="company-item">
+                <span className="company-item__name">Мои потребности</span>
+                <span className="company-meta">Статусы и предложения по вашим закупкам</span>
+              </Link>
+            </li>
+          </ul>
+        )}
+
+        {mode === "sell" && (
+          <ul className="company-list">
+            <li>
+              <Link href="/seller/profile" className="company-item">
+                <span className="company-item__name">Производственный профиль</span>
+                <span className="company-meta">Адрес площадки и информация о производстве</span>
+              </Link>
+            </li>
+            <li>
+              <Link href="/seller/products" className="company-item">
+                <span className="company-item__name">Мои товары</span>
+                <span className="company-meta">Каталог и публикация товаров</span>
+              </Link>
+            </li>
+            <li>
+              <Link href="/seller/capacity" className="company-item">
+                <span className="company-item__name">Мощности</span>
+                <span className="company-meta">Доступные объёмы по дням</span>
+              </Link>
+            </li>
+            <li>
+              <Link href="/seller/documents" className="company-item">
+                <span className="company-item__name">Документы</span>
+                <span className="company-meta">Сертификаты и декларации</span>
+              </Link>
+            </li>
+            <li>
+              <Link href="/seller/passport" className="company-item">
+                <span className="company-item__name">Capability Passport</span>
+                <span className="company-meta">Технологии, оборудование, материалы</span>
+              </Link>
+            </li>
+            <li>
+              <Link href="/seller/requests" className="company-item">
+                <span className="company-item__name">Подходящие запросы</span>
+                <span className="company-meta">Открытые потребности покупателей</span>
+              </Link>
+            </li>
+          </ul>
+        )}
+
+        {mode === null && (
+          <p className="hint mode-hint">Выберите режим, чтобы открыть разделы маркетплейса.</p>
         )}
       </section>
 

@@ -7,6 +7,7 @@
 - Этап 0: создание репозитория и фиксация архитектуры — выполнено.
 - Этап 1: границы MVP, пользовательские сценарии и синтетические данные — выполнено.
 - Этап 2: каркас и инфраструктура (монорепозиторий, Docker Compose, Web App, Gateway Auth, Marketplace, PostgreSQL, миграции, CI, проверка Ollama) — выполнено.
+- Этап 3: базовый маркетплейс (каталог, потребности, предложения, сделки, мощности, документы, Capability Passport, уведомления, Playwright) — выполнено.
 
 ## Структура
 
@@ -40,7 +41,8 @@ docker compose -f infra/docker-compose.yml up --build
 | --- | --- | --- |
 | Web App | http://localhost:3000 | интерфейс покупателя/производителя/админа |
 | Gateway Auth | http://localhost:8001 | аккаунты, вход, компании, проверка (OpenAPI: `/docs`) |
-| Marketplace | http://localhost:8002 | точка здоровья (каталог появится на этапе 3) |
+| Marketplace | http://localhost:8002 | каталог, потребности, предложения, сделки, уведомления (OpenAPI: `/docs`) |
+| MinIO | http://localhost:9000 | объектное хранилище файлов (консоль: :9001) |
 | PostgreSQL | localhost:5433 | БД (внутри Docker — хост `postgres:5432`) |
 
 Миграции применяются и демо-аккаунты создаются автоматически при старте `gateway-auth`.
@@ -69,14 +71,25 @@ DATABASE_URL=postgresql+asyncpg://sborka:sborka@localhost:5433/sborka ../../.ven
 ## Тесты
 
 ```bash
-# создать тестовую БД один раз
+# создать тестовые БД один раз
 docker compose -f infra/docker-compose.yml exec -T postgres psql -U sborka -d postgres -c "CREATE DATABASE sborka_test"
+docker compose -f infra/docker-compose.yml exec -T postgres psql -U sborka -d postgres -c "CREATE DATABASE sborka_marketplace_test"
 
 cd services/gateway-auth
 TEST_DATABASE_URL=postgresql+asyncpg://sborka:sborka@localhost:5433/sborka_test ../../.venv/bin/pytest
 
 cd ../marketplace
-../../.venv/bin/pytest
+TEST_DATABASE_URL=postgresql+asyncpg://sborka:sborka@localhost:5433/sborka_marketplace_test ../../.venv/bin/pytest
+```
+
+### Playwright (E2E)
+
+```bash
+cd tests/e2e
+pnpm install
+pnpm install:browsers   # один раз — скачает Chromium
+docker compose -f ../../infra/docker-compose.yml up --build   # поднимите стек
+pnpm test
 ```
 
 CI (`.github/workflows/ci.yml`) выполняет миграции и тесты бэкенда, а также type-check и сборку фронтенда.
@@ -91,4 +104,4 @@ python infra/verify_ollama.py
 
 ## Документация
 
-Основной план — `plan_sborka_b2b.md`. Результаты этапа 1 — `docs/mvp/`, `docs/demo/`, `packages/test-fixtures/`. API-контракт Gateway Auth — `docs/api/auth-api.md`.
+Основной план — `plan_sborka_b2b.md`. Результаты этапа 1 — `docs/mvp/`, `docs/demo/`, `packages/test-fixtures/`. API-контракты — `docs/api/auth-api.md` (gateway-auth) и `docs/api/marketplace-api.md` (marketplace).
