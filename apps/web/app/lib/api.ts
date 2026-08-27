@@ -108,6 +108,53 @@ export class ApiError extends Error {
   }
 }
 
+// ---------- Разбор ошибок валидации FastAPI (422) ----------
+
+const FIELD_LABELS: Record<string, string> = {
+  last_name: "Фамилия",
+  first_name: "Имя",
+  middle_name: "Отчество",
+  email: "Email",
+  password: "Пароль",
+  phone: "Телефон",
+  full_name: "Название",
+  display_name: "Отображаемое название",
+  legal_form: "Организационно-правовая форма",
+  inn: "ИНН",
+  ogrn: "ОГРН",
+  ogrnip: "ОГРНИП",
+  kpp: "КПП",
+  legal_address: "Юридический адрес",
+};
+
+interface ValidationErrorItem {
+  loc?: unknown[];
+  msg?: string;
+  ctx?: { min_length?: number };
+}
+
+function describeValidationError(item: ValidationErrorItem): string {
+  const loc = Array.isArray(item.loc) ? item.loc : [];
+  const field = String(loc[loc.length - 1] ?? "");
+  const label = FIELD_LABELS[field] ?? field;
+  const msg = item.msg ?? "";
+
+  if (msg.toLowerCase().includes("at least")) {
+    const min = item.ctx?.min_length;
+    return min ? `«${label}» должно быть не короче ${min} символов` : `«${label}» слишком короткое`;
+  }
+  if (msg.toLowerCase().includes("valid email")) {
+    return "Введите корректный email";
+  }
+  if (msg.toLowerCase().includes("string type")) {
+    return `«${label}» должно быть строкой`;
+  }
+  if (label) {
+    return `«${label}»: ${msg}`;
+  }
+  return msg;
+}
+
 // ---------- Работа с токеном ----------
 
 export function getToken(): string | null {
@@ -140,7 +187,11 @@ async function request<T>(path: string, options: RequestOptions = {}): Promise<T
     let message = `Ошибка запроса: ${response.status}`;
     try {
       const body = (await response.json()) as { detail?: unknown };
-      if (typeof body.detail === "string" && body.detail) message = body.detail;
+      if (typeof body.detail === "string" && body.detail) {
+        message = body.detail;
+      } else if (Array.isArray(body.detail)) {
+        message = body.detail.map((item) => describeValidationError(item as ValidationErrorItem)).join("; ");
+      }
     } catch {
       // тело ответа не JSON — оставляем стандартное сообщение
     }

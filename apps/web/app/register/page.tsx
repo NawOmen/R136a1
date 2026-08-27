@@ -105,8 +105,10 @@ export default function RegisterPage() {
             value={password}
             onChange={(event) => setPassword(event.target.value)}
             required
+            minLength={6}
             autoComplete="new-password"
           />
+          <p className="hint">Минимум 6 символов.</p>
         </div>
         <div className="field">
           <label htmlFor="phone">Телефон</label>
