@@ -1,0 +1,10 @@
+{
+  "name": "sborka-b2b",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev:web": "pnpm --filter @sborka/web dev",
+    "build:web": "pnpm --filter @sborka/web build",
+    "lint:web": "pnpm --filter @sborka/web lint"
+  }
+}

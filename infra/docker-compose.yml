@@ -1,0 +1,64 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-sborka}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-sborka}
+      POSTGRES_DB: ${POSTGRES_DB:-sborka}
+    ports:
+      - "${POSTGRES_PORT:-5433}:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-sborka} -d ${POSTGRES_DB:-sborka}"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+
+  gateway-auth:
+    build:
+      context: ../services/gateway-auth
+    environment:
+      DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-sborka}:${POSTGRES_PASSWORD:-sborka}@postgres:5432/${POSTGRES_DB:-sborka}
+      JWT_SECRET: ${JWT_SECRET:-dev-secret-change-me-0123456789abcdef}
+      ACCESS_TOKEN_EXPIRE_MINUTES: ${ACCESS_TOKEN_EXPIRE_MINUTES:-1440}
+      SEED_ADMIN_EMAIL: ${SEED_ADMIN_EMAIL:-admin@demo.ru}
+      SEED_ADMIN_PASSWORD: ${SEED_ADMIN_PASSWORD:-admin123}
+      SEED_DEMO_EMAIL: ${SEED_DEMO_EMAIL:-demo@demo.ru}
+      SEED_DEMO_PASSWORD: ${SEED_DEMO_PASSWORD:-demo123}
+    ports:
+      - "${GATEWAY_AUTH_PORT:-8001}:8001"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8001/health')"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+
+  marketplace:
+    build:
+      context: ../services/marketplace
+    ports:
+      - "${MARKETPLACE_PORT:-8002}:8002"
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8002/health')"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+
+  web:
+    build:
+      context: ..
+      dockerfile: apps/web/Dockerfile
+    environment:
+      NEXT_PUBLIC_API_URL: http://localhost:8001
+    ports:
+      - "${WEB_PORT:-3000}:3000"
+    depends_on:
+      gateway-auth:
+        condition: service_healthy
+
+volumes:
+  postgres_data:
