@@ -1,0 +1,6 @@
+{
+  "name": "@sborka/contracts",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Версионированные API-контракты (заполняется с этапа 2+)."
+}
