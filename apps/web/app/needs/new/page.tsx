@@ -169,9 +169,12 @@ export default function NewNeedPage() {
         delivery_address_id: deliveryAddressId,
         visibility,
       });
-      // Файлы загружаются после создания потребности
+      // Сначала сохраняем черновик и файлы; только затем публикуем целиком.
       for (const file of files) {
         await marketplace.uploadNeedFile(token, need.id, file);
+      }
+      if (company.verification_status === "verified") {
+        await marketplace.publishNeed(token, need.id);
       }
       router.push(`/needs/${need.id}`);
     } catch (err) {
@@ -251,7 +254,8 @@ export default function NewNeedPage() {
 
         {company && company.verification_status !== "verified" && (
           <p className="hint mode-hint">
-            Компания ещё не проверена — создание потребности может быть недоступно до подтверждения.
+            Компания ещё не проверена — потребность сохранится как черновик, а опубликовать её можно
+            будет после подтверждения компании.
           </p>
         )}
 
@@ -407,6 +411,7 @@ export default function NewNeedPage() {
             id="need_files"
             type="file"
             multiple
+            accept="image/*,application/pdf,audio/*"
             onChange={(event) => setFiles(Array.from(event.target.files ?? []))}
           />
           {files.length > 0 && (
@@ -418,7 +423,11 @@ export default function NewNeedPage() {
 
         <div className="actions">
           <button type="submit" className="btn btn-primary" disabled={submitting || !company}>
-            {submitting ? "Создаём..." : "Создать потребность"}
+            {submitting
+              ? "Сохраняем..."
+              : company?.verification_status === "verified"
+                ? "Создать и опубликовать"
+                : "Сохранить черновик"}
           </button>
           <Link href="/needs" className="btn btn-secondary">
             Отмена

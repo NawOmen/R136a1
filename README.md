@@ -53,6 +53,7 @@ docker compose -f infra/docker-compose.yml up --build
 | --- | --- | --- |
 | Администратор | `admin@demo.ru` | `admin123` |
 | Покупатель + продавец (проверенная компания) | `demo@demo.ru` | `demo123` |
+| Производитель «СтаканОпт Демо» | `seller@demo.ru` | `seller123` |
 
 ## Локальный запуск сервисов без Docker
 

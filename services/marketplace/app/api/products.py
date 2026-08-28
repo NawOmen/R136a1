@@ -5,7 +5,13 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..database import get_db
-from ..deps import CurrentUser, get_current_user, require_company_admin, require_company_seller
+from ..deps import (
+    CurrentUser,
+    get_current_user,
+    require_company_admin,
+    require_company_seller,
+    require_verified_company,
+)
 from ..models import Product
 from ..schemas import ProductIn, ProductOut, ProductPatch, PublishIn
 
@@ -59,6 +65,7 @@ async def update_product(
     product = await db.get(Product, product_id)
     if product is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, detail="Товар не найден")
+    await require_company_seller(product.company_id, user, db)
     await require_company_admin(product.company_id, user, db)
     for field, value in data.model_dump(exclude_unset=True).items():
         setattr(product, field, value)
@@ -77,7 +84,10 @@ async def publish_product(
     product = await db.get(Product, product_id)
     if product is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, detail="Товар не найден")
+    await require_company_seller(product.company_id, user, db)
     await require_company_admin(product.company_id, user, db)
+    if data.published:
+        await require_verified_company(product.company_id, user, db)
     product.is_published = data.published
     await db.commit()
     await db.refresh(product)

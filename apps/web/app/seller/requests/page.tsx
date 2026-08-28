@@ -10,10 +10,9 @@ import { getToken } from "../../lib/api";
 import {
   ApiError,
   formatCharacteristics,
-  formatRub,
   formatUnits,
   marketplace,
-  Need,
+  NeedFeedItem,
   NEED_STATUS_LABELS,
 } from "../../lib/marketplace";
 import { useCompanySelector } from "../../lib/useMe";
@@ -28,7 +27,7 @@ export default function SellerRequestsPage() {
     setCompanyId,
   } = useCompanySelector("can_sell");
 
-  const [needs, setNeeds] = useState<Need[]>([]);
+  const [needs, setNeeds] = useState<NeedFeedItem[]>([]);
   const [loaded, setLoaded] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -41,12 +40,12 @@ export default function SellerRequestsPage() {
 
   useEffect(() => {
     const token = getToken();
-    if (!token) return;
+    if (!token || !companyId) return;
     let cancelled = false;
     setLoaded(false);
     setError(null);
     marketplace
-      .getNeedsFeed(token)
+      .getNeedsFeed(token, companyId)
       .then((list) => {
         if (!cancelled) setNeeds(list);
       })
@@ -61,7 +60,7 @@ export default function SellerRequestsPage() {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [companyId]);
 
   function toggleForm(needId: string) {
     setOpenFormId((current) => (current === needId ? null : needId));
@@ -71,7 +70,7 @@ export default function SellerRequestsPage() {
     setError(null);
   }
 
-  async function handleOffer(event: FormEvent<HTMLFormElement>, need: Need) {
+  async function handleOffer(event: FormEvent<HTMLFormElement>, need: NeedFeedItem) {
     event.preventDefault();
     const token = getToken();
     if (!token || !company) return;
@@ -169,9 +168,7 @@ export default function SellerRequestsPage() {
                   <div className="company-meta">
                     {formatCharacteristics(need.characteristics)}
                   </div>
-                  <div className="company-meta">
-                    Бюджет: {formatRub(need.budget_rub)} · Срок: {need.deadline_date}
-                  </div>
+                  <div className="company-meta">Срок: {need.deadline_date}</div>
                 </div>
                 <span className={`badge badge-${need.status}`}>{NEED_STATUS_LABELS[need.status]}</span>
               </div>

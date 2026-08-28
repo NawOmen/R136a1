@@ -20,6 +20,7 @@ class CurrentUser:
 
 async def get_current_user(
     credentials: HTTPAuthorizationCredentials | None = Depends(bearer_scheme),
+    db: AsyncSession = Depends(get_db),
 ) -> CurrentUser:
     if credentials is None:
         raise HTTPException(status.HTTP_401_UNAUTHORIZED, detail="Не авторизован")
@@ -28,10 +29,23 @@ async def get_current_user(
     except pyjwt.PyJWTError:
         raise HTTPException(status.HTTP_401_UNAUTHORIZED, detail="Неверный токен")
 
-    user_id = payload.get("sub")
-    if not user_id:
+    user_id_raw = payload.get("sub")
+    if not user_id_raw:
         raise HTTPException(status.HTTP_401_UNAUTHORIZED, detail="Неверный токен")
-    return CurrentUser(id=uuid.UUID(str(user_id)))
+    try:
+        user_id = uuid.UUID(str(user_id_raw))
+    except (TypeError, ValueError):
+        raise HTTPException(status.HTTP_401_UNAUTHORIZED, detail="Неверный токен")
+
+    result = await db.execute(
+        text("SELECT account_status FROM auth.users WHERE id = :uid"), {"uid": user_id}
+    )
+    row = result.mappings().first()
+    if row is None:
+        raise HTTPException(status.HTTP_401_UNAUTHORIZED, detail="Пользователь не найден")
+    if row["account_status"] == "blocked":
+        raise HTTPException(status.HTTP_401_UNAUTHORIZED, detail="Аккаунт заблокирован")
+    return CurrentUser(id=user_id)
 
 
 async def get_membership(db: AsyncSession, company_id: uuid.UUID, user_id: uuid.UUID) -> dict | None:

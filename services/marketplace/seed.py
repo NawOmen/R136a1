@@ -12,8 +12,8 @@ from sqlalchemy import select, text
 from app.database import SessionLocal
 from app.models import CapabilityPassport, DeliveryAddress, Product, ProductionProfile
 
-DEMO_COMPANY_NAME = "ООО «Демо-Кофе»"
-DEMO_USER_EMAIL = os.getenv("SEED_DEMO_EMAIL", "demo@demo.ru")
+DEMO_COMPANY_NAME = "ООО «СтаканОпт Демо»"
+DEMO_USER_EMAIL = os.getenv("SEED_SELLER_EMAIL", "seller@demo.ru")
 
 
 async def seed() -> None:
@@ -65,7 +65,7 @@ async def seed() -> None:
                 )
             )
 
-        product = (await db.execute(select(Product).where(Product.company_id == company_id))).scalar_one_or_none()
+        product = (await db.execute(select(Product).where(Product.company_id == company_id))).scalars().first()
         if product is None:
             db.add(
                 Product(

@@ -1,6 +1,6 @@
 "use client";
 
-// Мои потребности (GET /needs?mine=true): статус, объём, бюджет, срок,
+// Мои потребности (GET /needs/mine): статус, объём, бюджет, срок,
 // переход к деталям.
 
 import Link from "next/link";

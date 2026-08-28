@@ -36,6 +36,8 @@ export default function NeedDetailPage() {
   const [notFound, setNotFound] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [selectingId, setSelectingId] = useState<string | null>(null);
+  const [downloadingId, setDownloadingId] = useState<string | null>(null);
+  const [publishing, setPublishing] = useState(false);
 
   useEffect(() => {
     const token = getToken();
@@ -91,6 +93,41 @@ export default function NeedDetailPage() {
     }
   }
 
+  async function handleDownload(fileId: string, fileName: string) {
+    const token = getToken();
+    if (!token) return;
+    setDownloadingId(fileId);
+    setError(null);
+    try {
+      const blob = await marketplace.downloadNeedFile(token, fileId);
+      const url = URL.createObjectURL(blob);
+      const anchor = document.createElement("a");
+      anchor.href = url;
+      anchor.download = fileName;
+      anchor.click();
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : "Не удалось скачать файл.");
+    } finally {
+      setDownloadingId(null);
+    }
+  }
+
+  async function handlePublish() {
+    const token = getToken();
+    if (!token || !need) return;
+    if (!window.confirm("Опубликовать потребность для производителей?")) return;
+    setPublishing(true);
+    setError(null);
+    try {
+      setNeed(await marketplace.publishNeed(token, need.id));
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : "Не удалось опубликовать потребность.");
+    } finally {
+      setPublishing(false);
+    }
+  }
+
   if (loading) return <p className="hint">Загрузка...</p>;
 
   if (notFound || !need) {
@@ -104,7 +141,8 @@ export default function NeedDetailPage() {
     );
   }
 
-  const isBuyer = me.companies.some((company) => company.id === need.company_id);
+  const buyerCompany = me.companies.find((company) => company.id === need.company_id);
+  const isBuyer = buyerCompany?.membership?.can_buy === true;
 
   return (
     <div>
@@ -120,6 +158,28 @@ export default function NeedDetailPage() {
       </div>
 
       {error && <div className="alert alert-error">{error}</div>}
+
+      {isBuyer && need.status === "draft" && (
+        <section className="card">
+          <h2>Черновик потребности</h2>
+          {buyerCompany?.verification_status === "verified" ? (
+            <div className="actions">
+              <button
+                type="button"
+                className="btn btn-success"
+                disabled={publishing}
+                onClick={() => void handlePublish()}
+              >
+                {publishing ? "Публикуем..." : "Опубликовать"}
+              </button>
+            </div>
+          ) : (
+            <p className="hint mode-hint">
+              Черновик сохранён. Публикация станет доступна после проверки компании.
+            </p>
+          )}
+        </section>
+      )}
 
       {deal && (
         <section className="card">
@@ -169,8 +229,18 @@ export default function NeedDetailPage() {
           <ul className="company-list">
             {need.files.map((file) => (
               <li key={file.id} className="company-item">
-                <span className="company-item__name">{file.file_name}</span>
-                <span className="company-meta">{file.content_type}</span>
+                <span>
+                  <span className="company-item__name">{file.file_name}</span>
+                  <span className="company-meta">{file.content_type}</span>
+                </span>
+                <button
+                  type="button"
+                  className="btn btn-secondary btn-sm"
+                  disabled={downloadingId === file.id}
+                  onClick={() => void handleDownload(file.id, file.file_name)}
+                >
+                  {downloadingId === file.id ? "Скачиваем..." : "Скачать"}
+                </button>
               </li>
             ))}
           </ul>

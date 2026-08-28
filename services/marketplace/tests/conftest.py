@@ -13,8 +13,18 @@ TEST_DATABASE_URL = os.getenv(
 
 AUTH_DDL_STATEMENTS = [
     "CREATE SCHEMA IF NOT EXISTS auth",
-    "CREATE TABLE IF NOT EXISTS auth.users (id UUID PRIMARY KEY)",
-    "CREATE TABLE IF NOT EXISTS auth.companies (id UUID PRIMARY KEY, verification_status VARCHAR(16) NOT NULL)",
+    "CREATE TABLE IF NOT EXISTS auth.users ("
+    " id UUID PRIMARY KEY, last_name VARCHAR(120) NOT NULL, first_name VARCHAR(120) NOT NULL,"
+    " middle_name VARCHAR(120), email VARCHAR(255) NOT NULL UNIQUE, password_hash VARCHAR(255) NOT NULL,"
+    " phone VARCHAR(40), account_status VARCHAR(16) NOT NULL DEFAULT 'active',"
+    " is_marketplace_admin BOOLEAN NOT NULL DEFAULT false, created_at TIMESTAMPTZ NOT NULL DEFAULT now(),"
+    " updated_at TIMESTAMPTZ NOT NULL DEFAULT now())",
+    "CREATE TABLE IF NOT EXISTS auth.companies ("
+    " id UUID PRIMARY KEY, full_name VARCHAR(255) NOT NULL, display_name VARCHAR(255) NOT NULL,"
+    " legal_form VARCHAR(8) NOT NULL, inn VARCHAR(12) NOT NULL, ogrn VARCHAR(15), ogrnip VARCHAR(15),"
+    " kpp VARCHAR(9), legal_address VARCHAR(500) NOT NULL, country VARCHAR(2) NOT NULL DEFAULT 'RU',"
+    " verification_status VARCHAR(16) NOT NULL, rejection_reason VARCHAR(500),"
+    " created_at TIMESTAMPTZ NOT NULL DEFAULT now(), updated_at TIMESTAMPTZ NOT NULL DEFAULT now())",
     "CREATE TABLE IF NOT EXISTS auth.company_members ("
     " id UUID PRIMARY KEY,"
     " company_id UUID NOT NULL REFERENCES auth.companies(id),"
@@ -91,7 +101,21 @@ async def db_session(session_factory):
 
 async def make_user(db_session: AsyncSession, email: str = "u@demo.ru") -> uuid.UUID:
     uid = uuid.uuid4()
-    await db_session.execute(text("INSERT INTO auth.users (id) VALUES (:id)"), {"id": uid})
+    unique_email = f"{uid.hex}@demo.ru" if email == "u@demo.ru" else email
+    await db_session.execute(
+        text(
+            "INSERT INTO auth.users "
+            "(id, last_name, first_name, email, password_hash, account_status) "
+            "VALUES (:id, :last_name, :first_name, :email, :password_hash, 'active')"
+        ),
+        {
+            "id": uid,
+            "last_name": "Тестов",
+            "first_name": "Пользователь",
+            "email": unique_email,
+            "password_hash": "$2b$12$synthetic.hash.for.marketplace.tests.only",
+        },
+    )
     await db_session.commit()
     return uid
 
@@ -106,8 +130,19 @@ async def make_company(
     cid = uuid.uuid4()
     status = "verified" if verified else "draft"
     await db_session.execute(
-        text("INSERT INTO auth.companies (id, verification_status) VALUES (:id, :s)"),
-        {"id": cid, "s": status},
+        text(
+            "INSERT INTO auth.companies "
+            "(id, full_name, display_name, legal_form, inn, legal_address, country, verification_status) "
+            "VALUES (:id, :full_name, :display_name, 'ООО', :inn, :address, 'RU', :status)"
+        ),
+        {
+            "id": cid,
+            "full_name": f"Общество с ограниченной ответственностью «Тест {cid.hex[:8]}»",
+            "display_name": f"ООО «Тест {cid.hex[:8]}»",
+            "inn": str(int(cid.hex[:10], 16)).zfill(12)[-10:],
+            "address": "г. Москва, ул. Синтетическая, д. 1",
+            "status": status,
+        },
     )
     await db_session.execute(
         text(

@@ -102,7 +102,10 @@
 ```
 
 - `visibility`: `open_anonymized` | `selected_producers` | `closed`.
-- `status`: `open_for_offers` | `matched` | `cancelled` | `expired`.
+- `status`: `draft` | `open_for_offers` | `matched` | `cancelled` | `expired`.
+
+Открытая лента возвращает обезличенную форму карточки без `company_id`,
+`created_by_user_id`, бюджета, адреса доставки и исходных файлов.
 
 ### Offer
 
@@ -130,6 +133,7 @@
   "need_id": "uuid",
   "buyer_company_id": "uuid",
   "seller_company_id": "uuid",
+  "performed_by_user_id": "uuid",
   "units": 48000,
   "total_price_rub": 537600.0,
   "status": "created"
@@ -166,7 +170,8 @@
 - `GET /companies/{company_id}/products` — товары компании, включая неопубликованные (seller).
 - `POST /companies/{company_id}/products` — создать (seller + admin). `201`.
 - `PATCH /products/{product_id}` — обновить (seller + admin своей компании).
-- `POST /products/{product_id}/publish` — body `{published: bool}` (seller + admin).
+- `POST /products/{product_id}/publish` — body `{published: bool}` (seller + admin;
+  для публикации также требуется статус компании `verified`).
 
 ### Мощности
 
@@ -186,16 +191,18 @@
 
 ### Потребности (режим «Покупаю»)
 
-- `GET /needs?mine=true` — мои потребности (buyer); `GET /needs` — открытая лента (для продавца, `open_anonymized`).
-- `POST /needs` — body `{company_id, category, characteristics, volume_units, budget_rub, deadline_date, delivery_address_id, visibility}` (buyer, проверенная компания). `201`.
+- `GET /needs/mine` — мои потребности; `GET /needs?seller_company_id=...` — обезличенная лента открытых запросов подходящей товарной категории для компании-продавца.
+- `POST /needs` — создать черновик body `{company_id, category, characteristics, volume_units, budget_rub, deadline_date, delivery_address_id, visibility}` (buyer + admin компании). `201`.
+- `POST /needs/{need_id}/publish` — опубликовать черновик (buyer + admin + проверенная компания).
 - `GET /needs/{need_id}` — деталь (участники: покупатель или продавец).
-- `POST /needs/{need_id}/files` — multipart `file` (buyer своей потребности).
+- `POST /needs/{need_id}/files` — multipart `file` (buyer + admin своей потребности, только в статусе `draft`).
+- `GET /need-files/{file_id}/download` — скачать исходный файл (только buyer своей потребности).
 - `POST /needs/{need_id}/cancel` — отменить (buyer своей потребности).
 
 ### Предложения (режим «Продаю»)
 
 - `GET /needs/{need_id}/offers` — предложения по потребности (покупатель видит все, продавец — только свои).
-- `POST /needs/{need_id}/offers` — body `{company_id, price_rub, available_units, lead_time_days}` (seller, проверенная компания). `201`.
+- `POST /needs/{need_id}/offers` — body `{company_id, price_rub, available_units, lead_time_days}` (seller, проверенная компания; одно предложение от компании; нельзя отвечать своей компании). `201`.
 
 ### Сделка (выбор предложения покупателем)
 
@@ -217,4 +224,4 @@
 
 ## Файлы
 
-Файлы хранятся в MinIO. При загрузке через multipart сервис сохраняет объект в MinIO (ключ `file_key` в БД). Допустимые типы: изображения, PDF, аудио. Размер — до 25 МБ.
+Файлы хранятся в MinIO. При загрузке через multipart сервис сохраняет объект в MinIO (ключ `file_key` в БД). Допустимые типы: изображения, PDF, аудио. Пустые файлы отклоняются, размер — до 25 МБ. Исходные файлы потребности не попадают в открытую ленту и скачиваются только участником компании-покупателя.

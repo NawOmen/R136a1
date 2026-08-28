@@ -169,6 +169,20 @@ class NeedOut(BaseModel):
     files: list[NeedFileOut] = Field(default_factory=list)
 
 
+class NeedFeedOut(BaseModel):
+    """Обезличенная карточка для открытой ленты производителей."""
+
+    model_config = ConfigDict(from_attributes=True)
+
+    id: uuid.UUID
+    category: str
+    characteristics: dict[str, Any]
+    volume_units: int
+    deadline_date: date
+    visibility: str
+    status: str
+
+
 class NeedIn(BaseModel):
     company_id: uuid.UUID
     category: str = Field(min_length=2, max_length=120)
@@ -212,6 +226,7 @@ class DealOut(BaseModel):
     need_id: uuid.UUID
     buyer_company_id: uuid.UUID
     seller_company_id: uuid.UUID
+    performed_by_user_id: uuid.UUID | None
     units: int
     total_price_rub: float
     status: str

@@ -33,3 +33,12 @@ def upload_object(key: str, data: bytes, content_type: str) -> str:
 
 def delete_object(key: str) -> None:
     _client.remove_object(settings.minio_bucket, key)
+
+
+def download_object(key: str) -> bytes:
+    response = _client.get_object(settings.minio_bucket, key)
+    try:
+        return response.read()
+    finally:
+        response.close()
+        response.release_conn()

@@ -131,7 +131,9 @@ class Need(Base):
         ForeignKey(f"{SCHEMA}.delivery_addresses.id", ondelete="SET NULL"), nullable=True
     )
     visibility: Mapped[str] = mapped_column(String(32), nullable=False, default="open_anonymized")
-    status: Mapped[str] = mapped_column(String(32), nullable=False, default="open_for_offers")
+    status: Mapped[str] = mapped_column(
+        String(32), nullable=False, default="draft", server_default="draft"
+    )
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, server_default=func.now(), onupdate=func.now()
@@ -177,6 +179,7 @@ class Deal(Base):
     need_id: Mapped[uuid.UUID] = mapped_column(ForeignKey(f"{SCHEMA}.needs.id", ondelete="CASCADE"), nullable=False)
     buyer_company_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), nullable=False)
     seller_company_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), nullable=False)
+    performed_by_user_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), nullable=True)
     units: Mapped[int] = mapped_column(Integer, nullable=False)
     total_price_rub: Mapped[float] = mapped_column(Float, nullable=False)
     status: Mapped[str] = mapped_column(String(32), nullable=False, default="created")

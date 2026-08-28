@@ -12,7 +12,7 @@ const MARKETPLACE_BASE_URL = process.env.NEXT_PUBLIC_MARKETPLACE_URL || "http://
 // ---------- Типы домена ----------
 
 export type NeedVisibility = "open_anonymized" | "selected_producers" | "closed";
-export type NeedStatus = "open_for_offers" | "matched" | "cancelled" | "expired";
+export type NeedStatus = "draft" | "open_for_offers" | "matched" | "cancelled" | "expired";
 export type OfferStatus = "sent" | "selected" | "rejected";
 export type DealStatus = "created";
 
@@ -92,6 +92,16 @@ export interface Need {
   visibility: NeedVisibility;
   status: NeedStatus;
   files: NeedFile[];
+}
+
+export interface NeedFeedItem {
+  id: string;
+  category: string;
+  characteristics: Record<string, unknown>;
+  volume_units: number;
+  deadline_date: string;
+  visibility: NeedVisibility;
+  status: NeedStatus;
 }
 
 export interface Offer {
@@ -184,6 +194,7 @@ export interface UpdateCapabilityPassportInput {
 // ---------- Подписи статусов (русский язык) ----------
 
 export const NEED_STATUS_LABELS: Record<NeedStatus, string> = {
+  draft: "Черновик",
   open_for_offers: "Открыта для предложений",
   matched: "Сделка заключена",
   cancelled: "Отменена",
@@ -349,6 +360,23 @@ async function marketplaceFetch<T>(path: string, options: RequestOptions = {}): 
 
   if (response.status === 204) return undefined as T;
   return (await response.json()) as T;
+}
+
+async function marketplaceFetchBlob(path: string, token: string): Promise<Blob> {
+  const response = await fetch(`${MARKETPLACE_BASE_URL}${path}`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  if (!response.ok) {
+    let message = `Ошибка запроса: ${response.status}`;
+    try {
+      const body = (await response.json()) as { detail?: unknown };
+      if (typeof body.detail === "string") message = body.detail;
+    } catch {
+      // Не-JSON ответ — оставляем стандартное сообщение.
+    }
+    throw new ApiError(message, response.status);
+  }
+  return response.blob();
 }
 
 // Списочные эндпоинты могут возвращать как голый массив, так и обёртку
@@ -519,19 +547,23 @@ export const marketplace = {
 
   // Потребности
   getMyNeeds(token: string): Promise<Need[]> {
-    return marketplaceFetch("/api/v1/needs?mine=true", { token }).then((body) =>
+    return marketplaceFetch("/api/v1/needs/mine", { token }).then((body) =>
       unwrapList<Need>(body, ["needs", "items"]),
     );
   },
 
-  getNeedsFeed(token: string): Promise<Need[]> {
-    return marketplaceFetch("/api/v1/needs", { token }).then((body) =>
-      unwrapList<Need>(body, ["needs", "items"]),
+  getNeedsFeed(token: string, sellerCompanyId: string): Promise<NeedFeedItem[]> {
+    return marketplaceFetch(`/api/v1/needs?seller_company_id=${sellerCompanyId}`, { token }).then((body) =>
+      unwrapList<NeedFeedItem>(body, ["needs", "items"]),
     );
   },
 
   createNeed(token: string, input: CreateNeedInput): Promise<Need> {
     return marketplaceFetch("/api/v1/needs", { method: "POST", token, body: JSON.stringify(input) });
+  },
+
+  publishNeed(token: string, needId: string): Promise<Need> {
+    return marketplaceFetch(`/api/v1/needs/${needId}/publish`, { method: "POST", token });
   },
 
   getNeed(token: string, needId: string): Promise<Need> {
@@ -546,6 +578,10 @@ export const marketplace = {
       token,
       body: formData,
     });
+  },
+
+  downloadNeedFile(token: string, fileId: string): Promise<Blob> {
+    return marketplaceFetchBlob(`/api/v1/need-files/${fileId}/download`, token);
   },
 
   cancelNeed(token: string, needId: string): Promise<Need> {
