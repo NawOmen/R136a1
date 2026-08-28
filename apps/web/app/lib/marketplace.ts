@@ -2,7 +2,7 @@
 // gateway-auth: токен хранится в localStorage ("token") и передаётся в каждый запрос.
 // Базовый URL задаётся через NEXT_PUBLIC_MARKETPLACE_URL.
 
-import { ApiError } from "./api";
+import { ApiError, handleUnauthorized } from "./api";
 
 // Тот же класс ошибок, что у gateway-auth — страницы ловят единый тип.
 export { ApiError };
@@ -342,6 +342,7 @@ async function marketplaceFetch<T>(path: string, options: RequestOptions = {}): 
   const response = await fetch(`${MARKETPLACE_BASE_URL}${path}`, { ...init, headers });
 
   if (!response.ok) {
+    if (response.status === 401) handleUnauthorized();
     let message = `Ошибка запроса: ${response.status}`;
     try {
       const body = (await response.json()) as { detail?: unknown };
@@ -367,6 +368,7 @@ async function marketplaceFetchBlob(path: string, token: string): Promise<Blob> 
     headers: { Authorization: `Bearer ${token}` },
   });
   if (!response.ok) {
+    if (response.status === 401) handleUnauthorized();
     let message = `Ошибка запроса: ${response.status}`;
     try {
       const body = (await response.json()) as { detail?: unknown };

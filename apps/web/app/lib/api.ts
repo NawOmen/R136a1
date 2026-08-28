@@ -170,6 +170,15 @@ export function clearToken(): void {
   window.localStorage.removeItem(TOKEN_KEY);
 }
 
+// При истёкшем/недействительном токене (401) сбрасываем токен и отправляем на вход.
+export function handleUnauthorized(): void {
+  if (typeof window === "undefined") return;
+  clearToken();
+  if (window.location.pathname !== "/login") {
+    window.location.replace("/login");
+  }
+}
+
 // ---------- HTTP ----------
 
 type RequestOptions = RequestInit & { token?: string | null };
@@ -184,6 +193,13 @@ async function request<T>(path: string, options: RequestOptions = {}): Promise<T
   const response = await fetch(`${API_BASE_URL}${path}`, { ...init, headers });
 
   if (!response.ok) {
+    if (
+      response.status === 401 &&
+      path !== "/api/v1/auth/login" &&
+      path !== "/api/v1/auth/register"
+    ) {
+      handleUnauthorized();
+    }
     let message = `Ошибка запроса: ${response.status}`;
     try {
       const body = (await response.json()) as { detail?: unknown };
