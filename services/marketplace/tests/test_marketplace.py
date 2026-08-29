@@ -1,4 +1,4 @@
-from sqlalchemy import text
+from sqlalchemy import select, text
 
 from conftest import make_company, make_token, make_user
 
@@ -216,3 +216,57 @@ async def test_company_without_seller_cannot_create_product(client, db_session):
         headers=_auth(make_token(user)),
     )
     assert r.status_code == 403
+
+
+async def test_demo_seed_separates_buyer_address_and_seller_data(
+    db_session, session_factory, monkeypatch
+):
+    import seed as marketplace_seed
+    from app.models import DeliveryAddress, Product, ProductionProfile
+
+    buyer_user = await make_user(db_session, email="demo@demo.ru")
+    buyer_company = await make_company(
+        db_session, buyer_user, can_buy=True, can_sell=True
+    )
+    seller_user = await make_user(db_session, email="seller@demo.ru")
+    seller_company = await make_company(
+        db_session, seller_user, can_buy=False, can_sell=True
+    )
+    await db_session.execute(
+        text("UPDATE auth.companies SET display_name = :name WHERE id = :id"),
+        {"name": marketplace_seed.BUYER_COMPANY_NAME, "id": buyer_company},
+    )
+    await db_session.execute(
+        text("UPDATE auth.companies SET display_name = :name WHERE id = :id"),
+        {"name": marketplace_seed.SELLER_COMPANY_NAME, "id": seller_company},
+    )
+    await db_session.commit()
+
+    monkeypatch.setattr(marketplace_seed, "SessionLocal", session_factory)
+    await marketplace_seed.seed()
+
+    buyer_addresses = (
+        await db_session.execute(
+            select(DeliveryAddress).where(
+                DeliveryAddress.company_id == buyer_company
+            )
+        )
+    ).scalars().all()
+    seller_addresses = (
+        await db_session.execute(
+            select(DeliveryAddress).where(
+                DeliveryAddress.company_id == seller_company
+            )
+        )
+    ).scalars().all()
+    products = (
+        await db_session.execute(
+            select(Product).where(Product.company_id == seller_company)
+        )
+    ).scalars().all()
+
+    assert len(buyer_addresses) == 1
+    assert buyer_addresses[0].is_default is True
+    assert seller_addresses == []
+    assert await db_session.get(ProductionProfile, seller_company) is not None
+    assert len(products) == 2
