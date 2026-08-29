@@ -168,7 +168,10 @@ h2 {
 .field input[type="email"],
 .field input[type="password"],
 .field input[type="tel"],
-.field select {
+.field input[type="number"],
+.field input[type="date"],
+.field select,
+.field textarea {
   width: 100%;
   padding: 10px 14px;
   font-size: 15px;
@@ -180,15 +183,77 @@ h2 {
   transition: border-color 0.15s ease, box-shadow 0.15s ease;
 }
 
+.field textarea {
+  min-height: 96px;
+  resize: vertical;
+  line-height: 1.5;
+}
+
 .field input:focus,
-.field select:focus {
+.field select:focus,
+.field textarea:focus {
   outline: none;
   border-color: var(--primary);
   box-shadow: var(--focus-ring);
 }
 
-.field input::placeholder {
+.field input::placeholder,
+.field textarea::placeholder {
   color: #98a2b3;
+}
+
+/* Динамические пары «ключ/значение» (характеристики) */
+
+.char-row {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.char-row input {
+  flex: 1;
+  min-width: 0;
+}
+
+.char-row .btn {
+  flex-shrink: 0;
+}
+
+/* Таблица мощностей */
+
+.capacity-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 4px;
+}
+
+.capacity-table th,
+.capacity-table td {
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--border);
+  text-align: left;
+  font-size: 15px;
+}
+
+.capacity-table th {
+  font-size: 13px;
+  color: var(--text-muted);
+  font-weight: 600;
+}
+
+.capacity-table input {
+  width: 130px;
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  font-family: inherit;
+  font-size: 14px;
+}
+
+.capacity-table input:focus {
+  outline: none;
+  border-color: var(--primary);
+  box-shadow: var(--focus-ring);
 }
 
 .req {
@@ -306,6 +371,12 @@ h2 {
   border: 1px solid #f6c9c5;
 }
 
+.alert-success {
+  background: var(--success-soft);
+  color: var(--success);
+  border: 1px solid #bbdcc7;
+}
+
 /* ---------- Бейджи статусов ---------- */
 
 .badge {
@@ -335,6 +406,68 @@ h2 {
 .badge-rejected {
   background: var(--danger-soft);
   color: #b42318;
+}
+
+/* ---------- Статусы маркетплейса ---------- */
+
+.badge-open_for_offers {
+  background: var(--success-soft);
+  color: var(--success);
+}
+
+.badge-matched {
+  background: var(--primary-soft);
+  color: var(--primary);
+}
+
+.badge-cancelled {
+  background: #eef0f3;
+  color: #4b5563;
+}
+
+.badge-expired {
+  background: var(--danger-soft);
+  color: #b42318;
+}
+
+.badge-sent {
+  background: var(--warning-soft);
+  color: var(--warning);
+}
+
+.badge-selected {
+  background: var(--primary-soft);
+  color: var(--primary);
+}
+
+.badge-created {
+  background: var(--success-soft);
+  color: var(--success);
+}
+
+.badge-unread {
+  background: var(--danger-soft);
+  color: #b42318;
+}
+
+.badge-read {
+  background: #eef0f3;
+  color: #4b5563;
+}
+
+.badge-open_anonymized {
+  background: var(--primary-soft);
+  color: var(--primary);
+}
+
+.badge-selected_producers {
+  background: var(--warning-soft);
+  color: var(--warning);
+}
+
+.badge-closed {
+  background: #eef0f3;
+  color: #4b5563;
 }
 
 /* ---------- Дашборд ---------- */

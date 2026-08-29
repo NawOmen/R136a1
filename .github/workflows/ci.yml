@@ -36,6 +36,11 @@ jobs:
         env:
           DATABASE_URL: postgresql+asyncpg://sborka:sborka@localhost:5432/sborka_test
         run: alembic upgrade head
+      - name: Verify migrations (marketplace)
+        working-directory: services/marketplace
+        env:
+          DATABASE_URL: postgresql+asyncpg://sborka:sborka@localhost:5432/sborka_test
+        run: alembic upgrade head
       - name: Run gateway-auth tests
         working-directory: services/gateway-auth
         env:
@@ -43,6 +48,8 @@ jobs:
         run: pytest -q
       - name: Run marketplace tests
         working-directory: services/marketplace
+        env:
+          TEST_DATABASE_URL: postgresql+asyncpg://sborka:sborka@localhost:5432/sborka_test
         run: pytest -q
 
   frontend:
