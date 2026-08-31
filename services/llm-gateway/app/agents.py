@@ -32,6 +32,9 @@ SYSTEM_PROMPT = """Ты Buyer Investigation Agent российского B2B-м�
 Если значение в источнике отсутствует, не создавай для него факт. Никогда не используй
 заглушки «не указано», «неизвестно», «не задано», «отсутствует», null или N/A.
 Отвечай на русском языке строго по JSON Schema.
+Поле category возвращай только на русском языке. Для текущего MVP используй
+каноническую категорию «бумажные стаканы», если запрос относится к paper cup,
+coffee cup, disposable cup, cup или к бумажным/крафтовым стаканам.
 Используй канонические ключи: volume_ml, body_material, inner_coating, print,
 top_diameter_mm, bottom_diameter_mm, height_mm, quantity_units, budget_rub,
 lead_time_days, delivery_city, mandatory_requirements.
@@ -89,6 +92,30 @@ PLACEHOLDER_VALUES = {
     "отсутствует",
     "отсутствуют",
 }
+
+CATEGORY_ALIASES = {
+    "cup": "бумажные стаканы",
+    "cups": "бумажные стаканы",
+    "paper cup": "бумажные стаканы",
+    "paper cups": "бумажные стаканы",
+    "coffee cup": "бумажные стаканы",
+    "coffee cups": "бумажные стаканы",
+    "disposable cup": "бумажные стаканы",
+    "disposable cups": "бумажные стаканы",
+    "стакан": "бумажные стаканы",
+    "стаканы": "бумажные стаканы",
+    "бумажный стакан": "бумажные стаканы",
+    "бумажные стаканы для горячих напитков": "бумажные стаканы",
+    "крафтовый стакан": "бумажные стаканы",
+    "крафтовые стаканы": "бумажные стаканы",
+}
+
+
+def canonical_category(value: str) -> str:
+    normalized = re.sub(
+        r"\s+", " ", value.strip().lower().strip(" .,:;!?\"'«»")
+    )
+    return CATEGORY_ALIASES.get(normalized, value.strip())
 
 
 def _canonical_key(key: str) -> str:
@@ -345,6 +372,9 @@ class BuyerInvestigationAgent:
         prompt = build_extraction_prompt(sources)
         extraction, _, _ = await self.provider.structured(
             SYSTEM_PROMPT, prompt, RawExtraction, prefer_external=False
+        )
+        extraction = extraction.model_copy(
+            update={"category": canonical_category(extraction.category)}
         )
         route = "local_qwen"
         fallback = None
