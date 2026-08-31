@@ -7,6 +7,7 @@
 import Link from "next/link";
 import { FormEvent, useEffect, useState } from "react";
 import { getToken } from "../../lib/api";
+import { agents, FactValue } from "../../lib/agents";
 import {
   ApiError,
   formatCharacteristics,
@@ -37,6 +38,8 @@ export default function SellerRequestsPage() {
   const [leadTime, setLeadTime] = useState("");
   const [submittedIds, setSubmittedIds] = useState<Set<string>>(new Set());
   const [submitting, setSubmitting] = useState(false);
+  const [explainingId, setExplainingId] = useState<string | null>(null);
+  const [explanations, setExplanations] = useState<Record<string, string>>({});
 
   useEffect(() => {
     const token = getToken();
@@ -89,6 +92,40 @@ export default function SellerRequestsPage() {
       setError(err instanceof ApiError ? err.message : "Не удалось отправить предложение.");
     } finally {
       setSubmitting(false);
+    }
+  }
+
+  async function handleExplain(need: NeedFeedItem) {
+    const token = getToken();
+    if (!token || !company) return;
+    const requirements: Record<string, FactValue> = {};
+    for (const [key, value] of Object.entries(need.characteristics)) {
+      if (
+        typeof value === "string" ||
+        typeof value === "number" ||
+        typeof value === "boolean" ||
+        (Array.isArray(value) && value.every((item) => typeof item === "string"))
+      ) {
+        requirements[key] = value as FactValue;
+      }
+    }
+    setExplainingId(need.id);
+    setError(null);
+    try {
+      const result = await agents.explainSellerMatch(
+        token,
+        company.id,
+        need.category,
+        requirements,
+      );
+      setExplanations((current) => ({
+        ...current,
+        [need.id]: `${result.reasons.join(" ")} ${result.explanation}`,
+      }));
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : "Не удалось объяснить совпадение.");
+    } finally {
+      setExplainingId(null);
     }
   }
 
@@ -173,6 +210,10 @@ export default function SellerRequestsPage() {
                 <span className={`badge badge-${need.status}`}>{NEED_STATUS_LABELS[need.status]}</span>
               </div>
 
+              {explanations[need.id] && (
+                <p className="hint mode-hint">{explanations[need.id]}</p>
+              )}
+
               {submittedIds.has(need.id) ? (
                 <p className="hint mode-hint">Предложение отправлено. Ожидайте решения покупателя.</p>
               ) : openFormId === need.id ? (
@@ -235,6 +276,14 @@ export default function SellerRequestsPage() {
                 </form>
               ) : (
                 <div className="actions">
+                  <button
+                    type="button"
+                    className="btn btn-secondary btn-sm"
+                    disabled={explainingId === need.id}
+                    onClick={() => void handleExplain(need)}
+                  >
+                    {explainingId === need.id ? "Проверяю..." : "Почему подходит?"}
+                  </button>
                   <button type="button" className="btn btn-primary btn-sm" onClick={() => toggleForm(need.id)}>
                     Предложить условия
                   </button>

@@ -15,6 +15,19 @@ services:
       timeout: 5s
       retries: 12
 
+  pgadmin:
+    image: dpage/pgadmin4:8.14
+    environment:
+      PGADMIN_DEFAULT_EMAIL: ${PGADMIN_DEFAULT_EMAIL:-admin@demo.ru}
+      PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_DEFAULT_PASSWORD:-admin123}
+    ports:
+      - "${PGADMIN_PORT:-5050}:80"
+    volumes:
+      - pgadmin_data:/var/lib/pgadmin
+    depends_on:
+      postgres:
+        condition: service_healthy
+
   gateway-auth:
     build:
       context: ../services/gateway-auth
@@ -83,6 +96,38 @@ services:
       timeout: 5s
       retries: 12
 
+  llm-gateway:
+    build:
+      context: ../services/llm-gateway
+    environment:
+      DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-sborka}:${POSTGRES_PASSWORD:-sborka}@postgres:5432/${POSTGRES_DB:-sborka}
+      JWT_SECRET: ${JWT_SECRET:-dev-secret-change-me-0123456789abcdef}
+      OLLAMA_BASE_URL: ${OLLAMA_DOCKER_BASE_URL:-http://host.docker.internal:11434}
+      OLLAMA_MODEL: ${OLLAMA_MODEL:-qwen3.5:9b}
+      LLM_CONTEXT_TOKENS: ${LLM_CONTEXT_TOKENS:-8192}
+      DEEPSEEK_BASE_URL: ${DEEPSEEK_BASE_URL:-https://api.deepseek.com}
+      DEEPSEEK_API_KEY: ${DEEPSEEK_API_KEY:-}
+      DEEPSEEK_MODEL: ${DEEPSEEK_MODEL:-deepseek-v4-pro}
+      WHISPER_MODEL: ${WHISPER_MODEL:-small}
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    volumes:
+      - whisper_cache:/root/.cache/huggingface
+    ports:
+      - "${LLM_GATEWAY_PORT:-8003}:8003"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      gateway-auth:
+        condition: service_healthy
+      marketplace:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8003/health')"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+
   web:
     build:
       context: ..
@@ -90,10 +135,13 @@ services:
     environment:
       NEXT_PUBLIC_API_URL: http://localhost:8001
       NEXT_PUBLIC_MARKETPLACE_URL: http://localhost:8002
+      NEXT_PUBLIC_LLM_GATEWAY_URL: http://localhost:8003
     ports:
       - "${WEB_PORT:-3000}:3000"
     depends_on:
       gateway-auth:
+        condition: service_healthy
+      llm-gateway:
         condition: service_healthy
     healthcheck:
       test: ["CMD", "node", "-e", "fetch('http://localhost:3000/').then(function(r){process.exit(r.ok?0:1)}).catch(function(){process.exit(1)})"]
@@ -104,4 +152,6 @@ services:
 
 volumes:
   postgres_data:
+  pgadmin_data:
   minio_data:
+  whisper_cache:

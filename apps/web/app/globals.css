@@ -635,3 +635,55 @@ h2 {
   margin-top: 18px;
   text-align: center;
 }
+
+/* ---------- Подготовка требований ---------- */
+
+.agent-panel {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 18px;
+  margin-bottom: 22px;
+  background: #f8fafc;
+}
+
+.agent-panel textarea {
+  width: 100%;
+  resize: vertical;
+}
+
+.agent-result {
+  margin-top: 18px;
+  display: grid;
+  gap: 14px;
+}
+
+.evidence-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: grid;
+  gap: 8px;
+}
+
+.evidence-list > li,
+.clarification-box {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 12px;
+  background: var(--surface);
+}
+
+.evidence-confirmed {
+  background: #dcfce7;
+  color: #166534;
+}
+
+.evidence-assumed {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.evidence-needs_clarification {
+  background: #fee2e2;
+  color: #991b1b;
+}

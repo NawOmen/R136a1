@@ -23,7 +23,7 @@ from ..storage import download_object, upload_object
 router = APIRouter(tags=["needs"])
 
 MAX_SIZE = 25 * 1024 * 1024
-ALLOWED_CONTENT_TYPES = {"application/pdf"}
+ALLOWED_CONTENT_TYPES = {"application/pdf", "text/plain", "text/markdown"}
 
 
 def _is_allowed_content_type(content_type: str) -> bool:
