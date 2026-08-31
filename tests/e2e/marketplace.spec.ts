@@ -33,6 +33,8 @@ test("потребность → предложение → сделка", async
   await page.getByRole("button", { name: "Предложить условия" }).first().click();
   await page.getByLabel("Цена за единицу, ₽").fill("10");
   await page.getByLabel("Доступный объём, шт.").fill("1000");
+  await page.getByLabel("MOQ предложения, шт.").fill("1000");
+  await page.getByLabel("Логистика, ₽").fill("0");
   await page.getByLabel("Срок производства, дней").fill("7");
   await page.getByRole("button", { name: "Отправить предложение" }).click();
   await expect(page.getByText("Предложение отправлено")).toBeVisible();
