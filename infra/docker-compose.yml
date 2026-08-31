@@ -70,6 +70,17 @@ services:
       retries: 12
       start_period: 10s
 
+  optimizer:
+    build:
+      context: ../services/optimizer
+    ports:
+      - "${OPTIMIZER_PORT:-8004}:8004"
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8004/health')"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+
   marketplace:
     build:
       context: ../services/marketplace
@@ -80,6 +91,7 @@ services:
       MINIO_ACCESS_KEY: ${MINIO_ROOT_USER:-minioadmin}
       MINIO_SECRET_KEY: ${MINIO_ROOT_PASSWORD:-minioadmin}
       MINIO_BUCKET: ${MINIO_BUCKET:-sborka}
+      OPTIMIZER_URL: http://optimizer:8004
       SEED_SELLER_EMAIL: ${SEED_SELLER_EMAIL:-seller@demo.ru}
     ports:
       - "${MARKETPLACE_PORT:-8002}:8002"
@@ -89,6 +101,8 @@ services:
       gateway-auth:
         condition: service_healthy
       minio:
+        condition: service_healthy
+      optimizer:
         condition: service_healthy
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8002/health')"]

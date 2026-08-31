@@ -13,6 +13,7 @@ from ..deps import (
     require_verified_company,
 )
 from ..models import Product
+from ..matching import run_market_rematch
 from ..schemas import ProductIn, ProductOut, ProductPatch, PublishIn
 
 router = APIRouter(tags=["products"])
@@ -69,6 +70,7 @@ async def update_product(
     await require_company_admin(product.company_id, user, db)
     for field, value in data.model_dump(exclude_unset=True).items():
         setattr(product, field, value)
+    await run_market_rematch(db, "product_terms_changed", product.id)
     await db.commit()
     await db.refresh(product)
     return product
@@ -89,6 +91,7 @@ async def publish_product(
     if data.published:
         await require_verified_company(product.company_id, user, db)
     product.is_published = data.published
+    await run_market_rematch(db, "product_publication_changed", product.id)
     await db.commit()
     await db.refresh(product)
     return product

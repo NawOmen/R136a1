@@ -12,7 +12,17 @@ const MARKETPLACE_BASE_URL = process.env.NEXT_PUBLIC_MARKETPLACE_URL || "http://
 // ---------- Типы домена ----------
 
 export type NeedVisibility = "open_anonymized" | "selected_producers" | "closed";
-export type NeedStatus = "draft" | "open_for_offers" | "matched" | "cancelled" | "expired";
+export type NeedStatus =
+  | "draft"
+  | "needs_clarification"
+  | "confirmed"
+  | "open_for_offers"
+  | "waiting_for_match"
+  | "coalition_candidate"
+  | "awaiting_approvals"
+  | "matched"
+  | "cancelled"
+  | "expired";
 export type OfferStatus = "sent" | "selected" | "rejected";
 export type DealStatus = "created";
 
@@ -91,6 +101,9 @@ export interface Need {
   delivery_address_id: string | null;
   visibility: NeedVisibility;
   status: NeedStatus;
+  valid_until: string | null;
+  no_match_reason: string | null;
+  confirmed_at: string | null;
   files: NeedFile[];
 }
 
@@ -102,6 +115,7 @@ export interface NeedFeedItem {
   deadline_date: string;
   visibility: NeedVisibility;
   status: NeedStatus;
+  valid_until: string | null;
 }
 
 export interface Offer {
@@ -112,7 +126,108 @@ export interface Offer {
   price_rub: number;
   available_units: number;
   lead_time_days: number;
+  delivery_cost_rub: number;
+  moq_units: number;
+  price_tiers: { min_units: number; unit_price_rub: number }[];
+  valid_until: string | null;
   status: OfferStatus;
+}
+
+export interface OptimizationVariant {
+  id: string;
+  need_id: string;
+  kind: "cheapest" | "balanced" | "reliable";
+  input_hash: string;
+  result: {
+    title: string;
+    feasible: boolean;
+    total_units: number;
+    total_cost_rub: number;
+    max_lead_time_days: number;
+    reliability_score: number;
+    reasons: string[];
+    allocations: {
+      company_id: string;
+      units: number;
+      unit_price_rub: number;
+      total_cost_rub: number;
+    }[];
+  };
+}
+
+export interface MarketOpportunity {
+  id: string;
+  company_id: string;
+  category: string;
+  score: number;
+  competition_level: string;
+  saturation_risk: string;
+  unmet_volume_units: number | null;
+  buyers_count: number;
+  reasons: string[];
+  missing_data: string[];
+  status: string;
+}
+
+export interface GroupOffer {
+  id: string;
+  coalition_id: string;
+  company_id: string;
+  opportunity_id: string | null;
+  min_total_units: number | null;
+  max_total_units: number | null;
+  price_tiers: { min_units: number; unit_price_rub: number }[];
+  production_start: string | null;
+  production_end: string | null;
+  fill_deadline: string | null;
+  non_fill_rule: string | null;
+  status: string;
+  seller_approval_status: string;
+}
+
+export interface CoalitionMember {
+  need_id: string;
+  buyer_company_id: string | null;
+  units: number;
+  individual_operations: Record<string, unknown>;
+  common_cost_rub: number | null;
+  individual_cost_rub: number | null;
+  delivery_cost_rub: number | null;
+  total_cost_rub: number | null;
+  baseline_cost_rub: number | null;
+  benefit_rub: number | null;
+  approval_status: string;
+}
+
+export interface Coalition {
+  id: string;
+  producer_company_id: string | null;
+  category: string;
+  combined_volume_units: number;
+  target_moq_units: number | null;
+  status: string;
+  version: number;
+  explanation: string[];
+  members: CoalitionMember[];
+  group_offer: GroupOffer | null;
+}
+
+export interface PublishGroupOfferInput {
+  min_total_units: number;
+  max_total_units: number;
+  available_capacity_units: number;
+  price_tiers: { min_units: number; unit_price_rub: number }[];
+  production_start: string;
+  production_end: string;
+  fill_deadline: string;
+  non_fill_rule: "extend_with_approval" | "recalculate" | "close_without_obligations";
+  participant_terms: {
+    need_id: string;
+    individual_operations_cost_rub: number;
+    delivery_cost_rub: number;
+    individual_baseline_cost_rub: number | null;
+    delivery_days: number;
+  }[];
 }
 
 export interface Deal {
@@ -169,6 +284,7 @@ export interface CreateNeedInput {
   deadline_date: string;
   delivery_address_id: string;
   visibility: NeedVisibility;
+  valid_until?: string;
 }
 
 export interface CreateOfferInput {
@@ -176,6 +292,10 @@ export interface CreateOfferInput {
   price_rub: number;
   available_units: number;
   lead_time_days: number;
+  delivery_cost_rub?: number;
+  moq_units?: number;
+  price_tiers?: { min_units: number; unit_price_rub: number }[];
+  valid_until?: string;
 }
 
 export interface UpdateCapabilityPassportInput {
@@ -195,7 +315,12 @@ export interface UpdateCapabilityPassportInput {
 
 export const NEED_STATUS_LABELS: Record<NeedStatus, string> = {
   draft: "Черновик",
+  needs_clarification: "Нужно уточнение",
+  confirmed: "Подтверждена",
   open_for_offers: "Открыта для предложений",
+  waiting_for_match: "Ожидает подходящего варианта",
+  coalition_candidate: "Найдена совместимая группа",
+  awaiting_approvals: "Ожидает подтверждений участников",
   matched: "Сделка заключена",
   cancelled: "Отменена",
   expired: "Истекла",
@@ -602,6 +727,52 @@ export const marketplace = {
       method: "POST",
       token,
       body: JSON.stringify(input),
+    });
+  },
+
+  optimizeNeed(token: string, needId: string): Promise<OptimizationVariant[]> {
+    return marketplaceFetch(`/api/v1/needs/${needId}/optimize`, { method: "POST", token }).then((body) =>
+      unwrapList<OptimizationVariant>(body, ["variants", "items"]),
+    );
+  },
+
+  getMarketOpportunities(token: string, companyId: string): Promise<MarketOpportunity[]> {
+    return marketplaceFetch(`/api/v1/companies/${companyId}/market-opportunities`, { token }).then((body) =>
+      unwrapList<MarketOpportunity>(body, ["opportunities", "items"]),
+    );
+  },
+
+  prepareGroupOffer(token: string, opportunityId: string): Promise<GroupOffer> {
+    return marketplaceFetch(`/api/v1/opportunities/${opportunityId}/prepare-offer`, {
+      method: "POST",
+      token,
+    });
+  },
+
+  publishGroupOffer(token: string, groupOfferId: string, input: PublishGroupOfferInput): Promise<Coalition> {
+    return marketplaceFetch(`/api/v1/group-offers/${groupOfferId}/publish`, {
+      method: "POST",
+      token,
+      body: JSON.stringify(input),
+    });
+  },
+
+  getCoalitions(token: string): Promise<Coalition[]> {
+    return marketplaceFetch("/api/v1/coalitions/mine", { token }).then((body) =>
+      unwrapList<Coalition>(body, ["coalitions", "items"]),
+    );
+  },
+
+  decideCoalition(
+    token: string,
+    coalitionId: string,
+    companyId: string,
+    decision: "approved" | "rejected",
+  ): Promise<Coalition> {
+    return marketplaceFetch(`/api/v1/coalitions/${coalitionId}/decision`, {
+      method: "POST",
+      token,
+      body: JSON.stringify({ company_id: companyId, decision }),
     });
   },
 

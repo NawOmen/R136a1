@@ -9,6 +9,7 @@
 - Этап 2: каркас и инфраструктура (монорепозиторий, Docker Compose, Web App, Gateway Auth, Marketplace, PostgreSQL, миграции, CI, проверка Ollama) — выполнено.
 - Этап 3: базовый маркетплейс (каталог, потребности, предложения, сделки, мощности, документы, Capability Passport, уведомления, Playwright) — выполнено.
 - Этап 4: локальная LLM, восстановление требований, доказательства и агенты — реализовано.
+- Этап 5: коалиции покупателей, рыночные возможности и OR-Tools-оптимизатор — реализовано.
 
 ## Структура
 
@@ -17,7 +18,8 @@ apps/web/                    Next.js (App Router, TypeScript) — интерфе
 services/gateway-auth/       FastAPI — аккаунты, вход, компании, проверка
 services/marketplace/        FastAPI — каталог/потребности/сделки
 services/llm-gateway/        FastAPI — обработка материалов и агенты (этап 4)
-services/{optimizer,evidence-audit}/  (этап 5+)
+services/optimizer/          FastAPI + OR-Tools — распределение объёма и проверка коалиций
+services/evidence-audit/     зарезервирован для следующих этапов
 packages/{contracts,ui}/     общие пакеты (pnpm workspace)
 infra/                       docker-compose.yml, миграции, скрипты проверки
 docs/                        mvp/, demo/, api/, architecture/
@@ -59,6 +61,7 @@ Whisper `small` в Docker volume. DeepSeek необязателен и вклю�
 | Gateway Auth | http://localhost:8001 | аккаунты, вход, компании, проверка (OpenAPI: `/docs`) |
 | Marketplace | http://localhost:8002 | каталог, потребности, предложения, сделки, уведомления (OpenAPI: `/docs`) |
 | LLM Gateway | http://localhost:8003 | восстановление требований и агенты (OpenAPI: `/docs`) |
+| Optimizer | http://localhost:8004 | детерминированные варианты, MOQ, скидки и коалиции (OpenAPI: `/docs`) |
 | MinIO | http://localhost:9000 | объектное хранилище файлов (консоль: :9001) |
 | PostgreSQL | localhost:5433 | БД (внутри Docker — хост `postgres:5432`) |
 | pgAdmin | http://localhost:5050 | веб-интерфейс для просмотра локальной PostgreSQL |
@@ -89,7 +92,8 @@ Docker volume `pgadmin_data` и не попадают в Git.
 python3 -m venv .venv
 .venv/bin/pip install -r services/gateway-auth/requirements-dev.txt \
                         -r services/marketplace/requirements-dev.txt \
-                        -r services/llm-gateway/requirements-dev.txt
+                        -r services/llm-gateway/requirements-dev.txt \
+                        -r services/optimizer/requirements-dev.txt
 
 # миграции (при запущенном PostgreSQL)
 cd services/gateway-auth
@@ -113,6 +117,9 @@ TEST_DATABASE_URL=postgresql+asyncpg://sborka:sborka@localhost:5433/sborka_marke
 
 cd ../llm-gateway
 TEST_DATABASE_URL=postgresql+asyncpg://sborka:sborka@localhost:5433/sborka_test ../../.venv/bin/pytest
+
+cd ../optimizer
+../../.venv/bin/pytest
 ```
 
 Опциональный smoke-тест с реальной локальной Qwen (Ollama должна быть запущена):

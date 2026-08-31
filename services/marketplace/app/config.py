@@ -12,6 +12,8 @@ class Settings(BaseSettings):
     minio_access_key: str = "minioadmin"
     minio_secret_key: str = "minioadmin"
     minio_bucket: str = "sborka"
+    optimizer_url: str = "http://optimizer:8004"
+    optimizer_timeout_seconds: float = 15.0
     minio_secure: bool = False
 
 

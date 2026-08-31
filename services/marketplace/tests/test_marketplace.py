@@ -51,12 +51,13 @@ async def test_full_flow(client, db_session):
 
     r = await client.post(f"/api/v1/needs/{need_id}/publish", headers=_auth(buyer_token))
     assert r.status_code == 200
-    assert r.json()["status"] == "open_for_offers"
+    assert r.json()["status"] == "waiting_for_match"
+    assert r.json()["no_match_reason"]
 
     # продавец отвечает предложением
     r = await client.post(
         f"/api/v1/needs/{need_id}/offers",
-        json={"company_id": str(seller_company), "price_rub": 11.0, "available_units": 120000, "lead_time_days": 9},
+        json={"company_id": str(seller_company), "price_rub": 11.0, "available_units": 120000, "lead_time_days": 9, "delivery_cost_rub": 10000},
         headers=_auth(seller_token),
     )
     assert r.status_code == 201
@@ -68,6 +69,7 @@ async def test_full_flow(client, db_session):
     assert r.json()["status"] == "created"
     assert r.json()["performed_by_user_id"] == str(buyer_user)
     assert r.json()["units"] == 120000
+    assert r.json()["total_price_rub"] == 1330000
 
     r = await client.get(f"/api/v1/needs/{need_id}", headers=_auth(buyer_token))
     assert r.json()["status"] == "matched"

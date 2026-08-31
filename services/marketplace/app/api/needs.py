@@ -1,4 +1,5 @@
 import uuid
+from datetime import date, datetime, timezone
 from urllib.parse import quote
 
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile, status
@@ -17,6 +18,7 @@ from ..deps import (
     require_verified_company,
 )
 from ..models import DeliveryAddress, Need, NeedFile, Product
+from ..matching import ACTIVE_NEED_STATUSES, run_market_rematch
 from ..schemas import NeedFeedOut, NeedFileOut, NeedIn, NeedOut
 from ..storage import download_object, upload_object
 
@@ -54,6 +56,9 @@ def _need_out(need: Need, files: list[NeedFile] | None = None) -> NeedOut:
         delivery_address_id=need.delivery_address_id,
         visibility=need.visibility,
         status=need.status,
+        valid_until=need.valid_until,
+        no_match_reason=need.no_match_reason,
+        confirmed_at=need.confirmed_at,
         files=[NeedFileOut.model_validate(f) for f in (files or [])],
     )
 
@@ -65,7 +70,7 @@ async def list_needs(
     db: AsyncSession = Depends(get_db),
 ):
     query = select(Need).where(
-        Need.status == "open_for_offers", Need.visibility == "open_anonymized"
+        Need.status.in_(ACTIVE_NEED_STATUSES), Need.visibility == "open_anonymized"
     )
     if seller_company_id is not None:
         await require_company_seller(seller_company_id, user, db)
@@ -110,7 +115,24 @@ async def create_need(
                 status.HTTP_422_UNPROCESSABLE_ENTITY,
                 detail="Адрес доставки не принадлежит выбранной компании",
             )
-    need = Need(created_by_user_id=user.id, status="draft", **data.model_dump())
+    values = data.model_dump()
+    valid_until = values.pop("valid_until") or data.deadline_date
+    if data.deadline_date < date.today():
+        raise HTTPException(
+            status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="Срок поставки потребности не может быть в прошлом",
+        )
+    if valid_until < date.today():
+        raise HTTPException(
+            status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="Срок актуальности потребности не может быть в прошлом",
+        )
+    need = Need(
+        created_by_user_id=user.id,
+        status="draft",
+        valid_until=valid_until,
+        **values,
+    )
     db.add(need)
     await db.commit()
     await db.refresh(need)
@@ -132,6 +154,9 @@ async def publish_need(
     if need.status != "draft":
         raise HTTPException(status.HTTP_409_CONFLICT, detail="Опубликовать можно только черновик")
     need.status = "open_for_offers"
+    need.confirmed_at = datetime.now(timezone.utc)
+    need.no_match_reason = None
+    await run_market_rematch(db, "need_confirmed", need.id)
     await db.commit()
     await db.refresh(need)
     return _need_out(need)
@@ -149,7 +174,7 @@ async def get_need(
     membership = await get_membership(db, need.company_id, user.id)
     is_owner = bool(membership and membership["can_buy"])
     if not is_owner and not (
-        need.status == "open_for_offers" and need.visibility == "open_anonymized"
+        need.status in ACTIVE_NEED_STATUSES and need.visibility == "open_anonymized"
     ):
         raise HTTPException(status.HTTP_404_NOT_FOUND, detail="Потребность не найдена")
     if not is_owner:
@@ -236,9 +261,11 @@ async def cancel_need(
         raise HTTPException(status.HTTP_404_NOT_FOUND, detail="Потребность не найдена")
     await require_company_buyer(need.company_id, user, db)
     await require_company_admin(need.company_id, user, db)
-    if need.status not in ("draft", "open_for_offers", "matched"):
+    if need.status not in ({"draft", "matched"} | ACTIVE_NEED_STATUSES):
         raise HTTPException(status.HTTP_409_CONFLICT, detail="Потребность уже закрыта")
     need.status = "cancelled"
+    need.no_match_reason = "Потребность отозвана покупателем"
+    await run_market_rematch(db, "need_cancelled", need.id)
     await db.commit()
     await db.refresh(need)
     return _need_out(need)
