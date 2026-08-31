@@ -32,6 +32,7 @@ class OllamaProvider:
         payload = {
             "model": settings.ollama_model,
             "stream": False,
+            "think": False,
             "messages": [
                 {"role": "system", "content": system},
                 {"role": "user", "content": prompt},
@@ -55,6 +56,7 @@ class OllamaProvider:
         payload = {
             "model": settings.ollama_model,
             "stream": False,
+            "think": False,
             "messages": [
                 {
                     "role": "user",

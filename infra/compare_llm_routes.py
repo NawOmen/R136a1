@@ -42,6 +42,7 @@ def main() -> None:
             {
                 "model": OLLAMA_MODEL,
                 "stream": False,
+                "think": False,
                 "messages": [{"role": "user", "content": task}],
                 "format": "json",
                 "options": {"temperature": 0.1, "num_ctx": 8192},

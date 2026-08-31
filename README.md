@@ -115,6 +115,13 @@ cd ../llm-gateway
 TEST_DATABASE_URL=postgresql+asyncpg://sborka:sborka@localhost:5433/sborka_test ../../.venv/bin/pytest
 ```
 
+Опциональный smoke-тест с реальной локальной Qwen (Ollama должна быть запущена):
+
+```bash
+cd services/llm-gateway
+RUN_OLLAMA_SMOKE=1 OLLAMA_BASE_URL=http://localhost:11434 ../../.venv/bin/pytest -m ollama
+```
+
 ### Playwright (E2E)
 
 ```bash
