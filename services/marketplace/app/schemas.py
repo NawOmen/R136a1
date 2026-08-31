@@ -1,6 +1,6 @@
 import uuid
-from datetime import date
-from typing import Any
+from datetime import date, datetime
+from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -166,6 +166,9 @@ class NeedOut(BaseModel):
     delivery_address_id: uuid.UUID | None
     visibility: str
     status: str
+    valid_until: date | None
+    no_match_reason: str | None
+    confirmed_at: datetime | None
     files: list[NeedFileOut] = Field(default_factory=list)
 
 
@@ -181,6 +184,7 @@ class NeedFeedOut(BaseModel):
     deadline_date: date
     visibility: str
     status: str
+    valid_until: date | None
 
 
 class NeedIn(BaseModel):
@@ -192,6 +196,7 @@ class NeedIn(BaseModel):
     deadline_date: date
     delivery_address_id: uuid.UUID | None = None
     visibility: str = Field(default="open_anonymized", pattern="^(open_anonymized|selected_producers|closed)$")
+    valid_until: date | None = None
 
 
 # ---------- Предложения ----------
@@ -206,7 +211,16 @@ class OfferOut(BaseModel):
     price_rub: float
     available_units: int
     lead_time_days: int
+    delivery_cost_rub: float
+    moq_units: int
+    price_tiers: list[dict[str, Any]]
+    valid_until: date | None
     status: str
+
+
+class OfferPriceTierIn(BaseModel):
+    min_units: int = Field(gt=0)
+    unit_price_rub: float = Field(gt=0)
 
 
 class OfferIn(BaseModel):
@@ -214,6 +228,123 @@ class OfferIn(BaseModel):
     price_rub: float = Field(gt=0)
     available_units: int = Field(gt=0)
     lead_time_days: int = Field(gt=0)
+    delivery_cost_rub: float = Field(default=0, ge=0)
+    moq_units: int = Field(default=1, gt=0)
+    price_tiers: list[OfferPriceTierIn] = Field(default_factory=list)
+    valid_until: date | None = None
+
+
+class OfferPatch(BaseModel):
+    price_rub: float | None = Field(default=None, gt=0)
+    available_units: int | None = Field(default=None, gt=0)
+    lead_time_days: int | None = Field(default=None, gt=0)
+    delivery_cost_rub: float | None = Field(default=None, ge=0)
+    moq_units: int | None = Field(default=None, gt=0)
+    price_tiers: list[OfferPriceTierIn] | None = None
+    valid_until: date | None = None
+
+
+# ---------- Оптимизатор и рыночные возможности ----------
+
+class OptimizationVariantOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: uuid.UUID
+    need_id: uuid.UUID
+    kind: str
+    result: dict[str, Any]
+    input_hash: str
+
+
+class MarketOpportunityOut(BaseModel):
+    id: uuid.UUID
+    company_id: uuid.UUID
+    category: str
+    score: int
+    competition_level: str
+    saturation_risk: str
+    unmet_volume_units: int | None
+    buyers_count: int
+    reasons: list[str]
+    missing_data: list[str]
+    status: str
+
+
+class PriceTierIn(BaseModel):
+    min_units: int = Field(gt=0)
+    unit_price_rub: float = Field(gt=0)
+
+
+class ParticipantTermsIn(BaseModel):
+    need_id: uuid.UUID
+    individual_operations_cost_rub: float = Field(default=0, ge=0)
+    delivery_cost_rub: float = Field(default=0, ge=0)
+    individual_baseline_cost_rub: float | None = Field(default=None, gt=0)
+    delivery_days: int = Field(default=1, ge=0)
+
+
+class GroupOfferPublishIn(BaseModel):
+    min_total_units: int = Field(gt=0)
+    max_total_units: int = Field(gt=0)
+    available_capacity_units: int = Field(gt=0)
+    price_tiers: list[PriceTierIn] = Field(min_length=1)
+    production_start: date
+    production_end: date
+    fill_deadline: date
+    non_fill_rule: Literal["extend_with_approval", "recalculate", "close_without_obligations"]
+    participant_terms: list[ParticipantTermsIn] = Field(min_length=2)
+
+
+class GroupOfferOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: uuid.UUID
+    coalition_id: uuid.UUID
+    company_id: uuid.UUID
+    opportunity_id: uuid.UUID | None
+    min_total_units: int | None
+    max_total_units: int | None
+    price_tiers: list[dict[str, Any]]
+    production_start: date | None
+    production_end: date | None
+    fill_deadline: date | None
+    non_fill_rule: str | None
+    status: str
+    seller_approval_status: str
+
+
+class CoalitionMemberOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    need_id: uuid.UUID
+    buyer_company_id: uuid.UUID | None
+    units: int
+    individual_operations: dict[str, Any]
+    common_cost_rub: float | None
+    individual_cost_rub: float | None
+    delivery_cost_rub: float | None
+    total_cost_rub: float | None
+    baseline_cost_rub: float | None
+    benefit_rub: float | None
+    approval_status: str
+
+
+class CoalitionOut(BaseModel):
+    id: uuid.UUID
+    producer_company_id: uuid.UUID | None
+    category: str
+    combined_volume_units: int
+    target_moq_units: int | None
+    status: str
+    version: int
+    explanation: list[str]
+    members: list[CoalitionMemberOut]
+    group_offer: GroupOfferOut | None = None
+
+
+class CoalitionDecisionIn(BaseModel):
+    company_id: uuid.UUID
+    decision: Literal["approved", "rejected"]
 
 
 # ---------- Сделки ----------

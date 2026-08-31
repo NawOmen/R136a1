@@ -8,6 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from ..database import get_db
 from ..deps import CurrentUser, get_current_user, require_company_admin, require_company_seller
 from ..models import CapacityEntry
+from ..matching import run_market_rematch
 from ..schemas import CapacityEntryIn, CapacityPutIn
 
 router = APIRouter(prefix="/companies", tags=["capacity"])
@@ -44,5 +45,6 @@ async def put_capacity(
     await db.execute(delete(CapacityEntry).where(CapacityEntry.company_id == company_id, CapacityEntry.date.in_(dates)))
     for entry in data.entries:
         db.add(CapacityEntry(company_id=company_id, date=entry.date, available_units=entry.available_units))
+    await run_market_rematch(db, "capacity_changed", company_id)
     await db.commit()
     return data.entries

@@ -36,6 +36,8 @@ export default function SellerRequestsPage() {
   const [price, setPrice] = useState("");
   const [units, setUnits] = useState("");
   const [leadTime, setLeadTime] = useState("");
+  const [deliveryCost, setDeliveryCost] = useState("0");
+  const [moq, setMoq] = useState("");
   const [submittedIds, setSubmittedIds] = useState<Set<string>>(new Set());
   const [submitting, setSubmitting] = useState(false);
   const [explainingId, setExplainingId] = useState<string | null>(null);
@@ -70,6 +72,8 @@ export default function SellerRequestsPage() {
     setPrice("");
     setUnits("");
     setLeadTime("");
+    setDeliveryCost("0");
+    setMoq("");
     setError(null);
   }
 
@@ -85,6 +89,8 @@ export default function SellerRequestsPage() {
         price_rub: Number(price),
         available_units: Number(units),
         lead_time_days: Number(leadTime),
+        delivery_cost_rub: Number(deliveryCost),
+        moq_units: Number(moq || 1),
       });
       setSubmittedIds((current) => new Set(current).add(need.id));
       setOpenFormId(null);
@@ -162,7 +168,9 @@ export default function SellerRequestsPage() {
     );
   }
 
-  const openNeeds = needs.filter((need) => need.status === "open_for_offers");
+  const openNeeds = needs.filter((need) =>
+    ["open_for_offers", "waiting_for_match", "coalition_candidate"].includes(need.status),
+  );
 
   return (
     <div>
@@ -244,6 +252,34 @@ export default function SellerRequestsPage() {
                       value={units}
                       onChange={(event) => setUnits(event.target.value)}
                       placeholder="Например, 48000"
+                      required
+                    />
+                  </div>
+                  <div className="field">
+                    <label htmlFor={`offer_moq_${need.id}`}>
+                      MOQ предложения, шт.<span className="req">*</span>
+                    </label>
+                    <input
+                      id={`offer_moq_${need.id}`}
+                      type="number"
+                      min="1"
+                      value={moq}
+                      onChange={(event) => setMoq(event.target.value)}
+                      placeholder="Например, 5000"
+                      required
+                    />
+                  </div>
+                  <div className="field">
+                    <label htmlFor={`offer_delivery_${need.id}`}>
+                      Логистика, ₽<span className="req">*</span>
+                    </label>
+                    <input
+                      id={`offer_delivery_${need.id}`}
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      value={deliveryCost}
+                      onChange={(event) => setDeliveryCost(event.target.value)}
                       required
                     />
                   </div>

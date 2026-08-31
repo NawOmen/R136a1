@@ -140,6 +140,12 @@ export default function DashboardPage() {
                 <span className="company-meta">Статусы и предложения по вашим закупкам</span>
               </Link>
             </li>
+            <li>
+              <Link href="/coalitions" className="company-item">
+                <span className="company-item__name">Объединённые партии</span>
+                <span className="company-meta">Отдельно подтвердите условия вашей компании</span>
+              </Link>
+            </li>
           </ul>
         )}
 
@@ -179,6 +185,18 @@ export default function DashboardPage() {
               <Link href="/seller/requests" className="company-item">
                 <span className="company-item__name">Подходящие запросы</span>
                 <span className="company-meta">Открытые потребности покупателей</span>
+              </Link>
+            </li>
+            <li>
+              <Link href="/seller/opportunities" className="company-item">
+                <span className="company-item__name">Что сейчас нужно рынку</span>
+                <span className="company-meta">Объяснимые возможности из подтверждённого спроса</span>
+              </Link>
+            </li>
+            <li>
+              <Link href="/coalitions" className="company-item">
+                <span className="company-item__name">Групповые предложения</span>
+                <span className="company-meta">Черновики, подтверждения и общие партии</span>
               </Link>
             </li>
           </ul>

@@ -4,7 +4,12 @@ import uuid
 import pytest
 from sqlalchemy import text
 
-from app.agents import build_extraction_prompt, merge_facts
+from app.agents import (
+    SYSTEM_PROMPT,
+    build_extraction_prompt,
+    canonical_category,
+    merge_facts,
+)
 from app.anonymizer import anonymize_text
 from app.extractors import UnreadableMaterial
 from app.providers import ModelUnavailable, RoutedProvider
@@ -13,6 +18,15 @@ from app.schemas import RawExtraction, RawFact, SourceDescriptor
 
 def auth(token: str) -> dict[str, str]:
     return {"Authorization": f"Bearer {token}"}
+
+
+def test_category_is_canonicalized_for_stable_russian_demo():
+    assert canonical_category("cup") == "бумажные стаканы"
+    assert canonical_category("CUP.") == "бумажные стаканы"
+    assert canonical_category(" Paper   cups ") == "бумажные стаканы"
+    assert canonical_category("крафтовые стаканы") == "бумажные стаканы"
+    assert canonical_category("бумажные пакеты") == "бумажные пакеты"
+    assert "Поле category возвращай только на русском языке" in SYSTEM_PROMPT
 
 
 def test_anonymizer_removes_contacts_and_company_details():
@@ -182,6 +196,44 @@ async def test_russian_request_becomes_validated_structure(client, token):
         call["tool_name"] == "human_approval"
         for call in confirmed.json()["tool_calls"]
     )
+
+
+@pytest.mark.asyncio
+async def test_english_cup_category_from_local_model_is_normalized(
+    client, token, fake_provider
+):
+    fake_provider.extraction = RawExtraction(
+        category="cup",
+        facts=[
+            RawFact(
+                key="quantity_units",
+                value=5000,
+                source_id="request_text",
+                confidence=0.95,
+            ),
+            RawFact(
+                key="lead_time_days",
+                value=10,
+                source_id="request_text",
+                confidence=0.9,
+            ),
+            RawFact(
+                key="delivery_city",
+                value="Москва",
+                source_id="request_text",
+                confidence=0.9,
+            ),
+        ],
+    )
+
+    response = await client.post(
+        "/api/v1/buyer-agent/runs",
+        data={"request_text": "Нужно 5000 крафтовых стаканов", "route": "local"},
+        headers=auth(token),
+    )
+
+    assert response.status_code == 201
+    assert response.json()["result"]["category"] == "бумажные стаканы"
 
 
 @pytest.mark.asyncio

@@ -1,4 +1,5 @@
 import uuid
+from datetime import date
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import select, text
@@ -16,7 +17,8 @@ from ..deps import (
     require_verified_company,
 )
 from ..models import Deal, Need, Offer
-from ..schemas import DealOut, OfferIn, OfferOut
+from ..matching import ACTIVE_NEED_STATUSES, offer_unit_price, run_market_rematch
+from ..schemas import DealOut, OfferIn, OfferOut, OfferPatch
 
 router = APIRouter(tags=["offers"])
 
@@ -67,7 +69,7 @@ async def create_offer(
     need = await db.get(Need, need_id)
     if need is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, detail="Потребность не найдена")
-    if need.status != "open_for_offers":
+    if need.status not in ACTIVE_NEED_STATUSES:
         raise HTTPException(status.HTTP_409_CONFLICT, detail="Потребность не открыта для предложений")
     if need.visibility != "open_anonymized":
         raise HTTPException(status.HTTP_403_FORBIDDEN, detail="Потребность недоступна этой компании")
@@ -79,6 +81,13 @@ async def create_offer(
 
     await require_company_seller(data.company_id, user, db)
     await require_verified_company(data.company_id, user, db)
+    if data.moq_units > data.available_units:
+        raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, detail="MOQ превышает доступный объём")
+    if data.valid_until is not None and data.valid_until < date.today():
+        raise HTTPException(
+            status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="Срок действия предложения не может быть в прошлом",
+        )
     existing = await db.execute(
         select(Offer).where(Offer.need_id == need.id, Offer.company_id == data.company_id)
     )
@@ -95,10 +104,44 @@ async def create_offer(
         price_rub=data.price_rub,
         available_units=data.available_units,
         lead_time_days=data.lead_time_days,
+        delivery_cost_rub=data.delivery_cost_rub,
+        moq_units=data.moq_units,
+        price_tiers=[item.model_dump() for item in data.price_tiers],
+        valid_until=data.valid_until,
     )
     db.add(offer)
+    await db.flush()
+    await run_market_rematch(db, "offer_created", offer.id, {"need_id": str(need.id)})
     if need.created_by_user_id:
         await notify(db, need.created_by_user_id, "По вашей потребности поступило новое предложение", "offer_received")
+    await db.commit()
+    await db.refresh(offer)
+    return offer
+
+
+@router.patch("/offers/{offer_id}", response_model=OfferOut)
+async def update_offer(
+    offer_id: uuid.UUID,
+    data: OfferPatch,
+    user: CurrentUser = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    offer = await db.get(Offer, offer_id)
+    if offer is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, detail="Предложение не найдено")
+    await require_company_seller(offer.company_id, user, db)
+    if offer.status != "sent":
+        raise HTTPException(status.HTTP_409_CONFLICT, detail="Можно изменить только действующее предложение")
+    for field, value in data.model_dump(exclude_unset=True).items():
+        setattr(offer, field, value)
+    if offer.moq_units > offer.available_units:
+        raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, detail="MOQ превышает доступный объём")
+    if offer.valid_until is not None and offer.valid_until < date.today():
+        raise HTTPException(
+            status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="Срок действия предложения не может быть в прошлом",
+        )
+    await run_market_rematch(db, "offer_terms_changed", offer.id, {"need_id": str(offer.need_id)})
     await db.commit()
     await db.refresh(offer)
     return offer
@@ -122,7 +165,7 @@ async def select_offer(
 
     await require_company_buyer(need.company_id, user, db)
     await require_verified_company(need.company_id, user, db)
-    if need.status != "open_for_offers":
+    if need.status not in ACTIVE_NEED_STATUSES:
         raise HTTPException(status.HTTP_409_CONFLICT, detail="Потребность уже не открыта для предложений")
     if offer.status != "sent":
         raise HTTPException(status.HTTP_409_CONFLICT, detail="Предложение уже обработано")
@@ -137,7 +180,20 @@ async def select_offer(
             status.HTTP_409_CONFLICT,
             detail="Предложение не покрывает требуемый объём",
         )
-    total_price = round(offer.price_rub * need.volume_units, 2)
+    if offer.moq_units > need.volume_units:
+        raise HTTPException(
+            status.HTTP_409_CONFLICT,
+            detail="Объём потребности не достигает MOQ предложения",
+        )
+    if offer.valid_until is not None and offer.valid_until < date.today():
+        raise HTTPException(status.HTTP_409_CONFLICT, detail="Срок действия предложения истёк")
+    if offer.lead_time_days > max(0, (need.deadline_date - date.today()).days):
+        raise HTTPException(status.HTTP_409_CONFLICT, detail="Предложение не соблюдает срок потребности")
+    total_price = round(
+        offer_unit_price(offer, need.volume_units) * need.volume_units
+        + offer.delivery_cost_rub,
+        2,
+    )
     if need.budget_rub is not None and total_price > need.budget_rub:
         raise HTTPException(
             status.HTTP_409_CONFLICT,
@@ -159,8 +215,10 @@ async def select_offer(
     for other in others.scalars():
         other.status = "rejected"
     need.status = "matched"
+    need.no_match_reason = None
 
     db.add(deal)
+    await run_market_rematch(db, "offer_selected", offer.id, {"need_id": str(need.id)})
     if offer.created_by_user_id:
         await notify(db, offer.created_by_user_id, "Ваше предложение выбрано покупателем", "offer_selected")
     await db.commit()

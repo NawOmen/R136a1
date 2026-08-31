@@ -32,6 +32,7 @@ jobs:
           pip install -r services/gateway-auth/requirements-dev.txt
           pip install -r services/marketplace/requirements-dev.txt
           pip install -r services/llm-gateway/requirements-dev.txt
+          pip install -r services/optimizer/requirements-dev.txt
       - name: Verify migrations (gateway-auth)
         working-directory: services/gateway-auth
         env:
@@ -61,6 +62,9 @@ jobs:
         working-directory: services/llm-gateway
         env:
           TEST_DATABASE_URL: postgresql+asyncpg://sborka:sborka@localhost:5432/sborka_test
+        run: pytest -q
+      - name: Run optimizer tests
+        working-directory: services/optimizer
         run: pytest -q
 
   frontend:

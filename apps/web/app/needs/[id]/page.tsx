@@ -21,6 +21,7 @@ import {
   NEED_VISIBILITY_LABELS,
   Offer,
   OFFER_STATUS_LABELS,
+  OptimizationVariant,
 } from "../../lib/marketplace";
 import { useMe } from "../../lib/useMe";
 
@@ -38,6 +39,8 @@ export default function NeedDetailPage() {
   const [selectingId, setSelectingId] = useState<string | null>(null);
   const [downloadingId, setDownloadingId] = useState<string | null>(null);
   const [publishing, setPublishing] = useState(false);
+  const [optimizing, setOptimizing] = useState(false);
+  const [variants, setVariants] = useState<OptimizationVariant[]>([]);
 
   useEffect(() => {
     const token = getToken();
@@ -128,6 +131,20 @@ export default function NeedDetailPage() {
     }
   }
 
+  async function handleOptimize() {
+    const token = getToken();
+    if (!token || !need) return;
+    setOptimizing(true);
+    setError(null);
+    try {
+      setVariants(await marketplace.optimizeNeed(token, need.id));
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : "Не удалось рассчитать варианты.");
+    } finally {
+      setOptimizing(false);
+    }
+  }
+
   if (loading) return <p className="hint">Загрузка...</p>;
 
   if (notFound || !need) {
@@ -158,6 +175,12 @@ export default function NeedDetailPage() {
       </div>
 
       {error && <div className="alert alert-error">{error}</div>}
+
+      {need.no_match_reason && (
+        <div className="alert alert-warning">
+          <strong>Почему вариант пока не найден:</strong> {need.no_match_reason}
+        </div>
+      )}
 
       {isBuyer && need.status === "draft" && (
         <section className="card">
@@ -213,6 +236,10 @@ export default function NeedDetailPage() {
             <dd>{need.deadline_date}</dd>
           </div>
           <div>
+            <dt>Карточка актуальна до</dt>
+            <dd>{need.valid_until ?? "—"}</dd>
+          </div>
+          <div>
             <dt>Видимость</dt>
             <dd>{NEED_VISIBILITY_LABELS[need.visibility]}</dd>
           </div>
@@ -248,7 +275,19 @@ export default function NeedDetailPage() {
       </section>
 
       <section className="card">
-        <h2>Предложения ({offers.length})</h2>
+        <div className="company-row">
+          <h2>Предложения ({offers.length})</h2>
+          {isBuyer && offers.length > 0 && need.status !== "matched" && (
+            <button
+              type="button"
+              className="btn btn-secondary btn-sm"
+              disabled={optimizing}
+              onClick={() => void handleOptimize()}
+            >
+              {optimizing ? "Считаем..." : "Рассчитать 3 варианта"}
+            </button>
+          )}
+        </div>
         {offers.length === 0 ? (
           <p className="hint mode-hint">Предложений пока нет.</p>
         ) : (
@@ -262,14 +301,19 @@ export default function NeedDetailPage() {
                     </div>
                     <div className="company-meta">
                       Цена: {formatRub(offer.price_rub)} · Объём: {formatUnits(offer.available_units)} ·
-                      Срок: {offer.lead_time_days} дн.
+                      MOQ: {formatUnits(offer.moq_units)} · Логистика: {formatRub(offer.delivery_cost_rub)} ·
+                      Срок: {offer.lead_time_days} дн. · Действует до: {offer.valid_until ?? "не ограничено"}
                     </div>
                   </div>
                   <span className={`badge badge-${offer.status}`}>
                     {OFFER_STATUS_LABELS[offer.status]}
                   </span>
                 </div>
-                {isBuyer && need.status === "open_for_offers" && offer.status === "sent" && (
+                {isBuyer &&
+                  ["open_for_offers", "waiting_for_match", "coalition_candidate"].includes(
+                    need.status,
+                  ) &&
+                  offer.status === "sent" && (
                   <div className="actions">
                     <button
                       type="button"
@@ -286,6 +330,45 @@ export default function NeedDetailPage() {
           </ul>
         )}
       </section>
+
+      {variants.length > 0 && (
+        <section className="card">
+          <h2>Варианты оптимизатора</h2>
+          <p className="hint mode-hint">
+            Расчёт выполнен обычным кодом и OR-Tools. LLM не выбирает распределение.
+          </p>
+          <div className="market-grid">
+            {variants.map((variant) => (
+              <article className="card" key={variant.id}>
+                <div className="company-row">
+                  <strong>{variant.result.title}</strong>
+                  <span className={`badge ${variant.result.feasible ? "badge-verified" : "badge-rejected"}`}>
+                    {variant.result.feasible ? "Выполнимо" : "Нет варианта"}
+                  </span>
+                </div>
+                {variant.result.feasible ? (
+                  <>
+                    <p>
+                      {formatUnits(variant.result.total_units)} · {formatRub(variant.result.total_cost_rub)} ·
+                      до {variant.result.max_lead_time_days} дн.
+                    </p>
+                    <ul className="evidence-list">
+                      {variant.result.allocations.map((allocation) => (
+                        <li key={allocation.company_id}>
+                          Производитель #{allocation.company_id.slice(0, 8)}: {formatUnits(allocation.units)} ·
+                          {formatRub(allocation.total_cost_rub)}
+                        </li>
+                      ))}
+                    </ul>
+                  </>
+                ) : (
+                  <p className="hint">{variant.result.reasons.join(" ")}</p>
+                )}
+              </article>
+            ))}
+          </div>
+        </section>
+      )}
     </div>
   );
 }
