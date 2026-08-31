@@ -178,6 +178,17 @@ async def test_need_file_download_is_available_only_to_buyer(
     assert uploaded.status_code == 201
     file_id = uploaded.json()["files"][0]["id"]
 
+    text_uploaded = await client.post(
+        f"/api/v1/needs/{need_id}/files",
+        files={"file": ("requirements.md", b"synthetic requirements", "text/markdown")},
+        headers=_auth(make_token(buyer)),
+    )
+    assert text_uploaded.status_code == 201
+    assert any(
+        item["content_type"] == "text/markdown"
+        for item in text_uploaded.json()["files"]
+    )
+
     downloaded = await client.get(
         f"/api/v1/need-files/{file_id}/download", headers=_auth(make_token(buyer))
     )

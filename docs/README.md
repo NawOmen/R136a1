@@ -6,6 +6,7 @@
 
 - Этап 0 — фиксация идеи и архитектуры (см. `plan_sborka_b2b.md`).
 - Этап 1 — границы MVP, пользовательские сценарии и синтетические данные. Материалы находятся в `docs/mvp/`, `docs/demo/` и `packages/test-fixtures/`.
+- Этап 4 — LLM Gateway, агенты и доказательства: `docs/architecture/stage-4-agents.md` и `docs/api/llm-gateway-api.md`.
 
 ## Структура
 
