@@ -241,6 +241,77 @@ export interface Deal {
   status: DealStatus;
 }
 
+export interface ReserveCommitment {
+  id: string;
+  plan_id: string;
+  company_id: string;
+  offer_id: string | null;
+  reserve_tier: "hot" | "warm" | "cold";
+  confirmation_status: string;
+  proposed_capacity_units: number | null;
+  proposed_moq_units: number | null;
+  proposed_unit_price_rub: number | null;
+  proposed_delivery_cost_rub: number | null;
+  proposed_lead_time_days: number | null;
+  confirmed_capacity_units: number | null;
+  confirmed_moq_units: number | null;
+  confirmed_unit_price_rub: number | null;
+  confirmed_delivery_cost_rub: number | null;
+  confirmed_lead_time_days: number | null;
+  held_until: string | null;
+}
+
+export interface ResilienceScenario {
+  id: string;
+  plan_id: string;
+  scenario_type: string;
+  failed_company_ids: string[];
+  result: {
+    failed_units: number;
+    confirmed_covered_units: number;
+    uncovered_units: number;
+    unconfirmed_units: number;
+    price_delta_rub: number | null;
+    price_delta_pct: number | null;
+    cost_comparison_applicable: boolean;
+    delay_days: number;
+    auto_eligible: boolean;
+    explanations: string[];
+  };
+  status: string;
+  is_simulation: boolean;
+}
+
+export interface ResiliencePlan {
+  id: string;
+  need_id: string;
+  baseline_variant_id: string;
+  baseline_allocations: { company_id: string; units: number; total_cost_rub: number }[];
+  baseline_total_cost_rub: number;
+  baseline_lead_time_days: number;
+  current_allocations: { company_id: string; units: number; total_cost_rub: number }[];
+  current_total_cost_rub: number;
+  current_lead_time_days: number;
+  max_price_increase_pct: number;
+  max_delay_days: number;
+  auto_replace_within_thresholds: boolean;
+  failed_company_ids: string[];
+  status: string;
+  version: number;
+  confirmed_at: string | null;
+  reserves: ReserveCommitment[];
+  scenarios: ResilienceScenario[];
+}
+
+export interface PrimaryObligation {
+  plan_id: string;
+  need_id: string;
+  company_id: string;
+  allocation: { company_id: string; units: number; total_cost_rub: number };
+  plan_status: string;
+  confirmed_at: string | null;
+}
+
 export interface Notification {
   id: string;
   user_id: string;
@@ -734,6 +805,78 @@ export const marketplace = {
     return marketplaceFetch(`/api/v1/needs/${needId}/optimize`, { method: "POST", token }).then((body) =>
       unwrapList<OptimizationVariant>(body, ["variants", "items"]),
     );
+  },
+
+  createResiliencePlan(
+    token: string,
+    needId: string,
+    variantId: string,
+    maxPriceIncreasePct = 5,
+    maxDelayDays = 0,
+    autoReplace = false,
+  ): Promise<ResiliencePlan> {
+    return marketplaceFetch(`/api/v1/needs/${needId}/resilience-plans`, {
+      method: "POST",
+      token,
+      body: JSON.stringify({
+        variant_id: variantId,
+        max_price_increase_pct: maxPriceIncreasePct,
+        max_delay_days: maxDelayDays,
+        auto_replace_within_thresholds: autoReplace,
+      }),
+    });
+  },
+
+  getResiliencePlans(token: string): Promise<ResiliencePlan[]> {
+    return marketplaceFetch("/api/v1/resilience-plans/mine", { token }).then((body) =>
+      unwrapList<ResiliencePlan>(body, ["plans", "items"]),
+    );
+  },
+
+  confirmResiliencePlan(token: string, planId: string): Promise<ResiliencePlan> {
+    return marketplaceFetch(`/api/v1/resilience-plans/${planId}/confirm`, {
+      method: "POST", token, body: JSON.stringify({ approved: true }),
+    });
+  },
+
+  simulateFailure(token: string, planId: string, companyIds: string[]): Promise<ResilienceScenario> {
+    return marketplaceFetch(`/api/v1/resilience-plans/${planId}/simulate-failure`, {
+      method: "POST", token, body: JSON.stringify({ failed_company_ids: companyIds }),
+    });
+  },
+
+  approveRecovery(token: string, scenarioId: string): Promise<ResiliencePlan> {
+    return marketplaceFetch(`/api/v1/resilience-scenarios/${scenarioId}/approve`, {
+      method: "POST", token, body: JSON.stringify({ approved: true }),
+    });
+  },
+
+  getReserveInvitations(token: string, companyId: string): Promise<ReserveCommitment[]> {
+    return marketplaceFetch(`/api/v1/reserve-invitations/${companyId}`, { token }).then((body) =>
+      unwrapList<ReserveCommitment>(body, ["commitments", "items"]),
+    );
+  },
+
+  decideReserve(
+    token: string,
+    commitmentId: string,
+    input: Record<string, unknown>,
+  ): Promise<ReserveCommitment> {
+    return marketplaceFetch(`/api/v1/reserve-commitments/${commitmentId}/decision`, {
+      method: "POST", token, body: JSON.stringify(input),
+    });
+  },
+
+  getPrimaryObligations(token: string, companyId: string): Promise<PrimaryObligation[]> {
+    return marketplaceFetch(`/api/v1/primary-obligations/${companyId}`, { token }).then((body) =>
+      unwrapList<PrimaryObligation>(body, ["obligations", "items"]),
+    );
+  },
+
+  reportFailure(token: string, planId: string, companyId: string, reason: string): Promise<ResiliencePlan> {
+    return marketplaceFetch(`/api/v1/resilience-plans/${planId}/failures`, {
+      method: "POST", token, body: JSON.stringify({ company_id: companyId, reason }),
+    });
   },
 
   getMarketOpportunities(token: string, companyId: string): Promise<MarketOpportunity[]> {

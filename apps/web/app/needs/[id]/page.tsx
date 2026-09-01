@@ -41,6 +41,7 @@ export default function NeedDetailPage() {
   const [publishing, setPublishing] = useState(false);
   const [optimizing, setOptimizing] = useState(false);
   const [variants, setVariants] = useState<OptimizationVariant[]>([]);
+  const [preparingResilience, setPreparingResilience] = useState<string | null>(null);
 
   useEffect(() => {
     const token = getToken();
@@ -142,6 +143,33 @@ export default function NeedDetailPage() {
       setError(err instanceof ApiError ? err.message : "Не удалось рассчитать варианты.");
     } finally {
       setOptimizing(false);
+    }
+  }
+
+  async function handlePrepareResilience(variant: OptimizationVariant) {
+    const token = getToken();
+    if (!token || !need) return;
+    const priceThreshold = window.prompt("Допустимое увеличение цены, %:", "5");
+    const delayThreshold = window.prompt("Допустимое увеличение срока, дней:", "2");
+    if (priceThreshold === null || delayThreshold === null) return;
+    const price = Number(priceThreshold);
+    const delay = Number(delayThreshold);
+    if (!Number.isFinite(price) || price < 0 || !Number.isInteger(delay) || delay < 0) {
+      setError("Пороги должны быть неотрицательными числами, срок — целым числом дней.");
+      return;
+    }
+    const autoReplace = window.confirm(
+      "Разрешить автоматическую замену только после подтверждения резервов и только внутри этих порогов?",
+    );
+    setPreparingResilience(variant.id);
+    setError(null);
+    try {
+      await marketplace.createResiliencePlan(token, need.id, variant.id, price, delay, autoReplace);
+      window.location.href = "/resilience";
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : "Не удалось подготовить план устойчивости.");
+    } finally {
+      setPreparingResilience(null);
     }
   }
 
@@ -360,6 +388,18 @@ export default function NeedDetailPage() {
                         </li>
                       ))}
                     </ul>
+                    {variant.kind === "reliable" && (
+                      <button
+                        type="button"
+                        className="btn btn-primary btn-sm"
+                        disabled={preparingResilience === variant.id}
+                        onClick={() => void handlePrepareResilience(variant)}
+                      >
+                        {preparingResilience === variant.id
+                          ? "Готовим резерв..."
+                          : "Подготовить N-1 / N-2 и резерв"}
+                      </button>
+                    )}
                   </>
                 ) : (
                   <p className="hint">{variant.result.reasons.join(" ")}</p>

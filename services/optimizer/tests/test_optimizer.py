@@ -1,8 +1,19 @@
 import uuid
+from datetime import date, timedelta
 
 from app.main import app
-from app.schemas import AllocationRequest, CoalitionRequest, OpportunityScoreIn
-from app.solver import calculate_opportunity_score, evaluate_coalition, optimize_allocations
+from app.schemas import (
+    AllocationRequest,
+    CoalitionRequest,
+    OpportunityScoreIn,
+    ResilienceRequest,
+)
+from app.solver import (
+    calculate_opportunity_score,
+    calculate_resilience,
+    evaluate_coalition,
+    optimize_allocations,
+)
 
 
 def producer(price, moq, capacity, lead=8, reliability=0.8, delivery=1000, tiers=None):
@@ -177,3 +188,73 @@ def test_optimizer_is_reproducible_for_the_same_input():
     second = optimize_allocations(request)
     assert first.input_hash == second.input_hash
     assert first.variants == second.variants
+
+
+def resilience_payload(*, hot_capacity=50_000, warm_capacity=50_000):
+    primary = [
+        {
+            "company_id": str(uuid.uuid4()),
+            "units": 40_000,
+            "unit_price_rub": price,
+            "delivery_cost_rub": 5_000,
+            "lead_time_days": lead,
+        }
+        for price, lead in ((10, 8), (10.4, 9), (10.8, 10))
+    ]
+    reserves = [
+        {
+            **producer(11, 10_000, hot_capacity, lead=10, delivery=6_000),
+            "reserve_tier": "hot",
+            "confirmation_status": "approved",
+            "held_until": str(date.today() + timedelta(days=14)),
+        },
+        {
+            **producer(11.5, 10_000, warm_capacity, lead=12, delivery=8_000),
+            "reserve_tier": "warm",
+            "confirmation_status": "pending",
+        },
+    ]
+    return {
+        "primary_allocations": primary,
+        "reserve_options": reserves,
+        "max_price_increase_pct": 15,
+        "max_delay_days": 2,
+    }
+
+
+def test_resilience_calculates_every_n1_and_n2_and_separates_confirmation():
+    request = ResilienceRequest.model_validate(resilience_payload())
+    result = calculate_resilience(request)
+    assert len(result.scenarios) == 6
+    assert result.n1_fully_covered is True
+    assert result.n2_fully_covered is False
+    n1 = next(item for item in result.scenarios if item.scenario_type == "n1")
+    assert n1.cost_comparison_applicable is True
+    assert n1.price_delta_pct is not None
+    n2 = next(item for item in result.scenarios if item.scenario_type == "n2")
+    assert n2.uncovered_units == 0
+    assert n2.unconfirmed_units == 30_000
+    assert n2.requires_human_approval is True
+    assert {item.reserve_tier for item in n2.replacement_allocations} == {"hot", "warm"}
+
+
+def test_simultaneous_failure_reports_uncovered_volume_reproducibly():
+    request = ResilienceRequest.model_validate(
+        resilience_payload(hot_capacity=30_000, warm_capacity=30_000)
+    )
+    first = calculate_resilience(request)
+    second = calculate_resilience(request)
+    n2 = next(item for item in first.scenarios if item.scenario_type == "n2")
+    assert n2.failed_units == 80_000
+    assert n2.uncovered_units == 20_000
+    assert n2.cost_comparison_applicable is False
+    assert n2.new_total_cost_rub is None
+    assert n2.price_delta_rub is None
+    assert n2.price_delta_pct is None
+    assert any("неприменимо" in item for item in n2.explanations)
+    assert n2.auto_eligible is False
+    assert first == second
+
+
+def test_resilience_api_is_versioned():
+    assert "/api/v1/optimize/resilience" in app.openapi()["paths"]

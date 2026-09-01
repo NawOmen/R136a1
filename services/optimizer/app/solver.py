@@ -1,5 +1,7 @@
 import hashlib
 import json
+from datetime import date
+from itertools import combinations
 
 from ortools.sat.python import cp_model
 
@@ -13,6 +15,11 @@ from .schemas import (
     OptimizationVariant,
     OpportunityScoreIn,
     OpportunityScoreOut,
+    ReplacementAllocation,
+    ReserveOptionIn,
+    ResilienceRequest,
+    ResilienceResponse,
+    FailureScenarioOut,
 )
 
 
@@ -249,3 +256,261 @@ def calculate_opportunity_score(data: OpportunityScoreIn) -> OpportunityScoreOut
     factors = data.model_dump()
     score = round(100 * sum(factors[key] * weight for key, weight in weights.items()))
     return OpportunityScoreOut(score=score, factors=factors)
+
+
+def _partial_replacement(
+    demand_units: int, reserves: list[ReserveOptionIn]
+) -> tuple[list[ReplacementAllocation], int, float, int]:
+    eligible = sorted(
+        (
+            item
+            for item in reserves
+            if item.country == "RU" and item.serves_region
+        ),
+        key=lambda item: str(item.company_id),
+    )
+    if demand_units <= 0 or not eligible:
+        return [], 0, 0, 0
+
+    model = cp_model.CpModel()
+    total_units_terms = []
+    total_cost_terms = []
+    producer_data = []
+    for index, producer in enumerate(eligible):
+        tier_prices = {producer.moq_units: producer.unit_price_rub}
+        for tier in producer.price_tiers:
+            if tier.min_units <= producer.capacity_units:
+                tier_prices[max(producer.moq_units, tier.min_units)] = tier.unit_price_rub
+        tiers = sorted(tier_prices.items())
+        tier_variables = []
+        tier_selected = []
+        for tier_index, (minimum, price) in enumerate(tiers):
+            upper = min(producer.capacity_units, demand_units)
+            if tier_index + 1 < len(tiers):
+                upper = min(upper, tiers[tier_index + 1][0] - 1)
+            if upper < minimum:
+                continue
+            units = model.new_int_var(0, upper, f"reserve_units_{index}_{tier_index}")
+            selected = model.new_bool_var(f"reserve_selected_{index}_{tier_index}")
+            model.add(units >= minimum * selected)
+            model.add(units <= upper * selected)
+            tier_variables.append((units, price))
+            tier_selected.append(selected)
+            total_cost_terms.append(round(price * 100) * units)
+        if not tier_variables:
+            continue
+        model.add(sum(tier_selected) <= 1)
+        producer_units = model.new_int_var(
+            0, min(producer.capacity_units, demand_units), f"reserve_total_{index}"
+        )
+        model.add(producer_units == sum(item[0] for item in tier_variables))
+        total_units_terms.append(producer_units)
+        delivery_kopecks = round(producer.delivery_cost_rub * 100)
+        total_cost_terms.append(delivery_kopecks * sum(tier_selected))
+        producer_data.append(
+            (producer, producer_units, tier_variables, tier_selected)
+        )
+
+    if not total_units_terms:
+        return [], 0, 0, 0
+    covered = sum(total_units_terms)
+    cost = sum(total_cost_terms)
+    model.add(covered <= demand_units)
+    model.maximize(covered)
+
+    solver = cp_model.CpSolver()
+    solver.parameters.num_search_workers = 1
+    solver.parameters.random_seed = 0
+    solver.parameters.max_time_in_seconds = 10
+    status = solver.solve(model)
+    if status not in (cp_model.OPTIMAL, cp_model.FEASIBLE):
+        return [], 0, 0, 0
+    max_covered = solver.value(covered)
+    if max_covered <= 0:
+        return [], 0, 0, 0
+
+    model.add(covered == max_covered)
+    model.minimize(cost)
+    status = solver.solve(model)
+    if status not in (cp_model.OPTIMAL, cp_model.FEASIBLE):
+        return [], 0, 0, 0
+
+    allocations = []
+    today = date.today()
+    for producer, units_variable, tiers, selected_variables in producer_data:
+        units = solver.value(units_variable)
+        if units <= 0:
+            continue
+        unit_price = next(
+            price
+            for (_, price), selected in zip(
+                tiers, selected_variables, strict=True
+            )
+            if solver.value(selected)
+        )
+        confirmed = (
+            producer.reserve_tier == "hot"
+            and producer.confirmation_status == "approved"
+            and producer.held_until is not None
+            and producer.held_until >= today
+        )
+        allocations.append(
+            ReplacementAllocation(
+                company_id=producer.company_id,
+                units=units,
+                unit_price_rub=unit_price,
+                delivery_cost_rub=producer.delivery_cost_rub,
+                total_cost_rub=round(
+                    units * unit_price + producer.delivery_cost_rub, 2
+                ),
+                lead_time_days=producer.lead_time_days,
+                reserve_tier=producer.reserve_tier,
+                confirmed=confirmed,
+            )
+        )
+    return (
+        allocations,
+        sum(item.units for item in allocations),
+        round(sum(item.total_cost_rub for item in allocations), 2),
+        max((item.lead_time_days for item in allocations), default=0),
+    )
+
+
+def calculate_resilience(request: ResilienceRequest) -> ResilienceResponse:
+    baseline_cost = round(
+        sum(item.total_cost_rub for item in request.primary_allocations), 2
+    )
+    baseline_lead = max(
+        item.lead_time_days for item in request.primary_allocations
+    )
+    today = date.today()
+    confirmed_reserves = [
+        item
+        for item in request.reserve_options
+        if item.reserve_tier == "hot"
+        and item.confirmation_status == "approved"
+        and item.held_until is not None
+        and item.held_until >= today
+    ]
+    failure_sets = [
+        ("n1", group)
+        for group in combinations(request.primary_allocations, 1)
+    ]
+    failure_sets.extend(
+        ("n2", group)
+        for group in combinations(request.primary_allocations, 2)
+    )
+
+    scenarios = []
+    coverage_ratios = []
+    for scenario_type, failed in failure_sets:
+        failed_ids = [item.company_id for item in failed]
+        failed_units = sum(item.units for item in failed)
+        failed_cost = sum(item.total_cost_rub for item in failed)
+        confirmed_replacements, confirmed_covered, confirmed_cost, confirmed_lead = _partial_replacement(
+            failed_units, confirmed_reserves
+        )
+        unconfirmed_reserves = [
+            item for item in request.reserve_options if item not in confirmed_reserves
+        ]
+        probable_replacements, probable_covered, probable_cost, probable_lead = _partial_replacement(
+            failed_units - confirmed_covered, unconfirmed_reserves
+        )
+        replacements = [*confirmed_replacements, *probable_replacements]
+        covered = confirmed_covered + probable_covered
+        replacement_cost = confirmed_cost + probable_cost
+        replacement_lead = max(confirmed_lead, probable_lead)
+        uncovered = max(0, failed_units - covered)
+        unconfirmed = probable_covered
+        candidate_cost = round(baseline_cost - failed_cost + replacement_cost, 2)
+        candidate_price_delta = round(candidate_cost - baseline_cost, 2)
+        candidate_price_delta_pct = (
+            round(candidate_price_delta / baseline_cost * 100, 2)
+            if baseline_cost
+            else 0
+        )
+        cost_comparison_applicable = uncovered == 0
+        new_cost = candidate_cost if cost_comparison_applicable else None
+        price_delta = candidate_price_delta if cost_comparison_applicable else None
+        price_delta_pct = (
+            candidate_price_delta_pct if cost_comparison_applicable else None
+        )
+        surviving_leads = [
+            item.lead_time_days
+            for item in request.primary_allocations
+            if item.company_id not in failed_ids
+        ]
+        new_lead = max([*surviving_leads, replacement_lead], default=0)
+        delay = max(0, new_lead - baseline_lead)
+        auto_eligible = (
+            uncovered == 0
+            and unconfirmed == 0
+            and candidate_price_delta_pct <= request.max_price_increase_pct
+            and delay <= request.max_delay_days
+        )
+        explanations = [
+            f"Заблокирован только объём выпавших производителей: {failed_units} шт.",
+            f"Подтверждённым горячим резервом покрывается {confirmed_covered} шт.",
+        ]
+        if uncovered:
+            explanations.append(
+                f"Для {uncovered} шт. не найдено даже вероятной альтернативы"
+            )
+            explanations.append(
+                "Изменение полной стоимости неприменимо, пока часть объёма не покрыта"
+            )
+        elif unconfirmed:
+            explanations.append(
+                f"Для {unconfirmed} шт. требуется подтверждение резервного производителя"
+            )
+        elif auto_eligible:
+            explanations.append(
+                "Замена укладывается в заранее заданные пороги цены и срока"
+            )
+        else:
+            explanations.append(
+                "Замена превышает порог цены или срока и требует решения покупателя"
+            )
+        coverage_ratios.append(
+            confirmed_covered / failed_units if failed_units else 1
+        )
+        scenarios.append(
+            FailureScenarioOut(
+                scenario_type=scenario_type,
+                failed_company_ids=failed_ids,
+                failed_units=failed_units,
+                replacement_allocations=replacements,
+                baseline_total_cost_rub=baseline_cost,
+                new_total_cost_rub=new_cost,
+                price_delta_rub=price_delta,
+                price_delta_pct=price_delta_pct,
+                cost_comparison_applicable=cost_comparison_applicable,
+                baseline_lead_time_days=baseline_lead,
+                new_lead_time_days=new_lead,
+                delay_days=delay,
+                uncovered_units=uncovered,
+                confirmed_covered_units=confirmed_covered,
+                unconfirmed_units=unconfirmed,
+                auto_eligible=auto_eligible,
+                requires_human_approval=not auto_eligible,
+                explanations=explanations,
+            )
+        )
+
+    n1 = [item for item in scenarios if item.scenario_type == "n1"]
+    n2 = [item for item in scenarios if item.scenario_type == "n2"]
+    return ResilienceResponse(
+        scenarios=scenarios,
+        n1_fully_covered=bool(n1) and all(
+            item.unconfirmed_units == 0 and item.uncovered_units == 0
+            for item in n1
+        ),
+        n2_fully_covered=bool(n2) and all(
+            item.unconfirmed_units == 0 and item.uncovered_units == 0
+            for item in n2
+        ),
+        confirmed_coverage_pct=round(
+            100 * min(coverage_ratios), 2
+        ) if coverage_ratios else 0,
+        input_hash=_input_hash(request),
+    )

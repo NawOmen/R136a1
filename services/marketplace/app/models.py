@@ -367,3 +367,113 @@ class OptimizationVariantRecord(Base):
     result: Mapped[dict] = mapped_column(JSONB, nullable=False)
     input_hash: Mapped[str] = mapped_column(String(64), nullable=False)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now())
+
+
+class ResiliencePlan(Base):
+    __tablename__ = "resilience_plans"
+    __table_args__ = (
+        UniqueConstraint("need_id", name="uq_resilience_plan_need"),
+        {"schema": SCHEMA},
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=_uuid)
+    need_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey(f"{SCHEMA}.needs.id", ondelete="CASCADE"), nullable=False
+    )
+    buyer_company_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), nullable=False)
+    baseline_variant_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey(f"{SCHEMA}.optimization_variants.id", ondelete="RESTRICT"),
+        nullable=False,
+    )
+    baseline_allocations: Mapped[list] = mapped_column(JSONB, nullable=False)
+    baseline_total_cost_rub: Mapped[float] = mapped_column(Float, nullable=False)
+    baseline_lead_time_days: Mapped[int] = mapped_column(Integer, nullable=False)
+    current_allocations: Mapped[list] = mapped_column(JSONB, nullable=False, default=list)
+    current_total_cost_rub: Mapped[float] = mapped_column(Float, nullable=False)
+    current_lead_time_days: Mapped[int] = mapped_column(Integer, nullable=False)
+    max_price_increase_pct: Mapped[float] = mapped_column(Float, nullable=False, default=5)
+    max_delay_days: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    auto_replace_within_thresholds: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=False, server_default=text("false")
+    )
+    failed_company_ids: Mapped[list] = mapped_column(JSONB, nullable=False, default=list)
+    status: Mapped[str] = mapped_column(String(48), nullable=False, default="preparing_reserves")
+    version: Mapped[int] = mapped_column(Integer, nullable=False, default=1, server_default="1")
+    confirmed_by_user_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), nullable=True)
+    confirmed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now())
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=func.now(), onupdate=func.now()
+    )
+
+
+class ReserveCommitment(Base):
+    __tablename__ = "reserve_commitments"
+    __table_args__ = (
+        UniqueConstraint("plan_id", "company_id", name="uq_reserve_plan_company"),
+        {"schema": SCHEMA},
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=_uuid)
+    plan_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey(f"{SCHEMA}.resilience_plans.id", ondelete="CASCADE"), nullable=False
+    )
+    company_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), nullable=False)
+    offer_id: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey(f"{SCHEMA}.offers.id", ondelete="SET NULL"), nullable=True
+    )
+    reserve_tier: Mapped[str] = mapped_column(String(16), nullable=False)
+    confirmation_status: Mapped[str] = mapped_column(String(32), nullable=False, default="pending")
+    proposed_capacity_units: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    proposed_moq_units: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    proposed_unit_price_rub: Mapped[float | None] = mapped_column(Float, nullable=True)
+    proposed_delivery_cost_rub: Mapped[float | None] = mapped_column(Float, nullable=True)
+    proposed_lead_time_days: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    price_tiers: Mapped[list] = mapped_column(JSONB, nullable=False, default=list)
+    confirmed_capacity_units: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    confirmed_moq_units: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    confirmed_unit_price_rub: Mapped[float | None] = mapped_column(Float, nullable=True)
+    confirmed_delivery_cost_rub: Mapped[float | None] = mapped_column(Float, nullable=True)
+    confirmed_lead_time_days: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    held_until: Mapped[date | None] = mapped_column(Date, nullable=True)
+    confirmed_by_user_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), nullable=True)
+    confirmed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now())
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=func.now(), onupdate=func.now()
+    )
+
+
+class ResilienceScenario(Base):
+    __tablename__ = "resilience_scenarios"
+    __table_args__ = {"schema": SCHEMA}
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=_uuid)
+    plan_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey(f"{SCHEMA}.resilience_plans.id", ondelete="CASCADE"), nullable=False
+    )
+    scenario_type: Mapped[str] = mapped_column(String(24), nullable=False)
+    failed_company_ids: Mapped[list] = mapped_column(JSONB, nullable=False)
+    result: Mapped[dict] = mapped_column(JSONB, nullable=False)
+    input_hash: Mapped[str] = mapped_column(String(64), nullable=False)
+    status: Mapped[str] = mapped_column(String(32), nullable=False, default="calculated")
+    is_simulation: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=False, server_default=text("false")
+    )
+    approved_by_user_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now())
+
+
+class ResilienceEvent(Base):
+    __tablename__ = "resilience_events"
+    __table_args__ = {"schema": SCHEMA}
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=_uuid)
+    plan_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey(f"{SCHEMA}.resilience_plans.id", ondelete="CASCADE"), nullable=False
+    )
+    event_type: Mapped[str] = mapped_column(String(64), nullable=False, index=True)
+    actor_user_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), nullable=True)
+    actor_company_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), nullable=True)
+    payload: Mapped[dict] = mapped_column(JSONB, nullable=False, default=dict)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now())

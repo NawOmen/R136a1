@@ -146,6 +146,12 @@ export default function DashboardPage() {
                 <span className="company-meta">Отдельно подтвердите условия вашей компании</span>
               </Link>
             </li>
+            <li>
+              <Link href="/resilience" className="company-item">
+                <span className="company-item__name">Устойчивость сделок</span>
+                <span className="company-meta">Резервы, сценарии N-1/N-2 и безопасная симуляция</span>
+              </Link>
+            </li>
           </ul>
         )}
 
@@ -197,6 +203,12 @@ export default function DashboardPage() {
               <Link href="/coalitions" className="company-item">
                 <span className="company-item__name">Групповые предложения</span>
                 <span className="company-meta">Черновики, подтверждения и общие партии</span>
+              </Link>
+            </li>
+            <li>
+              <Link href="/seller/reserves" className="company-item">
+                <span className="company-item__name">Резерв и сбои</span>
+                <span className="company-meta">Подтверждение мощности и сообщение об отказе</span>
               </Link>
             </li>
           </ul>

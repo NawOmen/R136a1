@@ -7,8 +7,15 @@ from .schemas import (
     OptimizationResponse,
     OpportunityScoreIn,
     OpportunityScoreOut,
+    ResilienceRequest,
+    ResilienceResponse,
 )
-from .solver import calculate_opportunity_score, evaluate_coalition, optimize_allocations
+from .solver import (
+    calculate_opportunity_score,
+    calculate_resilience,
+    evaluate_coalition,
+    optimize_allocations,
+)
 
 app = FastAPI(title="Matching and Resilience Optimizer", version="1.0.0")
 
@@ -31,3 +38,8 @@ async def coalition(data: CoalitionRequest):
 @app.post("/api/v1/score/opportunity", response_model=OpportunityScoreOut)
 async def opportunity_score(data: OpportunityScoreIn):
     return calculate_opportunity_score(data)
+
+
+@app.post("/api/v1/optimize/resilience", response_model=ResilienceResponse)
+async def resilience(data: ResilienceRequest):
+    return calculate_resilience(data)
