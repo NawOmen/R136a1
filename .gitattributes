@@ -1,0 +1,2 @@
+# Linux-контейнеры должны получать shell-скрипты только с LF даже при checkout в Windows.
+*.sh text eol=lf
