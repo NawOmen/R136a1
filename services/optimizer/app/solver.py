@@ -422,12 +422,18 @@ def calculate_resilience(request: ResilienceRequest) -> ResilienceResponse:
         replacement_lead = max(confirmed_lead, probable_lead)
         uncovered = max(0, failed_units - covered)
         unconfirmed = probable_covered
-        new_cost = round(baseline_cost - failed_cost + replacement_cost, 2)
-        price_delta = round(new_cost - baseline_cost, 2)
-        price_delta_pct = (
-            round(price_delta / baseline_cost * 100, 2)
+        candidate_cost = round(baseline_cost - failed_cost + replacement_cost, 2)
+        candidate_price_delta = round(candidate_cost - baseline_cost, 2)
+        candidate_price_delta_pct = (
+            round(candidate_price_delta / baseline_cost * 100, 2)
             if baseline_cost
             else 0
+        )
+        cost_comparison_applicable = uncovered == 0
+        new_cost = candidate_cost if cost_comparison_applicable else None
+        price_delta = candidate_price_delta if cost_comparison_applicable else None
+        price_delta_pct = (
+            candidate_price_delta_pct if cost_comparison_applicable else None
         )
         surviving_leads = [
             item.lead_time_days
@@ -439,7 +445,7 @@ def calculate_resilience(request: ResilienceRequest) -> ResilienceResponse:
         auto_eligible = (
             uncovered == 0
             and unconfirmed == 0
-            and price_delta_pct <= request.max_price_increase_pct
+            and candidate_price_delta_pct <= request.max_price_increase_pct
             and delay <= request.max_delay_days
         )
         explanations = [
@@ -449,6 +455,9 @@ def calculate_resilience(request: ResilienceRequest) -> ResilienceResponse:
         if uncovered:
             explanations.append(
                 f"Для {uncovered} шт. не найдено даже вероятной альтернативы"
+            )
+            explanations.append(
+                "Изменение полной стоимости неприменимо, пока часть объёма не покрыта"
             )
         elif unconfirmed:
             explanations.append(
@@ -475,6 +484,7 @@ def calculate_resilience(request: ResilienceRequest) -> ResilienceResponse:
                 new_total_cost_rub=new_cost,
                 price_delta_rub=price_delta,
                 price_delta_pct=price_delta_pct,
+                cost_comparison_applicable=cost_comparison_applicable,
                 baseline_lead_time_days=baseline_lead,
                 new_lead_time_days=new_lead,
                 delay_days=delay,

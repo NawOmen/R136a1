@@ -271,8 +271,9 @@ export interface ResilienceScenario {
     confirmed_covered_units: number;
     uncovered_units: number;
     unconfirmed_units: number;
-    price_delta_rub: number;
-    price_delta_pct: number;
+    price_delta_rub: number | null;
+    price_delta_pct: number | null;
+    cost_comparison_applicable: boolean;
     delay_days: number;
     auto_eligible: boolean;
     explanations: string[];

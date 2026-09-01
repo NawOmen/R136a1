@@ -197,9 +197,10 @@ class FailureScenarioOut(BaseModel):
     failed_units: int
     replacement_allocations: list[ReplacementAllocation]
     baseline_total_cost_rub: float
-    new_total_cost_rub: float
-    price_delta_rub: float
-    price_delta_pct: float
+    new_total_cost_rub: float | None
+    price_delta_rub: float | None
+    price_delta_pct: float | None
+    cost_comparison_applicable: bool
     baseline_lead_time_days: int
     new_lead_time_days: int
     delay_days: int

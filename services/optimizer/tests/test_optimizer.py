@@ -228,6 +228,9 @@ def test_resilience_calculates_every_n1_and_n2_and_separates_confirmation():
     assert len(result.scenarios) == 6
     assert result.n1_fully_covered is True
     assert result.n2_fully_covered is False
+    n1 = next(item for item in result.scenarios if item.scenario_type == "n1")
+    assert n1.cost_comparison_applicable is True
+    assert n1.price_delta_pct is not None
     n2 = next(item for item in result.scenarios if item.scenario_type == "n2")
     assert n2.uncovered_units == 0
     assert n2.unconfirmed_units == 30_000
@@ -244,6 +247,11 @@ def test_simultaneous_failure_reports_uncovered_volume_reproducibly():
     n2 = next(item for item in first.scenarios if item.scenario_type == "n2")
     assert n2.failed_units == 80_000
     assert n2.uncovered_units == 20_000
+    assert n2.cost_comparison_applicable is False
+    assert n2.new_total_cost_rub is None
+    assert n2.price_delta_rub is None
+    assert n2.price_delta_pct is None
+    assert any("неприменимо" in item for item in n2.explanations)
     assert n2.auto_eligible is False
     assert first == second
 
