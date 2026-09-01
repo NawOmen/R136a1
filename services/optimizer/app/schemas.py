@@ -1,4 +1,5 @@
 import uuid
+from datetime import date
 from typing import Literal
 
 from pydantic import BaseModel, Field, model_validator
@@ -138,3 +139,81 @@ class OpportunityScoreIn(BaseModel):
 class OpportunityScoreOut(BaseModel):
     score: int = Field(ge=0, le=100)
     factors: dict[str, float]
+
+
+class PrimaryAllocationIn(BaseModel):
+    company_id: uuid.UUID
+    units: int = Field(gt=0)
+    unit_price_rub: float = Field(gt=0)
+    delivery_cost_rub: float = Field(default=0, ge=0)
+    lead_time_days: int = Field(gt=0)
+
+    @property
+    def total_cost_rub(self) -> float:
+        return round(self.units * self.unit_price_rub + self.delivery_cost_rub, 2)
+
+
+class ReserveOptionIn(ProducerOption):
+    reserve_tier: Literal["hot", "warm"]
+    confirmation_status: Literal[
+        "approved", "pending", "reconfirmation_requested"
+    ] = "pending"
+    held_until: date | None = None
+
+
+class ResilienceRequest(BaseModel):
+    primary_allocations: list[PrimaryAllocationIn] = Field(min_length=1, max_length=6)
+    reserve_options: list[ReserveOptionIn] = Field(default_factory=list, max_length=20)
+    max_price_increase_pct: float = Field(default=5, ge=0, le=100)
+    max_delay_days: int = Field(default=0, ge=0, le=365)
+
+    @model_validator(mode="after")
+    def validate_companies(self):
+        primary_ids = [item.company_id for item in self.primary_allocations]
+        reserve_ids = [item.company_id for item in self.reserve_options]
+        if len(set(primary_ids)) != len(primary_ids):
+            raise ValueError("Основной производитель не может повторяться")
+        if len(set(reserve_ids)) != len(reserve_ids):
+            raise ValueError("Резервный производитель не может повторяться")
+        if set(primary_ids) & set(reserve_ids):
+            raise ValueError("Основной производитель не может одновременно быть резервом")
+        return self
+
+
+class ReplacementAllocation(BaseModel):
+    company_id: uuid.UUID
+    units: int
+    unit_price_rub: float
+    delivery_cost_rub: float
+    total_cost_rub: float
+    lead_time_days: int
+    reserve_tier: Literal["hot", "warm"]
+    confirmed: bool
+
+
+class FailureScenarioOut(BaseModel):
+    scenario_type: Literal["n1", "n2"]
+    failed_company_ids: list[uuid.UUID]
+    failed_units: int
+    replacement_allocations: list[ReplacementAllocation]
+    baseline_total_cost_rub: float
+    new_total_cost_rub: float
+    price_delta_rub: float
+    price_delta_pct: float
+    baseline_lead_time_days: int
+    new_lead_time_days: int
+    delay_days: int
+    uncovered_units: int
+    confirmed_covered_units: int
+    unconfirmed_units: int
+    auto_eligible: bool
+    requires_human_approval: bool
+    explanations: list[str]
+
+
+class ResilienceResponse(BaseModel):
+    scenarios: list[FailureScenarioOut]
+    n1_fully_covered: bool
+    n2_fully_covered: bool
+    confirmed_coverage_pct: float
+    input_hash: str

@@ -347,6 +347,118 @@ class CoalitionDecisionIn(BaseModel):
     decision: Literal["approved", "rejected"]
 
 
+# ---------- Устойчивость, N-1 / N-2 и резерв ----------
+
+class ResiliencePlanCreateIn(BaseModel):
+    variant_id: uuid.UUID
+    max_price_increase_pct: float = Field(default=5, ge=0, le=100)
+    max_delay_days: int = Field(default=0, ge=0, le=365)
+    auto_replace_within_thresholds: bool = False
+
+
+class ResiliencePlanConfirmIn(BaseModel):
+    approved: Literal[True]
+
+
+class ReserveDecisionIn(BaseModel):
+    company_id: uuid.UUID
+    decision: Literal["approved", "rejected"]
+    capacity_units: int | None = Field(default=None, gt=0)
+    moq_units: int | None = Field(default=None, gt=0)
+    unit_price_rub: float | None = Field(default=None, gt=0)
+    delivery_cost_rub: float | None = Field(default=None, ge=0)
+    lead_time_days: int | None = Field(default=None, gt=0)
+    price_tiers: list[PriceTierIn] = Field(default_factory=list)
+    held_until: date | None = None
+
+
+class FailureSimulationIn(BaseModel):
+    failed_company_ids: list[uuid.UUID] = Field(min_length=1, max_length=2)
+
+
+class ProducerFailureIn(BaseModel):
+    company_id: uuid.UUID
+    reason: str = Field(min_length=3, max_length=500)
+
+
+class ReserveCommitmentOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: uuid.UUID
+    plan_id: uuid.UUID
+    company_id: uuid.UUID
+    offer_id: uuid.UUID | None
+    reserve_tier: str
+    confirmation_status: str
+    proposed_capacity_units: int | None
+    proposed_moq_units: int | None
+    proposed_unit_price_rub: float | None
+    proposed_delivery_cost_rub: float | None
+    proposed_lead_time_days: int | None
+    price_tiers: list[dict[str, Any]]
+    confirmed_capacity_units: int | None
+    confirmed_moq_units: int | None
+    confirmed_unit_price_rub: float | None
+    confirmed_delivery_cost_rub: float | None
+    confirmed_lead_time_days: int | None
+    held_until: date | None
+
+
+class PrimaryObligationOut(BaseModel):
+    plan_id: uuid.UUID
+    need_id: uuid.UUID
+    company_id: uuid.UUID
+    allocation: dict[str, Any]
+    plan_status: str
+    confirmed_at: datetime | None
+
+
+class ResilienceScenarioOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: uuid.UUID
+    plan_id: uuid.UUID
+    scenario_type: str
+    failed_company_ids: list[str]
+    result: dict[str, Any]
+    input_hash: str
+    status: str
+    is_simulation: bool
+
+
+class ResilienceEventOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: uuid.UUID
+    event_type: str
+    actor_company_id: uuid.UUID | None
+    payload: dict[str, Any]
+    created_at: datetime
+
+
+class ResiliencePlanOut(BaseModel):
+    id: uuid.UUID
+    need_id: uuid.UUID
+    buyer_company_id: uuid.UUID
+    baseline_variant_id: uuid.UUID
+    baseline_allocations: list[dict[str, Any]]
+    baseline_total_cost_rub: float
+    baseline_lead_time_days: int
+    current_allocations: list[dict[str, Any]]
+    current_total_cost_rub: float
+    current_lead_time_days: int
+    max_price_increase_pct: float
+    max_delay_days: int
+    auto_replace_within_thresholds: bool
+    failed_company_ids: list[str]
+    status: str
+    version: int
+    confirmed_at: datetime | None
+    reserves: list[ReserveCommitmentOut]
+    scenarios: list[ResilienceScenarioOut]
+    events: list[ResilienceEventOut]
+
+
 # ---------- Сделки ----------
 
 class DealOut(BaseModel):

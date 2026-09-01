@@ -10,6 +10,7 @@
 - Этап 3: базовый маркетплейс (каталог, потребности, предложения, сделки, мощности, документы, Capability Passport, уведомления, Playwright) — выполнено.
 - Этап 4: локальная LLM, восстановление требований, доказательства и агенты — реализовано.
 - Этап 5: коалиции покупателей, рыночные возможности и OR-Tools-оптимизатор — реализовано.
+- Этап 6: горячий/тёплый/холодный резерв, N-1/N-2 и безопасное восстановление — реализовано.
 
 ## Структура
 
@@ -18,7 +19,7 @@ apps/web/                    Next.js (App Router, TypeScript) — интерфе
 services/gateway-auth/       FastAPI — аккаунты, вход, компании, проверка
 services/marketplace/        FastAPI — каталог/потребности/сделки
 services/llm-gateway/        FastAPI — обработка материалов и агенты (этап 4)
-services/optimizer/          FastAPI + OR-Tools — распределение объёма и проверка коалиций
+services/optimizer/          FastAPI + OR-Tools — распределение объёма, коалиции и N-1/N-2
 services/evidence-audit/     зарезервирован для следующих этапов
 packages/{contracts,ui}/     общие пакеты (pnpm workspace)
 infra/                       docker-compose.yml, миграции, скрипты проверки
@@ -157,4 +158,4 @@ python infra/compare_llm_routes.py
 
 ## Документация
 
-Основной план — `plan_sborka_b2b.md`. Результаты этапа 1 — `docs/mvp/`, `docs/demo/`, `packages/test-fixtures/`. API-контракты — `docs/api/auth-api.md`, `docs/api/marketplace-api.md` и `docs/api/llm-gateway-api.md`.
+Основной план — `plan_sborka_b2b.md`. Результаты этапа 1 — `docs/mvp/`, `docs/demo/`, `packages/test-fixtures/`. API-контракты — в `docs/api/`, архитектура устойчивости — `docs/architecture/stage-6-resilience.md`.

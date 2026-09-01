@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from .api import addresses, capacity, documents, health, market, needs, notifications, offers, products, production
+from .api import addresses, capacity, documents, health, market, needs, notifications, offers, products, production, resilience
 
 app = FastAPI(title="Marketplace Service", version="0.2.0")
 
@@ -23,3 +23,4 @@ app.include_router(needs.router, prefix="/api/v1")
 app.include_router(offers.router, prefix="/api/v1")
 app.include_router(notifications.router, prefix="/api/v1")
 app.include_router(market.router, prefix="/api/v1")
+app.include_router(resilience.router, prefix="/api/v1")
