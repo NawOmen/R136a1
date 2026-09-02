@@ -77,6 +77,8 @@ async def me(user: User = Depends(get_current_user), db: AsyncSession = Depends(
             country=company.country,
             verification_status=company.verification_status,
             rejection_reason=company.rejection_reason,
+            created_at=company.created_at,
+            updated_at=company.updated_at,
             membership=MembershipOut.model_validate(member),
         )
         for company, member in result.all()
