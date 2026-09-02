@@ -65,7 +65,7 @@ Whisper `small` в Docker volume. DeepSeek необязателен и вклю�
 | LLM Gateway | http://localhost:8003 | восстановление требований и агенты (OpenAPI: `/docs`) |
 | Optimizer | http://localhost:8004 | детерминированные варианты, MOQ, скидки и коалиции (OpenAPI: `/docs`) |
 | MinIO | http://localhost:9000 | объектное хранилище файлов (консоль: :9001) |
-| PostgreSQL | localhost:5433 | БД (внутри Docker — хост `postgres:5432`) |
+| PostgreSQL | http://localhost:5433 | БД (внутри Docker — хост `postgres:5432`) |
 | pgAdmin | http://localhost:5050 | веб-интерфейс для просмотра локальной PostgreSQL |
 
 В pgAdmin войдите с `PGADMIN_DEFAULT_EMAIL` и `PGADMIN_DEFAULT_PASSWORD` из
