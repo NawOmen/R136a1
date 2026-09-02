@@ -3,11 +3,12 @@
 // Базовый URL задаётся через NEXT_PUBLIC_MARKETPLACE_URL.
 
 import { ApiError, handleUnauthorized } from "./api";
+import { serviceUrl } from "./serviceUrl";
 
 // Тот же класс ошибок, что у gateway-auth — страницы ловят единый тип.
 export { ApiError };
 
-const MARKETPLACE_BASE_URL = process.env.NEXT_PUBLIC_MARKETPLACE_URL || "http://localhost:8002";
+const marketplaceBaseUrl = () => serviceUrl(process.env.NEXT_PUBLIC_MARKETPLACE_URL, 8002);
 
 // ---------- Типы домена ----------
 
@@ -47,12 +48,20 @@ export interface Product {
   company_id: string;
   name: string;
   category: string;
+  subcategory: string | null;
   characteristics: Record<string, unknown>;
   price_rub: number;
+  price_tiers: ProductPriceTier[];
   moq_units: number;
   lead_time_days: number;
   is_published: boolean;
+  images: ProductImage[];
 }
+
+export interface ProductImage { id: string; file_name: string; content_type: string; position: number }
+export interface ProductPriceTier { min_units: number; unit_price_rub: number }
+export interface SellerAnalytics { company_id: string; products_total: number; products_published: number; deals_total: number; sold_units: number; revenue_rub: number; available_capacity_units: number; capacity_utilization_pct: number }
+export interface DealMessage { id: string; deal_id: string; author_user_id: string; author_company_id: string; message: string; created_at: string }
 
 export interface CapacityEntry {
   /** Дата в формате YYYY-MM-DD. */
@@ -362,8 +371,10 @@ export interface UpdateProductionProfileInput {
 export interface CreateProductInput {
   name: string;
   category: string;
+  subcategory?: string | null;
   characteristics: Record<string, unknown>;
   price_rub: number;
+  price_tiers: ProductPriceTier[];
   moq_units: number;
   lead_time_days: number;
 }
@@ -437,13 +448,21 @@ export const NEED_VISIBILITY_LABELS: Record<NeedVisibility, string> = {
   closed: "Закрытая",
 };
 
-export const PRODUCT_CATEGORIES = [
-  "бумажные стаканы",
-  "бумажные тарелки",
-  "бумажные пакеты",
-  "упаковка для еды",
-  "прочее",
-];
+export const PRODUCT_CATEGORY_TREE: Record<string, string[]> = {
+  "Упаковка и тара": ["Бумажные стаканы", "Пищевая упаковка", "Пакеты", "Коробки", "Бутылки и канистры"],
+  "Сырьё и материалы": ["Бумага и картон", "Полимеры", "Металлы", "Текстиль", "Химическое сырьё"],
+  "Оборудование": ["Производственное", "Торговое", "Складское", "Пищевое", "Запасные части"],
+  "Строительство": ["Отделочные материалы", "Крепёж", "Инженерные системы", "Инструмент"],
+  "Продукты питания": ["Напитки", "Бакалея", "Замороженная продукция", "Ингредиенты"],
+  "Товары для бизнеса": ["Канцелярия", "Хозяйственные товары", "Спецодежда", "Мебель"],
+  "Электроника": ["Компоненты", "Компьютерная техника", "Связь", "Автоматизация"],
+  "Транспорт и логистика": ["Тара для перевозки", "Комплектующие", "Складские услуги"],
+  "Полиграфия и реклама": ["Этикетки", "Печать", "Вывески", "Сувенирная продукция"],
+  "Услуги производства": ["Контрактное производство", "Фасовка", "Обработка", "Сборка"],
+  "Медицина и гигиена": ["Расходные материалы", "Средства защиты", "Гигиеническая продукция"],
+  "Другое": ["Другая продукция"],
+};
+export const PRODUCT_CATEGORIES = Object.keys(PRODUCT_CATEGORY_TREE);
 
 export const DOCUMENT_TYPES: { value: string; label: string }[] = [
   { value: "certificate", label: "Сертификат" },
@@ -559,7 +578,7 @@ async function marketplaceFetch<T>(path: string, options: RequestOptions = {}): 
   if (init.body !== undefined && !isFormData) headers.set("Content-Type", "application/json");
   if (token) headers.set("Authorization", `Bearer ${token}`);
 
-  const response = await fetch(`${MARKETPLACE_BASE_URL}${path}`, { ...init, headers });
+  const response = await fetch(`${marketplaceBaseUrl()}${path}`, { ...init, headers });
 
   if (!response.ok) {
     if (response.status === 401) handleUnauthorized();
@@ -584,7 +603,7 @@ async function marketplaceFetch<T>(path: string, options: RequestOptions = {}): 
 }
 
 async function marketplaceFetchBlob(path: string, token: string): Promise<Blob> {
-  const response = await fetch(`${MARKETPLACE_BASE_URL}${path}`, {
+  const response = await fetch(`${marketplaceBaseUrl()}${path}`, {
     headers: { Authorization: `Bearer ${token}` },
   });
   if (!response.ok) {
@@ -703,6 +722,36 @@ export const marketplace = {
       token,
       body: JSON.stringify({ published }),
     });
+  },
+
+  uploadProductImage(token: string, productId: string, file: File): Promise<ProductImage> {
+    const body = new FormData();
+    body.append("file", file);
+    return marketplaceFetch(`/api/v1/products/${productId}/images`, { method: "POST", token, body });
+  },
+
+  deleteProductImage(token: string, imageId: string): Promise<void> {
+    return marketplaceFetch(`/api/v1/product-images/${imageId}`, { method: "DELETE", token });
+  },
+
+  productImageUrl(imageId: string): string {
+    return `${marketplaceBaseUrl()}/api/v1/product-images/${imageId}`;
+  },
+
+  getSellerAnalytics(token: string, companyId: string): Promise<SellerAnalytics> {
+    return marketplaceFetch(`/api/v1/companies/${companyId}/seller-analytics`, { token });
+  },
+
+  getMyDeals(token: string): Promise<Deal[]> {
+    return marketplaceFetch("/api/v1/deals/mine", { token });
+  },
+
+  getDealMessages(token: string, dealId: string, companyId: string): Promise<DealMessage[]> {
+    return marketplaceFetch(`/api/v1/deals/${dealId}/messages?company_id=${companyId}`, { token });
+  },
+
+  sendDealMessage(token: string, dealId: string, companyId: string, message: string): Promise<DealMessage> {
+    return marketplaceFetch(`/api/v1/deals/${dealId}/messages`, { method: "POST", token, body: JSON.stringify({ company_id: companyId, message }) });
   },
 
   // Мощности

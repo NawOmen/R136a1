@@ -1,15 +1,9 @@
-"use client";
-
-import { useRouter } from "next/navigation";
-import { useEffect } from "react";
-import { getToken } from "./lib/api";
+import Link from "next/link";
 
 export default function HomePage() {
-  const router = useRouter();
-
-  useEffect(() => {
-    router.replace(getToken() ? "/dashboard" : "/login");
-  }, [router]);
-
-  return <p className="hint">Перенаправление...</p>;
+  const purchases = [["Бумажные стаканы 400 мл", "55 000 шт.", "Москва"], ["Гофрокороба для доставки", "12 000 шт.", "Казань"], ["ПЭТ-бутылки 1 л", "28 000 шт.", "Тула"]];
+  return <div className="landing"><section className="hero"><span className="eyebrow">Российский B2B-маркетплейс</span><h1>Закупка, в которой спрос сам находит производство</h1><p>ПоРукам превращает запрос компании в карточку потребности, находит производителей и объединяет совместимые объёмы только при подтверждённой выгоде.</p><div className="actions"><Link href="/register" className="btn btn-primary">Начать бесплатно</Link><Link href="/catalog" className="btn btn-secondary">Смотреть товары</Link></div></section>
+    <section className="landing-grid"><article className="feature"><b>Малый опт становится доступнее</b><p>Кофейням не нужно в одиночку покупать партию, рассчитанную на крупную сеть.</p></article><article className="feature"><b>Производитель видит реальный спрос</b><p>Открытые потребности помогают загрузить свободные мощности.</p></article><article className="feature"><b>Человек сохраняет контроль</b><p>ИИ готовит варианты, но цена, резерв и сделка меняются только после подтверждения.</p></article></section>
+    <section className="card"><div className="company-row"><div><h2>Недавние покупки</h2><p className="hint">Синтетические данные демонстрационного контура</p></div><Link href="/catalog">Весь каталог →</Link></div><div className="purchase-grid">{purchases.map(([name, volume, city]) => <article key={name}><b>{name}</b><span>{volume}</span><small>{city}</small></article>)}</div></section>
+    <section className="promo"><div><span className="eyebrow">Выгодное предложение</span><h2>Объедините 5 000 стаканов с другими покупателями</h2><p>Демосценарий достигает минимальной партии 50 000 шт. с расчётом логистики и требований.</p></div><Link href="/ai-procurement" className="btn btn-primary">Как работают ИИ-агенты</Link></section></div>;
 }

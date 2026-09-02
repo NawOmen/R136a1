@@ -67,10 +67,11 @@ export default function CatalogPage() {
         <ul className="company-list">
           {products.map((product) => (
             <li key={product.id} className="card">
+              {product.images[0] && <img className="product-photo" src={marketplace.productImageUrl(product.images[0].id)} alt={product.name} />}
               <div className="company-row">
                 <div>
                   <div className="company-item__name">{product.name}</div>
-                  <div className="company-meta">Категория: {product.category}</div>
+                  <div className="company-meta">Категория: {product.category}{product.subcategory ? ` / ${product.subcategory}` : ""}</div>
                   <div className="company-meta">Продавец: {companyName(product.company_id)}</div>
                 </div>
                 <span className="badge badge-verified">{formatRub(product.price_rub)}</span>
@@ -79,6 +80,7 @@ export default function CatalogPage() {
               <p className="hint mode-hint">
                 Мин. заказ: {formatUnits(product.moq_units)} · Срок: {product.lead_time_days} дн.
               </p>
+              {product.price_tiers.map((tier) => <p className="hint mode-hint" key={tier.min_units}>От {formatUnits(tier.min_units)} — {formatRub(tier.unit_price_rub)} за шт., {formatRub(tier.min_units * tier.unit_price_rub)} за партию</p>)}
             </li>
           ))}
         </ul>

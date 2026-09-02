@@ -10,7 +10,7 @@ jobs:
     runs-on: ubuntu-latest
     services:
       postgres:
-        image: postgres:16-alpine
+        image: postgres:16.4-alpine
         env:
           POSTGRES_USER: sborka
           POSTGRES_PASSWORD: sborka
@@ -82,5 +82,7 @@ jobs:
         run: pnpm install --frozen-lockfile
       - name: Type-check
         run: pnpm --filter @sborka/web lint
+      - name: Check Russian UI
+        run: python3 scripts/check-russian-ui.py
       - name: Build
         run: pnpm build:web

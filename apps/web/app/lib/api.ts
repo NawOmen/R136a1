@@ -1,7 +1,8 @@
 // Минимальный клиент gateway-auth. Все запросы — JSON,
 // аутентификация — JWT Bearer, токен хранится в localStorage ("token").
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8001";
+import { serviceUrl } from "./serviceUrl";
+const apiBaseUrl = () => serviceUrl(process.env.NEXT_PUBLIC_API_URL, 8001);
 const TOKEN_KEY = "token";
 
 // ---------- Типы домена ----------
@@ -202,7 +203,7 @@ async function request<T>(path: string, options: RequestOptions = {}): Promise<T
   if (init.body !== undefined) headers.set("Content-Type", "application/json");
   if (token) headers.set("Authorization", `Bearer ${token}`);
 
-  const response = await fetch(`${API_BASE_URL}${path}`, { ...init, headers });
+  const response = await fetch(`${apiBaseUrl()}${path}`, { ...init, headers });
 
   if (!response.ok) {
     if (

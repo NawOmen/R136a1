@@ -1,0 +1,1 @@
+export default function SettingsPage() { return <div><h1>Настройки</h1><section className="card"><h2>Интерфейс</h2><p>Язык: русский. Уведомления и параметры компании настраиваются в соответствующих разделах кабинета.</p></section></div>; }

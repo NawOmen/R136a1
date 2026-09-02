@@ -14,6 +14,8 @@ import {
   marketplace,
   Product,
   PRODUCT_CATEGORIES,
+  PRODUCT_CATEGORY_TREE,
+  ProductPriceTier,
 } from "../../lib/marketplace";
 import { useCompanySelector } from "../../lib/useMe";
 
@@ -43,6 +45,7 @@ export default function SellerProductsPage() {
   // Форма создания
   const [name, setName] = useState("");
   const [category, setCategory] = useState(PRODUCT_CATEGORIES[0]);
+  const [subcategory, setSubcategory] = useState(PRODUCT_CATEGORY_TREE[PRODUCT_CATEGORIES[0]][0]);
   const [rows, setRows] = useState<CharacteristicRow[]>([
     newRow("volume_ml", ""),
     newRow("coating", ""),
@@ -50,6 +53,9 @@ export default function SellerProductsPage() {
   const [price, setPrice] = useState("");
   const [moq, setMoq] = useState("");
   const [leadTime, setLeadTime] = useState("");
+  const [tiers, setTiers] = useState<ProductPriceTier[]>([]);
+  const [image, setImage] = useState<File | null>(null);
+  const [editingId, setEditingId] = useState<string | null>(null);
   const [creating, setCreating] = useState(false);
   const [publishingId, setPublishingId] = useState<string | null>(null);
 
@@ -96,14 +102,20 @@ export default function SellerProductsPage() {
     setCreating(true);
     setError(null);
     try {
-      await marketplace.createProduct(token, company.id, {
+      const input = {
         name: name.trim(),
         category,
+        subcategory,
         characteristics,
         price_rub: Number(price),
+        price_tiers: tiers,
         moq_units: Number(moq),
         lead_time_days: Number(leadTime),
-      });
+      };
+      const saved = editingId
+        ? await marketplace.updateProduct(token, editingId, input)
+        : await marketplace.createProduct(token, company.id, input);
+      if (image) await marketplace.uploadProductImage(token, saved.id, image);
       const updated = await marketplace.getCompanyProducts(token, company.id);
       setProducts(updated);
       setName("");
@@ -111,11 +123,27 @@ export default function SellerProductsPage() {
       setPrice("");
       setMoq("");
       setLeadTime("");
+      setTiers([]);
+      setImage(null);
+      setEditingId(null);
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "Не удалось создать товар.");
     } finally {
       setCreating(false);
     }
+  }
+
+  function beginEdit(product: Product) {
+    setEditingId(product.id);
+    setName(product.name);
+    setCategory(product.category);
+    setSubcategory(product.subcategory ?? PRODUCT_CATEGORY_TREE[product.category]?.[0] ?? "Другая продукция");
+    setRows(Object.entries(product.characteristics).map(([key, value]) => newRow(key, String(value))));
+    setPrice(String(product.price_rub));
+    setMoq(String(product.moq_units));
+    setLeadTime(String(product.lead_time_days));
+    setTiers(product.price_tiers);
+    window.scrollTo({ top: 0, behavior: "smooth" });
   }
 
   async function handlePublish(product: Product, published: boolean) {
@@ -193,7 +221,7 @@ export default function SellerProductsPage() {
       {error && <div className="alert alert-error">{error}</div>}
 
       <section className="card">
-        <h2>Новый товар</h2>
+        <h2>{editingId ? "Редактирование товара" : "Новый товар"}</h2>
         <form onSubmit={handleCreate}>
           <div className="field">
             <label htmlFor="product_name">
@@ -212,12 +240,22 @@ export default function SellerProductsPage() {
             <label htmlFor="product_category">
               Категория<span className="req">*</span>
             </label>
-            <select id="product_category" value={category} onChange={(event) => setCategory(event.target.value)}>
+            <select id="product_category" value={category} onChange={(event) => {
+              const value = event.target.value;
+              setCategory(value);
+              setSubcategory(PRODUCT_CATEGORY_TREE[value][0]);
+            }}>
               {PRODUCT_CATEGORIES.map((item) => (
                 <option key={item} value={item}>
                   {item}
                 </option>
               ))}
+            </select>
+          </div>
+          <div className="field">
+            <label htmlFor="product_subcategory">Подкатегория<span className="req">*</span></label>
+            <select id="product_subcategory" value={subcategory} onChange={(event) => setSubcategory(event.target.value)}>
+              {PRODUCT_CATEGORY_TREE[category].map((item) => <option key={item}>{item}</option>)}
             </select>
           </div>
           <div className="field">
@@ -250,9 +288,10 @@ export default function SellerProductsPage() {
             <button
               type="button"
               className="btn btn-secondary btn-sm"
-              onClick={() => setRows((current) => [...current, newRow()])}
+              disabled={rows.length >= 25}
+              onClick={() => setRows((current) => current.length < 25 ? [...current, newRow()] : current)}
             >
-              + Добавить характеристику
+              + Добавить характеристику ({rows.length}/25)
             </button>
           </div>
           <div className="field">
@@ -269,6 +308,27 @@ export default function SellerProductsPage() {
               placeholder="Например, 11.2"
               required
             />
+          </div>
+          <div className="field">
+            <label>Цены по объёму <span className="opt">необязательно, до 10 ступеней</span></label>
+            {tiers.map((tier, index) => (
+              <div className="char-row" key={index}>
+                <input type="number" min="1" value={tier.min_units} aria-label="Объём ступени"
+                  onChange={(event) => setTiers((current) => current.map((item, i) => i === index ? {...item, min_units: Number(event.target.value)} : item))} />
+                <input type="number" min="0.01" step="0.01" value={tier.unit_price_rub} aria-label="Цена ступени"
+                  onChange={(event) => setTiers((current) => current.map((item, i) => i === index ? {...item, unit_price_rub: Number(event.target.value)} : item))} />
+                <span className="company-meta">{formatRub(tier.min_units * tier.unit_price_rub)} за партию</span>
+                <button type="button" className="btn btn-secondary btn-sm" onClick={() => setTiers((current) => current.filter((_, i) => i !== index))}>Удалить</button>
+              </div>
+            ))}
+            <button type="button" className="btn btn-secondary btn-sm" disabled={tiers.length >= 10}
+              onClick={() => setTiers((current) => [...current, {min_units: Number(moq) || 1, unit_price_rub: Number(price) || 1}])}>
+              + Добавить ценовую ступень
+            </button>
+          </div>
+          <div className="field">
+            <label htmlFor="product_image">Фото товара <span className="opt">PNG, JPG или WebP, до 8 МБ</span></label>
+            <input id="product_image" type="file" accept="image/png,image/jpeg,image/webp" onChange={(event) => setImage(event.target.files?.[0] ?? null)} />
           </div>
           <div className="field">
             <label htmlFor="product_moq">
@@ -300,8 +360,9 @@ export default function SellerProductsPage() {
           </div>
           <div className="actions">
             <button type="submit" className="btn btn-primary" disabled={creating}>
-              {creating ? "Создаём..." : "Создать товар"}
+              {creating ? "Сохраняем..." : editingId ? "Сохранить изменения" : "Создать товар"}
             </button>
+            {editingId && <button type="button" className="btn btn-secondary" onClick={() => setEditingId(null)}>Отменить</button>}
           </div>
         </form>
       </section>
@@ -320,16 +381,20 @@ export default function SellerProductsPage() {
                   <div>
                     <div className="company-item__name">{product.name}</div>
                     <div className="company-meta">
-                      {product.category} · {formatRub(product.price_rub)} · МОЗ{" "}
+                      {product.category} / {product.subcategory ?? "Без подкатегории"} · {formatRub(product.price_rub)} за шт. · МОЗ{" "}
                       {formatUnits(product.moq_units)} · {product.lead_time_days} дн.
                     </div>
                     <div className="company-meta">{formatCharacteristics(product.characteristics)}</div>
+                    {product.price_tiers.map((tier) => <div className="company-meta" key={tier.min_units}>
+                      От {formatUnits(tier.min_units)}: {formatRub(tier.unit_price_rub)} за шт. · {formatRub(tier.min_units * tier.unit_price_rub)} за партию
+                    </div>)}
                   </div>
                   <span className={`badge ${product.is_published ? "badge-verified" : "badge-draft"}`}>
                     {product.is_published ? "Опубликован" : "Не опубликован"}
                   </span>
                 </div>
                 <div className="actions">
+                  <button type="button" className="btn btn-secondary btn-sm" onClick={() => beginEdit(product)}>Редактировать</button>
                   <button
                     type="button"
                     className={`btn btn-sm ${product.is_published ? "btn-secondary" : "btn-success"}`}

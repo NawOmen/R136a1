@@ -2,7 +2,7 @@ import uuid
 from datetime import date, datetime
 from typing import Any, Literal
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 
 # ---------- Адреса доставки ----------
@@ -51,6 +51,44 @@ class ProductionProfileIn(BaseModel):
 
 # ---------- Товары ----------
 
+class ProductImageOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: uuid.UUID
+    file_name: str
+    content_type: str
+    position: int
+
+
+class ProductPriceTier(BaseModel):
+    min_units: int = Field(gt=0)
+    unit_price_rub: float = Field(gt=0)
+
+
+class ProductRules(BaseModel):
+    @field_validator("characteristics", check_fields=False)
+    @classmethod
+    def validate_characteristics(cls, value: dict[str, Any] | None):
+        if value is not None and len(value) > 25:
+            raise ValueError("Можно добавить не более 25 характеристик")
+        return value
+
+    @field_validator("price_tiers", check_fields=False)
+    @classmethod
+    def validate_price_tiers(cls, value: list[ProductPriceTier] | None):
+        if value is None:
+            return value
+        if len(value) > 10:
+            raise ValueError("Можно добавить не более 10 ценовых ступеней")
+        units = [tier.min_units for tier in value]
+        if units != sorted(set(units)):
+            raise ValueError("Объёмы ценовых ступеней должны возрастать и не повторяться")
+        prices = [tier.unit_price_rub for tier in value]
+        if any(current > previous for previous, current in zip(prices, prices[1:])):
+            raise ValueError("Цена за единицу не должна расти при увеличении объёма")
+        return value
+
+
 class ProductOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
@@ -58,33 +96,81 @@ class ProductOut(BaseModel):
     company_id: uuid.UUID
     name: str
     category: str
+    subcategory: str | None
     characteristics: dict[str, Any]
     price_rub: float
+    price_tiers: list[ProductPriceTier]
     moq_units: int
     lead_time_days: int
     is_published: bool
+    images: list[ProductImageOut] = Field(default_factory=list)
 
 
-class ProductIn(BaseModel):
+class ProductIn(ProductRules):
     name: str = Field(min_length=2, max_length=255)
     category: str = Field(min_length=2, max_length=120)
+    subcategory: str | None = Field(default=None, max_length=120)
     characteristics: dict[str, Any] = Field(default_factory=dict)
     price_rub: float = Field(gt=0)
+    price_tiers: list[ProductPriceTier] = Field(default_factory=list)
     moq_units: int = Field(gt=0)
     lead_time_days: int = Field(gt=0)
 
+    @model_validator(mode="after")
+    def validate_tiers_against_moq(self):
+        if self.price_tiers and self.price_tiers[0].min_units < self.moq_units:
+            raise ValueError("Первая ценовая ступень не может быть меньше минимального заказа")
+        if any(tier.unit_price_rub > self.price_rub for tier in self.price_tiers):
+            raise ValueError("Цена в ступени не может быть выше базовой цены")
+        return self
 
-class ProductPatch(BaseModel):
+
+class ProductPatch(ProductRules):
     name: str | None = Field(default=None, min_length=2, max_length=255)
     category: str | None = Field(default=None, min_length=2, max_length=120)
+    subcategory: str | None = Field(default=None, max_length=120)
     characteristics: dict[str, Any] | None = None
     price_rub: float | None = Field(default=None, gt=0)
+    price_tiers: list[ProductPriceTier] | None = None
     moq_units: int | None = Field(default=None, gt=0)
     lead_time_days: int | None = Field(default=None, gt=0)
 
 
 class PublishIn(BaseModel):
     published: bool
+
+
+class DealMessageIn(BaseModel):
+    company_id: uuid.UUID
+    message: str = Field(min_length=1, max_length=2000)
+
+    @field_validator("message")
+    @classmethod
+    def message_not_blank(cls, value: str) -> str:
+        if not value.strip():
+            raise ValueError("Сообщение не может быть пустым")
+        return value.strip()
+
+
+class DealMessageOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    id: uuid.UUID
+    deal_id: uuid.UUID
+    author_user_id: uuid.UUID
+    author_company_id: uuid.UUID
+    message: str
+    created_at: datetime
+
+
+class SellerAnalyticsOut(BaseModel):
+    company_id: uuid.UUID
+    products_total: int
+    products_published: int
+    deals_total: int
+    sold_units: int
+    revenue_rub: float
+    available_capacity_units: int
+    capacity_utilization_pct: float
 
 
 # ---------- Мощности ----------

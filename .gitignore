@@ -57,3 +57,7 @@ Thumbs.db
 
 # Codex local logs
 .codex-log/
+
+# Generated presentation previews and inspection traces
+docs/contest/stage8-deck-preview/
+docs/contest/*.inspect.ndjson

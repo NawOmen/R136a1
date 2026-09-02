@@ -1,0 +1,5 @@
+{
+  "local_llm": {"provider": "ollama", "model": "qwen3.5:9b", "context_tokens": 8192},
+  "speech_to_text": {"provider": "faster-whisper", "model": "small", "compute_type": "int8"},
+  "note": "Перед защитой оператор проверяет наличие этих моделей локально; внешняя LLM для офлайн-режима отключается."
+}

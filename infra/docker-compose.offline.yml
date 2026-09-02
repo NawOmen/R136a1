@@ -1,0 +1,12 @@
+services:
+  postgres: {pull_policy: never}
+  pgadmin: {pull_policy: never}
+  minio: {pull_policy: never}
+  gateway-auth: {pull_policy: never}
+  marketplace: {pull_policy: never}
+  optimizer: {pull_policy: never}
+  llm-gateway:
+    pull_policy: never
+    environment:
+      DEEPSEEK_API_KEY: ""
+  web: {pull_policy: never}
