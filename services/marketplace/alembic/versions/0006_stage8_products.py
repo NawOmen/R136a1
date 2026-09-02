@@ -33,20 +33,10 @@ def upgrade() -> None:
             message VARCHAR(2000) NOT NULL, created_at TIMESTAMPTZ NOT NULL DEFAULT now()
         )
     """)
-    op.execute(
-        "ALTER TABLE marketplace.products "
-        "DROP CONSTRAINT IF EXISTS ck_product_characteristics_limit"
-    )
-    op.execute(
-        "ALTER TABLE marketplace.products "
-        "ADD CONSTRAINT ck_product_characteristics_limit "
-        "CHECK (jsonb_object_length(characteristics) <= 25)"
-    )
 
 
 def downgrade() -> None:
     op.execute("DROP TABLE IF EXISTS marketplace.deal_messages")
     op.execute("DROP TABLE IF EXISTS marketplace.product_images")
-    op.execute("ALTER TABLE marketplace.products DROP CONSTRAINT IF EXISTS ck_product_characteristics_limit")
     op.execute("ALTER TABLE marketplace.products DROP COLUMN IF EXISTS price_tiers")
     op.execute("ALTER TABLE marketplace.products DROP COLUMN IF EXISTS subcategory")
