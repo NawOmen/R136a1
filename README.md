@@ -11,6 +11,7 @@
 - Этап 4: локальная LLM, восстановление требований, доказательства и агенты — реализовано.
 - Этап 5: коалиции покупателей, рыночные возможности и OR-Tools-оптимизатор — реализовано.
 - Этап 6: горячий/тёплый/холодный резерв, N-1/N-2 и безопасное восстановление — реализовано.
+- Этап 7: Human Approval Guard, проверяемый аудит, KPI, поддержка и проектные правовые материалы — реализовано.
 
 ## Структура
 
@@ -158,4 +159,4 @@ python infra/compare_llm_routes.py
 
 ## Документация
 
-Основной план — `plan_sborka_b2b.md`. Результаты этапа 1 — `docs/mvp/`, `docs/demo/`, `packages/test-fixtures/`. API-контракты — в `docs/api/`, архитектура устойчивости — `docs/architecture/stage-6-resilience.md`.
+Основной план — `plan_sborka_b2b.md`. Результаты этапа 1 — `docs/mvp/`, `docs/demo/`, `packages/test-fixtures/`. API-контракты — в `docs/api/`, архитектура устойчивости — `docs/architecture/stage-6-resilience.md`, контроль этапа 7 — `docs/architecture/stage-7-trust-control.md`. Юридические файлы в `docs/legal/` являются проектными черновиками до проверки российским юристом.

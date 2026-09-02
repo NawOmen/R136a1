@@ -57,6 +57,8 @@ async def create_company(
         country=company.country,
         verification_status=company.verification_status,
         rejection_reason=None,
+        created_at=company.created_at,
+        updated_at=company.updated_at,
         membership=MembershipOut(can_buy=data.can_buy, can_sell=data.can_sell, is_admin=True),
     )
 

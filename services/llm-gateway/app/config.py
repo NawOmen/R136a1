@@ -12,6 +12,7 @@ class Settings(BaseSettings):
     ollama_model: str = "qwen3.5:9b"
     ollama_timeout_seconds: float = 180.0
     llm_context_tokens: int = 8192
+    local_inference_cost_rub_per_minute: float = 0.35
 
     deepseek_base_url: str = "https://api.deepseek.com"
     deepseek_api_key: str = ""

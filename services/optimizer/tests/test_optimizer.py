@@ -1,11 +1,14 @@
 import uuid
 from datetime import date, timedelta
 
+import pytest
+
 from app.main import app
 from app.schemas import (
     AllocationRequest,
     CoalitionRequest,
     OpportunityScoreIn,
+    ProducerOption,
     ResilienceRequest,
 )
 from app.solver import (
@@ -258,3 +261,19 @@ def test_simultaneous_failure_reports_uncovered_volume_reproducibly():
 
 def test_resilience_api_is_versioned():
     assert "/api/v1/optimize/resilience" in app.openapi()["paths"]
+
+
+def test_stage7_rejects_missing_price():
+    payload = producer(10, 1_000, 5_000)
+    payload.pop("unit_price_rub")
+    with pytest.raises(ValueError):
+        ProducerOption.model_validate(payload)
+
+
+def test_stage7_expired_hot_reserve_is_not_treated_as_confirmed():
+    payload = resilience_payload()
+    payload["reserve_options"][0]["held_until"] = str(date.today() - timedelta(days=1))
+    result = calculate_resilience(ResilienceRequest.model_validate(payload))
+    n1 = next(item for item in result.scenarios if item.scenario_type == "n1")
+    assert n1.unconfirmed_units > 0
+    assert n1.auto_eligible is False

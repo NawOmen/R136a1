@@ -12,6 +12,7 @@ from ..deps import (
     get_current_user,
     get_membership,
     notify,
+    require_company_admin,
     require_company_buyer,
     require_company_seller,
     require_verified_company,
@@ -19,6 +20,7 @@ from ..deps import (
 from ..models import Deal, Need, Offer
 from ..matching import ACTIVE_NEED_STATUSES, offer_unit_price, run_market_rematch
 from ..schemas import DealOut, OfferIn, OfferOut, OfferPatch
+from ..trust import append_audit_event, record_human_approval
 
 router = APIRouter(tags=["offers"])
 
@@ -164,6 +166,7 @@ async def select_offer(
         raise HTTPException(status.HTTP_404_NOT_FOUND, detail="Потребность не найдена")
 
     await require_company_buyer(need.company_id, user, db)
+    await require_company_admin(need.company_id, user, db)
     await require_verified_company(need.company_id, user, db)
     if need.status not in ACTIVE_NEED_STATUSES:
         raise HTTPException(status.HTTP_409_CONFLICT, detail="Потребность уже не открыта для предложений")
@@ -218,6 +221,38 @@ async def select_offer(
     need.no_match_reason = None
 
     db.add(deal)
+    await db.flush()
+    approval_payload = {
+        "offer_id": str(offer.id),
+        "need_id": str(need.id),
+        "seller_company_id": str(offer.company_id),
+        "units": need.volume_units,
+        "total_price_rub": total_price,
+    }
+    await record_human_approval(
+        db,
+        action="select_offer_and_create_deal",
+        entity_type="deal",
+        entity_id=deal.id,
+        actor_user_id=user.id,
+        actor_company_id=need.company_id,
+        permission="company_admin+buyer+verified",
+        decision="approved",
+        payload=approval_payload,
+        source_refs=[{"type": "need", "id": str(need.id)}, {"type": "offer", "id": str(offer.id)}],
+        explanation="Администратор проверенной компании-покупателя явно выбрал предложение после программной проверки цены, объёма, MOQ и срока.",
+    )
+    await append_audit_event(
+        db,
+        event_type="deal_created",
+        entity_type="deal",
+        entity_id=deal.id,
+        actor_user_id=user.id,
+        actor_company_id=need.company_id,
+        source_refs=[{"type": "need", "id": str(need.id)}, {"type": "offer", "id": str(offer.id)}],
+        explanation="Сделка создана из выбранного действующего предложения после Human Approval.",
+        payload={**approval_payload, "gmv_rub": total_price},
+    )
     await run_market_rematch(db, "offer_selected", offer.id, {"need_id": str(need.id)})
     if offer.created_by_user_id:
         await notify(db, offer.created_by_user_id, "Ваше предложение выбрано покупателем", "offer_selected")

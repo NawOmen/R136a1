@@ -39,6 +39,7 @@ from ..schemas import (
     ResiliencePlanOut,
     ResilienceScenarioOut,
 )
+from ..trust import append_audit_event, record_human_approval
 
 router = APIRouter(tags=["stage-6-resilience"])
 
@@ -226,6 +227,28 @@ async def _activate_scenario(
                 "delay_days": scenario.result["delay_days"],
             },
         )
+    )
+    await append_audit_event(
+        db,
+        event_type="recovery_activated",
+        entity_type="resilience_scenario",
+        entity_id=scenario.id,
+        actor_user_id=actor_user_id,
+        actor_company_id=plan.buyer_company_id,
+        source_refs=[
+            {"type": "resilience_plan", "id": str(plan.id)},
+            {"type": "scenario", "id": str(scenario.id)},
+            {"type": "baseline_variant", "id": str(plan.baseline_variant_id)},
+        ],
+        explanation="Конфигурация восстановления активирована после программной проверки покрытия, цены и срока.",
+        payload={
+            "automatic": automatic,
+            "baseline_cost_rub": plan.baseline_total_cost_rub,
+            "new_cost_rub": scenario.result["new_total_cost_rub"],
+            "buyer_value_rub": round(plan.baseline_total_cost_rub - scenario.result["new_total_cost_rub"], 2),
+            "price_delta_rub": scenario.result["price_delta_rub"],
+            "delay_days": scenario.result["delay_days"],
+        },
     )
 
 
@@ -439,6 +462,21 @@ async def create_resilience_plan(
             },
         )
     )
+    await append_audit_event(
+        db,
+        event_type="resilience_baseline_fixed",
+        entity_type="resilience_plan",
+        entity_id=plan.id,
+        actor_user_id=user.id,
+        actor_company_id=plan.buyer_company_id,
+        source_refs=[{"type": "baseline_variant", "id": str(plan.baseline_variant_id)}],
+        explanation="До применения восстановления зафиксированы исходная стоимость, срок и распределение оптимизатора.",
+        payload={
+            "baseline_total_cost_rub": plan.baseline_total_cost_rub,
+            "baseline_lead_time_days": plan.baseline_lead_time_days,
+            "baseline_allocations": plan.baseline_allocations,
+        },
+    )
     await db.flush()
     for company_id in reserve_company_ids:
         await _notify_company_admins(
@@ -515,6 +553,27 @@ async def confirm_resilience_plan(
                 "max_delay_days": plan.max_delay_days,
             },
         )
+    )
+    await record_human_approval(
+        db,
+        action="confirm_resilience_plan",
+        entity_type="resilience_plan",
+        entity_id=plan.id,
+        actor_user_id=user.id,
+        actor_company_id=plan.buyer_company_id,
+        permission="company_admin+buyer+verified",
+        decision="approved",
+        payload={
+            "baseline_variant_id": str(plan.baseline_variant_id),
+            "max_price_increase_pct": plan.max_price_increase_pct,
+            "max_delay_days": plan.max_delay_days,
+            "auto_replace_within_thresholds": plan.auto_replace_within_thresholds,
+        },
+        source_refs=[
+            {"type": "baseline_variant", "id": str(plan.baseline_variant_id)},
+            {"type": "resilience_plan", "id": str(plan.id)},
+        ],
+        explanation="Администратор проверенной компании-покупателя явно подтвердил конфигурацию и пределы замены.",
     )
     await db.commit()
     return await _plan_out(db, plan)
@@ -650,6 +709,30 @@ async def decide_reserve_commitment(
             actor_company_id=data.company_id,
             payload={"commitment_id": str(commitment.id)},
         )
+    )
+    await record_human_approval(
+        db,
+        action="reserve_commitment_decision",
+        entity_type="reserve_commitment",
+        entity_id=commitment.id,
+        actor_user_id=user.id,
+        actor_company_id=data.company_id,
+        permission="company_admin+seller+verified",
+        decision=data.decision,
+        payload={
+            "plan_id": str(plan.id),
+            "capacity_units": data.capacity_units,
+            "moq_units": data.moq_units,
+            "unit_price_rub": data.unit_price_rub,
+            "delivery_cost_rub": data.delivery_cost_rub,
+            "lead_time_days": data.lead_time_days,
+            "held_until": data.held_until.isoformat() if data.held_until else None,
+        },
+        source_refs=[
+            {"type": "resilience_plan", "id": str(plan.id)},
+            {"type": "reserve_commitment", "id": str(commitment.id)},
+        ],
+        explanation="Администратор проверенной компании-производителя явно принял решение по резервной мощности.",
     )
     await _calculate_and_store(db, plan, user.id)
     await db.commit()
@@ -814,6 +897,27 @@ async def approve_recovery(
             status.HTTP_409_CONFLICT,
             detail="Нельзя активировать неполную или неподтверждённую замену",
         )
+    await record_human_approval(
+        db,
+        action="approve_recovery",
+        entity_type="resilience_scenario",
+        entity_id=scenario.id,
+        actor_user_id=user.id,
+        actor_company_id=plan.buyer_company_id,
+        permission="company_admin+buyer+verified",
+        decision="approved",
+        payload={
+            "plan_id": str(plan.id),
+            "new_total_cost_rub": result["new_total_cost_rub"],
+            "new_lead_time_days": result["new_lead_time_days"],
+            "replacement_allocations": result["replacement_allocations"],
+        },
+        source_refs=[
+            {"type": "resilience_plan", "id": str(plan.id)},
+            {"type": "scenario", "id": str(scenario.id)},
+        ],
+        explanation="Администратор проверенной компании-покупателя явно подтвердил предложенную конфигурацию восстановления.",
+    )
     await _activate_scenario(db, plan, scenario, user.id, automatic=False)
     await db.commit()
     return await _plan_out(db, plan)

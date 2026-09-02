@@ -67,6 +67,7 @@ export interface Document {
   document_type: string;
   file_key: string;
   content_type: string;
+  verification_status: "unverified" | "verified" | "rejected";
 }
 
 export interface CapabilityPassport {
@@ -318,6 +319,29 @@ export interface Notification {
   message: string;
   type: string;
   is_read: boolean;
+}
+
+export interface SupportTicket {
+  id: string;
+  user_id: string;
+  company_id: string | null;
+  subject: string;
+  message: string;
+  status: "new" | "in_progress" | "resolved" | "closed";
+  admin_response: string | null;
+  assigned_admin_user_id: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface TrustKpi {
+  scope: "company" | "marketplace";
+  company_id: string | null;
+  generated_from_events: number;
+  buyer: Record<string, number>;
+  seller: Record<string, number>;
+  marketplace: Record<string, number>;
+  baseline_note: string;
 }
 
 // ---------- Входные данные ----------
@@ -937,5 +961,38 @@ export const marketplace = {
 
   markAllNotificationsRead(token: string): Promise<void> {
     return marketplaceFetch("/api/v1/notifications/read-all", { method: "POST", token });
+  },
+
+  createSupportTicket(
+    token: string,
+    input: { company_id?: string; subject: string; message: string },
+  ): Promise<SupportTicket> {
+    return marketplaceFetch("/api/v1/support/tickets", {
+      method: "POST", token, body: JSON.stringify(input),
+    });
+  },
+
+  getMySupportTickets(token: string): Promise<SupportTicket[]> {
+    return marketplaceFetch("/api/v1/support/tickets/mine", { token });
+  },
+
+  getAdminSupportTickets(token: string, status?: string): Promise<SupportTicket[]> {
+    const query = status ? `?status=${encodeURIComponent(status)}` : "";
+    return marketplaceFetch(`/api/v1/admin/support/tickets${query}`, { token });
+  },
+
+  updateAdminSupportTicket(
+    token: string,
+    ticketId: string,
+    input: { status: SupportTicket["status"]; admin_response?: string },
+  ): Promise<SupportTicket> {
+    return marketplaceFetch(`/api/v1/admin/support/tickets/${ticketId}`, {
+      method: "PATCH", token, body: JSON.stringify(input),
+    });
+  },
+
+  getKpi(token: string, companyId?: string): Promise<TrustKpi> {
+    const query = companyId ? `?company_id=${companyId}` : "";
+    return marketplaceFetch(`/api/v1/kpi${query}`, { token });
   },
 };

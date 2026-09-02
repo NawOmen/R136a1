@@ -43,6 +43,18 @@ export interface Company {
   membership?: Membership;
   /** Может возвращаться бэкендом при отклонении заявки. */
   rejection_reason?: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface VerificationEvent {
+  id: string;
+  company_id: string;
+  from_status: VerificationStatus;
+  to_status: VerificationStatus;
+  performed_by_user_id: string | null;
+  reason: string | null;
+  created_at: string;
 }
 
 export interface AuthResponse {
@@ -267,6 +279,17 @@ export const api = {
   // 7. Компании на проверке (для marketplace-администратора)
   getPendingCompanies(token: string): Promise<{ companies: Company[] }> {
     return request("/api/v1/admin/companies?status=pending_review", { token });
+  },
+
+  getAdminCompanies(token: string, status?: VerificationStatus, search?: string): Promise<{ companies: Company[] }> {
+    const params = new URLSearchParams();
+    if (status) params.set("status", status);
+    if (search?.trim()) params.set("search", search.trim());
+    return request(`/api/v1/admin/companies?${params.toString()}`, { token });
+  },
+
+  getCompanyVerificationHistory(token: string, id: string): Promise<VerificationEvent[]> {
+    return request(`/api/v1/admin/companies/${id}/verification-events`, { token });
   },
 
   // 8. Решение по проверке компании

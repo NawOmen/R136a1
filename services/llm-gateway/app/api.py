@@ -1,4 +1,6 @@
+import json
 import uuid
+from time import perf_counter
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, Request, UploadFile, status
@@ -24,6 +26,7 @@ from .schemas import (
     ToolCallOut,
 )
 from .security import CurrentUser, get_current_user
+from .safety import source_safety_warnings
 
 router = APIRouter()
 transcriber = LocalTranscriber()
@@ -88,7 +91,7 @@ async def analyze_buyer_request(
     await db.refresh(run)
 
     sources = [SourceDescriptor(id="request_text", kind="text", name="Описание покупателя", text=request_text)]
-    warnings: list[str] = []
+    warnings: list[str] = source_safety_warnings("Описание покупателя", request_text)
     local = _provider(request).local
     for index, upload in enumerate(files, start=1):
         data = await upload.read()
@@ -119,6 +122,7 @@ async def analyze_buyer_request(
                     text=extracted[: settings.max_combined_text_chars],
                 )
             )
+            warnings.extend(source_safety_warnings(upload.filename or f"Материал {index}", extracted))
             await log_tool(
                 db,
                 run.id,
@@ -147,7 +151,9 @@ async def analyze_buyer_request(
         raise HTTPException(status.HTTP_413_REQUEST_ENTITY_TOO_LARGE, detail=run.error)
 
     run.state = "extracting_requirements"
+    run.input_chars = combined_length
     await db.commit()
+    started_at = perf_counter()
     try:
         result, used_route, fallback = await BuyerAgent(_provider(request)).run(
             db, run.id, sources, warnings, route, buyer_company_id=company_id
@@ -162,12 +168,23 @@ async def analyze_buyer_request(
                 f"Выполнен возврат к локальной Qwen: {fallback}",
             )
         run.result = result.model_dump(mode="json")
+        run.duration_ms = round((perf_counter() - started_at) * 1000)
+        run.output_chars = len(json.dumps(run.result, ensure_ascii=False))
+        if used_route.startswith("local"):
+            run.estimated_cost_rub = round(
+                run.duration_ms / 60_000 * settings.local_inference_cost_rub_per_minute, 4
+            )
+            run.cost_basis = "Оценка времени локального инференса по настраиваемому тарифу эксплуатации"
+        else:
+            run.estimated_cost_rub = None
+            run.cost_basis = "Стоимость внешнего маршрута не оценивается без подтверждённого биллинга"
         run.used_route = used_route
         run.state = "needs_clarification" if result.questions else "ready_for_review"
         await db.commit()
         await db.refresh(run)
         return await _run_out(db, run)
     except ModelUnavailable as exc:
+        run.duration_ms = round((perf_counter() - started_at) * 1000)
         run.state = "failed"
         run.error = str(exc)
         await db.commit()
