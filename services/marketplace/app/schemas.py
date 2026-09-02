@@ -109,6 +109,7 @@ class DocumentOut(BaseModel):
     document_type: str
     file_key: str
     content_type: str
+    verification_status: str
 
 
 # ---------- Capability Passport ----------
@@ -485,3 +486,62 @@ class NotificationOut(BaseModel):
     message: str
     type: str
     is_read: bool
+
+
+# ---------- Доверие, KPI и поддержка ----------
+
+class SupportTicketIn(BaseModel):
+    company_id: uuid.UUID | None = None
+    subject: str = Field(min_length=3, max_length=200)
+    message: str = Field(min_length=10, max_length=5000)
+
+
+class SupportTicketUpdateIn(BaseModel):
+    status: Literal["new", "in_progress", "resolved", "closed"]
+    admin_response: str | None = Field(default=None, max_length=5000)
+
+
+class SupportTicketOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: uuid.UUID
+    user_id: uuid.UUID
+    company_id: uuid.UUID | None
+    subject: str
+    message: str
+    status: str
+    admin_response: str | None
+    assigned_admin_user_id: uuid.UUID | None
+    created_at: datetime
+    updated_at: datetime
+
+
+class TrustAuditEventOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: uuid.UUID
+    sequence: int
+    event_hash: str
+    event_type: str
+    entity_type: str
+    entity_id: uuid.UUID | None
+    source_refs: list[dict[str, Any]]
+    explanation: str
+    payload: dict[str, Any]
+    created_at: datetime
+
+
+class AuditVerificationOut(BaseModel):
+    valid: bool
+    checked_events: int
+    broken_sequence: int | None = None
+
+
+class KpiOut(BaseModel):
+    scope: Literal["company", "marketplace"]
+    company_id: uuid.UUID | None = None
+    generated_from_events: int
+    buyer: dict[str, int | float]
+    seller: dict[str, int | float]
+    marketplace: dict[str, int | float]
+    baseline_note: str

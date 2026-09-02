@@ -1,4 +1,5 @@
 import uuid
+from datetime import datetime
 from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, EmailStr, Field, model_validator
@@ -63,6 +64,8 @@ class CompanyOut(BaseModel):
     country: str
     verification_status: str
     rejection_reason: str | None = None
+    created_at: datetime
+    updated_at: datetime
 
 
 class CompanyWithMembership(CompanyOut):
@@ -111,6 +114,18 @@ class MeOut(BaseModel):
 
 class AdminCompaniesOut(BaseModel):
     companies: list[CompanyOut]
+
+
+class VerificationEventOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: uuid.UUID
+    company_id: uuid.UUID
+    from_status: str
+    to_status: str
+    performed_by_user_id: uuid.UUID | None
+    reason: str | None
+    created_at: datetime
 
 
 class AdminVerificationIn(BaseModel):

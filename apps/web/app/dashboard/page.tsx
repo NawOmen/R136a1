@@ -84,6 +84,12 @@ export default function DashboardPage() {
           </p>
         </div>
         <div className="actions">
+          <Link href="/support" className="btn btn-secondary">
+            Поддержка
+          </Link>
+          <Link href="/kpi" className="btn btn-secondary">
+            KPI и доверие
+          </Link>
           <Link href="/notifications" className="btn btn-secondary">
             Уведомления{unreadCount > 0 ? ` (${unreadCount})` : ""}
           </Link>

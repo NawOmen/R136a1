@@ -347,3 +347,29 @@ async def test_admin_filter_invalid_status(client, db_session):
     admin_token = await _make_admin(client, db_session)
     r = await client.get("/api/v1/admin/companies?status=whatever", headers=_auth(admin_token))
     assert r.status_code == 422
+
+
+async def test_admin_search_and_verification_history(client, db_session):
+    admin_token = await _make_admin(client, db_session)
+    user_token = await _register(client, USER_EMAIL)
+    company = await _create_company(client, user_token, display_name="ООО «Искомая фабрика»")
+    await _submit(client, user_token, company["id"])
+    await client.post(
+        f"/api/v1/admin/companies/{company['id']}/verification",
+        json={"decision": "reject", "reason": "нужно уточнить адрес"},
+        headers=_auth(admin_token),
+    )
+
+    found = await client.get(
+        "/api/v1/admin/companies?status=rejected&search=Искомая",
+        headers=_auth(admin_token),
+    )
+    assert found.status_code == 200
+    assert [item["id"] for item in found.json()["companies"]] == [company["id"]]
+
+    history = await client.get(
+        f"/api/v1/admin/companies/{company['id']}/verification-events",
+        headers=_auth(admin_token),
+    )
+    assert history.status_code == 200
+    assert history.json()[0]["reason"] == "нужно уточнить адрес"

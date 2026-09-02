@@ -101,6 +101,11 @@ class AgentRunOut(BaseModel):
     used_route: str | None
     result: dict[str, Any]
     error: str | None
+    duration_ms: int | None
+    input_chars: int | None
+    output_chars: int | None
+    estimated_cost_rub: float | None
+    cost_basis: str | None
     created_at: datetime
     updated_at: datetime
     tool_calls: list[ToolCallOut] = Field(default_factory=list)

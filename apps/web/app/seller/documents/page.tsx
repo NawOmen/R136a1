@@ -129,7 +129,7 @@ export default function SellerDocumentsPage() {
           На главную
         </Link>
       </div>
-      <p className="subtitle">Сертификаты, декларации и прочие документы компании</p>
+      <p className="subtitle">Загрузка не подтверждает подлинность: до проверки документ не используется как доказательство.</p>
 
       {available.length > 1 && (
         <div className="field">
@@ -217,6 +217,9 @@ export default function SellerDocumentsPage() {
                       <div className="company-meta">
                         {typeLabel} · {document.content_type}
                       </div>
+                      <span className={`badge badge-${document.verification_status}`}>
+                        {document.verification_status === "verified" ? "Проверен" : document.verification_status === "rejected" ? "Отклонён" : "Не проверен"}
+                      </span>
                     </div>
                     <button
                       type="button"
