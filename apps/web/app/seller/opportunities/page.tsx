@@ -161,7 +161,7 @@ export default function MarketOpportunitiesPage() {
       {error && <div className="alert alert-error">{error}</div>}
 
       {items.length === 0 ? (
-        <p className="hint">Активных дефицитных возможностей сейчас нет: спрос закрыт либо не соответствует Capability Passport.</p>
+        <p className="hint">Активных дефицитных возможностей сейчас нет: спрос закрыт либо не соответствует паспорту возможностей.</p>
       ) : (
         <div className="market-grid">
           {items.map((item) => (

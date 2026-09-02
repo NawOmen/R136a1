@@ -127,7 +127,7 @@ export default function SellerPassportPage() {
   if (meError) {
     return (
       <div>
-        <h1 className="page-title">Capability Passport</h1>
+        <h1 className="page-title">Паспорт возможностей</h1>
         <div className="alert alert-error">{meError}</div>
         <Link href="/login" className="btn btn-secondary">
           На страницу входа
@@ -139,7 +139,7 @@ export default function SellerPassportPage() {
   if (available.length === 0) {
     return (
       <div>
-        <h1 className="page-title">Capability Passport</h1>
+        <h1 className="page-title">Паспорт возможностей</h1>
         <div className="alert alert-error">
           У вас нет компании с правом «Продаю». Создайте компанию и включите режим продажи.
         </div>
@@ -158,7 +158,7 @@ export default function SellerPassportPage() {
   return (
     <div>
       <div className="company-row">
-        <h1 className="page-title">Capability Passport</h1>
+        <h1 className="page-title">Паспорт возможностей</h1>
         <Link href="/dashboard" className="btn btn-secondary btn-sm">
           На главную
         </Link>

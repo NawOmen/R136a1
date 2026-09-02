@@ -15,6 +15,11 @@ class Settings(BaseSettings):
     optimizer_url: str = "http://optimizer:8004"
     optimizer_timeout_seconds: float = 15.0
     minio_secure: bool = False
+    cors_origins: str = "http://localhost:3000,http://127.0.0.1:3000"
+
+    @property
+    def cors_origin_list(self) -> list[str]:
+        return [origin.strip() for origin in self.cors_origins.split(",") if origin.strip()]
 
 
 settings = Settings()

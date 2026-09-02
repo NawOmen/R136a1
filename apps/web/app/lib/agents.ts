@@ -1,7 +1,7 @@
 import { ApiError, clearToken } from "./api";
+import { serviceUrl } from "./serviceUrl";
 
-const AGENTS_BASE_URL =
-  process.env.NEXT_PUBLIC_LLM_GATEWAY_URL || "http://localhost:8003";
+const agentsBaseUrl = () => serviceUrl(process.env.NEXT_PUBLIC_LLM_GATEWAY_URL, 8003);
 
 export type FactValue = string | number | boolean | string[];
 export type PropertyStatus = "confirmed" | "assumed" | "needs_clarification";
@@ -105,7 +105,7 @@ export const agents = {
     if (companyId) form.set("company_id", companyId);
     files.forEach((file) => form.append("files", file));
     return readResponse(
-      await fetch(`${AGENTS_BASE_URL}/api/v1/buyer-agent/runs`, {
+      await fetch(`${agentsBaseUrl()}/api/v1/buyer-agent/runs`, {
         method: "POST",
         headers: { Authorization: `Bearer ${token}` },
         body: form,
@@ -119,7 +119,7 @@ export const agents = {
     answers: Record<string, FactValue>,
   ): Promise<AgentRun> {
     return readResponse(
-      await fetch(`${AGENTS_BASE_URL}/api/v1/agent-runs/${runId}/clarify`, {
+      await fetch(`${agentsBaseUrl()}/api/v1/agent-runs/${runId}/clarify`, {
         method: "POST",
         headers: {
           Authorization: `Bearer ${token}`,
@@ -132,7 +132,7 @@ export const agents = {
 
   async confirm(token: string, runId: string): Promise<AgentRun> {
     return readResponse(
-      await fetch(`${AGENTS_BASE_URL}/api/v1/agent-runs/${runId}/confirm`, {
+      await fetch(`${agentsBaseUrl()}/api/v1/agent-runs/${runId}/confirm`, {
         method: "POST",
         headers: { Authorization: `Bearer ${token}` },
       }),
@@ -145,7 +145,7 @@ export const agents = {
     category: string,
     requirements: Record<string, FactValue>,
   ): Promise<SellerExplanation> {
-    const response = await fetch(`${AGENTS_BASE_URL}/api/v1/seller-agent/explain`, {
+    const response = await fetch(`${agentsBaseUrl()}/api/v1/seller-agent/explain`, {
       method: "POST",
       headers: {
         Authorization: `Bearer ${token}`,

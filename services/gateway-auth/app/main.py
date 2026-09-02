@@ -2,13 +2,14 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from .api import admin, auth, companies, health
+from .config import settings
 
 app = FastAPI(title="Gateway Auth", version="1.0.0")
 
 # Для прототипа разрешаем CORS с фронтенда и инструментов разработки.
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=settings.cors_origin_list,
     allow_credentials=False,
     allow_methods=["*"],
     allow_headers=["*"],

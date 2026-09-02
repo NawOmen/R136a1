@@ -93,6 +93,7 @@ export default function DashboardPage() {
           <Link href="/notifications" className="btn btn-secondary">
             Уведомления{unreadCount > 0 ? ` (${unreadCount})` : ""}
           </Link>
+          <Link href="/deals" className="btn btn-secondary">Сделки и сообщения</Link>
           {user.is_marketplace_admin && (
             <Link href="/admin" className="btn btn-secondary">
               Панель администратора
@@ -175,6 +176,7 @@ export default function DashboardPage() {
                 <span className="company-meta">Каталог и публикация товаров</span>
               </Link>
             </li>
+            <li><Link href="/seller/analytics" className="company-item"><span className="company-item__name">Продажи и статистика</span><span className="company-meta">Сделки, оборот и загрузка мощности</span></Link></li>
             <li>
               <Link href="/seller/capacity" className="company-item">
                 <span className="company-item__name">Мощности</span>
@@ -189,7 +191,7 @@ export default function DashboardPage() {
             </li>
             <li>
               <Link href="/seller/passport" className="company-item">
-                <span className="company-item__name">Capability Passport</span>
+                <span className="company-item__name">Паспорт возможностей</span>
                 <span className="company-meta">Технологии, оборудование, материалы</span>
               </Link>
             </li>
