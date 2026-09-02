@@ -16,11 +16,11 @@ depends_on: Union[str, Sequence[str], None] = None
 
 def upgrade() -> None:
     op.execute(
-        "ALTER TABLE marketplace.documents ADD COLUMN verification_status "
+        "ALTER TABLE marketplace.documents ADD COLUMN IF NOT EXISTS verification_status "
         "VARCHAR(24) NOT NULL DEFAULT 'unverified'"
     )
     op.execute("""
-        CREATE TABLE marketplace.trust_audit_events (
+        CREATE TABLE IF NOT EXISTS marketplace.trust_audit_events (
             id UUID PRIMARY KEY, sequence INTEGER NOT NULL UNIQUE,
             previous_hash VARCHAR(64) NOT NULL, event_hash VARCHAR(64) NOT NULL UNIQUE,
             event_type VARCHAR(80) NOT NULL, entity_type VARCHAR(80) NOT NULL,
@@ -30,9 +30,9 @@ def upgrade() -> None:
             created_at TIMESTAMPTZ NOT NULL DEFAULT now()
         )
     """)
-    op.execute("CREATE INDEX ix_trust_audit_event_type ON marketplace.trust_audit_events (event_type)")
+    op.execute("CREATE INDEX IF NOT EXISTS ix_trust_audit_event_type ON marketplace.trust_audit_events (event_type)")
     op.execute("""
-        CREATE TABLE marketplace.human_approval_records (
+        CREATE TABLE IF NOT EXISTS marketplace.human_approval_records (
             id UUID PRIMARY KEY, action VARCHAR(100) NOT NULL,
             entity_type VARCHAR(80) NOT NULL, entity_id UUID,
             actor_user_id UUID NOT NULL, actor_company_id UUID,
@@ -42,9 +42,9 @@ def upgrade() -> None:
             CONSTRAINT ck_human_approval_decision CHECK (decision IN ('approved', 'rejected'))
         )
     """)
-    op.execute("CREATE INDEX ix_human_approval_action ON marketplace.human_approval_records (action)")
+    op.execute("CREATE INDEX IF NOT EXISTS ix_human_approval_action ON marketplace.human_approval_records (action)")
     op.execute("""
-        CREATE TABLE marketplace.support_tickets (
+        CREATE TABLE IF NOT EXISTS marketplace.support_tickets (
             id UUID PRIMARY KEY, user_id UUID NOT NULL, company_id UUID,
             subject VARCHAR(200) NOT NULL, message TEXT NOT NULL,
             status VARCHAR(32) NOT NULL DEFAULT 'new', admin_response TEXT,
@@ -53,7 +53,7 @@ def upgrade() -> None:
             CONSTRAINT ck_support_status CHECK (status IN ('new', 'in_progress', 'resolved', 'closed'))
         )
     """)
-    op.execute("CREATE INDEX ix_support_tickets_user_id ON marketplace.support_tickets (user_id)")
+    op.execute("CREATE INDEX IF NOT EXISTS ix_support_tickets_user_id ON marketplace.support_tickets (user_id)")
 
 
 def downgrade() -> None:

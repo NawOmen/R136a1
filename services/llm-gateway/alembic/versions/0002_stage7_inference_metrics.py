@@ -15,11 +15,11 @@ depends_on: Union[str, Sequence[str], None] = None
 
 
 def upgrade() -> None:
-    op.execute("ALTER TABLE agents.agent_runs ADD COLUMN duration_ms INTEGER")
-    op.execute("ALTER TABLE agents.agent_runs ADD COLUMN input_chars INTEGER")
-    op.execute("ALTER TABLE agents.agent_runs ADD COLUMN output_chars INTEGER")
-    op.execute("ALTER TABLE agents.agent_runs ADD COLUMN estimated_cost_rub DOUBLE PRECISION")
-    op.execute("ALTER TABLE agents.agent_runs ADD COLUMN cost_basis VARCHAR(160)")
+    op.execute("ALTER TABLE agents.agent_runs ADD COLUMN IF NOT EXISTS duration_ms INTEGER")
+    op.execute("ALTER TABLE agents.agent_runs ADD COLUMN IF NOT EXISTS input_chars INTEGER")
+    op.execute("ALTER TABLE agents.agent_runs ADD COLUMN IF NOT EXISTS output_chars INTEGER")
+    op.execute("ALTER TABLE agents.agent_runs ADD COLUMN IF NOT EXISTS estimated_cost_rub DOUBLE PRECISION")
+    op.execute("ALTER TABLE agents.agent_runs ADD COLUMN IF NOT EXISTS cost_basis VARCHAR(160)")
 
 
 def downgrade() -> None:
