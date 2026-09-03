@@ -39,6 +39,10 @@ export default function DashboardPage() {
       .then((result) => {
         setUser(result.user);
         setCompanies(result.companies);
+        const savedMode = window.localStorage.getItem("porukam-work-mode");
+        const canBuyNow = result.companies.some((item) => item.membership?.can_buy);
+        const canSellNow = result.companies.some((item) => item.membership?.can_sell);
+        setMode(savedMode === "sell" && canSellNow ? "sell" : canBuyNow ? "buy" : canSellNow ? "sell" : null);
         marketplace
           .getNotifications(token)
           .then((list) => setUnreadCount(list.filter((item) => !item.is_read).length))
@@ -55,6 +59,11 @@ export default function DashboardPage() {
   function handleLogout() {
     clearToken();
     router.push("/login");
+  }
+
+  function selectMode(next: Exclude<Mode, null>) {
+    setMode(next);
+    window.localStorage.setItem("porukam-work-mode", next);
   }
 
   if (loading) return <p className="hint">Загрузка...</p>;
@@ -82,10 +91,11 @@ export default function DashboardPage() {
   const buyerCompany = companies.find((company) => company.membership?.can_buy);
 
   return (
-    <div>
+    <div className="dashboard-page">
       <OnboardingTour canBuy={canBuy} canSell={canSell} />
       <div className="dashboard-head">
         <div>
+          <span className="eyebrow">Центр управления</span>
           <h1 className="page-title">Личный кабинет</h1>
           <p className="subtitle">
             {fullName} · {user.email} · Статус: {ACCOUNT_STATUS_LABELS[user.account_status]}
@@ -113,15 +123,14 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      <section className="card">
-        <h2>Режим работы</h2>
-        <div className="mode-toggle" role="group" aria-label="Режим работы">
+      <section className="workspace-card">
+        <div className="workspace-card__head"><div><h2>Рабочие разделы</h2><p>Один аккаунт может покупать и продавать от имени компании</p></div><div className="mode-toggle" role="group" aria-label="Режим работы">
           <button
             type="button"
             className={mode === "buy" ? "active" : ""}
             disabled={!canBuy}
             title={canBuy ? undefined : "Нет компании с правом покупки"}
-            onClick={() => setMode("buy")}
+            onClick={() => selectMode("buy")}
           >
             Покупаю
           </button>
@@ -130,11 +139,11 @@ export default function DashboardPage() {
             className={mode === "sell" ? "active" : ""}
             disabled={!canSell}
             title={canSell ? undefined : "Нет компании с правом продажи"}
-            onClick={() => setMode("sell")}
+            onClick={() => selectMode("sell")}
           >
             Продаю
           </button>
-        </div>
+        </div></div>
         {mode === "buy" && (
           <ul className="company-list">
             <li>
