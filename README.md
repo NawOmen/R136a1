@@ -13,6 +13,7 @@
 - Этап 6: горячий/тёплый/холодный резерв, N-1/N-2 и безопасное восстановление — реализовано.
 - Этап 7: Human Approval Guard, проверяемый аудит, KPI, поддержка и проектные правовые материалы — реализовано.
 - Этап 8: полировка, конкурсный прототип, офлайн-режим демо и материалы подачи — выполнено.
+- Этап 9: персональный путь, сопровождение сделки, отзывы, индекс цен и база знаний — реализовано.
 
 ## Структура
 
@@ -160,4 +161,4 @@ python infra/compare_llm_routes.py
 
 ## Документация
 
-Основной план — `plan_sborka_b2b.md`. Результаты этапа 1 — `docs/mvp/`, `docs/demo/`, `packages/test-fixtures/`. API-контракты — в `docs/api/`, архитектура устойчивости — `docs/architecture/stage-6-resilience.md`, контроль этапа 7 — `docs/architecture/stage-7-trust-control.md`. Юридические файлы в `docs/legal/` являются проектными черновиками до проверки российским юристом.
+Основной план — `plan_sborka_b2b.md`. Результаты этапа 1 — `docs/mvp/`, `docs/demo/`, `packages/test-fixtures/`. API-контракты — в `docs/api/`, архитектура устойчивости — `docs/architecture/stage-6-resilience.md`, контроль этапа 7 — `docs/architecture/stage-7-trust-control.md`, сопровождение сделки — `docs/architecture/stage9-experience.md`. Юридические файлы в `docs/legal/` являются проектными черновиками до проверки российским юристом.

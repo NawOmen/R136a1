@@ -102,6 +102,9 @@ export default function SellerProductsPage() {
     setCreating(true);
     setError(null);
     try {
+      const validation = await marketplace.validateCharacteristics({ category, subcategory, characteristics, moq_units: Number(moq) });
+      if (!validation.valid) { setError(validation.errors.join(". ")); return; }
+      if (validation.warnings.length && !window.confirm(`${validation.warnings.join(". ")}\n\nСохранить после ручной проверки?`)) return;
       const input = {
         name: name.trim(),
         category,

@@ -4,6 +4,7 @@
 import { serviceUrl } from "./serviceUrl";
 const apiBaseUrl = () => serviceUrl(process.env.NEXT_PUBLIC_API_URL, 8001);
 const TOKEN_KEY = "token";
+export const AUTH_CHANGED_EVENT = "porukam-auth-changed";
 
 // ---------- Типы домена ----------
 
@@ -177,10 +178,12 @@ export function getToken(): string | null {
 
 export function setToken(token: string): void {
   window.localStorage.setItem(TOKEN_KEY, token);
+  window.dispatchEvent(new Event(AUTH_CHANGED_EVENT));
 }
 
 export function clearToken(): void {
   window.localStorage.removeItem(TOKEN_KEY);
+  window.dispatchEvent(new Event(AUTH_CHANGED_EVENT));
 }
 
 // При истёкшем/недействительном токене (401) сбрасываем токен и отправляем на вход.
@@ -287,6 +290,11 @@ export const api = {
     if (status) params.set("status", status);
     if (search?.trim()) params.set("search", search.trim());
     return request(`/api/v1/admin/companies?${params.toString()}`, { token });
+  },
+
+  getAdminUsers(token: string, search?: string): Promise<{ users: User[] }> {
+    const query = search?.trim() ? `?search=${encodeURIComponent(search.trim())}` : "";
+    return request(`/api/v1/admin/users${query}`, { token });
   },
 
   getCompanyVerificationHistory(token: string, id: string): Promise<VerificationEvent[]> {

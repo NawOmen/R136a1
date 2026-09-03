@@ -21,6 +21,8 @@ export default function MyNeedsPage() {
   const [needs, setNeeds] = useState<Need[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [repeatId, setRepeatId] = useState<string | null>(null);
+  const [repeating, setRepeating] = useState(false);
 
   useEffect(() => {
     const token = getToken();
@@ -33,6 +35,17 @@ export default function MyNeedsPage() {
       )
       .finally(() => setLoading(false));
   }, []);
+
+  async function repeat(need: Need) {
+    const token = getToken(); if (!token) return;
+    setRepeating(true); setError(null);
+    try {
+      const deadline = new Date(); deadline.setDate(deadline.getDate() + 30);
+      const copy = await marketplace.repeatNeed(token, need.id, deadline.toISOString().slice(0, 10));
+      setNeeds((current) => [copy, ...current]); setRepeatId(null);
+    } catch (err) { setError(err instanceof ApiError ? err.message : "Не удалось повторить потребность."); }
+    finally { setRepeating(false); }
+  }
 
   if (loading) return <p className="hint">Загрузка...</p>;
 
@@ -55,7 +68,7 @@ export default function MyNeedsPage() {
       ) : (
         <ul className="company-list">
           {needs.map((need) => (
-            <li key={need.id}>
+            <li key={need.id} className="company-item repeat-order">
               <Link href={`/needs/${need.id}`} className="company-item">
                 <span className="company-item__name">
                   {need.category} · {formatUnits(need.volume_units)}
@@ -65,6 +78,7 @@ export default function MyNeedsPage() {
                 </span>
                 <span className={`badge badge-${need.status}`}>{NEED_STATUS_LABELS[need.status]}</span>
               </Link>
+              {repeatId === need.id ? <div className="repeat-confirm"><span>Создать такой же черновик со сроком +30 дней?</span><button className="btn btn-primary btn-sm" disabled={repeating} onClick={() => void repeat(need)}>Да, создать</button><button className="btn btn-secondary btn-sm" onClick={() => setRepeatId(null)}>Отмена</button></div> : <button className="btn btn-secondary btn-sm" onClick={() => setRepeatId(need.id)}>Повторить заказ</button>}
             </li>
           ))}
         </ul>

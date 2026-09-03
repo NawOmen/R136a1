@@ -1,19 +1,44 @@
 "use client";
 
 import Link from "next/link";
+import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { getToken } from "../lib/api";
+import { api, AUTH_CHANGED_EVENT, clearToken, getToken, User } from "../lib/api";
+
+type Theme = "light" | "dark";
+
+function applyTheme(theme: Theme) {
+  document.documentElement.dataset.theme = theme;
+  window.localStorage.setItem("porukam-theme", theme);
+}
 
 export function AccountDrawer() {
+  const pathname = usePathname();
+  const router = useRouter();
   const [open, setOpen] = useState(false);
-  const [authenticated, setAuthenticated] = useState(false);
-  useEffect(() => setAuthenticated(Boolean(getToken())), []);
+  const [user, setUser] = useState<User | null>(null);
+  const [theme, setTheme] = useState<Theme>("light");
+  useEffect(() => {
+    setOpen(false);
+    const sync = () => {
+      const token = getToken();
+      if (!token) { setUser(null); return; }
+      void api.me(token).then((result) => setUser(result.user)).catch(() => setUser(null));
+    };
+    const saved = window.localStorage.getItem("porukam-theme") === "dark" ? "dark" : "light";
+    setTheme(saved); applyTheme(saved); sync();
+    window.addEventListener(AUTH_CHANGED_EVENT, sync);
+    window.addEventListener("storage", sync);
+    return () => { window.removeEventListener(AUTH_CHANGED_EVENT, sync); window.removeEventListener("storage", sync); };
+  }, [pathname]);
+  function toggleTheme() { const next = theme === "light" ? "dark" : "light"; setTheme(next); applyTheme(next); }
+  function logout() { clearToken(); setOpen(false); router.replace("/"); router.refresh(); }
   return <div className="account-control">
-    {!authenticated && <><Link className="btn btn-secondary btn-sm" href="/login">Войти</Link><Link className="btn btn-primary btn-sm" href="/register">Зарегистрироваться</Link></>}
-    {authenticated && <button className="btn btn-secondary btn-sm" type="button" onClick={() => setOpen(true)}>Личный кабинет</button>}
-    {open && <><button className="drawer-backdrop" aria-label="Закрыть панель" onClick={() => setOpen(false)} /><aside className="account-drawer" aria-label="Личный кабинет">
-      <div className="company-row"><h2>Личный кабинет</h2><button className="btn btn-secondary btn-sm" onClick={() => setOpen(false)}>Закрыть</button></div>
-      <nav><Link href="/dashboard">Режимы работы</Link><Link href="/notifications">Уведомления</Link><Link href="/seller/products">Мои товары</Link><Link href="/seller/analytics">Продажи и статистика</Link><Link href="/settings">Настройки</Link><Link href="/support">Поддержка</Link></nav>
+    {!user && <><Link className="btn btn-secondary btn-sm" href="/login">Войти</Link><Link className="btn btn-primary btn-sm" href="/register">Зарегистрироваться</Link></>}
+    {user && <button className="account-avatar" type="button" aria-label="Открыть личный кабинет" onClick={() => setOpen(true)}>{user.first_name.slice(0, 1)}{user.last_name.slice(0, 1)}</button>}
+    {open && user && <><button className="drawer-backdrop" aria-label="Закрыть панель" onClick={() => setOpen(false)} /><aside className="account-drawer" aria-label="Меню аккаунта">
+      <div className="company-row"><div><h2>{user.first_name} {user.last_name}</h2><span className="hint">{user.email}</span></div><button className="drawer-close" aria-label="Закрыть" onClick={() => setOpen(false)}>×</button></div>
+      <nav><Link href={user.is_marketplace_admin ? "/admin" : "/dashboard"}>Личный кабинет</Link><Link href="/notifications">Уведомления</Link><Link href="/settings">Настройки</Link>{!user.is_marketplace_admin && <Link href="/support">Поддержка</Link>}<button type="button" onClick={toggleTheme}>Тема: {theme === "dark" ? "тёмная" : "светлая"}</button><button className="drawer-logout" type="button" onClick={logout}>Выйти</button></nav>
     </aside></>}
   </div>;
 }

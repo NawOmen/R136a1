@@ -43,6 +43,9 @@ class ProductionProfile(Base):
     production_site_address: Mapped[str | None] = mapped_column(String(500), nullable=True)
     region: Mapped[str | None] = mapped_column(String(120), nullable=True)
     about: Mapped[str | None] = mapped_column(String(2000), nullable=True)
+    photo_file_name: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    photo_file_key: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    photo_content_type: Mapped[str | None] = mapped_column(String(80), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, server_default=func.now(), onupdate=func.now()
@@ -222,6 +225,92 @@ class DealMessage(Base):
     author_user_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), nullable=False)
     author_company_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), nullable=False)
     message: Mapped[str] = mapped_column(String(2000), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now())
+
+
+class DealCheckpoint(Base):
+    __tablename__ = "deal_checkpoints"
+    __table_args__ = (
+        UniqueConstraint("deal_id", "kind", name="uq_deal_checkpoint_kind"),
+        {"schema": SCHEMA},
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=_uuid)
+    deal_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey(f"{SCHEMA}.deals.id", ondelete="CASCADE"), nullable=False
+    )
+    kind: Mapped[str] = mapped_column(String(32), nullable=False)
+    status: Mapped[str] = mapped_column(String(24), nullable=False, default="pending", server_default="pending")
+    note: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    confirmed_by_user_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), nullable=True)
+    completed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now())
+
+
+class DeliveryArrangement(Base):
+    __tablename__ = "delivery_arrangements"
+    __table_args__ = (UniqueConstraint("deal_id", name="uq_delivery_arrangement_deal"), {"schema": SCHEMA})
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=_uuid)
+    deal_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey(f"{SCHEMA}.deals.id", ondelete="CASCADE"), nullable=False
+    )
+    weight_kg: Mapped[float] = mapped_column(Float, nullable=False)
+    volume_m3: Mapped[float] = mapped_column(Float, nullable=False)
+    cargo_class: Mapped[str] = mapped_column(String(32), nullable=False)
+    classification_note: Mapped[str] = mapped_column(String(500), nullable=False)
+    method: Mapped[str] = mapped_column(String(32), nullable=False)
+    carrier_name: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    tracking_number: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    buyer_responsible: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True, server_default=text("true"))
+    confirmed_by_user_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now())
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now(), onupdate=func.now())
+
+
+class DealReview(Base):
+    __tablename__ = "deal_reviews"
+    __table_args__ = (
+        UniqueConstraint("deal_id", "reviewer_company_id", name="uq_deal_review_reviewer"),
+        {"schema": SCHEMA},
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=_uuid)
+    deal_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey(f"{SCHEMA}.deals.id", ondelete="CASCADE"), nullable=False
+    )
+    reviewer_company_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), nullable=False)
+    reviewed_company_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), nullable=False, index=True)
+    rating: Mapped[int] = mapped_column(Integer, nullable=False)
+    comment: Mapped[str] = mapped_column(String(2000), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now())
+
+
+class ProductPriceObservation(Base):
+    __tablename__ = "product_price_observations"
+    __table_args__ = {"schema": SCHEMA}
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=_uuid)
+    product_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey(f"{SCHEMA}.products.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    category: Mapped[str] = mapped_column(String(120), nullable=False, index=True)
+    unit_price_rub: Mapped[float] = mapped_column(Float, nullable=False)
+    observed_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now())
+
+
+class MarketWatch(Base):
+    __tablename__ = "market_watches"
+    __table_args__ = (
+        UniqueConstraint("user_id", "category", name="uq_market_watch_user_category"),
+        {"schema": SCHEMA},
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=_uuid)
+    user_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), nullable=False, index=True)
+    category: Mapped[str] = mapped_column(String(120), nullable=False)
+    demand_changes: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True, server_default=text("true"))
+    supply_changes: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True, server_default=text("true"))
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now())
 
 

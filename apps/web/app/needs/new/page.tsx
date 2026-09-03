@@ -6,7 +6,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { FormEvent, useEffect, useState } from "react";
+import { FormEvent, useEffect, useRef, useState } from "react";
 import { getToken } from "../../lib/api";
 import {
   AgentRun,
@@ -64,6 +64,9 @@ export default function NewNeedPage() {
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [busyAddress, setBusyAddress] = useState(false);
+  const [recording, setRecording] = useState(false);
+  const [transcribing, setTranscribing] = useState(false);
+  const recorderRef = useRef<MediaRecorder | null>(null);
 
   // Загрузка адресов выбранной компании
   useEffect(() => {
@@ -90,6 +93,26 @@ export default function NewNeedPage() {
 
   function updateRow(index: number, patch: Partial<CharacteristicRow>) {
     setRows((current) => current.map((row, i) => (i === index ? { ...row, ...patch } : row)));
+  }
+
+  async function toggleRecording() {
+    if (recording) { recorderRef.current?.stop(); return; }
+    const token = getToken(); if (!token) return;
+    if (!navigator.mediaDevices?.getUserMedia || typeof MediaRecorder === "undefined") {
+      setError("Запись с микрофона недоступна. Приложите готовый аудиофайл ниже."); return;
+    }
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const chunks: BlobPart[] = [];
+      const recorder = new MediaRecorder(stream);
+      recorder.ondataavailable = (event) => { if (event.data.size) chunks.push(event.data); };
+      recorder.onstop = () => {
+        stream.getTracks().forEach((track) => track.stop()); setRecording(false); setTranscribing(true);
+        const file = new File([new Blob(chunks, { type: recorder.mimeType || "audio/webm" })], "голосовой-запрос.webm", { type: recorder.mimeType || "audio/webm" });
+        void agents.transcribe(token, file).then((text) => setRequestDescription((current) => [current.trim(), text].filter(Boolean).join(" "))).catch((err: Error) => setError(err.message)).finally(() => setTranscribing(false));
+      };
+      recorderRef.current = recorder; recorder.start(); setRecording(true); setError(null);
+    } catch { setError("Не удалось получить доступ к микрофону. Разрешите доступ или загрузите аудиофайл."); }
   }
 
   async function handleAddAddress() {
@@ -385,6 +408,7 @@ export default function NewNeedPage() {
               onChange={(event) => setRequestDescription(event.target.value)}
               placeholder="Например: нужны 5000 крафтовых стаканов 400 мл с логотипом, доставка в Москву..."
             />
+            <div className="voice-row"><button type="button" className={recording ? "btn btn-danger btn-sm" : "btn btn-secondary btn-sm"} disabled={transcribing} onClick={() => void toggleRecording()}>{transcribing ? "Распознаём…" : recording ? "Остановить запись" : "🎙 Продиктовать запрос"}</button><span className="hint">Речь распознаётся локально и подставляется в текст. В локальной сети микрофону может потребоваться HTTPS.</span></div>
           </div>
           <div className="field">
             <label htmlFor="need_files">
@@ -500,12 +524,13 @@ export default function NewNeedPage() {
 
               {agentRun.result.matches.length > 0 && (
                 <div>
-                  <h3>Подходящие производители</h3>
+                <h3>Почему подошёл этот производитель</h3>
                   <ul className="company-list">
                     {agentRun.result.matches.map((match) => (
                       <li key={match.company_id} className="company-item">
                         <strong>{match.company_name}</strong>
-                        <span className="company-meta">Совпадение {match.score}% · {match.reasons.join("; ")}</span>
+                        <span className="match-score">{match.score}/100</span>
+                        <ul className="match-reasons">{match.reasons.map((reason) => <li key={reason}>{reason}</li>)}</ul>
                       </li>
                     ))}
                   </ul>

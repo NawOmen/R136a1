@@ -1,1 +1,14 @@
-export default function SettingsPage() { return <div><h1>Настройки</h1><section className="card"><h2>Интерфейс</h2><p>Язык: русский. Уведомления и параметры компании настраиваются в соответствующих разделах кабинета.</p></section></div>; }
+"use client";
+
+import { useEffect, useState } from "react";
+import { getToken } from "../lib/api";
+import { MarketWatch, marketplace, PRODUCT_CATEGORIES } from "../lib/marketplace";
+
+export default function SettingsPage() {
+  const [theme,setTheme]=useState<"light"|"dark">("light"); const [category,setCategory]=useState(PRODUCT_CATEGORIES[0]); const [watches,setWatches]=useState<MarketWatch[]>([]); const [error,setError]=useState<string|null>(null);
+  useEffect(()=>{const saved=window.localStorage.getItem("porukam-theme")==="dark"?"dark":"light";setTheme(saved);const token=getToken();if(token)void marketplace.getMarketWatches(token).then(setWatches).catch((e:Error)=>setError(e.message));},[]);
+  function changeTheme(value:"light"|"dark"){setTheme(value);document.documentElement.dataset.theme=value;window.localStorage.setItem("porukam-theme",value);}
+  async function addWatch(){const token=getToken();if(!token)return;try{await marketplace.createMarketWatch(token,category);setWatches(await marketplace.getMarketWatches(token));}catch(e){setError(e instanceof Error?e.message:"Не удалось сохранить подписку.");}}
+  async function removeWatch(id:string){const token=getToken();if(!token)return;await marketplace.deleteMarketWatch(token,id);setWatches((current)=>current.filter((item)=>item.id!==id));}
+  return <div><h1>Настройки</h1>{error&&<div className="alert alert-error">{error}</div>}<section className="card"><h2>Интерфейс</h2><div className="theme-choice"><button className={theme==="light"?"active":""} onClick={()=>changeTheme("light")}>☀ Светлая</button><button className={theme==="dark"?"active":""} onClick={()=>changeTheme("dark")}>☾ Тёмная</button></div><p className="hint">Язык интерфейса: русский.</p></section><section className="card"><h2>Изменения рынка</h2><p>Получайте уведомления, когда меняется спрос или предложение в выбранной категории.</p><div className="company-row"><select value={category} onChange={(e)=>setCategory(e.target.value)}>{PRODUCT_CATEGORIES.map((item)=><option key={item}>{item}</option>)}</select><button className="btn btn-primary btn-sm" disabled={watches.some((item)=>item.category===category)} onClick={()=>void addWatch()}>Следить</button></div><ul className="company-list">{watches.map((watch)=><li className="company-row" key={watch.id}><span>{watch.category}</span><button className="btn btn-secondary btn-sm" onClick={()=>void removeWatch(watch.id)}>Отключить</button></li>)}</ul></section><section className="card"><h2>Двухфакторная аутентификация</h2><div className="alert alert-warning">Не включена в демопрототипе</div><p>Имитация 2FA создаёт ложное чувство защиты. Для запуска потребуется TOTP с зашифрованным секретом, резервными кодами и процедурой восстановления; это зафиксировано как отдельная задача перед эксплуатацией.</p></section></div>;
+}

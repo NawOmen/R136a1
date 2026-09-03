@@ -19,6 +19,7 @@ from ..deps import (
 )
 from ..models import DeliveryAddress, Need, NeedFile, Product
 from ..matching import ACTIVE_NEED_STATUSES, run_market_rematch
+from ..experience import notify_market_watchers
 from ..schemas import NeedFeedOut, NeedFileOut, NeedIn, NeedOut
 from ..storage import download_object, upload_object
 
@@ -157,6 +158,7 @@ async def publish_need(
     need.confirmed_at = datetime.now(timezone.utc)
     need.no_match_reason = None
     await run_market_rematch(db, "need_confirmed", need.id)
+    await notify_market_watchers(db, need.category, "demand", exclude_user_id=user.id)
     await db.commit()
     await db.refresh(need)
     return _need_out(need)
@@ -263,9 +265,12 @@ async def cancel_need(
     await require_company_admin(need.company_id, user, db)
     if need.status not in ({"draft", "matched"} | ACTIVE_NEED_STATUSES):
         raise HTTPException(status.HTTP_409_CONFLICT, detail="Потребность уже закрыта")
+    was_public = need.status != "draft"
     need.status = "cancelled"
     need.no_match_reason = "Потребность отозвана покупателем"
     await run_market_rematch(db, "need_cancelled", need.id)
+    if was_public:
+        await notify_market_watchers(db, need.category, "demand", exclude_user_id=user.id)
     await db.commit()
     await db.refresh(need)
     return _need_out(need)

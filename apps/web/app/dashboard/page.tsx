@@ -14,6 +14,8 @@ import {
   VERIFICATION_STATUS_LABELS,
 } from "../lib/api";
 import { marketplace } from "../lib/marketplace";
+import { OnboardingTour } from "../components/OnboardingTour";
+import { BuyerSavingsPanel } from "../components/BuyerSavingsPanel";
 
 type Mode = "buy" | "sell" | null;
 
@@ -70,12 +72,18 @@ export default function DashboardPage() {
 
   if (!user) return null;
 
+  if (user.is_marketplace_admin) {
+    return <div><div className="dashboard-head"><div><h1 className="page-title">Рабочее место администратора</h1><p className="subtitle">Управление компаниями, пользователями и обращениями платформы</p></div><button type="button" className="btn btn-secondary" onClick={handleLogout}>Выйти</button></div><section className="journey-grid"><Link className="journey-card" href="/admin"><span>01</span><b>Заявки компаний</b><small>Проверка, причины решений и история</small></Link><Link className="journey-card" href="/admin#tickets"><span>02</span><b>Обращения пользователей</b><small>Очередь поддержки и ответы</small></Link><Link className="journey-card" href="/notifications"><span>03</span><b>Уведомления</b><small>Системные события администратора</small></Link></section></div>;
+  }
+
   const fullName = [user.last_name, user.first_name, user.middle_name].filter(Boolean).join(" ");
   const canBuy = companies.some((company) => company.membership?.can_buy);
   const canSell = companies.some((company) => company.membership?.can_sell);
+  const buyerCompany = companies.find((company) => company.membership?.can_buy);
 
   return (
     <div>
+      <OnboardingTour canBuy={canBuy} canSell={canSell} />
       <div className="dashboard-head">
         <div>
           <h1 className="page-title">Личный кабинет</h1>
@@ -226,6 +234,8 @@ export default function DashboardPage() {
           <p className="hint mode-hint">Выберите режим, чтобы открыть разделы маркетплейса.</p>
         )}
       </section>
+
+      <BuyerSavingsPanel companyId={buyerCompany?.id} />
 
       <section className="card">
         <div className="company-row">

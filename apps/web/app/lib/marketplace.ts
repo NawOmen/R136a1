@@ -62,6 +62,14 @@ export interface ProductImage { id: string; file_name: string; content_type: str
 export interface ProductPriceTier { min_units: number; unit_price_rub: number }
 export interface SellerAnalytics { company_id: string; products_total: number; products_published: number; deals_total: number; sold_units: number; revenue_rub: number; available_capacity_units: number; capacity_utilization_pct: number }
 export interface DealMessage { id: string; deal_id: string; author_user_id: string; author_company_id: string; message: string; created_at: string }
+export interface PublicProducer { company_id: string; display_name: string; legal_form: string; region: string | null; about: string | null; production_site_address: string | null; has_photo: boolean; rating: number | null; reviews_count: number }
+export interface PublicProductDetail extends Product { producer: PublicProducer }
+export interface DealCheckpoint { id: string; deal_id: string; kind: "production" | "shipment" | "delivery"; status: "pending" | "completed"; note: string | null; completed_at: string | null }
+export interface DeliveryArrangement { id: string; deal_id: string; weight_kg: number; volume_m3: number; cargo_class: "small" | "medium" | "large" | "manual_review"; classification_note: string; method: "buyer_carrier" | "self_pickup" | "seller_delivery"; carrier_name: string | null; tracking_number: string | null; buyer_responsible: boolean }
+export interface DealReview { id: string; deal_id: string; reviewer_company_id: string; reviewed_company_id: string; rating: number; comment: string; created_at: string }
+export interface PriceIndexPoint { date: string; average_unit_price_rub: number; offers_count: number }
+export interface MarketWatch { id: string; category: string; demand_changes: boolean; supply_changes: boolean }
+export interface BuyerSavings { company_id: string; confirmed_savings_rub: number; calculated_variants_rub: number; coalitions_count: number; explanation: string }
 
 export interface CapacityEntry {
   /** Дата в формате YYYY-MM-DD. */
@@ -641,6 +649,27 @@ export const marketplace = {
     return marketplaceFetch("/api/v1/products", {}).then((body) => unwrapList<Product>(body, ["products", "items"]));
   },
 
+  getProductDetail(productId: string): Promise<PublicProductDetail> {
+    return marketplaceFetch(`/api/v1/products/${productId}/detail`);
+  },
+
+  getProducer(companyId: string): Promise<PublicProducer> {
+    return marketplaceFetch(`/api/v1/producers/${companyId}`);
+  },
+
+  producerPhotoUrl(companyId: string): string {
+    return `${marketplaceBaseUrl()}/api/v1/producers/${companyId}/photo`;
+  },
+
+  uploadProductionPhoto(token: string, companyId: string, file: File): Promise<void> {
+    const body = new FormData(); body.set("file", file);
+    return marketplaceFetch(`/api/v1/companies/${companyId}/production-photo`, { method: "POST", token, body });
+  },
+
+  getPriceIndex(category: string): Promise<PriceIndexPoint[]> {
+    return marketplaceFetch(`/api/v1/price-index/${encodeURIComponent(category)}`);
+  },
+
   // Адреса доставки
   getAddresses(token: string, companyId: string): Promise<DeliveryAddress[]> {
     return marketplaceFetch(`/api/v1/companies/${companyId}/addresses`, { token }).then((body) =>
@@ -753,6 +782,39 @@ export const marketplace = {
   sendDealMessage(token: string, dealId: string, companyId: string, message: string): Promise<DealMessage> {
     return marketplaceFetch(`/api/v1/deals/${dealId}/messages`, { method: "POST", token, body: JSON.stringify({ company_id: companyId, message }) });
   },
+
+  getDealTimeline(token: string, dealId: string, companyId: string): Promise<DealCheckpoint[]> {
+    return marketplaceFetch(`/api/v1/deals/${dealId}/timeline?company_id=${companyId}`, { token });
+  },
+
+  updateDealCheckpoint(token: string, dealId: string, kind: DealCheckpoint["kind"], companyId: string, completed: boolean): Promise<DealCheckpoint[]> {
+    return marketplaceFetch(`/api/v1/deals/${dealId}/timeline/${kind}`, { method: "PATCH", token, body: JSON.stringify({ company_id: companyId, completed, human_approved: true }) });
+  },
+
+  getDelivery(token: string, dealId: string, companyId: string): Promise<DeliveryArrangement | null> {
+    return marketplaceFetch(`/api/v1/deals/${dealId}/delivery?company_id=${companyId}`, { token });
+  },
+
+  saveDelivery(token: string, dealId: string, input: { company_id: string; weight_kg: number; volume_m3: number; method: DeliveryArrangement["method"]; carrier_name?: string; tracking_number?: string }): Promise<DeliveryArrangement> {
+    return marketplaceFetch(`/api/v1/deals/${dealId}/delivery`, { method: "PUT", token, body: JSON.stringify({ ...input, human_approved: true }) });
+  },
+
+  createReview(token: string, dealId: string, companyId: string, rating: number, comment: string): Promise<DealReview> {
+    return marketplaceFetch(`/api/v1/deals/${dealId}/reviews`, { method: "POST", token, body: JSON.stringify({ company_id: companyId, rating, comment }) });
+  },
+
+  repeatNeed(token: string, needId: string, deadlineDate: string): Promise<Need> {
+    return marketplaceFetch(`/api/v1/needs/${needId}/repeat`, { method: "POST", token, body: JSON.stringify({ deadline_date: deadlineDate }) });
+  },
+
+  validateCharacteristics(input: { category: string; subcategory?: string; characteristics: Record<string, unknown>; moq_units: number }): Promise<{ valid: boolean; errors: string[]; warnings: string[] }> {
+    return marketplaceFetch("/api/v1/products/validate-characteristics", { method: "POST", body: JSON.stringify(input) });
+  },
+
+  getMarketWatches(token: string): Promise<MarketWatch[]> { return marketplaceFetch("/api/v1/market-watches", { token }); },
+  createMarketWatch(token: string, category: string): Promise<MarketWatch> { return marketplaceFetch("/api/v1/market-watches", { method: "POST", token, body: JSON.stringify({ category, demand_changes: true, supply_changes: true }) }); },
+  deleteMarketWatch(token: string, watchId: string): Promise<void> { return marketplaceFetch(`/api/v1/market-watches/${watchId}`, { method: "DELETE", token }); },
+  getBuyerSavings(token: string, companyId: string): Promise<BuyerSavings> { return marketplaceFetch(`/api/v1/companies/${companyId}/buyer-savings`, { token }); },
 
   // Мощности
   getCapacity(token: string, companyId: string, from?: string, to?: string): Promise<CapacityEntry[]> {

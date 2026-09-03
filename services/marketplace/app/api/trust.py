@@ -5,7 +5,7 @@ from sqlalchemy import or_, select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..database import get_db
-from ..deps import CurrentUser, get_current_user, require_membership
+from ..deps import CurrentUser, get_current_user, notify, require_membership
 from ..models import SupportTicket, TrustAuditEvent
 from ..schemas import (
     AuditVerificationOut,
@@ -54,6 +54,9 @@ async def create_support_ticket(
         explanation="Пользователь создал внутреннее обращение поддержки.",
         payload={"status": ticket.status, "subject": ticket.subject},
     )
+    admin_ids = (await db.execute(text("SELECT id FROM auth.users WHERE is_marketplace_admin = true AND account_status = 'active'"))).scalars().all()
+    for admin_id in admin_ids:
+        await notify(db, admin_id, f"Новое обращение поддержки: {ticket.subject}", "support_ticket_created")
     await db.commit()
     await db.refresh(ticket)
     return ticket
@@ -108,6 +111,7 @@ async def update_support_ticket_admin(
         explanation=f"Администратор изменил статус обращения: {previous_status} → {data.status}.",
         payload={"from_status": previous_status, "to_status": data.status},
     )
+    await notify(db, ticket.user_id, f"Поддержка обновила обращение «{ticket.subject}»: {data.status}", "support_ticket_updated")
     await db.commit()
     await db.refresh(ticket)
     return ticket

@@ -66,7 +66,8 @@ export default function CatalogPage() {
       ) : (
         <ul className="company-list">
           {products.map((product) => (
-            <li key={product.id} className="card">
+            <li key={product.id} className="card product-card">
+              <Link className="product-card__link" href={`/catalog/${product.id}`} aria-label={`Открыть товар ${product.name}`} />
               {product.images[0] && <img className="product-photo" src={marketplace.productImageUrl(product.images[0].id)} alt={product.name} />}
               <div className="company-row">
                 <div>
@@ -81,6 +82,7 @@ export default function CatalogPage() {
                 Мин. заказ: {formatUnits(product.moq_units)} · Срок: {product.lead_time_days} дн.
               </p>
               {product.price_tiers.map((tier) => <p className="hint mode-hint" key={tier.min_units}>От {formatUnits(tier.min_units)} — {formatRub(tier.unit_price_rub)} за шт., {formatRub(tier.min_units * tier.unit_price_rub)} за партию</p>)}
+              <span className="product-card__more">Подробнее о товаре, поставщике и получении →</span>
             </li>
           ))}
         </ul>

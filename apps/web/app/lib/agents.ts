@@ -92,6 +92,24 @@ async function readResponse(response: Response): Promise<AgentRun> {
 }
 
 export const agents = {
+  async askPlatform(token: string, question: string): Promise<{ answer: string; links: string[] }> {
+    const response = await fetch(`${agentsBaseUrl()}/api/v1/platform-assistant`, { method: "POST", headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" }, body: JSON.stringify({ question }) });
+    if (!response.ok) { let message="Помощник временно недоступен"; try { const body=(await response.json()) as {detail?:string}; message=body.detail??message; } catch {} throw new ApiError(message,response.status); }
+    return response.json();
+  },
+  async transcribe(token: string, file: File): Promise<string> {
+    const form = new FormData();
+    form.set("file", file);
+    const response = await fetch(`${agentsBaseUrl()}/api/v1/transcribe`, {
+      method: "POST", headers: { Authorization: `Bearer ${token}` }, body: form,
+    });
+    if (!response.ok) {
+      let message = "Не удалось распознать речь";
+      try { const body = (await response.json()) as { detail?: string }; message = body.detail ?? message; } catch {}
+      throw new ApiError(message, response.status);
+    }
+    return ((await response.json()) as { text: string }).text;
+  },
   async analyze(
     token: string,
     requestText: string,

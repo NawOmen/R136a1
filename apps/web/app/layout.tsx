@@ -3,6 +3,7 @@ import type { ReactNode } from "react";
 import "./globals.css";
 import Link from "next/link";
 import { AccountDrawer } from "./components/AccountDrawer";
+import { SiteNavigation } from "./components/SiteNavigation";
 
 export const metadata: Metadata = {
   title: "ПоРукам",
@@ -11,14 +12,12 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: Readonly<{ children: ReactNode }>) {
   return (
-    <html lang="ru">
+    <html lang="ru" suppressHydrationWarning>
       <body>
         <header className="site-header">
           <div className="container site-header__inner">
             <Link className="site-header__logo" href="/">ПоРукам</Link>
-            <nav className="site-nav" aria-label="Основная навигация">
-              <Link href="/catalog">Каталог</Link><Link href="/ai-procurement">Закупки с ИИ</Link><Link href="/support">Поддержка</Link>
-            </nav>
+            <SiteNavigation />
             <AccountDrawer />
           </div>
         </header>
