@@ -1,6 +1,6 @@
 "use client";
 
-import Link from "next/link";
+import { ActiveLink } from "./ActiveLink";
 import { FormEvent, useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
 import { api, AUTH_CHANGED_EVENT, getToken } from "../lib/api";
@@ -22,7 +22,6 @@ export function SiteNavigation() {
   }, []);
 
   const demandHref = authenticated ? "/seller/requests" : "/login";
-  const productActive = pathname.startsWith("/catalog");
   const demandActive = pathname.startsWith("/seller/requests") || pathname.startsWith("/needs");
 
   function search(event: FormEvent<HTMLFormElement>) {
@@ -34,8 +33,8 @@ export function SiteNavigation() {
 
   return <div className="market-navigation">
     <nav className="market-lanes" aria-label="Раздел рынка">
-      <Link className={productActive ? "active" : ""} href="/catalog">Товары</Link>
-      {!admin && <Link className={demandActive ? "active" : ""} href={demandHref}>Потребности</Link>}
+      <ActiveLink href="/catalog">Товары</ActiveLink>
+      {!admin && <ActiveLink paths={["/seller/requests", "/needs"]} href={demandHref}>Потребности</ActiveLink>}
     </nav>
     <form className="market-search" role="search" onSubmit={search}>
       <span aria-hidden="true">⌕</span>
@@ -43,11 +42,11 @@ export function SiteNavigation() {
       <button type="submit">Найти</button>
     </form>
     <nav className="site-nav" aria-label="Рабочие разделы">
-      {authenticated && !admin && <Link href="/coalitions">Коалиции</Link>}
-      {authenticated && !admin && <Link href="/deals">Сделки</Link>}
-      <Link href="/ai-procurement">ИИ-закупки</Link>
-      {!admin && <Link href="/support">Поддержка</Link>}
-      <Link href="/knowledge">Помощь</Link>
+      {authenticated && !admin && <ActiveLink href="/coalitions">Коалиции</ActiveLink>}
+      {authenticated && !admin && <ActiveLink href="/deals">Сделки</ActiveLink>}
+      <ActiveLink href="/ai-procurement">ИИ-закупки</ActiveLink>
+      {!admin && <ActiveLink href="/support">Поддержка</ActiveLink>}
+      <ActiveLink href="/knowledge">Помощь</ActiveLink>
     </nav>
   </div>;
 }

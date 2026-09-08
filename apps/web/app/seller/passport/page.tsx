@@ -6,7 +6,8 @@
 import Link from "next/link";
 import { FormEvent, useEffect, useState } from "react";
 import { getToken } from "../../lib/api";
-import { ApiError, marketplace } from "../../lib/marketplace";
+import { ApiError, marketplace, CapabilityDetails } from "../../lib/marketplace";
+import { CAPABILITY_FIELDS, EMPTY_CAPABILITY_DETAILS, parseSizeRanges } from "../../lib/capabilities";
 import { useCompanySelector } from "../../lib/useMe";
 
 function parseLines(text: string): string[] {
@@ -29,8 +30,8 @@ export default function SellerPassportPage() {
   const [technologies, setTechnologies] = useState("");
   const [equipment, setEquipment] = useState("");
   const [materials, setMaterials] = useState("");
-  const [sizeMin, setSizeMin] = useState("");
-  const [sizeMax, setSizeMax] = useState("");
+  const [sizeRangesText, setSizeRangesText] = useState("");
+  const [details, setDetails] = useState<CapabilityDetails>({ ...EMPTY_CAPABILITY_DETAILS });
   const [tolerances, setTolerances] = useState("");
   const [certifications, setCertifications] = useState("");
   const [minOrder, setMinOrder] = useState("");
@@ -61,14 +62,8 @@ export default function SellerPassportPage() {
         setMaxOrder(passport.max_order_units ? String(passport.max_order_units) : "");
         setDeliveryRegions(passport.delivery_regions.join("\n"));
         setCompletedOrderTypes(passport.completed_order_types.join("\n"));
-        const firstRange = Object.entries(passport.size_ranges ?? {})[0];
-        if (firstRange) {
-          setSizeMin(String(firstRange[1][0]));
-          setSizeMax(String(firstRange[1][1]));
-        } else {
-          setSizeMin("");
-          setSizeMax("");
-        }
+        setDetails({ ...EMPTY_CAPABILITY_DETAILS, ...passport.details });
+        setSizeRangesText(Object.entries(passport.size_ranges ?? {}).map(([key, range]) => `${key}: ${range[0]}: ${range[1]}`).join("\n"));
       })
       .catch((err: unknown) => {
         if (cancelled) return;
@@ -91,18 +86,16 @@ export default function SellerPassportPage() {
     const token = getToken();
     if (!token || !company) return;
 
-    const sizeRanges: Record<string, [number, number]> = {};
-    const min = Number(sizeMin);
-    const max = Number(sizeMax);
-    if (sizeMin !== "" && sizeMax !== "" && !Number.isNaN(min) && !Number.isNaN(max)) {
-      sizeRanges.cup_volume_ml = [min, max];
-    }
+    let sizeRanges: Record<string, [number, number]>;
+    try { sizeRanges = parseSizeRanges(sizeRangesText); }
+    catch (err) { setError((err as Error).message); return; }
 
     setSaving(true);
     setError(null);
     setSaved(false);
     try {
       await marketplace.updateCapabilityPassport(token, company.id, {
+        details,
         technologies: parseLines(technologies),
         equipment: parseLines(equipment),
         materials: parseLines(materials),
@@ -163,7 +156,7 @@ export default function SellerPassportPage() {
           На главную
         </Link>
       </div>
-      <p className="subtitle">Возможности производства: технологии, оборудование, материалы</p>
+      <p className="subtitle">Производство и поставки: возможности, ограничения и условия</p>
 
       {available.length > 1 && (
         <div className="field">
@@ -185,9 +178,23 @@ export default function SellerPassportPage() {
         <p className="hint">Загрузка паспорта...</p>
       ) : (
         <form className="card" onSubmit={handleSubmit}>
+          <p className="hint">Описание ниже будет доступно покупателям в подборе и на публичной странице вашей проверенной компании. Не указывайте конфиденциальные сведения.</p>
+          <div className="field">
+            <label htmlFor="business_kind">Вид деятельности</label>
+            <select id="business_kind" value={details.business_kind} onChange={(event) => setDetails({ ...details, business_kind: event.target.value as CapabilityDetails["business_kind"] })}>
+              <option value="manufacturer">Производство на заказ</option>
+              <option value="stock_supplier">Поставка со склада</option>
+              <option value="both">Производство и склад</option>
+            </select>
+          </div>
+          {CAPABILITY_FIELDS.map((field) => <div className="field" key={field.key}>
+            <label htmlFor={field.key}>{field.label}</label>
+            <textarea id={field.key} value={details[field.key]} maxLength={field.max} placeholder={field.example} onChange={(event) => setDetails({ ...details, [field.key]: event.target.value })} />
+          </div>)}
+          <p className="hint">Списки ниже заполняются построчно. Указывайте только подтверждённые возможности; сложный заказ требует согласования.</p>
           <div className="field">
             <label htmlFor="technologies">
-              Технологии<span className="opt">каждая строка — одна технология</span>
+              Технологии
             </label>
             <textarea
               id="technologies"
@@ -198,7 +205,7 @@ export default function SellerPassportPage() {
           </div>
           <div className="field">
             <label htmlFor="equipment">
-              Оборудование<span className="opt">каждая строка — единица</span>
+              Оборудование
             </label>
             <textarea
               id="equipment"
@@ -209,7 +216,7 @@ export default function SellerPassportPage() {
           </div>
           <div className="field">
             <label htmlFor="materials">
-              Материалы<span className="opt">каждая строка — материал</span>
+              Материалы
             </label>
             <textarea
               id="materials"
@@ -218,35 +225,14 @@ export default function SellerPassportPage() {
               placeholder={"крафт-картон 260–320 г/м²"}
             />
           </div>
-          <div className="char-row">
-            <div className="field" style={{ flex: 1 }}>
-              <label htmlFor="size_min">
-                Размер: минимум, мл<span className="opt">например, 150</span>
-              </label>
-              <input
-                id="size_min"
-                type="number"
-                min="0"
-                value={sizeMin}
-                onChange={(event) => setSizeMin(event.target.value)}
-              />
-            </div>
-            <div className="field" style={{ flex: 1 }}>
-              <label htmlFor="size_max">
-                Размер: максимум, мл<span className="opt">например, 600</span>
-              </label>
-              <input
-                id="size_max"
-                type="number"
-                min="0"
-                value={sizeMax}
-                onChange={(event) => setSizeMax(event.target.value)}
-              />
-            </div>
+          <div className="field">
+            <label htmlFor="size_ranges">Диапазоны размеров</label>
+            <textarea id="size_ranges" value={sizeRangesText} onChange={(event) => setSizeRangesText(event.target.value)} placeholder={"diameter_mm: 10: 120\nlength_mm: 5: 600"} aria-describedby="size_ranges_hint" />
+            <p className="hint" id="size_ranges_hint">Одна строка: название с единицей измерения: минимум: максимум. Для стаканов — cup_volume_ml.</p>
           </div>
           <div className="field">
             <label htmlFor="tolerances">
-              Допуски<span className="opt">необязательно</span>
+              Допуски
             </label>
             <input
               id="tolerances"
@@ -258,7 +244,7 @@ export default function SellerPassportPage() {
           </div>
           <div className="field">
             <label htmlFor="certifications">
-              Сертификации<span className="opt">каждая строка — документ</span>
+              Сертификации
             </label>
             <textarea
               id="certifications"
@@ -299,7 +285,7 @@ export default function SellerPassportPage() {
           </div>
           <div className="field">
             <label htmlFor="delivery_regions">
-              Регионы доставки<span className="opt">каждая строка — регион</span>
+              Регионы доставки
             </label>
             <textarea
               id="delivery_regions"
@@ -310,7 +296,7 @@ export default function SellerPassportPage() {
           </div>
           <div className="field">
             <label htmlFor="completed_order_types">
-              Типы выполненных заказов<span className="opt">каждая строка — тип</span>
+              Типы выполненных заказов
             </label>
             <textarea
               id="completed_order_types"

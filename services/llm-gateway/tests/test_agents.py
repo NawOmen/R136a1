@@ -349,7 +349,7 @@ async def test_bad_photo_requests_clarification_instead_of_guessing(
 
 @pytest.mark.asyncio
 async def test_capability_search_works_without_exact_product(
-    client, token, db_session, fake_provider
+    client, token, db_session, fake_provider, user_id
 ):
     company_id = uuid.uuid4()
     await db_session.execute(
@@ -371,6 +371,9 @@ async def test_capability_search_works_without_exact_product(
         ),
         {"id": company_id},
     )
+    await db_session.execute(text(
+        "INSERT INTO auth.company_members (id, company_id, user_id, can_sell) VALUES (:id, :cid, :uid, true)"
+    ), {"id": uuid.uuid4(), "cid": company_id, "uid": user_id})
     await db_session.commit()
     response = await client.post(
         "/api/v1/buyer-agent/runs",

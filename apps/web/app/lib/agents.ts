@@ -31,6 +31,9 @@ export interface ClarificationQuestion {
 }
 
 export interface CapabilityMatch {
+  details?: Record<string, string>;
+  cautions?: string[];
+  catalog?: { product_id: string; name: string; unit_price_rub: string; total_rub: string | null; moq_units: number; lead_time_days: number; comparable: boolean; note: string }[];
   company_id: string;
   company_name: string;
   score: number;
