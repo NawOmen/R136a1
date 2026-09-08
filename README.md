@@ -173,6 +173,14 @@ python infra/verify_ollama.py
 python infra/compare_llm_routes.py
 ```
 
+Если IP сменится (переподключились к другой сети) — узнайте новый адрес одной командой на ноутбуке:
+
+```bash
+python scripts/print-access-url.py
+```
+
+И откройте новый http://<новый-IP>:3000. Ничего настраивать и пересобирать не нужно — CORS уже разрешает любые приватные подсети.
+
 ## Документация
 
 Основной план — `plan_sborka_b2b.md`. Результаты этапа 1 — `docs/mvp/`, `docs/demo/`, `packages/test-fixtures/`. API-контракты — в `docs/api/`, архитектура устойчивости — `docs/architecture/stage-6-resilience.md`, контроль этапа 7 — `docs/architecture/stage-7-trust-control.md`, сопровождение сделки — `docs/architecture/stage9-experience.md`. Юридические файлы в `docs/legal/` являются проектными черновиками до проверки российским юристом.
