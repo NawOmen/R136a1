@@ -8,9 +8,24 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from ..database import get_db
 from ..deps import require_admin
 from ..models import Company, CompanyVerificationEvent, User
-from ..schemas import AdminCompaniesOut, AdminVerificationIn, BlockIn, CompanyOut, UserOut, VerificationEventOut
+from ..schemas import AdminCompaniesOut, AdminUsersOut, AdminVerificationIn, BlockIn, CompanyOut, UserOut, VerificationEventOut
 
 router = APIRouter(prefix="/admin", tags=["admin"])
+
+
+@router.get("/users", response_model=AdminUsersOut)
+async def list_users(
+    search: str | None = Query(default=None, min_length=2, max_length=120),
+    admin: User = Depends(require_admin),
+    db: AsyncSession = Depends(get_db),
+):
+    del admin
+    query = select(User).order_by(User.created_at.desc())
+    if search:
+        value = f"%{search.strip()}%"
+        query = query.where(or_(User.email.ilike(value), User.first_name.ilike(value), User.last_name.ilike(value)))
+    result = await db.execute(query)
+    return AdminUsersOut(users=[UserOut.model_validate(item) for item in result.scalars().all()])
 
 
 @router.get("/companies", response_model=AdminCompaniesOut)

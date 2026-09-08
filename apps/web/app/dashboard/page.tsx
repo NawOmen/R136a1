@@ -14,6 +14,8 @@ import {
   VERIFICATION_STATUS_LABELS,
 } from "../lib/api";
 import { marketplace } from "../lib/marketplace";
+import { OnboardingTour } from "../components/OnboardingTour";
+import { BuyerSavingsPanel } from "../components/BuyerSavingsPanel";
 
 type Mode = "buy" | "sell" | null;
 
@@ -37,6 +39,10 @@ export default function DashboardPage() {
       .then((result) => {
         setUser(result.user);
         setCompanies(result.companies);
+        const savedMode = window.localStorage.getItem("porukam-work-mode");
+        const canBuyNow = result.companies.some((item) => item.membership?.can_buy);
+        const canSellNow = result.companies.some((item) => item.membership?.can_sell);
+        setMode(savedMode === "sell" && canSellNow ? "sell" : canBuyNow ? "buy" : canSellNow ? "sell" : null);
         marketplace
           .getNotifications(token)
           .then((list) => setUnreadCount(list.filter((item) => !item.is_read).length))
@@ -55,6 +61,11 @@ export default function DashboardPage() {
     router.push("/login");
   }
 
+  function selectMode(next: Exclude<Mode, null>) {
+    setMode(next);
+    window.localStorage.setItem("porukam-work-mode", next);
+  }
+
   if (loading) return <p className="hint">Загрузка...</p>;
 
   if (error) {
@@ -70,14 +81,21 @@ export default function DashboardPage() {
 
   if (!user) return null;
 
+  if (user.is_marketplace_admin) {
+    return <div><div className="dashboard-head"><div><h1 className="page-title">Рабочее место администратора</h1><p className="subtitle">Управление компаниями, пользователями и обращениями платформы</p></div><button type="button" className="btn btn-secondary" onClick={handleLogout}>Выйти</button></div><section className="journey-grid"><Link className="journey-card" href="/admin"><span>01</span><b>Заявки компаний</b><small>Проверка, причины решений и история</small></Link><Link className="journey-card" href="/admin#tickets"><span>02</span><b>Обращения пользователей</b><small>Очередь поддержки и ответы</small></Link><Link className="journey-card" href="/notifications"><span>03</span><b>Уведомления</b><small>Системные события администратора</small></Link></section></div>;
+  }
+
   const fullName = [user.last_name, user.first_name, user.middle_name].filter(Boolean).join(" ");
   const canBuy = companies.some((company) => company.membership?.can_buy);
   const canSell = companies.some((company) => company.membership?.can_sell);
+  const buyerCompany = companies.find((company) => company.membership?.can_buy);
 
   return (
-    <div>
+    <div className="dashboard-page">
+      <OnboardingTour canBuy={canBuy} canSell={canSell} />
       <div className="dashboard-head">
         <div>
+          <span className="eyebrow">Центр управления</span>
           <h1 className="page-title">Личный кабинет</h1>
           <p className="subtitle">
             {fullName} · {user.email} · Статус: {ACCOUNT_STATUS_LABELS[user.account_status]}
@@ -105,15 +123,14 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      <section className="card">
-        <h2>Режим работы</h2>
-        <div className="mode-toggle" role="group" aria-label="Режим работы">
+      <section className="workspace-card">
+        <div className="workspace-card__head"><div><h2>Рабочие разделы</h2><p>Один аккаунт может покупать и продавать от имени компании</p></div><div className="mode-toggle" role="group" aria-label="Режим работы">
           <button
             type="button"
             className={mode === "buy" ? "active" : ""}
             disabled={!canBuy}
             title={canBuy ? undefined : "Нет компании с правом покупки"}
-            onClick={() => setMode("buy")}
+            onClick={() => selectMode("buy")}
           >
             Покупаю
           </button>
@@ -122,11 +139,11 @@ export default function DashboardPage() {
             className={mode === "sell" ? "active" : ""}
             disabled={!canSell}
             title={canSell ? undefined : "Нет компании с правом продажи"}
-            onClick={() => setMode("sell")}
+            onClick={() => selectMode("sell")}
           >
             Продаю
           </button>
-        </div>
+        </div></div>
         {mode === "buy" && (
           <ul className="company-list">
             <li>
@@ -226,6 +243,8 @@ export default function DashboardPage() {
           <p className="hint mode-hint">Выберите режим, чтобы открыть разделы маркетплейса.</p>
         )}
       </section>
+
+      <BuyerSavingsPanel companyId={buyerCompany?.id} />
 
       <section className="card">
         <div className="company-row">

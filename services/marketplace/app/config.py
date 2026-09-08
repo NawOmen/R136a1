@@ -16,6 +16,12 @@ class Settings(BaseSettings):
     optimizer_timeout_seconds: float = 15.0
     minio_secure: bool = False
     cors_origins: str = "http://localhost:3000,http://127.0.0.1:3000"
+    cors_origin_regex: str = (
+        r"^https?://(localhost|127\.0\.0\.1|\[::1\]|"
+        r"10\.\d{1,3}\.\d{1,3}\.\d{1,3}|"
+        r"172\.(1[6-9]|2\d|3[01])\.\d{1,3}\.\d{1,3}|"
+        r"192\.168\.\d{1,3}\.\d{1,3})(:\d+)?$"
+    )
 
     @property
     def cors_origin_list(self) -> list[str]:

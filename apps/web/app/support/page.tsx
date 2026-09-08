@@ -44,13 +44,13 @@ export default function SupportPage() {
     <div className="company-row"><h1 className="page-title">Поддержка</h1><Link href="/dashboard" className="btn btn-secondary btn-sm">На главную</Link></div>
     <p className="subtitle">Не указывайте пароли, секреты и лишние персональные данные.</p>
     {error && <div className="alert alert-error">{error}</div>}
-    <form className="card" onSubmit={(event) => void submit(event)}>
+    <div className="support-layout"><aside className="support-history card"><h2>Мои обращения</h2>
+      {tickets.length === 0 ? <p className="hint">Обращений пока нет.</p> : <ul>{tickets.map((ticket) => <li key={ticket.id}><div className="company-row"><strong>{ticket.subject}</strong><span className="badge">{STATUS[ticket.status]}</span></div><p>{ticket.message}</p>{ticket.admin_response && <div className="alert alert-success">Ответ поддержки: {ticket.admin_response}</div>}</li>)}</ul>}
+    </aside><form className="card support-form" onSubmit={(event) => void submit(event)}><h2>Новое обращение</h2>
       <div className="field"><label htmlFor="support-company">Компания (необязательно)</label><select id="support-company" value={companyId} onChange={(e) => setCompanyId(e.target.value)}><option value="">Без привязки</option>{companies.map((c) => <option key={c.id} value={c.id}>{c.display_name}</option>)}</select></div>
       <div className="field"><label htmlFor="support-subject">Тема</label><input id="support-subject" type="text" minLength={3} maxLength={200} required value={subject} onChange={(e) => setSubject(e.target.value)} /></div>
       <div className="field"><label htmlFor="support-message">Сообщение</label><textarea id="support-message" minLength={10} maxLength={5000} required value={message} onChange={(e) => setMessage(e.target.value)} /></div>
       <button className="btn btn-primary" disabled={busy}>{busy ? "Отправляем…" : "Отправить"}</button>
-    </form>
-    <h2>Мои обращения</h2>
-    {tickets.length === 0 ? <p className="hint">Обращений пока нет.</p> : <ul className="company-list">{tickets.map((ticket) => <li className="card" key={ticket.id}><div className="company-row"><strong>{ticket.subject}</strong><span className="badge">{STATUS[ticket.status]}</span></div><p>{ticket.message}</p>{ticket.admin_response && <div className="alert alert-success">Ответ поддержки: {ticket.admin_response}</div>}</li>)}</ul>}
+    </form></div>
   </div>;
 }

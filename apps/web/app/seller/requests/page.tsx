@@ -42,8 +42,10 @@ export default function SellerRequestsPage() {
   const [submitting, setSubmitting] = useState(false);
   const [explainingId, setExplainingId] = useState<string | null>(null);
   const [explanations, setExplanations] = useState<Record<string, string>>({});
+  const [query, setQuery] = useState("");
 
   useEffect(() => {
+    setQuery(new URLSearchParams(window.location.search).get("q") ?? "");
     const token = getToken();
     if (!token || !companyId) return;
     let cancelled = false;
@@ -168,19 +170,19 @@ export default function SellerRequestsPage() {
     );
   }
 
+  const normalizedQuery = query.trim().toLocaleLowerCase("ru");
   const openNeeds = needs.filter((need) =>
-    ["open_for_offers", "waiting_for_match", "coalition_candidate"].includes(need.status),
+    ["open_for_offers", "waiting_for_match", "coalition_candidate"].includes(need.status) &&
+    (!normalizedQuery || `${need.category} ${formatCharacteristics(need.characteristics)}`.toLocaleLowerCase("ru").includes(normalizedQuery)),
   );
 
   return (
-    <div>
-      <div className="company-row">
-        <h1 className="page-title">Подходящие запросы</h1>
-        <Link href="/dashboard" className="btn btn-secondary btn-sm">
-          На главную
-        </Link>
-      </div>
-      <p className="subtitle">Открытые потребности покупателей — предложите свои условия</p>
+    <div className="market-page">
+      <header className="market-page__head">
+        <div><span className="eyebrow">Рынок спроса</span><h1>Потребности покупателей</h1><p>Реальные запросы российских компаний — предложите производство на своих условиях</p></div>
+        <Link href="/seller/opportunities" className="btn btn-secondary">Аналитика спроса</Link>
+      </header>
+      <div className="catalog-toolbar"><label className="catalog-search"><span aria-hidden="true">⌕</span><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Категория или характеристика" aria-label="Поиск потребностей" /></label><span className="result-count">{openNeeds.length} открытых запросов</span></div>
 
       {available.length > 1 && (
         <div className="field">
@@ -202,30 +204,22 @@ export default function SellerRequestsPage() {
       ) : openNeeds.length === 0 ? (
         <p className="hint">Открытых запросов пока нет.</p>
       ) : (
-        <ul className="company-list">
+        <ul className="demand-grid">
           {openNeeds.map((need) => (
-            <li key={need.id} className="card">
-              <div className="company-row">
-                <div>
-                  <div className="company-item__name">
-                    {need.category} · {formatUnits(need.volume_units)}
-                  </div>
-                  <div className="company-meta">
-                    {formatCharacteristics(need.characteristics)}
-                  </div>
-                  <div className="company-meta">Срок: {need.deadline_date}</div>
-                </div>
-                <span className={`badge badge-${need.status}`}>{NEED_STATUS_LABELS[need.status]}</span>
-              </div>
+            <li key={need.id} className="demand-card">
+              <div className="demand-card__top"><span className="demand-kind">Производство</span><span className="demand-deadline">до {need.deadline_date}</span></div>
+              <h2>{need.category}</h2>
+              <p className="demand-description">{formatCharacteristics(need.characteristics)}</p>
+              <dl className="demand-facts"><div><dt>Необходимый объём</dt><dd>{formatUnits(need.volume_units)}</dd></div><div><dt>Статус запроса</dt><dd>{NEED_STATUS_LABELS[need.status]}</dd></div></dl>
 
               {explanations[need.id] && (
-                <p className="hint mode-hint">{explanations[need.id]}</p>
+                <p className="match-explanation"><b>Почему подходит</b>{explanations[need.id]}</p>
               )}
 
               {submittedIds.has(need.id) ? (
                 <p className="hint mode-hint">Предложение отправлено. Ожидайте решения покупателя.</p>
               ) : openFormId === need.id ? (
-                <form className="card" style={{ marginTop: 12 }} onSubmit={(event) => void handleOffer(event, need)}>
+                <form className="inline-offer" onSubmit={(event) => void handleOffer(event, need)}>
                   <div className="field">
                     <label htmlFor={`offer_price_${need.id}`}>
                       Цена за единицу, ₽<span className="req">*</span>
@@ -311,7 +305,7 @@ export default function SellerRequestsPage() {
                   </div>
                 </form>
               ) : (
-                <div className="actions">
+                <div className="demand-actions">
                   <button
                     type="button"
                     className="btn btn-secondary btn-sm"

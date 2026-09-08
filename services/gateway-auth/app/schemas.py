@@ -116,6 +116,10 @@ class AdminCompaniesOut(BaseModel):
     companies: list[CompanyOut]
 
 
+class AdminUsersOut(BaseModel):
+    users: list[UserOut]
+
+
 class VerificationEventOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 

@@ -13,7 +13,8 @@ from ..deps import (
     require_company_seller,
     require_verified_company,
 )
-from ..models import Product, ProductImage
+from ..experience import notify_market_watchers
+from ..models import Product, ProductImage, ProductPriceObservation
 from ..matching import run_market_rematch
 from ..schemas import ProductImageOut, ProductIn, ProductOut, ProductPatch, PublishIn
 from ..storage import delete_object, download_object, upload_object
@@ -81,6 +82,8 @@ async def update_product(
     await require_company_seller(product.company_id, user, db)
     await require_company_admin(product.company_id, user, db)
     patch = data.model_dump(exclude_unset=True)
+    old_price = product.price_rub
+    old_category = product.category
     current = {
         "name": product.name, "category": product.category, "subcategory": product.subcategory,
         "characteristics": product.characteristics, "price_rub": product.price_rub,
@@ -92,7 +95,11 @@ async def update_product(
     validated = ProductIn.model_validate({**current, **patch})
     for field, value in validated.model_dump().items():
         setattr(product, field, value)
+    if product.is_published and (product.price_rub != old_price or product.category != old_category):
+        db.add(ProductPriceObservation(product_id=product.id, category=product.category, unit_price_rub=product.price_rub))
     await run_market_rematch(db, "product_terms_changed", product.id)
+    if product.is_published:
+        await notify_market_watchers(db, product.category, "supply", exclude_user_id=user.id)
     await db.commit()
     await db.refresh(product)
     return await _product_out(product, db)
@@ -112,7 +119,11 @@ async def publish_product(
     await require_company_admin(product.company_id, user, db)
     if data.published:
         await require_verified_company(product.company_id, user, db)
+    was_published = product.is_published
     product.is_published = data.published
+    if data.published and not was_published:
+        db.add(ProductPriceObservation(product_id=product.id, category=product.category, unit_price_rub=product.price_rub))
+        await notify_market_watchers(db, product.category, "supply", exclude_user_id=user.id)
     await run_market_rematch(db, "product_publication_changed", product.id)
     await db.commit()
     await db.refresh(product)

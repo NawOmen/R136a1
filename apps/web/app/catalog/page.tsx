@@ -1,90 +1,44 @@
 "use client";
 
-// Публичный каталог товаров (GET /products). Доступен без входа;
-// «Создать потребность» ведёт в форму, которая при необходимости попросит войти.
-
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { api, Company, getToken } from "../lib/api";
-import {
-  formatCharacteristics,
-  formatRub,
-  formatUnits,
-  marketplace,
-  Product,
-} from "../lib/marketplace";
+import { formatRub, formatUnits, marketplace, Product } from "../lib/marketplace";
 
 export default function CatalogPage() {
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [myCompanies, setMyCompanies] = useState<Company[]>([]);
+  const [query, setQuery] = useState("");
+  const [category, setCategory] = useState("Все категории");
 
   useEffect(() => {
-    marketplace
-      .getCatalog()
-      .then(setProducts)
-      .catch((err: unknown) =>
-        setError(err instanceof Error ? err.message : "Не удалось загрузить каталог."),
-      )
-      .finally(() => setLoading(false));
-
-    // Если пользователь вошёл — показываем названия его компаний как продавцов.
+    const initialQuery = new URLSearchParams(window.location.search).get("q") ?? "";
+    setQuery(initialQuery);
+    marketplace.getCatalog().then(setProducts).catch((err: unknown) => setError(err instanceof Error ? err.message : "Не удалось загрузить каталог.")).finally(() => setLoading(false));
     const token = getToken();
-    if (token) {
-      api
-        .me(token)
-        .then((result) => setMyCompanies(result.companies))
-        .catch(() => {
-          // каталог остаётся публичным
-        });
-    }
+    if (token) void api.me(token).then((result) => setMyCompanies(result.companies)).catch(() => undefined);
   }, []);
 
+  const categories = useMemo(() => ["Все категории", ...Array.from(new Set(products.map((product) => product.category))).sort()], [products]);
+  const visible = useMemo(() => {
+    const normalized = query.trim().toLocaleLowerCase("ru");
+    return products.filter((product) => (category === "Все категории" || product.category === category) && (!normalized || `${product.name} ${product.category} ${product.subcategory ?? ""}`.toLocaleLowerCase("ru").includes(normalized)));
+  }, [products, category, query]);
+
   function companyName(companyId: string): string {
-    const mine = myCompanies.find((company) => company.id === companyId);
-    if (mine) return mine.display_name;
-    return `Компания ${companyId.slice(0, 8)}`;
+    return myCompanies.find((company) => company.id === companyId)?.display_name ?? "Проверенный производитель";
   }
 
-  if (loading) return <p className="hint">Загрузка каталога...</p>;
-
-  return (
-    <div>
-      <div className="company-row">
-        <h1 className="page-title">Каталог товаров</h1>
-        <Link href="/needs/new" className="btn btn-primary btn-sm">
-          Создать потребность
-        </Link>
-      </div>
-      <p className="subtitle">Публичный каталог производителей</p>
-
-      {error && <div className="alert alert-error">{error}</div>}
-
-      {!error && products.length === 0 ? (
-        <p className="hint">В каталоге пока нет опубликованных товаров.</p>
-      ) : (
-        <ul className="company-list">
-          {products.map((product) => (
-            <li key={product.id} className="card">
-              {product.images[0] && <img className="product-photo" src={marketplace.productImageUrl(product.images[0].id)} alt={product.name} />}
-              <div className="company-row">
-                <div>
-                  <div className="company-item__name">{product.name}</div>
-                  <div className="company-meta">Категория: {product.category}{product.subcategory ? ` / ${product.subcategory}` : ""}</div>
-                  <div className="company-meta">Продавец: {companyName(product.company_id)}</div>
-                </div>
-                <span className="badge badge-verified">{formatRub(product.price_rub)}</span>
-              </div>
-              <p className="hint mode-hint">{formatCharacteristics(product.characteristics)}</p>
-              <p className="hint mode-hint">
-                Мин. заказ: {formatUnits(product.moq_units)} · Срок: {product.lead_time_days} дн.
-              </p>
-              {product.price_tiers.map((tier) => <p className="hint mode-hint" key={tier.min_units}>От {formatUnits(tier.min_units)} — {formatRub(tier.unit_price_rub)} за шт., {formatRub(tier.min_units * tier.unit_price_rub)} за партию</p>)}
-            </li>
-          ))}
-        </ul>
-      )}
-    </div>
-  );
+  return <div className="market-page">
+    <header className="market-page__head"><div><span className="eyebrow">Рынок предложений</span><h1>Каталог товаров</h1><p>Готовая продукция российских производителей с оптовыми условиями</p></div><Link href="/needs/new" className="btn btn-primary">+ Разместить потребность</Link></header>
+    <div className="catalog-toolbar"><label className="catalog-search"><span aria-hidden="true">⌕</span><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Название товара или категория" aria-label="Поиск товаров" /></label><span className="result-count">{visible.length} {visible.length === 1 ? "товар" : "товаров"}</span></div>
+    <nav className="category-rail category-rail--catalog" aria-label="Категории товаров">{categories.map((item) => <button type="button" className={category === item ? "active" : ""} onClick={() => setCategory(item)} key={item}>{item}</button>)}</nav>
+    {error && <div className="alert alert-error">{error}</div>}
+    {loading ? <div className="market-loading"><span /><p>Загружаем предложения...</p></div> : !error && visible.length === 0 ? <div className="empty-market"><span aria-hidden="true">⌕</span><div><b>Подходящих товаров пока нет</b><p>Измените запрос или создайте карточку потребности — производители смогут предложить условия.</p></div><Link className="btn btn-primary" href="/needs/new">Создать потребность</Link></div> : <div className="product-grid">{visible.map((product) => <Link className="market-product" href={`/catalog/${product.id}`} key={product.id}>
+      <div className="market-product__visual">{product.images[0] ? <img src={marketplace.productImageUrl(product.images[0].id)} alt={product.name} /> : <span aria-hidden="true">{product.category.slice(0, 1)}</span>}<small>РОССИЯ</small></div>
+      <div className="market-product__body"><strong className="market-price">{formatRub(product.price_rub)}</strong><span className="market-muted">за единицу · MOQ {formatUnits(product.moq_units)}</span><h2>{product.name}</h2><p>{product.category}{product.subcategory ? ` · ${product.subcategory}` : ""}</p><span className="market-supplier">★ {companyName(product.company_id)}</span>{product.price_tiers[0] && <span className="volume-price">От {formatUnits(product.price_tiers[0].min_units)} — {formatRub(product.price_tiers[0].unit_price_rub)}/шт.</span>}<span className="market-product__cta">Открыть товар</span></div>
+    </Link>)}</div>}
+  </div>;
 }

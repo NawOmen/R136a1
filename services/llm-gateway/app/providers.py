@@ -1,4 +1,5 @@
 import json
+from copy import deepcopy
 from typing import Any
 
 import httpx
@@ -10,6 +11,29 @@ from .config import settings
 
 class ModelUnavailable(RuntimeError):
     pass
+
+
+def _ollama_schema(response_model: type[BaseModel]) -> dict[str, Any]:
+    """Ограничения длины проверяет Pydantic, а не несовместимая грамматика Ollama."""
+    schema = deepcopy(response_model.model_json_schema())
+
+    def visit(node: Any) -> None:
+        if not isinstance(node, dict):
+            return
+        node.pop("minLength", None)
+        node.pop("maxLength", None)
+        # Обходим только узлы схемы: имена полей, default и examples — данные.
+        for keyword in ("properties", "patternProperties", "$defs", "definitions", "dependentSchemas"):
+            for child in node.get(keyword, {}).values():
+                visit(child)
+        for keyword in ("items", "additionalProperties", "contains", "not", "if", "then", "else", "propertyNames"):
+            visit(node.get(keyword))
+        for keyword in ("anyOf", "allOf", "oneOf", "prefixItems"):
+            for child in node.get(keyword, []):
+                visit(child)
+
+    visit(schema)
+    return schema
 
 
 def _json_from_text(value: str) -> dict[str, Any]:
@@ -37,7 +61,7 @@ class OllamaProvider:
                 {"role": "system", "content": system},
                 {"role": "user", "content": prompt},
             ],
-            "format": response_model.model_json_schema(),
+            "format": _ollama_schema(response_model),
             "options": {
                 "temperature": 0.1,
                 "num_ctx": settings.llm_context_tokens,

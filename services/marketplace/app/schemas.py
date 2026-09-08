@@ -631,3 +631,135 @@ class KpiOut(BaseModel):
     seller: dict[str, int | float]
     marketplace: dict[str, int | float]
     baseline_note: str
+
+
+# ---------- Этап 9: пользовательский опыт и сопровождение сделки ----------
+
+class PublicProducerOut(BaseModel):
+    company_id: uuid.UUID
+    display_name: str
+    legal_form: str
+    region: str | None
+    about: str | None
+    production_site_address: str | None
+    has_photo: bool
+    rating: float | None
+    reviews_count: int
+
+
+class PublicProductDetailOut(ProductOut):
+    producer: PublicProducerOut
+
+
+class NeedRepeatIn(BaseModel):
+    deadline_date: date
+    valid_until: date | None = None
+
+
+class CharacteristicValidationIn(BaseModel):
+    category: str = Field(min_length=2, max_length=120)
+    subcategory: str | None = Field(default=None, max_length=120)
+    characteristics: dict[str, Any] = Field(default_factory=dict)
+    moq_units: int = Field(ge=1)
+
+
+class CharacteristicValidationOut(BaseModel):
+    valid: bool
+    errors: list[str]
+    warnings: list[str]
+
+
+class DealCheckpointOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: uuid.UUID
+    deal_id: uuid.UUID
+    kind: str
+    status: str
+    note: str | None
+    completed_at: datetime | None
+
+
+class CheckpointUpdateIn(BaseModel):
+    company_id: uuid.UUID
+    completed: bool
+    note: str | None = Field(default=None, max_length=500)
+    human_approved: Literal[True]
+
+
+class DeliveryArrangementIn(BaseModel):
+    company_id: uuid.UUID
+    weight_kg: float = Field(gt=0, le=100_000)
+    volume_m3: float = Field(gt=0, le=10_000)
+    method: Literal["buyer_carrier", "self_pickup", "seller_delivery"]
+    carrier_name: str | None = Field(default=None, max_length=255)
+    tracking_number: str | None = Field(default=None, max_length=255)
+    human_approved: Literal[True]
+
+    @model_validator(mode="after")
+    def require_carrier_for_buyer_delivery(self) -> "DeliveryArrangementIn":
+        if self.method == "buyer_carrier" and not (self.carrier_name or "").strip():
+            raise ValueError("Укажите выбранного перевозчика")
+        return self
+
+
+class DeliveryArrangementOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: uuid.UUID
+    deal_id: uuid.UUID
+    weight_kg: float
+    volume_m3: float
+    cargo_class: str
+    classification_note: str
+    method: str
+    carrier_name: str | None
+    tracking_number: str | None
+    buyer_responsible: bool
+
+
+class DealReviewIn(BaseModel):
+    company_id: uuid.UUID
+    rating: int = Field(ge=1, le=5)
+    comment: str = Field(min_length=10, max_length=2000)
+
+
+class DealReviewOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: uuid.UUID
+    deal_id: uuid.UUID
+    reviewer_company_id: uuid.UUID
+    reviewed_company_id: uuid.UUID
+    rating: int
+    comment: str
+    created_at: datetime
+
+
+class PriceIndexPoint(BaseModel):
+    date: date
+    average_unit_price_rub: float
+    offers_count: int
+
+
+class MarketWatchIn(BaseModel):
+    category: str = Field(min_length=2, max_length=120)
+    demand_changes: bool = True
+    supply_changes: bool = True
+
+
+class MarketWatchOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: uuid.UUID
+    category: str
+    demand_changes: bool
+    supply_changes: bool
+
+
+class BuyerSavingsOut(BaseModel):
+    company_id: uuid.UUID
+    confirmed_savings_rub: float
+    calculated_variants_rub: float
+    coalitions_count: int
+    explanation: str

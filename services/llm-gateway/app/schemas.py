@@ -128,3 +128,16 @@ class HealthOut(BaseModel):
     status: str
     local_model: str
     external_enabled: bool
+
+
+class TranscriptionOut(BaseModel):
+    text: str
+
+
+class PlatformAssistantIn(BaseModel):
+    question: str = Field(min_length=3, max_length=1000)
+
+
+class PlatformAssistantOut(BaseModel):
+    answer: str = Field(min_length=1, max_length=2000)
+    links: list[str] = Field(default_factory=list, max_length=3)

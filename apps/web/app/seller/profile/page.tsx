@@ -30,6 +30,7 @@ export default function SellerProfilePage() {
   const [error, setError] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [photo, setPhoto] = useState<File | null>(null);
 
   useEffect(() => {
     const token = getToken();
@@ -79,6 +80,7 @@ export default function SellerProfilePage() {
         region: profile.region?.trim() ?? "",
         about: profile.about?.trim() ?? "",
       });
+      if (photo) await marketplace.uploadProductionPhoto(token, company.id, photo);
       setSaved(true);
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "Не удалось сохранить профиль.");
@@ -150,6 +152,11 @@ export default function SellerProfilePage() {
         <p className="hint">Загрузка профиля...</p>
       ) : (
         <form className="card" onSubmit={handleSubmit}>
+          <div className="field">
+            <label htmlFor="production-photo">Фотография производства<span className="opt">PNG, JPG или WebP до 8 МБ</span></label>
+            <input id="production-photo" type="file" accept="image/png,image/jpeg,image/webp" onChange={(event) => setPhoto(event.target.files?.[0] ?? null)} />
+            <p className="hint">Показывается на публичной странице производителя. Используйте только синтетическое или разрешённое изображение.</p>
+          </div>
           <div className="field">
             <label htmlFor="production_site_address">
               Адрес производства<span className="req">*</span>

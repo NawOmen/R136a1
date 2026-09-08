@@ -30,12 +30,13 @@ export default function AdminPage() {
   const [history, setHistory] = useState<Record<string, VerificationEvent[]>>({});
   const [tickets, setTickets] = useState<SupportTicket[]>([]);
   const [response, setResponse] = useState<Record<string, string>>({});
+  const [users, setUsers] = useState<User[]>([]);
 
   const refreshPending = useCallback(async (token: string, selectedStatus: VerificationStatus = "pending_review", query = "") => {
     const result = await api.getAdminCompanies(token, selectedStatus, query || undefined);
     setCompanies(result.companies);
-    const support = await marketplace.getAdminSupportTickets(token);
-    setTickets(support);
+    const [support, userResult] = await Promise.all([marketplace.getAdminSupportTickets(token), api.getAdminUsers(token)]);
+    setTickets(support); setUsers(userResult.users);
   }, []);
 
   const load = useCallback(async () => {
@@ -213,7 +214,9 @@ export default function AdminPage() {
         </ul>
       )}
 
-      <h2 style={{ marginTop: 32 }}>Обращения поддержки ({tickets.length})</h2>
+      <section className="card" style={{ marginTop: 24 }}><h2>Пользователи ({users.length})</h2><div className="admin-user-grid">{users.map((item) => <div className="company-row" key={item.id}><div><b>{item.last_name} {item.first_name}</b><p className="hint mode-hint">{item.email} · {item.is_marketplace_admin ? "Администратор" : "Пользователь"}</p></div>{!item.is_marketplace_admin && <button className="btn btn-secondary btn-sm" onClick={() => { const token=getToken(); if(!token)return; void api.setUserBlocked(token,item.id,item.account_status!=="blocked").then(() => refreshPending(token,statusFilter,search)); }}>{item.account_status === "blocked" ? "Разблокировать" : "Заблокировать"}</button>}</div>)}</div></section>
+
+      <h2 id="tickets" style={{ marginTop: 32 }}>Обращения пользователей ({tickets.length})</h2>
       {tickets.length === 0 ? <p className="hint">Обращений нет.</p> : <ul className="company-list">{tickets.map((ticket) => <li className="card" key={ticket.id}><div className="company-row"><strong>{ticket.subject}</strong><span className="badge">{ticket.status}</span></div><p>{ticket.message}</p><div className="field"><label htmlFor={`response-${ticket.id}`}>Ответ</label><textarea id={`response-${ticket.id}`} value={response[ticket.id] ?? ticket.admin_response ?? ""} onChange={(event) => setResponse((current) => ({ ...current, [ticket.id]: event.target.value }))} /></div><div className="actions"><button className="btn btn-secondary btn-sm" onClick={() => { const token = getToken(); if (!token) return; void marketplace.updateAdminSupportTicket(token, ticket.id, { status: "in_progress", admin_response: response[ticket.id] }).then(() => refreshPending(token, statusFilter, search)); }}>В работу</button><button className="btn btn-success btn-sm" onClick={() => { const token = getToken(); if (!token) return; void marketplace.updateAdminSupportTicket(token, ticket.id, { status: "resolved", admin_response: response[ticket.id] }).then(() => refreshPending(token, statusFilter, search)); }}>Ответить и решить</button></div></li>)}</ul>}
     </div>
   );
