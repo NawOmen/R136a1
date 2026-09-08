@@ -1,3 +1,4 @@
+"""No-DB contract checks; distinct module name from API integration tests."""
 import importlib.util
 import io
 from pathlib import Path
