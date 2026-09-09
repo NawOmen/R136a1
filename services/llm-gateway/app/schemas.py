@@ -58,14 +58,29 @@ class ClarificationQuestion(BaseModel):
     options: list[FactValue] = Field(default_factory=list)
 
 
+class CatalogReference(BaseModel):
+    product_id: uuid.UUID
+    name: str
+    unit_price_rub: str
+    total_rub: str | None = None
+    moq_units: int
+    lead_time_days: int
+    comparable: bool = False
+    note: str
+
+
 class CapabilityMatch(BaseModel):
     company_id: uuid.UUID
     company_name: str
     score: int = Field(ge=0, le=100)
     reasons: list[str]
+    details: dict[str, str] = Field(default_factory=dict)
+    cautions: list[str] = Field(default_factory=list)
+    catalog: list[CatalogReference] = Field(default_factory=list)
 
 
 class BuyerAgentResult(BaseModel):
+    buyer_company_id: uuid.UUID | None = None
     category: str
     properties: list[RequirementProperty]
     conflicts: list[RequirementConflict]

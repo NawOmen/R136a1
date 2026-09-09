@@ -62,7 +62,7 @@ export interface ProductImage { id: string; file_name: string; content_type: str
 export interface ProductPriceTier { min_units: number; unit_price_rub: number }
 export interface SellerAnalytics { company_id: string; products_total: number; products_published: number; deals_total: number; sold_units: number; revenue_rub: number; available_capacity_units: number; capacity_utilization_pct: number }
 export interface DealMessage { id: string; deal_id: string; author_user_id: string; author_company_id: string; message: string; created_at: string }
-export interface PublicProducer { company_id: string; display_name: string; legal_form: string; region: string | null; about: string | null; production_site_address: string | null; has_photo: boolean; rating: number | null; reviews_count: number }
+export interface PublicProducer { company_id: string; display_name: string; legal_form: string; region: string | null; about: string | null; production_site_address: string | null; has_photo: boolean; rating: number | null; reviews_count: number; capability_details?: CapabilityDetails | null }
 export interface PublicProductDetail extends Product { producer: PublicProducer }
 export interface DealCheckpoint { id: string; deal_id: string; kind: "production" | "shipment" | "delivery"; status: "pending" | "completed"; note: string | null; completed_at: string | null }
 export interface DeliveryArrangement { id: string; deal_id: string; weight_kg: number; volume_m3: number; cargo_class: "small" | "medium" | "large" | "manual_review"; classification_note: string; method: "buyer_carrier" | "self_pickup" | "seller_delivery"; carrier_name: string | null; tracking_number: string | null; buyer_responsible: boolean }
@@ -87,7 +87,20 @@ export interface Document {
   verification_status: "unverified" | "verified" | "rejected";
 }
 
+export interface CapabilityDetails {
+  business_kind: "manufacturer" | "stock_supplier" | "both";
+  product_types: string;
+  complexity: string;
+  material_grades: string;
+  limitations: string;
+  packaging: string;
+  delivery: string;
+  quality_control: string;
+  trial_batch: string;
+}
+
 export interface CapabilityPassport {
+  details: CapabilityDetails;
   company_id: string;
   technologies: string[];
   equipment: string[];
@@ -413,6 +426,7 @@ export interface CreateOfferInput {
 }
 
 export interface UpdateCapabilityPassportInput {
+  details?: CapabilityDetails;
   technologies: string[];
   equipment: string[];
   materials: string[];

@@ -7,7 +7,8 @@ from fastapi import APIRouter, Depends, File, Form, HTTPException, Request, Uplo
 from sqlalchemy import select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from .agents import BuyerAgent, SellerAgent, log_tool
+from .agents import BuyerAgent, SellerAgent, log_tool, search_capabilities
+from .buyer_comparison import buyer_summary
 from .config import settings
 from .database import get_db
 from .extractors import LocalTranscriber, UnreadableMaterial, material_to_text
@@ -317,6 +318,8 @@ async def clarify_agent_run(
         item.status == "needs_clarification" for item in result.properties
     )
     result.can_confirm = not result.conflicts and not result.questions and not has_unresolved
+    result.matches = await search_capabilities(db, result.category, result.properties, result.buyer_company_id)
+    result.summary = buyer_summary(result.matches, not result.can_confirm)
     run.result = result.model_dump(mode="json")
     run.state = "ready_for_review" if result.can_confirm else "needs_clarification"
     await log_tool(
@@ -386,7 +389,7 @@ async def explain_seller_match(
         await db.execute(
             text(
                 "SELECT technologies, equipment, materials, size_ranges, tolerances, "
-                "certifications, min_order_units, max_order_units, delivery_regions, completed_order_types "
+                "certifications, min_order_units, max_order_units, delivery_regions, completed_order_types, details "
                 "FROM marketplace.capability_passports WHERE company_id = :company_id"
             ),
             {"company_id": data.company_id},

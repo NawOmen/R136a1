@@ -120,6 +120,7 @@ class CapabilityPassport(Base):
     __table_args__ = {"schema": SCHEMA}
 
     company_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True)
+    details: Mapped[dict] = mapped_column(JSONB, nullable=False, default=dict, server_default="{}")
     technologies: Mapped[list] = mapped_column(JSONB, nullable=False, default=list)
     equipment: Mapped[list] = mapped_column(JSONB, nullable=False, default=list)
     materials: Mapped[list] = mapped_column(JSONB, nullable=False, default=list)

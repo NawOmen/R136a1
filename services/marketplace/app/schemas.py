@@ -200,6 +200,21 @@ class DocumentOut(BaseModel):
 
 # ---------- Capability Passport ----------
 
+class CapabilityDetails(BaseModel):
+    """Ограниченный структурированный контекст производителя или поставщика."""
+
+    model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
+    business_kind: Literal["manufacturer", "stock_supplier", "both"] = "manufacturer"
+    product_types: str = Field(default="", max_length=1200)
+    complexity: str = Field(default="", max_length=1200)
+    material_grades: str = Field(default="", max_length=800)
+    limitations: str = Field(default="", max_length=1200)
+    packaging: str = Field(default="", max_length=800)
+    delivery: str = Field(default="", max_length=800)
+    quality_control: str = Field(default="", max_length=800)
+    trial_batch: str = Field(default="", max_length=800)
+
+
 class CapabilityPassportOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
@@ -214,9 +229,11 @@ class CapabilityPassportOut(BaseModel):
     max_order_units: int | None
     delivery_regions: list[Any]
     completed_order_types: list[Any]
+    details: CapabilityDetails = Field(default_factory=CapabilityDetails)
 
 
 class CapabilityPassportIn(BaseModel):
+    details: CapabilityDetails = Field(default_factory=CapabilityDetails)
     technologies: list[str] = Field(default_factory=list)
     equipment: list[str] = Field(default_factory=list)
     materials: list[str] = Field(default_factory=list)
@@ -227,6 +244,12 @@ class CapabilityPassportIn(BaseModel):
     max_order_units: int | None = Field(default=None, ge=0)
     delivery_regions: list[str] = Field(default_factory=list)
     completed_order_types: list[str] = Field(default_factory=list)
+
+    @model_validator(mode="after")
+    def validate_order_limits(self):
+        if self.min_order_units and self.max_order_units and self.min_order_units > self.max_order_units:
+            raise ValueError("Минимальный заказ не может быть больше максимального")
+        return self
 
 
 # ---------- Потребности ----------
@@ -636,6 +659,7 @@ class KpiOut(BaseModel):
 # ---------- Этап 9: пользовательский опыт и сопровождение сделки ----------
 
 class PublicProducerOut(BaseModel):
+    capability_details: CapabilityDetails | None = None
     company_id: uuid.UUID
     display_name: str
     legal_form: str

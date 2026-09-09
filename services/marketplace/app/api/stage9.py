@@ -11,7 +11,7 @@ from ..deps import CurrentUser, get_current_user, notify, require_company_admin,
 from ..experience import classify_cargo, validate_characteristics
 from ..models import (
     CoalitionMember, Deal, DealCheckpoint, DealReview, DeliveryArrangement, MarketWatch,
-    Need, Product, ProductImage, ProductPriceObservation, ProductionProfile,
+    Need, Product, ProductImage, ProductPriceObservation, ProductionProfile, CapabilityPassport,
 )
 from ..schemas import (
     BuyerSavingsOut, CharacteristicValidationIn, CharacteristicValidationOut,
@@ -81,10 +81,12 @@ async def public_producer(company_id: uuid.UUID, db: AsyncSession = Depends(get_
     if row is None or row["verification_status"] != "verified":
         raise HTTPException(status.HTTP_404_NOT_FOUND, detail="Производитель не найден")
     profile = await db.get(ProductionProfile, company_id)
+    passport = await db.get(CapabilityPassport, company_id)
     rating, count = (await db.execute(select(func.avg(DealReview.rating), func.count(DealReview.id)).where(
         DealReview.reviewed_company_id == company_id
     ))).one()
     return PublicProducerOut(
+        capability_details=(passport.details or None) if passport else None,
         company_id=company_id, display_name=row["display_name"], legal_form=row["legal_form"],
         region=profile.region if profile else None, about=profile.about if profile else None,
         production_site_address=profile.production_site_address if profile else None,

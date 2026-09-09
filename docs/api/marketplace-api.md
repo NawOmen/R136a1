@@ -81,6 +81,8 @@
 
 ### CapabilityPassport
 
+Расширение `details`, совместимость старых клиентов и публичное описание: [дополнение API v1](capabilities-and-buyer-comparison-v1.md).
+
 ```json
 {
   "company_id": "uuid",

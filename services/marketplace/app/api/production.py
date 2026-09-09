@@ -78,6 +78,9 @@ async def upsert_passport(
         db.add(passport)
     else:
         for field, value in data.model_dump().items():
+            # Старые клиенты API v1 не должны стирать расширенный паспорт.
+            if field == "details" and field not in data.model_fields_set:
+                continue
             setattr(passport, field, value)
     await db.commit()
     await db.refresh(passport)

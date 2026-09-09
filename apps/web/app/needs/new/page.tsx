@@ -21,8 +21,11 @@ import {
   NEED_VISIBILITY_LABELS,
   NeedVisibility,
   PRODUCT_CATEGORIES,
+  PRODUCT_CATEGORY_TREE,
 } from "../../lib/marketplace";
 import { useCompanySelector } from "../../lib/useMe";
+import { CapabilityDescription } from "../../components/CapabilityDescription";
+import { ValidatedFields } from "../../components/ValidatedFields";
 
 interface CharacteristicRow {
   key: string;
@@ -151,16 +154,17 @@ export default function NewNeedPage() {
   }
 
   function validate(): string | null {
-    if (rows.length < 2) {
-      return "Добавьте минимум две характеристики: объём и покрытие.";
+    if (rows.length < 1 || rows.length > 25) {
+      return "Добавьте от 1 до 25 характеристик.";
     }
     if (rows.some((row) => !row.key.trim() || !row.value.trim())) {
       return "Заполните ключ и значение каждой характеристики.";
     }
     const volume = Number(volumeUnits);
-    if (!volumeUnits || Number.isNaN(volume) || volume <= 0) {
-      return "Укажите объём (шт.).";
+    if (!volumeUnits || !Number.isSafeInteger(volume) || volume <= 0) {
+      return "Укажите целое положительное количество (шт.).";
     }
+    if (new Set(rows.map((row) => row.key.trim())).size !== rows.length) return "Названия характеристик не должны повторяться.";
     const budget = Number(budgetRub);
     if (!budgetRub || Number.isNaN(budget) || budget <= 0) {
       return "Укажите бюджет (₽).";
@@ -246,10 +250,11 @@ export default function NewNeedPage() {
         .filter((property) => property.value !== null)
         .map((property) => [property.key, property.value] as const),
     );
-    const detectedCategory = PRODUCT_CATEGORIES.find(
-      (item) => item === result.category || result.category.toLowerCase().includes(item),
+    const normalizedCategory = result.category.toLocaleLowerCase("ru");
+    const detectedCategory = PRODUCT_CATEGORIES.find((item) =>
+      item.toLocaleLowerCase("ru") === normalizedCategory || PRODUCT_CATEGORY_TREE[item].some((subcategory) => subcategory.toLocaleLowerCase("ru") === normalizedCategory),
     );
-    setCategory(detectedCategory ?? "прочее");
+    setCategory(detectedCategory ?? "Другое");
     if (values.has("quantity_units")) setVolumeUnits(String(values.get("quantity_units")));
     if (values.has("budget_rub")) setBudgetRub(String(values.get("budget_rub")));
     if (values.has("lead_time_days")) {
@@ -371,7 +376,7 @@ export default function NewNeedPage() {
             <label htmlFor="company_id">
               Компания<span className="req">*</span>
             </label>
-            <select id="company_id" value={companyId} onChange={(event) => setCompanyId(event.target.value)}>
+            <select id="company_id" value={companyId} disabled={analyzing || submitting} onChange={(event) => { setCompanyId(event.target.value); setAgentRun(null); setAnswers({}); }}>
               {available.map((item) => (
                 <option key={item.id} value={item.id}>
                   {item.display_name}
@@ -394,7 +399,7 @@ export default function NewNeedPage() {
         )}
 
         <section className="agent-panel" aria-labelledby="materials-heading">
-          <h2 id="materials-heading">Помощник по подготовке требований</h2>
+          <h2 id="materials-heading">ИИ-аналитика — требования и кандидаты</h2>
           <p className="hint">
             Опишите задачу обычными словами и приложите материалы. Система покажет источники,
             предположения и противоречия; карточка изменится только после вашего подтверждения.
@@ -403,9 +408,10 @@ export default function NewNeedPage() {
             <label htmlFor="request_description">Что требуется купить</label>
             <textarea
               id="request_description"
+              disabled={analyzing}
               rows={4}
               value={requestDescription}
-              onChange={(event) => setRequestDescription(event.target.value)}
+              onChange={(event) => { setRequestDescription(event.target.value); setAgentRun(null); setAnswers({}); }}
               placeholder="Например: нужны 5000 крафтовых стаканов 400 мл с логотипом, доставка в Москву..."
             />
             <div className="voice-row"><button type="button" className={recording ? "btn btn-danger btn-sm" : "btn btn-secondary btn-sm"} disabled={transcribing} onClick={() => void toggleRecording()}>{transcribing ? "Распознаём…" : recording ? "Остановить запись" : "🎙 Продиктовать запрос"}</button><span className="hint">Речь распознаётся локально и подставляется в текст. В локальной сети микрофону может потребоваться HTTPS.</span></div>
@@ -416,10 +422,11 @@ export default function NewNeedPage() {
             </label>
             <input
               id="need_files"
+              disabled={analyzing}
               type="file"
               multiple
               accept="image/*,application/pdf,audio/*,text/plain,text/markdown"
-              onChange={(event) => setFiles(Array.from(event.target.files ?? []))}
+              onChange={(event) => { setFiles(Array.from(event.target.files ?? [])); setAgentRun(null); setAnswers({}); }}
             />
             {files.length > 0 && (
               <p className="hint mode-hint">
@@ -451,8 +458,9 @@ export default function NewNeedPage() {
 
           {agentRun && (
             <div className="agent-result">
-              <h3>Восстановленные требования</h3>
+              <h3>Краткий результат подбора</h3>
               <p>{agentRun.result.summary}</p>
+              <h3>Восстановленные требования</h3>
               {agentRun.result.warnings.map((warning) => (
                 <div key={warning} className="alert alert-error">{warning}</div>
               ))}
@@ -524,13 +532,18 @@ export default function NewNeedPage() {
 
               {agentRun.result.matches.length > 0 && (
                 <div>
-                <h3>Почему подошёл этот производитель</h3>
+                <h3>Кандидаты и справочные предложения</h3>
                   <ul className="company-list">
                     {agentRun.result.matches.map((match) => (
-                      <li key={match.company_id} className="company-item">
-                        <strong>{match.company_name}</strong>
-                        <span className="match-score">{match.score}/100</span>
+                      <li key={match.company_id} className="company-item buyer-candidate">
+                        <Link href={`/producers/${match.company_id}`}>{match.company_name}</Link>
+                        <span className="match-score">Совпадение: {match.score}/100, не вероятность выполнения</span>
                         <ul className="match-reasons">{match.reasons.map((reason) => <li key={reason}>{reason}</li>)}</ul>
+                        {match.cautions?.map((note) => <p className="alert alert-error" key={note}>{note}</p>)}
+                        {match.details && <details><summary>Возможности и ограничения</summary><CapabilityDescription details={match.details} /></details>}
+                        {!!match.catalog?.length && <div className="comparison-scroll"><table className="buyer-comparison"><caption>Данные карточек — без доставки и дополнительных работ</caption><thead><tr><th>Товар</th><th>₽/шт.</th><th>MOQ, шт.</th><th>Срок, дней</th><th>Стоимость товара, ₽</th></tr></thead><tbody>{match.catalog.map((item) => <tr key={item.product_id}>
+                          <td><Link href={`/catalog/${item.product_id}`}>{item.name}</Link><p className="hint">{item.note}</p></td><td>{item.unit_price_rub}</td><td>{item.moq_units}</td><td>{item.lead_time_days}</td><td>{item.total_rub ?? "Нужно уточнение"}</td>
+                        </tr>)}</tbody></table></div>}
                       </li>
                     ))}
                   </ul>
@@ -562,6 +575,7 @@ export default function NewNeedPage() {
           )}
         </section>
 
+        <ValidatedFields>
         <div className="field">
           <label htmlFor="category">
             Категория<span className="req">*</span>
@@ -578,19 +592,22 @@ export default function NewNeedPage() {
         <div className="field">
           <label>
             Характеристики<span className="req">*</span>
-            <span className="opt">минимум объём и покрытие</span>
           </label>
           {rows.map((row, index) => (
             <div key={index} className="char-row">
               <input
                 type="text"
                 placeholder="Ключ (например, volume_ml)"
+                aria-label={`Характеристика ${index + 1}: название`}
+                required
                 value={row.key}
                 onChange={(event) => updateRow(index, { key: event.target.value })}
               />
               <input
                 type="text"
                 placeholder="Значение (например, 400)"
+                aria-label={`Характеристика ${index + 1}: значение`}
+                required
                 value={row.value}
                 onChange={(event) => updateRow(index, { value: event.target.value })}
               />
@@ -606,6 +623,7 @@ export default function NewNeedPage() {
           <button
             type="button"
             className="btn btn-secondary btn-sm"
+            disabled={rows.length >= 25}
             onClick={() => setRows((current) => [...current, newRow()])}
           >
             + Добавить характеристику
@@ -619,6 +637,7 @@ export default function NewNeedPage() {
           <input
             id="volume_units"
             type="number"
+            step="1"
             min="1"
             value={volumeUnits}
             onChange={(event) => setVolumeUnits(event.target.value)}
@@ -634,7 +653,7 @@ export default function NewNeedPage() {
           <input
             id="budget_rub"
             type="number"
-            min="0"
+            min="0.01"
             step="0.01"
             value={budgetRub}
             onChange={(event) => setBudgetRub(event.target.value)}
@@ -650,6 +669,7 @@ export default function NewNeedPage() {
           <input
             id="deadline_date"
             type="date"
+            min={new Date(Date.now() - new Date().getTimezoneOffset() * 60_000).toISOString().slice(0, 10)}
             value={deadlineDate}
             onChange={(event) => setDeadlineDate(event.target.value)}
             required
@@ -718,6 +738,7 @@ export default function NewNeedPage() {
             Отмена
           </Link>
         </div>
+        </ValidatedFields>
       </form>
     </div>
   );

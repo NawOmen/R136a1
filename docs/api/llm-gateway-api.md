@@ -14,6 +14,8 @@ JWT Bearer, что gateway-auth. Пользовательские сообщен
 
 ## Buyer Agent
 
+Расширенные паспорта, справочные цены/сроки и детерминированный краткий итог описаны в [дополнении API v1](capabilities-and-buyer-comparison-v1.md).
+
 `POST /api/v1/buyer-agent/runs` — multipart:
 
 - `request_text` — обычное описание потребности;

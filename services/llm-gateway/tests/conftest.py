@@ -11,6 +11,12 @@ TEST_DATABASE_URL = os.getenv(
     "TEST_DATABASE_URL", "postgresql+asyncpg://sborka:sborka@localhost:5433/sborka_agents_test"
 )
 
+# CREATE TABLE IF NOT EXISTS does not upgrade pre-existing local test tables.
+CAPABILITY_DETAILS_UPGRADE_SQL = (
+    "ALTER TABLE marketplace.capability_passports "
+    "ADD COLUMN IF NOT EXISTS details JSONB NOT NULL DEFAULT '{}'::jsonb"
+)
+
 
 @pytest.fixture(scope="session")
 async def engine():
@@ -55,12 +61,19 @@ async def engine():
                 "CREATE TABLE IF NOT EXISTS marketplace.capability_passports ("
                 "company_id UUID PRIMARY KEY, technologies JSONB NOT NULL DEFAULT '[]', "
                 "equipment JSONB NOT NULL DEFAULT '[]', materials JSONB NOT NULL DEFAULT '[]', "
-                "size_ranges JSONB NOT NULL DEFAULT '{}', tolerances VARCHAR(500), "
+                "size_ranges JSONB NOT NULL DEFAULT '{}', details JSONB NOT NULL DEFAULT '{}', tolerances VARCHAR(500), "
                 "certifications JSONB NOT NULL DEFAULT '[]', min_order_units INTEGER, max_order_units INTEGER, "
                 "delivery_regions JSONB NOT NULL DEFAULT '[]', completed_order_types JSONB NOT NULL DEFAULT '[]')"
             )
         )
+        await connection.execute(text(CAPABILITY_DETAILS_UPGRADE_SQL))
         await connection.run_sync(Base.metadata.drop_all)
+        await connection.execute(text(
+            "CREATE TABLE IF NOT EXISTS marketplace.products (id UUID PRIMARY KEY, company_id UUID NOT NULL, "
+            "name VARCHAR(255) NOT NULL, category VARCHAR(120) NOT NULL, subcategory VARCHAR(120), characteristics JSONB NOT NULL DEFAULT '{}', "
+            "price_rub DOUBLE PRECISION NOT NULL, price_tiers JSONB NOT NULL DEFAULT '[]', "
+            "moq_units INTEGER NOT NULL, lead_time_days INTEGER NOT NULL, is_published BOOLEAN NOT NULL DEFAULT false)"
+        ))
         await connection.run_sync(Base.metadata.create_all)
     yield engine
     await engine.dispose()
@@ -78,7 +91,7 @@ async def clean_db(session_factory):
             text(
                 "TRUNCATE agents.tool_calls, agents.agent_runs, "
                 "auth.company_members, auth.companies, auth.users, "
-                "marketplace.capability_passports CASCADE"
+                "marketplace.capability_passports, marketplace.products CASCADE"
             )
         )
         await session.commit()
