@@ -11,6 +11,12 @@ TEST_DATABASE_URL = os.getenv(
     "TEST_DATABASE_URL", "postgresql+asyncpg://sborka:sborka@localhost:5433/sborka_agents_test"
 )
 
+# CREATE TABLE IF NOT EXISTS does not upgrade pre-existing local test tables.
+CAPABILITY_DETAILS_UPGRADE_SQL = (
+    "ALTER TABLE marketplace.capability_passports "
+    "ADD COLUMN IF NOT EXISTS details JSONB NOT NULL DEFAULT '{}'::jsonb"
+)
+
 
 @pytest.fixture(scope="session")
 async def engine():
@@ -60,6 +66,7 @@ async def engine():
                 "delivery_regions JSONB NOT NULL DEFAULT '[]', completed_order_types JSONB NOT NULL DEFAULT '[]')"
             )
         )
+        await connection.execute(text(CAPABILITY_DETAILS_UPGRADE_SQL))
         await connection.run_sync(Base.metadata.drop_all)
         await connection.execute(text(
             "CREATE TABLE IF NOT EXISTS marketplace.products (id UUID PRIMARY KEY, company_id UUID NOT NULL, "

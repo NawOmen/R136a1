@@ -1,4 +1,22 @@
 from conftest import make_company, make_token, make_user
+from app.models import CapabilityPassport
+
+
+async def test_empty_legacy_details_do_not_invent_public_business_kind(client, db_session):
+    user = await make_user(db_session)
+    company = await make_company(db_session, user, can_sell=True)
+    passport = CapabilityPassport(company_id=company, details={})
+    db_session.add(passport)
+    await db_session.commit()
+    response = await client.get(f"/api/v1/producers/{company}")
+    assert response.status_code == 200
+    assert response.json()["capability_details"] is None
+
+    passport.details = {"business_kind": "stock_supplier"}
+    await db_session.commit()
+    response = await client.get(f"/api/v1/producers/{company}")
+    assert response.status_code == 200
+    assert response.json()["capability_details"]["business_kind"] == "stock_supplier"
 
 
 async def test_passport_round_trip_public_profile_and_legacy_client(client, db_session):

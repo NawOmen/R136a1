@@ -355,7 +355,7 @@ async def search_capabilities(
             1 for token in re.findall(r"[а-яёa-z0-9]+", required_text) if len(token) > 2 and token in corpus
         )
         score = min(100, 25 + overlap * 20 + min(requirement_hits, 3) * 10)
-        if overlap == 0:
+        if overlap == 0 and requirement_hits == 0:
             continue
         reasons = []
         if overlap:
@@ -363,6 +363,8 @@ async def search_capabilities(
         if requirement_hits:
             reasons.append("Есть текстовые совпадения с требованиями; точную применимость подтвердит поставщик")
         cautions = []
+        if overlap == 0:
+            cautions.append("Категория не подтверждена паспортом: совпали только отдельные требования. Возможность изготовления нужно уточнить у поставщика.")
         values = confirmed_values(properties)
         quantity = positive_integer(values.get("quantity_units"))
         if quantity and row["min_order_units"] and quantity < row["min_order_units"]:

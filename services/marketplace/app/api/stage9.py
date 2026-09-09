@@ -86,7 +86,7 @@ async def public_producer(company_id: uuid.UUID, db: AsyncSession = Depends(get_
         DealReview.reviewed_company_id == company_id
     ))).one()
     return PublicProducerOut(
-        capability_details=passport.details if passport else None,
+        capability_details=(passport.details or None) if passport else None,
         company_id=company_id, display_name=row["display_name"], legal_form=row["legal_form"],
         region=profile.region if profile else None, about=profile.about if profile else None,
         production_site_address=profile.production_site_address if profile else None,

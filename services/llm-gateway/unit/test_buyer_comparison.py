@@ -107,3 +107,33 @@ def test_unresolved_summary_does_not_rank_prices():
     match = CapabilityMatch(company_id=uuid.uuid4(), company_name="Демо", score=50, reasons=[], catalog=[quote])
     assert "минимальная стоимость" not in buyer_summary([match], True)
     assert "заказ невозможен" in buyer_summary([], False)
+
+
+@pytest.mark.asyncio
+async def test_requirement_only_candidate_is_visible_but_not_comparable():
+    row = suppliers()[0]
+    row.update(technologies=["токарная и фрезерная обработка"], materials=["сталь"],
+               completed_order_types=[], certifications=[], details={}, size_ranges={})
+    properties = [prop("body_material", "сталь"), prop("quantity_units", 1000)]
+    reference = product(company_id=row["company_id"], characteristics={"body_material": "сталь"})
+    matches = await search_capabilities(FakeDB([row], [reference]), "металлические детали", properties)
+    assert len(matches) == 1
+    candidate = matches[0]
+    assert any("Категория не подтверждена" in item for item in candidate.cautions)
+    assert not candidate.catalog[0].comparable
+    assert candidate.catalog[0].total_rub is None
+    assert "минимальная стоимость" not in buyer_summary(matches, False)
+
+    # A hypothesis or a request without any supporting facts is not enough.
+    assert await search_capabilities(FakeDB([row]), "металлические детали", []) == []
+    assert await search_capabilities(FakeDB([row]), "металлические детали", [prop("body_material", "сталь", "assumed")]) == []
+    assert await search_capabilities(FakeDB([row]), "металлические детали", properties, row["company_id"]) == []
+
+
+@pytest.mark.asyncio
+async def test_confirmed_category_ranks_before_requirement_only_candidate():
+    direct, fallback = suppliers()[0], copy.deepcopy(suppliers()[0])
+    fallback.update(company_id=uuid.uuid4(), technologies=["токарная обработка"], details={},
+                    completed_order_types=[], materials=["сталь"])
+    matches = await search_capabilities(FakeDB([fallback, direct]), "металлические детали", [prop("body_material", "сталь")])
+    assert [match.company_id for match in matches] == [direct["company_id"], fallback["company_id"]]
