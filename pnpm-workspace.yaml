@@ -2,3 +2,5 @@ packages:
   - "apps/*"
   - "packages/*"
   - "tests/e2e"
+overrides:
+  postcss: "^8.5.23"

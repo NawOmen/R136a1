@@ -1,13 +1,35 @@
 import uuid
 from datetime import datetime
 
-from sqlalchemy import Boolean, DateTime, ForeignKey, String, UniqueConstraint, func, text
+from sqlalchemy import BigInteger, Integer, Boolean, DateTime, ForeignKey, String, UniqueConstraint, func, text
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
 from .database import Base
 
 SCHEMA = "auth"
+
+
+class LoginLimit(Base):
+    __tablename__ = "login_limits"
+    __table_args__ = {"schema": SCHEMA}
+    key: Mapped[str] = mapped_column(String(64), primary_key=True)
+    bucket: Mapped[int] = mapped_column(BigInteger, primary_key=True, index=True)
+    attempts: Mapped[int] = mapped_column(Integer, nullable=False)
+
+
+class SecurityEvent(Base):
+    __tablename__ = "security_events"
+    __table_args__ = {"schema": SCHEMA}
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True)
+    event: Mapped[str] = mapped_column(String(64), nullable=False)
+    actor_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True))
+    target_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True))
+    before_value: Mapped[str | None] = mapped_column(String(32))
+    after_value: Mapped[str | None] = mapped_column(String(32))
+    reason: Mapped[str | None] = mapped_column(String(500))
+    correlation_id: Mapped[str] = mapped_column(String(36), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), index=True)
 
 
 def _uuid() -> uuid.UUID:

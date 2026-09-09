@@ -1,12 +1,19 @@
+x-service-logging: &service-logging
+  driver: local
+  options:
+    max-size: "10m"
+    max-file: "3"
+
 services:
   postgres:
+    logging: *service-logging
     image: postgres:16.4-alpine
     environment:
       POSTGRES_USER: ${POSTGRES_USER:-sborka}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-sborka}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Задайте POSTGRES_PASSWORD}
       POSTGRES_DB: ${POSTGRES_DB:-sborka}
     ports:
-      - "${POSTGRES_PORT:-5433}:5432"
+      - "127.0.0.1:${POSTGRES_PORT:-5433}:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
@@ -16,12 +23,13 @@ services:
       retries: 12
 
   pgadmin:
+    logging: *service-logging
     image: dpage/pgadmin4:8.14
     environment:
       PGADMIN_DEFAULT_EMAIL: ${PGADMIN_DEFAULT_EMAIL:-admin@demo.ru}
-      PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_DEFAULT_PASSWORD:-admin123}
+      PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_DEFAULT_PASSWORD:?Задайте PGADMIN_DEFAULT_PASSWORD}
     ports:
-      - "${PGADMIN_PORT:-5050}:80"
+      - "127.0.0.1:${PGADMIN_PORT:-5050}:80"
     volumes:
       - pgadmin_data:/var/lib/pgadmin
     depends_on:
@@ -29,21 +37,23 @@ services:
         condition: service_healthy
 
   gateway-auth:
+    logging: *service-logging
     build:
       context: ../services/gateway-auth
     environment:
-      DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-sborka}:${POSTGRES_PASSWORD:-sborka}@postgres:5432/${POSTGRES_DB:-sborka}
-      JWT_SECRET: ${JWT_SECRET:-dev-secret-change-me-0123456789abcdef}
+      DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-sborka}:${POSTGRES_PASSWORD:?Задайте POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-sborka}
+      JWT_SECRET: ${JWT_SECRET:?Задайте JWT_SECRET}
       ACCESS_TOKEN_EXPIRE_MINUTES: ${ACCESS_TOKEN_EXPIRE_MINUTES:-1440}
+      ENABLE_DEMO_SEED: ${ENABLE_DEMO_SEED:-false}
       SEED_ADMIN_EMAIL: ${SEED_ADMIN_EMAIL:-admin@demo.ru}
-      SEED_ADMIN_PASSWORD: ${SEED_ADMIN_PASSWORD:-admin123}
+      SEED_ADMIN_PASSWORD: ${SEED_ADMIN_PASSWORD:-}
       SEED_DEMO_EMAIL: ${SEED_DEMO_EMAIL:-demo@demo.ru}
-      SEED_DEMO_PASSWORD: ${SEED_DEMO_PASSWORD:-demo123}
+      SEED_DEMO_PASSWORD: ${SEED_DEMO_PASSWORD:-}
       SEED_SELLER_EMAIL: ${SEED_SELLER_EMAIL:-seller@demo.ru}
-      SEED_SELLER_PASSWORD: ${SEED_SELLER_PASSWORD:-seller123}
+      SEED_SELLER_PASSWORD: ${SEED_SELLER_PASSWORD:-}
       CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:3000,http://127.0.0.1:3000}
     ports:
-      - "${GATEWAY_AUTH_PORT:-8001}:8001"
+      - "127.0.0.1:${GATEWAY_AUTH_PORT:-8001}:8001"
     depends_on:
       postgres:
         condition: service_healthy
@@ -54,14 +64,15 @@ services:
       retries: 12
 
   minio:
+    logging: *service-logging
     image: minio/minio:RELEASE.2024-12-18T13-15-44Z
     command: server /data --console-address ":9001"
     environment:
       MINIO_ROOT_USER: ${MINIO_ROOT_USER:-minioadmin}
-      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-minioadmin}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:?Задайте MINIO_ROOT_PASSWORD}
     ports:
-      - "${MINIO_PORT:-9000}:9000"
-      - "9001:9001"
+      - "127.0.0.1:${MINIO_PORT:-9000}:9000"
+      - "127.0.0.1:9001:9001"
     volumes:
       - minio_data:/data
     healthcheck:
@@ -72,10 +83,14 @@ services:
       start_period: 10s
 
   optimizer:
+    logging: *service-logging
     build:
       context: ../services/optimizer
-    ports:
-      - "${OPTIMIZER_PORT:-8004}:8004"
+    environment:
+      OPTIMIZER_TOKEN: ${OPTIMIZER_TOKEN:?Задайте OPTIMIZER_TOKEN}
+    mem_limit: 1g
+    cpus: 2
+    pids_limit: 128
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8004/health')"]
       interval: 10s
@@ -83,20 +98,23 @@ services:
       retries: 12
 
   marketplace:
+    logging: *service-logging
     build:
       context: ../services/marketplace
     environment:
-      DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-sborka}:${POSTGRES_PASSWORD:-sborka}@postgres:5432/${POSTGRES_DB:-sborka}
-      JWT_SECRET: ${JWT_SECRET:-dev-secret-change-me-0123456789abcdef}
+      DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-sborka}:${POSTGRES_PASSWORD:?Задайте POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-sborka}
+      JWT_SECRET: ${JWT_SECRET:?Задайте JWT_SECRET}
       MINIO_ENDPOINT: minio:9000
       MINIO_ACCESS_KEY: ${MINIO_ROOT_USER:-minioadmin}
-      MINIO_SECRET_KEY: ${MINIO_ROOT_PASSWORD:-minioadmin}
+      MINIO_SECRET_KEY: ${MINIO_ROOT_PASSWORD:?Задайте MINIO_ROOT_PASSWORD}
       MINIO_BUCKET: ${MINIO_BUCKET:-sborka}
       OPTIMIZER_URL: http://optimizer:8004
+      OPTIMIZER_TOKEN: ${OPTIMIZER_TOKEN:?Задайте OPTIMIZER_TOKEN}
+      ENABLE_DEMO_SEED: ${ENABLE_DEMO_SEED:-false}
       SEED_SELLER_EMAIL: ${SEED_SELLER_EMAIL:-seller@demo.ru}
       CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:3000,http://127.0.0.1:3000}
     ports:
-      - "${MARKETPLACE_PORT:-8002}:8002"
+      - "127.0.0.1:${MARKETPLACE_PORT:-8002}:8002"
     depends_on:
       postgres:
         condition: service_healthy
@@ -113,11 +131,12 @@ services:
       retries: 12
 
   llm-gateway:
+    logging: *service-logging
     build:
       context: ../services/llm-gateway
     environment:
-      DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-sborka}:${POSTGRES_PASSWORD:-sborka}@postgres:5432/${POSTGRES_DB:-sborka}
-      JWT_SECRET: ${JWT_SECRET:-dev-secret-change-me-0123456789abcdef}
+      DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-sborka}:${POSTGRES_PASSWORD:?Задайте POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-sborka}
+      JWT_SECRET: ${JWT_SECRET:?Задайте JWT_SECRET}
       OLLAMA_BASE_URL: ${OLLAMA_DOCKER_BASE_URL:-http://host.docker.internal:11434}
       OLLAMA_MODEL: ${OLLAMA_MODEL:-qwen3.5:9b}
       LLM_CONTEXT_TOKENS: ${LLM_CONTEXT_TOKENS:-8192}
@@ -131,7 +150,7 @@ services:
     volumes:
       - whisper_cache:/root/.cache/huggingface
     ports:
-      - "${LLM_GATEWAY_PORT:-8003}:8003"
+      - "127.0.0.1:${LLM_GATEWAY_PORT:-8003}:8003"
     depends_on:
       postgres:
         condition: service_healthy
@@ -146,6 +165,7 @@ services:
       retries: 12
 
   web:
+    logging: *service-logging
     build:
       context: ..
       dockerfile: apps/web/Dockerfile
@@ -154,7 +174,7 @@ services:
       NEXT_PUBLIC_MARKETPLACE_URL: http://localhost:8002
       NEXT_PUBLIC_LLM_GATEWAY_URL: http://localhost:8003
     ports:
-      - "${WEB_PORT:-3000}:3000"
+      - "127.0.0.1:${WEB_PORT:-3000}:3000"
     depends_on:
       gateway-auth:
         condition: service_healthy

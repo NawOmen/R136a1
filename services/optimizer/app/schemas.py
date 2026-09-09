@@ -18,7 +18,7 @@ class ProducerOption(BaseModel):
     lead_time_days: int = Field(gt=0)
     delivery_cost_rub: float = Field(default=0, ge=0)
     reliability: float = Field(default=0.8, ge=0, le=1)
-    price_tiers: list[VolumePriceTier] = Field(default_factory=list)
+    price_tiers: list[VolumePriceTier] = Field(default_factory=list, max_length=25)
     serves_region: bool = True
     country: str = "RU"
 
@@ -33,7 +33,7 @@ class AllocationRequest(BaseModel):
     demand_units: int = Field(gt=0)
     budget_rub: float | None = Field(default=None, gt=0)
     deadline_days: int = Field(gt=0)
-    producers: list[ProducerOption] = Field(min_length=1)
+    producers: list[ProducerOption] = Field(min_length=1, max_length=25)
 
 
 class Allocation(BaseModel):
@@ -92,8 +92,8 @@ class CoalitionRequest(BaseModel):
     max_total_units: int = Field(gt=0)
     available_capacity_units: int = Field(gt=0)
     production_days: int = Field(gt=0)
-    price_tiers: list[PriceTier] = Field(min_length=1)
-    members: list[CoalitionMemberIn] = Field(min_length=2)
+    price_tiers: list[PriceTier] = Field(min_length=1, max_length=25)
+    members: list[CoalitionMemberIn] = Field(min_length=2, max_length=100)
 
     @model_validator(mode="after")
     def validate_bounds(self):

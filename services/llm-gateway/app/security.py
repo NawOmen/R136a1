@@ -29,6 +29,7 @@ async def get_current_user(
             credentials.credentials,
             settings.jwt_secret,
             algorithms=[settings.jwt_algorithm],
+            options={"require": ["sub", "exp"]},
         )
         user_id = uuid.UUID(str(payload["sub"]))
     except (jwt.PyJWTError, KeyError, TypeError, ValueError):

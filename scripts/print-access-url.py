@@ -81,20 +81,21 @@ def main() -> int:
         print(
             "Не удалось определить IP локальной сети.\n"
             "Проверьте, что машина подключена к Wi-Fi/роутеру, и укажите адрес вручную,\n"
-            "например: http://192.168.1.50:3000",
+            "Настройте HTTPS по docs/security/hardening.md.",
             file=sys.stderr,
         )
         return 1
 
     ip = candidates[0]
-    print(f"Сайт доступен с других устройств в той же сети: http://{ip}:{WEB_PORT}")
+    print(f"Кандидат адреса для HTTPS-сертификата: https://{ip}")
     if len(candidates) > 1:
         print("Другие сетевые адреса: " + ", ".join(
-            f"http://{other}:{WEB_PORT}" for other in candidates[1:]
+            f"https://{other}" for other in candidates[1:]
         ))
     print(
-        "Откройте этот адрес на телефоне/планшете, подключённом к той же сети.\n"
-        "API и CORS настраивать не нужно: приватные подсети разрешены автоматически."
+        "Это определение IP, а не проверка доступности сайта.\n"
+        "Для сети нужны HTTPS-прокси и доверенный сертификат: docs/security/hardening.md.\n"
+        "Базовый Compose доступен только на localhost."
     )
     return 0
 

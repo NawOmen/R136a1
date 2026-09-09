@@ -34,7 +34,7 @@ async def clean_db(session_factory):
     async with session_factory() as session:
         await session.execute(
             text(
-                "TRUNCATE auth.company_verification_events, auth.company_members, "
+                "TRUNCATE auth.security_events, auth.login_limits, auth.company_verification_events, auth.company_members, "
                 "auth.companies, auth.users CASCADE"
             )
         )

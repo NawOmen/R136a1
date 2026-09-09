@@ -124,7 +124,7 @@ def token(user_id):
     from app.config import settings
 
     return jwt.encode(
-        {"sub": str(user_id)}, settings.jwt_secret, algorithm=settings.jwt_algorithm
+        {"sub": str(user_id), "exp": __import__("time").time() + 3600}, settings.jwt_secret, algorithm=settings.jwt_algorithm
     )
 
 

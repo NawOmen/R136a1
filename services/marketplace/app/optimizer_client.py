@@ -11,14 +11,14 @@ async def optimize_allocations(payload: dict) -> dict:
         async with httpx.AsyncClient(timeout=settings.optimizer_timeout_seconds) as client:
             response = await client.post(
                 f"{settings.optimizer_url.rstrip('/')}/api/v1/optimize/allocations",
-                json=payload,
+                json=payload, headers={"X-Optimizer-Token": settings.optimizer_token},
             )
             response.raise_for_status()
             return response.json()
     except (httpx.HTTPError, ValueError) as exc:
         raise HTTPException(
             status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail=f"Оптимизатор временно недоступен: {exc}",
+            detail="Оптимизатор временно недоступен",
         ) from exc
 
 
@@ -27,14 +27,14 @@ async def evaluate_coalition(payload: dict) -> dict:
         async with httpx.AsyncClient(timeout=settings.optimizer_timeout_seconds) as client:
             response = await client.post(
                 f"{settings.optimizer_url.rstrip('/')}/api/v1/optimize/coalition",
-                json=payload,
+                json=payload, headers={"X-Optimizer-Token": settings.optimizer_token},
             )
             response.raise_for_status()
             return response.json()
     except (httpx.HTTPError, ValueError) as exc:
         raise HTTPException(
             status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail=f"Оптимизатор временно недоступен: {exc}",
+            detail="Оптимизатор временно недоступен",
         ) from exc
 
 
@@ -43,14 +43,14 @@ async def calculate_resilience(payload: dict) -> dict:
         async with httpx.AsyncClient(timeout=settings.optimizer_timeout_seconds) as client:
             response = await client.post(
                 f"{settings.optimizer_url.rstrip('/')}/api/v1/optimize/resilience",
-                json=payload,
+                json=payload, headers={"X-Optimizer-Token": settings.optimizer_token},
             )
             response.raise_for_status()
             return response.json()
     except (httpx.HTTPError, ValueError) as exc:
         raise HTTPException(
             status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail=f"Оптимизатор устойчивости временно недоступен: {exc}",
+            detail="Оптимизатор устойчивости временно недоступен",
         ) from exc
 
 
