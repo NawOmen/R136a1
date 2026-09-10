@@ -100,45 +100,74 @@ Docker volume `pgadmin_data` и не попадают в Git.
 
 ## Локальный запуск сервисов без Docker
 
+Нужен Python 3.12, запущенные PostgreSQL и MinIO. Для нового стенда создайте
+`.env` через `python3 scripts/init-local-env.py`; для существующего сначала выполните
+[ротацию секретов](docs/security/hardening.md). Следующие команды выполняются
+из корня проекта в bash/zsh. Загружайте только собственный доверенный `.env`:
+
 ```bash
-python3 -m venv .venv
-.venv/bin/pip install -r services/gateway-auth/requirements-dev.txt \
-                        -r services/marketplace/requirements-dev.txt \
-                        -r services/llm-gateway/requirements-dev.txt \
-                        -r services/optimizer/requirements-dev.txt
+set -a
+. ./.env
+set +a
+export OPTIMIZER_URL=http://127.0.0.1:8004
+export OLLAMA_BASE_URL=http://127.0.0.1:11434
+
+# Каждому сервису — собственное окружение, как в Docker и CI.
+for service_name in gateway-auth marketplace llm-gateway optimizer; do
+  python3.12 -m venv "services/$service_name/.venv"
+  "services/$service_name/.venv/bin/python" -m pip install "pytest>=8,<9" "pytest-asyncio>=0.26,<1" "httpx>=0.27,<1"
+  "services/$service_name/.venv/bin/python" -m pip install --require-hashes -r "services/$service_name/requirements.lock"
+  "services/$service_name/.venv/bin/python" -m pip check
+done
 
 # миграции (при запущенном PostgreSQL)
+for service_name in gateway-auth marketplace llm-gateway; do
+  (cd "services/$service_name" && .venv/bin/alembic upgrade head)
+done
+
+# Только для синтетического демо: явный флаг, пароли SEED_*_PASSWORD из .env.
+export ENABLE_DEMO_SEED=true
+if [ "$ENABLE_DEMO_SEED" = "true" ]; then
+  (cd services/gateway-auth && .venv/bin/python seed.py)
+  (cd services/marketplace && .venv/bin/python seed.py)
+fi
+export ENABLE_DEMO_SEED=false
+
+# Запуск авторизации; для остальных сервисов — отдельные терминалы.
 cd services/gateway-auth
-DATABASE_URL=postgresql+asyncpg://sborka:sborka@localhost:5433/sborka ../../.venv/bin/alembic upgrade head
-../../.venv/bin/python seed.py
-DATABASE_URL=postgresql+asyncpg://sborka:sborka@localhost:5433/sborka ../../.venv/bin/uvicorn app.main:app --reload --port 8001
+.venv/bin/uvicorn app.main:app --reload --host 127.0.0.1 --port 8001 --no-proxy-headers --no-access-log
 ```
+
+В каждом новом терминале сначала загрузите `.env` из корня теми же командами
+`set -a; . ./.env; set +a` и экспортируйте указанные локальные URL.
+Для marketplace, llm-gateway и optimizer перейдите в соответствующий каталог
+`services/...` и выполните ту же команду uvicorn с портами 8002, 8003 и 8004.
+Обязательны JWT_SECRET для авторизации/marketplace/LLM, OPTIMIZER_TOKEN для
+marketplace/optimizer и MINIO_SECRET_KEY для marketplace. DATABASE_URL должен
+содержать **текущий** пароль PostgreSQL. Флаг seed сам по себе не создаёт секреты.
 
 ## Тесты
 
+После установки отдельных окружений и загрузки собственного `.env` из корня:
+
 ```bash
-# создать тестовые БД один раз
-docker compose -f infra/docker-compose.yml exec -T postgres psql -U sborka -d postgres -c "CREATE DATABASE sborka_test"
-docker compose -f infra/docker-compose.yml exec -T postgres psql -U sborka -d postgres -c "CREATE DATABASE sborka_marketplace_test"
-
-cd services/gateway-auth
-TEST_DATABASE_URL=postgresql+asyncpg://sborka:sborka@localhost:5433/sborka_test ../../.venv/bin/pytest
-
-cd ../marketplace
-TEST_DATABASE_URL=postgresql+asyncpg://sborka:sborka@localhost:5433/sborka_marketplace_test ../../.venv/bin/pytest
-
-cd ../llm-gateway
-TEST_DATABASE_URL=postgresql+asyncpg://sborka:sborka@localhost:5433/sborka_test ../../.venv/bin/pytest
-
-cd ../optimizer
-../../.venv/bin/pytest
+# Создать отдельную тестовую БД один раз (для PostgreSQL из Compose).
+docker compose --env-file .env -f infra/docker-compose.yml exec -T postgres psql -U "$POSTGRES_USER" -d postgres -c "CREATE DATABASE sborka_test"
+# Сохраняет подключение и пароль из DATABASE_URL, меняет только имя базы.
+export TEST_DATABASE_URL="${DATABASE_URL%/*}/sborka_test"
+for service_name in gateway-auth marketplace llm-gateway optimizer; do
+  (cd "services/$service_name" && .venv/bin/python -m pytest -q)
+done
 ```
+
+Тесты очищают свои таблицы; TEST_DATABASE_URL должен указывать только на тестовую БД.
+Для PostgreSQL без Docker создайте sborka_test через локальный psql.
 
 Опциональный smoke-тест с реальной локальной Qwen (Ollama должна быть запущена):
 
 ```bash
 cd services/llm-gateway
-RUN_OLLAMA_SMOKE=1 OLLAMA_BASE_URL=http://localhost:11434 ../../.venv/bin/pytest -m ollama
+RUN_OLLAMA_SMOKE=1 OLLAMA_BASE_URL=http://localhost:11434 .venv/bin/python -m pytest -m ollama
 ```
 
 ### Playwright (E2E)

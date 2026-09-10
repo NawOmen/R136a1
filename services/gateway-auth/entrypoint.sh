@@ -4,8 +4,8 @@ set -e
 echo "Applying database migrations..."
 alembic upgrade head
 
-echo "Seeding demo accounts..."
 if [ "${ENABLE_DEMO_SEED:-false}" = "true" ]; then
+    echo "Seeding demo accounts..."
     python seed.py
 fi
 

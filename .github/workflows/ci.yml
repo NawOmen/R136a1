@@ -93,6 +93,9 @@ jobs:
         run: pnpm install --frozen-lockfile
       - name: Type-check
         run: pnpm --filter @sborka/web lint
+      - name: API client regression
+        working-directory: tests/e2e
+        run: pnpm exec playwright test --config api-client.config.ts
       - name: Check Russian UI
         run: python3 scripts/check-russian-ui.py
       - name: Build
