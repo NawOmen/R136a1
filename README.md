@@ -43,6 +43,26 @@ python3 scripts/init-local-env.py  # новый .env со случайными �
 docker compose --env-file .env -f infra/docker-compose.yml up --build
 ```
 
+Если стенд уже запускался раньше (на компьютере остался том PostgreSQL),
+`init-local-env.py` предупредит об этом, а сервисы упадут с
+`password authentication failed for user "sborka"`: PostgreSQL применяет
+`POSTGRES_PASSWORD` только при первой инициализации тома, и смена `.env` пароль
+роли не меняет. Перед запуском выполните один раз:
+
+```bash
+python3 scripts/sync-db-password.py   # выставит пароль роли из .env, данные сохранятся
+```
+
+Если данные не нужны, вместо этого удалите том (они будут потеряны):
+
+```bash
+docker compose --env-file .env -f infra/docker-compose.yml down
+docker volume rm infra_postgres_data   # имя тома уточните: docker volume ls | grep postgres
+```
+
+Тот же шаг нужен после ротации `POSTGRES_PASSWORD` на существующем стенде;
+подробности — в [docs/security/hardening.md](docs/security/hardening.md).
+
 Для функций этапа 4 Ollama запускается на хосте отдельно:
 
 ```bash

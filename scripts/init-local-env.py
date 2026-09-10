@@ -2,6 +2,18 @@
 import os
 from pathlib import Path
 import secrets
+import subprocess
+
+
+def existing_postgres_volumes() -> list[str]:
+    """Тома PostgreSQL, созданные прошлыми запусками (пароль в них не меняется)."""
+    try:
+        output = subprocess.check_output(
+            ["docker", "volume", "ls", "--format", "{{.Name}}"], text=True, timeout=10
+        )
+    except (OSError, subprocess.SubprocessError):
+        return []
+    return [name for name in output.split() if name.endswith("postgres_data")]
 
 
 def main():
@@ -23,6 +35,14 @@ def main():
         stream.write("# Локальные секреты. Не добавлять в Git.\n")
         stream.writelines(f"{key}={value}\n" for key, value in values.items())
     print("Создан .env с правами 0600. Значения секретов не выводятся.")
+
+    volumes = existing_postgres_volumes()
+    if volumes:
+        print("Внимание: найден существующий том PostgreSQL: " + ", ".join(sorted(volumes)))
+        print("PostgreSQL применяет POSTGRES_PASSWORD только при первой инициализации, поэтому")
+        print("сервисы упадут с 'password authentication failed', пока пароль роли не совпадёт с .env.")
+        print("Перед запуском стенда выполните: python3 scripts/sync-db-password.py")
+        print("Либо удалите ненужный том: docker volume rm <том> (данные будут потеряны).")
 
 
 if __name__ == "__main__":
