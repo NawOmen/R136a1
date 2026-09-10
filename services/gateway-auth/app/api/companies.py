@@ -1,6 +1,7 @@
 import uuid
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Request, status
+from ..security_events import audit
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..database import get_db
@@ -109,6 +110,7 @@ async def submit_review(
 async def update_membership(
     company_id: uuid.UUID,
     data: MembershipPatch,
+    request: Request,
     user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
@@ -118,8 +120,11 @@ async def update_membership(
             detail="Хотя бы одно разрешение («Покупаю» или «Продаю») должно быть включено",
         )
     membership = await require_company_admin(company_id, user, db)
+    previous = f"buy={membership.can_buy},sell={membership.can_sell}"
     membership.can_buy = data.can_buy
     membership.can_sell = data.can_sell
+    await audit(db, request, "company.membership", actor=user.id, target=company_id,
+                before=previous, after=f"buy={data.can_buy},sell={data.can_sell}")
     await db.commit()
     await db.refresh(membership)
     return membership

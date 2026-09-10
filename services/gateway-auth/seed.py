@@ -2,7 +2,7 @@
 
 Запуск (после миграций): python seed.py
 Пароли берутся из переменных окружения SEED_ADMIN_PASSWORD / SEED_DEMO_PASSWORD
-(по умолчанию admin123 / demo123 — только для локальной демонстрации).
+(обязательные случайные значения; seed включается оператором явно).
 """
 
 import asyncio
@@ -17,11 +17,13 @@ from app.security import hash_password
 
 async def seed() -> None:
     admin_email = os.getenv("SEED_ADMIN_EMAIL", "admin@demo.ru")
-    admin_password = os.getenv("SEED_ADMIN_PASSWORD", "admin123")
+    admin_password = os.environ["SEED_ADMIN_PASSWORD"]
     demo_email = os.getenv("SEED_DEMO_EMAIL", "demo@demo.ru")
-    demo_password = os.getenv("SEED_DEMO_PASSWORD", "demo123")
+    demo_password = os.environ["SEED_DEMO_PASSWORD"]
     seller_email = os.getenv("SEED_SELLER_EMAIL", "seller@demo.ru")
-    seller_password = os.getenv("SEED_SELLER_PASSWORD", "seller123")
+    seller_password = os.environ["SEED_SELLER_PASSWORD"]
+    if any(len(password) < 16 for password in (admin_password, demo_password, seller_password)):
+        raise ValueError("Пароли начальных аккаунтов должны содержать минимум 16 символов")
 
     async with SessionLocal() as db:
         await db.execute(text("CREATE SCHEMA IF NOT EXISTS auth"))

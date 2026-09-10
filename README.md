@@ -39,9 +39,29 @@ docs/                        mvp/, demo/, api/, architecture/
 ## Быстрый старт
 
 ```bash
-cp .env.example .env          # при необходимости задайте JWT_SECRET
-docker compose -f infra/docker-compose.yml up --build
+python3 scripts/init-local-env.py  # новый .env со случайными секретами, без перезаписи
+docker compose --env-file .env -f infra/docker-compose.yml up --build
 ```
+
+Если стенд уже запускался раньше (на компьютере остался том PostgreSQL),
+`init-local-env.py` предупредит об этом, а сервисы упадут с
+`password authentication failed for user "sborka"`: PostgreSQL применяет
+`POSTGRES_PASSWORD` только при первой инициализации тома, и смена `.env` пароль
+роли не меняет. Перед запуском выполните один раз:
+
+```bash
+python3 scripts/sync-db-password.py   # выставит пароль роли из .env, данные сохранятся
+```
+
+Если данные не нужны, вместо этого удалите том (они будут потеряны):
+
+```bash
+docker compose --env-file .env -f infra/docker-compose.yml down
+docker volume rm infra_postgres_data   # имя тома уточните: docker volume ls | grep postgres
+```
+
+Тот же шаг нужен после ротации `POSTGRES_PASSWORD` на существующем стенде;
+подробности — в [docs/security/hardening.md](docs/security/hardening.md).
 
 Для функций этапа 4 Ollama запускается на хосте отдельно:
 
@@ -76,29 +96,23 @@ Whisper `small` в Docker volume. DeepSeek необязателен и вклю�
 `POSTGRES_USER`, пароль из `POSTGRES_PASSWORD`. Данные pgAdmin сохраняются в
 Docker volume `pgadmin_data` и не попадают в Git.
 
-Миграции применяются и демо-аккаунты создаются автоматически при старте `gateway-auth`.
+Миграции применяются при старте. Демо-аккаунты создаются только при явном
+`ENABLE_DEMO_SEED=true`; пароли берутся из локального .env.
+Для существующей базы обязательно выполнить [инструкцию смены секретов](docs/security/hardening.md).
 
 ### Доступ с других устройств в локальной сети
 
-Чтобы открыть сайт с телефона или другого устройства в той же сети, узнайте
-адрес машины с запущенным Docker:
-
-```bash
-python scripts/print-access-url.py
-# Сайт доступен с других устройств в той же сети: http://192.168.1.50:3000
-```
-
-CORS сервисов разрешает любые приватные локальные подсети (10.x, 172.16–31.x,
-192.168.x), поэтому адрес работает при любой смене сети или IP без
-перенастройки.
+Базовый Compose доступен только на localhost. Для других устройств включите
+[HTTPS-прокси и доверенный сертификат](docs/security/hardening.md).
+Прямые API и служебные порты в сеть не публикуйте.
 
 ### Демо-аккаунты (синтетические)
 
 | Роль | Email | Пароль |
 | --- | --- | --- |
-| Администратор | `admin@demo.ru` | `admin123` |
-| Покупатель + продавец (проверенная компания) | `demo@demo.ru` | `demo123` |
-| Производитель «СтаканОпт Демо» | `seller@demo.ru` | `seller123` |
+| Администратор | `admin@demo.ru` | `SEED_ADMIN_PASSWORD` из .env |
+| Покупатель + продавец (проверенная компания) | `demo@demo.ru` | `SEED_DEMO_PASSWORD` из .env |
+| Производитель «СтаканОпт Демо» | `seller@demo.ru` | `SEED_SELLER_PASSWORD` из .env |
 
 После входа откройте «Создать потребность»: верхний блок принимает обычный
 русский текст, фото, PDF и голос, показывает источники и противоречия, а затем
@@ -106,45 +120,74 @@ CORS сервисов разрешает любые приватные лока�
 
 ## Локальный запуск сервисов без Docker
 
+Нужен Python 3.12, запущенные PostgreSQL и MinIO. Для нового стенда создайте
+`.env` через `python3 scripts/init-local-env.py`; для существующего сначала выполните
+[ротацию секретов](docs/security/hardening.md). Следующие команды выполняются
+из корня проекта в bash/zsh. Загружайте только собственный доверенный `.env`:
+
 ```bash
-python3 -m venv .venv
-.venv/bin/pip install -r services/gateway-auth/requirements-dev.txt \
-                        -r services/marketplace/requirements-dev.txt \
-                        -r services/llm-gateway/requirements-dev.txt \
-                        -r services/optimizer/requirements-dev.txt
+set -a
+. ./.env
+set +a
+export OPTIMIZER_URL=http://127.0.0.1:8004
+export OLLAMA_BASE_URL=http://127.0.0.1:11434
+
+# Каждому сервису — собственное окружение, как в Docker и CI.
+for service_name in gateway-auth marketplace llm-gateway optimizer; do
+  python3.12 -m venv "services/$service_name/.venv"
+  "services/$service_name/.venv/bin/python" -m pip install "pytest>=8,<9" "pytest-asyncio>=0.26,<1" "httpx>=0.27,<1"
+  "services/$service_name/.venv/bin/python" -m pip install --require-hashes -r "services/$service_name/requirements.lock"
+  "services/$service_name/.venv/bin/python" -m pip check
+done
 
 # миграции (при запущенном PostgreSQL)
+for service_name in gateway-auth marketplace llm-gateway; do
+  (cd "services/$service_name" && .venv/bin/alembic upgrade head)
+done
+
+# Только для синтетического демо: явный флаг, пароли SEED_*_PASSWORD из .env.
+export ENABLE_DEMO_SEED=true
+if [ "$ENABLE_DEMO_SEED" = "true" ]; then
+  (cd services/gateway-auth && .venv/bin/python seed.py)
+  (cd services/marketplace && .venv/bin/python seed.py)
+fi
+export ENABLE_DEMO_SEED=false
+
+# Запуск авторизации; для остальных сервисов — отдельные терминалы.
 cd services/gateway-auth
-DATABASE_URL=postgresql+asyncpg://sborka:sborka@localhost:5433/sborka ../../.venv/bin/alembic upgrade head
-../../.venv/bin/python seed.py
-DATABASE_URL=postgresql+asyncpg://sborka:sborka@localhost:5433/sborka ../../.venv/bin/uvicorn app.main:app --reload --port 8001
+.venv/bin/uvicorn app.main:app --reload --host 127.0.0.1 --port 8001 --no-proxy-headers --no-access-log
 ```
+
+В каждом новом терминале сначала загрузите `.env` из корня теми же командами
+`set -a; . ./.env; set +a` и экспортируйте указанные локальные URL.
+Для marketplace, llm-gateway и optimizer перейдите в соответствующий каталог
+`services/...` и выполните ту же команду uvicorn с портами 8002, 8003 и 8004.
+Обязательны JWT_SECRET для авторизации/marketplace/LLM, OPTIMIZER_TOKEN для
+marketplace/optimizer и MINIO_SECRET_KEY для marketplace. DATABASE_URL должен
+содержать **текущий** пароль PostgreSQL. Флаг seed сам по себе не создаёт секреты.
 
 ## Тесты
 
+После установки отдельных окружений и загрузки собственного `.env` из корня:
+
 ```bash
-# создать тестовые БД один раз
-docker compose -f infra/docker-compose.yml exec -T postgres psql -U sborka -d postgres -c "CREATE DATABASE sborka_test"
-docker compose -f infra/docker-compose.yml exec -T postgres psql -U sborka -d postgres -c "CREATE DATABASE sborka_marketplace_test"
-
-cd services/gateway-auth
-TEST_DATABASE_URL=postgresql+asyncpg://sborka:sborka@localhost:5433/sborka_test ../../.venv/bin/pytest
-
-cd ../marketplace
-TEST_DATABASE_URL=postgresql+asyncpg://sborka:sborka@localhost:5433/sborka_marketplace_test ../../.venv/bin/pytest
-
-cd ../llm-gateway
-TEST_DATABASE_URL=postgresql+asyncpg://sborka:sborka@localhost:5433/sborka_test ../../.venv/bin/pytest
-
-cd ../optimizer
-../../.venv/bin/pytest
+# Создать отдельную тестовую БД один раз (для PostgreSQL из Compose).
+docker compose --env-file .env -f infra/docker-compose.yml exec -T postgres psql -U "$POSTGRES_USER" -d postgres -c "CREATE DATABASE sborka_test"
+# Сохраняет подключение и пароль из DATABASE_URL, меняет только имя базы.
+export TEST_DATABASE_URL="${DATABASE_URL%/*}/sborka_test"
+for service_name in gateway-auth marketplace llm-gateway optimizer; do
+  (cd "services/$service_name" && .venv/bin/python -m pytest -q)
+done
 ```
+
+Тесты очищают свои таблицы; TEST_DATABASE_URL должен указывать только на тестовую БД.
+Для PostgreSQL без Docker создайте sborka_test через локальный psql.
 
 Опциональный smoke-тест с реальной локальной Qwen (Ollama должна быть запущена):
 
 ```bash
 cd services/llm-gateway
-RUN_OLLAMA_SMOKE=1 OLLAMA_BASE_URL=http://localhost:11434 ../../.venv/bin/pytest -m ollama
+RUN_OLLAMA_SMOKE=1 OLLAMA_BASE_URL=http://localhost:11434 .venv/bin/python -m pytest -m ollama
 ```
 
 ### Playwright (E2E)

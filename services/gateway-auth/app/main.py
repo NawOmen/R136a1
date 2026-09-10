@@ -3,13 +3,26 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from .api import admin, auth, companies, health
 from .config import settings
+from .security_events import correlation, logger
+import json
+from datetime import datetime, timezone
+from fastapi import Request
 
 app = FastAPI(title="Gateway Auth", version="1.0.0")
 
-# Для прототипа разрешаем CORS с фронтенда и инструментов разработки.
-# Список явных origins дополняется regex: любой адрес приватной локальной сети
-# (localhost, 10.x, 172.16-31.x, 192.168.x) разрешён автоматически — при смене
-# IP компьютера в локальной сети ничего перенастраивать не нужно.
+
+@app.middleware("http")
+async def security_log(request: Request, call_next):
+    request_id = correlation(request)
+    response = await call_next(request)
+    response.headers["X-Request-ID"] = request_id
+    if response.status_code in (401, 403, 429):
+        logger.warning(json.dumps({"event": "auth.denied", "status": response.status_code,
+                                   "time": datetime.now(timezone.utc).isoformat(),
+                                   "correlation_id": request_id}))
+    return response
+
+# Только явно настроенные origins. Для сети используется same-origin HTTPS-прокси.
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.cors_origin_list,

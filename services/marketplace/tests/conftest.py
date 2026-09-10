@@ -167,4 +167,4 @@ async def make_company(
 def make_token(user_id: uuid.UUID) -> str:
     from app.config import settings
 
-    return jwt.encode({"sub": str(user_id)}, settings.jwt_secret, algorithm=settings.jwt_algorithm)
+    return jwt.encode({"sub": str(user_id), "exp": __import__("time").time() + 3600}, settings.jwt_secret, algorithm=settings.jwt_algorithm)

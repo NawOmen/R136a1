@@ -2,7 +2,7 @@ import uuid
 from datetime import datetime
 from typing import Literal
 
-from pydantic import BaseModel, ConfigDict, EmailStr, Field, model_validator
+from pydantic import BaseModel, ConfigDict, EmailStr, Field, field_validator, model_validator
 
 LegalForm = Literal["ООО", "ИП"]
 VerificationDecision = Literal["approve", "reject"]
@@ -29,10 +29,17 @@ class RegisterIn(BaseModel):
     password: str = Field(min_length=6, max_length=128)
     phone: str | None = Field(default=None, max_length=40)
 
+    @field_validator("password")
+    @classmethod
+    def password_bytes(cls, value: str) -> str:
+        if len(value.encode("utf-8")) > 72:
+            raise ValueError("Пароль должен занимать не более 72 байт UTF-8")
+        return value
+
 
 class LoginIn(BaseModel):
     email: EmailStr
-    password: str
+    password: str = Field(max_length=128)
 
 
 class TokenResponse(BaseModel):
@@ -145,3 +152,4 @@ class AdminVerificationIn(BaseModel):
 
 class BlockIn(BaseModel):
     blocked: bool
+    reason: str | None = Field(default=None, max_length=500)

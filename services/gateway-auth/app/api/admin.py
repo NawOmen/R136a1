@@ -1,13 +1,14 @@
 import uuid
 from typing import Literal
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from sqlalchemy import or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..database import get_db
 from ..deps import require_admin
-from ..models import Company, CompanyVerificationEvent, User
+from ..models import Company, CompanyVerificationEvent, SecurityEvent, User
+from ..security_events import audit
 from ..schemas import AdminCompaniesOut, AdminUsersOut, AdminVerificationIn, BlockIn, CompanyOut, UserOut, VerificationEventOut
 
 router = APIRouter(prefix="/admin", tags=["admin"])
@@ -105,6 +106,7 @@ async def verify_company(
 async def block_user(
     user_id: uuid.UUID,
     data: BlockIn,
+    request: Request,
     admin: User = Depends(require_admin),
     db: AsyncSession = Depends(get_db),
 ):
@@ -112,7 +114,22 @@ async def block_user(
     if user is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, detail="Пользователь не найден")
 
+    previous = user.account_status
     user.account_status = "blocked" if data.blocked else "active"
+    await audit(db, request, "admin.account_status", actor=admin.id, target=user.id,
+                before=previous, after=user.account_status,
+                reason=data.reason or "Ручное решение администратора")
     await db.commit()
     await db.refresh(user)
     return user
+
+
+@router.get("/security-events")
+async def security_events(alerts_only: bool = False, admin: User = Depends(require_admin), db: AsyncSession = Depends(get_db)):
+    query = select(SecurityEvent)
+    if alerts_only:
+        query = query.where(SecurityEvent.event == "auth.rate_limited")
+    rows = (await db.execute(query.order_by(SecurityEvent.created_at.desc()).limit(100))).scalars().all()
+    return [{"event": row.event, "created_at": row.created_at, "actor_id": row.actor_id,
+             "target_id": row.target_id, "before": row.before_value, "after": row.after_value,
+             "correlation_id": row.correlation_id, "reason": row.reason} for row in rows]

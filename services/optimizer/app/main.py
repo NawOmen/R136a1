@@ -1,4 +1,5 @@
-from fastapi import FastAPI
+from fastapi import Depends, FastAPI
+from .security import require_service_token
 
 from .schemas import (
     AllocationRequest,
@@ -25,21 +26,21 @@ async def health():
     return {"status": "ok", "solver": "or-tools-cp-sat"}
 
 
-@app.post("/api/v1/optimize/allocations", response_model=OptimizationResponse)
-async def allocations(data: AllocationRequest):
+@app.post("/api/v1/optimize/allocations", response_model=OptimizationResponse, dependencies=[Depends(require_service_token)])
+def allocations(data: AllocationRequest):
     return optimize_allocations(data)
 
 
-@app.post("/api/v1/optimize/coalition", response_model=CoalitionResponse)
-async def coalition(data: CoalitionRequest):
+@app.post("/api/v1/optimize/coalition", response_model=CoalitionResponse, dependencies=[Depends(require_service_token)])
+def coalition(data: CoalitionRequest):
     return evaluate_coalition(data)
 
 
-@app.post("/api/v1/score/opportunity", response_model=OpportunityScoreOut)
-async def opportunity_score(data: OpportunityScoreIn):
+@app.post("/api/v1/score/opportunity", response_model=OpportunityScoreOut, dependencies=[Depends(require_service_token)])
+def opportunity_score(data: OpportunityScoreIn):
     return calculate_opportunity_score(data)
 
 
-@app.post("/api/v1/optimize/resilience", response_model=ResilienceResponse)
-async def resilience(data: ResilienceRequest):
+@app.post("/api/v1/optimize/resilience", response_model=ResilienceResponse, dependencies=[Depends(require_service_token)])
+def resilience(data: ResilienceRequest):
     return calculate_resilience(data)

@@ -237,6 +237,9 @@ async function request<T>(path: string, options: RequestOptions = {}): Promise<T
 // ---------- Эндпоинты ----------
 
 export const api = {
+  getSecurityEvents(token: string, alertsOnly = false): Promise<{event: string; created_at: string; correlation_id: string}[]> {
+    return request("/api/v1/admin/security-events" + (alertsOnly ? "?alerts_only=true" : ""), {token});
+  },
   // 1. Регистрация
   register(input: RegisterInput): Promise<AuthResponse> {
     return request("/api/v1/auth/register", { method: "POST", body: JSON.stringify(input) });

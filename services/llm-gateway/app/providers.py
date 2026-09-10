@@ -74,7 +74,7 @@ class OllamaProvider:
                 content = response.json()["message"]["content"]
             return response_model.model_validate(_json_from_text(content))
         except (httpx.HTTPError, KeyError, ValueError, ValidationError, json.JSONDecodeError) as exc:
-            raise ModelUnavailable(f"Локальная Qwen недоступна или вернула неверный JSON: {exc}") from exc
+            raise ModelUnavailable("Локальная Qwen недоступна или вернула неверный JSON") from exc
 
     async def vision_text(self, image_base64: str, prompt: str) -> str:
         payload = {
@@ -96,7 +96,7 @@ class OllamaProvider:
                 response.raise_for_status()
                 return str(response.json()["message"]["content"]).strip()
         except (httpx.HTTPError, KeyError, ValueError) as exc:
-            raise ModelUnavailable(f"Локальное распознавание изображения недоступно: {exc}") from exc
+            raise ModelUnavailable("Локальное распознавание изображения недоступно") from exc
 
 
 class DeepSeekProvider:
@@ -133,7 +133,7 @@ class DeepSeekProvider:
                 content = response.json()["choices"][0]["message"]["content"]
             return response_model.model_validate(_json_from_text(content))
         except (httpx.HTTPError, KeyError, IndexError, ValueError, ValidationError, json.JSONDecodeError) as exc:
-            raise ModelUnavailable(f"DeepSeek недоступен или вернул неверный JSON: {exc}") from exc
+            raise ModelUnavailable("DeepSeek недоступен или вернул неверный JSON") from exc
 
 
 class RoutedProvider:

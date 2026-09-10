@@ -27,45 +27,56 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-      - name: Install dependencies
+      - name: Ephemeral service keys for this job
         run: |
-          pip install -r services/gateway-auth/requirements-dev.txt
-          pip install -r services/marketplace/requirements-dev.txt
-          pip install -r services/llm-gateway/requirements-dev.txt
-          pip install -r services/optimizer/requirements-dev.txt
+          python - <<'PY'
+          import os, secrets
+          with open(os.environ["GITHUB_ENV"], "a") as stream:
+              for name in ("JWT_SECRET", "OPTIMIZER_TOKEN", "MINIO_SECRET_KEY"):
+                  stream.write(f"{name}={secrets.token_urlsafe(48)}\n")
+          PY
+      - name: Install dependencies in isolated service environments
+        run: |
+          for service_name in gateway-auth marketplace llm-gateway optimizer; do
+            service_venv="$RUNNER_TEMP/venv-$service_name"
+            python -m venv "$service_venv"
+            "$service_venv/bin/python" -m pip install "pytest>=8,<9" "pytest-asyncio>=0.26,<1" "httpx>=0.27,<1"
+            "$service_venv/bin/python" -m pip install --require-hashes -r "services/$service_name/requirements.lock"
+            "$service_venv/bin/python" -m pip check
+          done
       - name: Verify migrations (gateway-auth)
         working-directory: services/gateway-auth
         env:
           DATABASE_URL: postgresql+asyncpg://sborka:sborka@localhost:5432/sborka_test
-        run: alembic upgrade head
+        run: '"$RUNNER_TEMP/venv-gateway-auth/bin/alembic" upgrade head'
       - name: Verify migrations (marketplace)
         working-directory: services/marketplace
         env:
           DATABASE_URL: postgresql+asyncpg://sborka:sborka@localhost:5432/sborka_test
-        run: alembic upgrade head
+        run: '"$RUNNER_TEMP/venv-marketplace/bin/alembic" upgrade head'
       - name: Verify migrations (llm-gateway)
         working-directory: services/llm-gateway
         env:
           DATABASE_URL: postgresql+asyncpg://sborka:sborka@localhost:5432/sborka_test
-        run: alembic upgrade head
+        run: '"$RUNNER_TEMP/venv-llm-gateway/bin/alembic" upgrade head'
       - name: Run gateway-auth tests
         working-directory: services/gateway-auth
         env:
           TEST_DATABASE_URL: postgresql+asyncpg://sborka:sborka@localhost:5432/sborka_test
-        run: pytest -q
+        run: '"$RUNNER_TEMP/venv-gateway-auth/bin/python" -m pytest -q'
       - name: Run marketplace tests
         working-directory: services/marketplace
         env:
           TEST_DATABASE_URL: postgresql+asyncpg://sborka:sborka@localhost:5432/sborka_test
-        run: pytest -q
+        run: '"$RUNNER_TEMP/venv-marketplace/bin/python" -m pytest -q'
       - name: Run llm-gateway tests
         working-directory: services/llm-gateway
         env:
           TEST_DATABASE_URL: postgresql+asyncpg://sborka:sborka@localhost:5432/sborka_test
-        run: pytest -q
+        run: '"$RUNNER_TEMP/venv-llm-gateway/bin/python" -m pytest -q'
       - name: Run optimizer tests
         working-directory: services/optimizer
-        run: pytest -q
+        run: '"$RUNNER_TEMP/venv-optimizer/bin/python" -m pytest -q'
 
   frontend:
     runs-on: ubuntu-latest
@@ -82,6 +93,9 @@ jobs:
         run: pnpm install --frozen-lockfile
       - name: Type-check
         run: pnpm --filter @sborka/web lint
+      - name: API client regression
+        working-directory: tests/e2e
+        run: pnpm exec playwright test --config api-client.config.ts
       - name: Check Russian UI
         run: python3 scripts/check-russian-ui.py
       - name: Build

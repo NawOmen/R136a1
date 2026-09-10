@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -15,12 +15,15 @@ from ..schemas import (
     UserOut,
 )
 from ..security import create_access_token, hash_password, verify_password
+from ..security_events import audit, throttle
 
 router = APIRouter(prefix="/auth", tags=["auth"])
+_dummy_hash = hash_password("not-an-account-password")
 
 
 @router.post("/register", response_model=TokenResponse, status_code=status.HTTP_201_CREATED)
-async def register(data: RegisterIn, db: AsyncSession = Depends(get_db)):
+async def register(data: RegisterIn, request: Request, db: AsyncSession = Depends(get_db)):
+    await throttle(db, request, str(data.email), "register")
     existing = await db.execute(select(User).where(User.email == data.email))
     if existing.scalar_one_or_none() is not None:
         raise HTTPException(status.HTTP_409_CONFLICT, detail="Email уже занят")
@@ -43,14 +46,22 @@ async def register(data: RegisterIn, db: AsyncSession = Depends(get_db)):
 
 
 @router.post("/login", response_model=TokenResponse)
-async def login(data: LoginIn, db: AsyncSession = Depends(get_db)):
+async def login(data: LoginIn, request: Request, db: AsyncSession = Depends(get_db)):
+    await throttle(db, request, str(data.email), "login")
     result = await db.execute(select(User).where(User.email == data.email))
     user = result.scalar_one_or_none()
-    if user is None or not verify_password(data.password, user.password_hash):
+    valid = verify_password(data.password, user.password_hash if user else _dummy_hash)
+    if user is None or not valid:
+        await audit(db, request, "auth.login_failed")
+        await db.commit()
         raise HTTPException(status.HTTP_401_UNAUTHORIZED, detail="Неверный email или пароль")
     if user.account_status == "blocked":
+        await audit(db, request, "auth.blocked_login", actor=user.id)
+        await db.commit()
         raise HTTPException(status.HTTP_401_UNAUTHORIZED, detail="Аккаунт заблокирован")
 
+    await audit(db, request, "auth.login_success", actor=user.id)
+    await db.commit()
     token = create_access_token(user.id)
     return TokenResponse(user=UserOut.model_validate(user), access_token=token)
 

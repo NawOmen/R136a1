@@ -31,6 +31,28 @@ export default function AdminPage() {
   const [tickets, setTickets] = useState<SupportTicket[]>([]);
   const [response, setResponse] = useState<Record<string, string>>({});
   const [users, setUsers] = useState<User[]>([]);
+  const [security, setSecurity] = useState<{event: string; created_at: string; correlation_id: string}[]>([]);
+  const [securityError, setSecurityError] = useState(false);
+  const [securityAlert, setSecurityAlert] = useState(false);
+
+  useEffect(() => {
+    if (!user?.is_marketplace_admin) return;
+    let active = true;
+    const refresh = async () => {
+      const token = getToken();
+      if (!token) return;
+      try {
+        const [events, alerts] = await Promise.all([api.getSecurityEvents(token), api.getSecurityEvents(token, true)]);
+        if (active) {
+          setSecurity(events); setSecurityError(false);
+          setSecurityAlert(alerts.some(item => Date.now() - Date.parse(item.created_at) < 900000));
+        }
+      } catch { if (active) setSecurityError(true); }
+    };
+    void refresh();
+    const timer = window.setInterval(() => void refresh(), 30000);
+    return () => { active = false; window.clearInterval(timer); };
+  }, [user?.is_marketplace_admin]);
 
   const refreshPending = useCallback(async (token: string, selectedStatus: VerificationStatus = "pending_review", query = "") => {
     const result = await api.getAdminCompanies(token, selectedStatus, query || undefined);
@@ -127,6 +149,22 @@ export default function AdminPage() {
 
   return (
     <div>
+      <section className="card" aria-live="polite">
+        <h2>События безопасности</h2>
+        {securityError && <p role="alert">Журнал недоступен. Проверьте работу сервиса авторизации.</p>}
+        {securityAlert &&
+          <p className="alert alert-error" role="alert">Обнаружено превышение лимита входа за последние 15 минут. Проверьте журнал.</p>}
+        <p className="hint">Обновление каждые 30 секунд. Полный журнал хранится на сервере 30 дней.</p>
+        {security.slice(0, 10).map(item => <p key={item.correlation_id + item.event}>
+          {new Date(item.created_at).toLocaleString("ru-RU")} — {{
+            "auth.rate_limited": "Превышен лимит попыток",
+            "auth.login_failed": "Неудачный вход",
+            "auth.login_success": "Успешный вход",
+            "auth.blocked_login": "Вход заблокированного пользователя",
+            "admin.account_status": "Изменён статус пользователя",
+          }[item.event] ?? "Событие безопасности"}
+        </p>)}
+      </section>
       <div className="company-row">
         <h1 className="page-title">Панель администратора</h1>
         <Link href="/dashboard" className="btn btn-secondary btn-sm">

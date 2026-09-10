@@ -28,7 +28,11 @@ async def get_current_user(
     if not user_id:
         raise HTTPException(status.HTTP_401_UNAUTHORIZED, detail="Неверный токен")
 
-    user = await db.get(User, uuid.UUID(str(user_id)))
+    try:
+        parsed_id = uuid.UUID(str(user_id))
+    except (ValueError, TypeError):
+        raise HTTPException(status.HTTP_401_UNAUTHORIZED, detail="Неверный токен")
+    user = await db.get(User, parsed_id)
     if user is None:
         raise HTTPException(status.HTTP_401_UNAUTHORIZED, detail="Пользователь не найден")
     if user.account_status == "blocked":

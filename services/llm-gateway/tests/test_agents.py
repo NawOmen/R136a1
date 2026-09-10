@@ -479,7 +479,7 @@ async def test_run_is_private(client, token, db_session):
     import jwt
 
     other_token = jwt.encode(
-        {"sub": str(other_id)}, settings.jwt_secret, algorithm=settings.jwt_algorithm
+        {"sub": str(other_id), "exp": __import__("time").time() + 3600}, settings.jwt_secret, algorithm=settings.jwt_algorithm
     )
     response = await client.get(
         f"/api/v1/agent-runs/{created.json()['id']}", headers=auth(other_token)
