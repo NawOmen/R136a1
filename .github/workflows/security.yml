@@ -11,12 +11,12 @@ jobs:
   deployment-config:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - run: python3 scripts/security-config-smoke.py
   sast:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: actions/setup-python@v5
         with: {python-version: "3.12"}
       - run: pip install bandit==1.9.4
@@ -28,7 +28,7 @@ jobs:
       matrix:
         service: [gateway-auth, marketplace, llm-gateway, optimizer]
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: actions/setup-python@v5
         with: {python-version: "3.12"}
       - run: pip install pip-audit==2.10.1
@@ -36,7 +36,7 @@ jobs:
   javascript-dependencies:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: pnpm/action-setup@v4
         with: {version: 10.28.1}
       - uses: actions/setup-node@v4
