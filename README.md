@@ -33,7 +33,7 @@ docs/                        mvp/, demo/, api/, architecture/
 
 - Docker Desktop / Docker Engine с Docker Compose;
 - Node.js 20+ и pnpm;
-- Python 3.12 (для локального запуска сервисов без Docker);
+- Python 3.14 (для локального запуска сервисов без Docker);
 - Ollama с моделью `qwen3.5:9b` (нужна с этапа 4; для этапа 2 не обязательна).
 
 ## Быстрый старт
@@ -120,7 +120,7 @@ Docker volume `pgadmin_data` и не попадают в Git.
 
 ## Локальный запуск сервисов без Docker
 
-Нужен Python 3.12, запущенные PostgreSQL и MinIO. Для нового стенда создайте
+Нужен Python 3.14, запущенные PostgreSQL и MinIO. Для нового стенда создайте
 `.env` через `python3 scripts/init-local-env.py`; для существующего сначала выполните
 [ротацию секретов](docs/security/hardening.md). Следующие команды выполняются
 из корня проекта в bash/zsh. Загружайте только собственный доверенный `.env`:
@@ -134,7 +134,7 @@ export OLLAMA_BASE_URL=http://127.0.0.1:11434
 
 # Каждому сервису — собственное окружение, как в Docker и CI.
 for service_name in gateway-auth marketplace llm-gateway optimizer; do
-  python3.12 -m venv "services/$service_name/.venv"
+  python3.14 -m venv "services/$service_name/.venv"
   "services/$service_name/.venv/bin/python" -m pip install "pytest>=8,<9" "pytest-asyncio>=0.26,<1" "httpx>=0.27,<1"
   "services/$service_name/.venv/bin/python" -m pip install --require-hashes -r "services/$service_name/requirements.lock"
   "services/$service_name/.venv/bin/python" -m pip check

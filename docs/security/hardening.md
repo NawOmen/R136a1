@@ -89,7 +89,7 @@ API по-прежнему проверяет 25 МиБ на файл и 100 Ми
 ## Регулярные проверки
 
 - Проверять security job и PR обновлений до каждого развёртывания.
-- Lock-файлы обновлять через `uv pip compile --python 3.12 --generate-hashes
+- Lock-файлы обновлять через `uv pip compile --python 3.14 --generate-hashes
   --output-file services/ИМЯ/requirements.lock services/ИМЯ/requirements.txt`,
   затем повторять SCA, тесты и сборку. Не замораживать случайный локальный Python 3.14.
 - Проверять TLS и доступность стенда со второго устройства; проверять невозможность
