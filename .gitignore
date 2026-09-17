@@ -58,6 +58,9 @@ Thumbs.db
 # Codex local logs
 .codex-log/
 
+# Local code-navigation cache (never publish source-derived graphs)
+graphify-out/
+
 # Generated presentation previews and inspection traces
 docs/contest/stage8-deck-preview/
 docs/contest/*.inspect.ndjson
