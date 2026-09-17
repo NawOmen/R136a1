@@ -196,6 +196,97 @@ class DocumentOut(BaseModel):
     file_key: str
     content_type: str
     verification_status: str
+    scope_category: str | None = None
+    scope_subcategory: str | None = None
+    valid_until: date | None = None
+    verified_by_user_id: uuid.UUID | None = None
+    verified_at: datetime | None = None
+    verification_note: str | None = None
+    created_at: datetime | None = None
+
+
+class PendingDocumentOut(DocumentOut):
+    """Документ в очереди проверки площадки: имя компании нужно проверяющему."""
+
+    company_display_name: str | None = None
+
+
+class DocumentVerificationIn(BaseModel):
+    """Решение проверяющего. Допуск выдаёт человек, а не загрузка файла."""
+
+    decision: Literal["verified", "rejected", "unverified"]
+    scope_category: str | None = Field(default=None, max_length=120)
+    scope_subcategory: str | None = Field(default=None, max_length=120)
+    valid_until: date | None = None
+    note: str | None = Field(default=None, max_length=500)
+
+    @model_validator(mode="after")
+    def validate_decision(self):
+        if self.decision == "verified" and not self.scope_category:
+            raise ValueError("Для подтверждения укажите область действия документа")
+        if self.decision == "rejected" and not (self.note or "").strip():
+            raise ValueError("Для отклонения укажите причину")
+        return self
+
+
+# ---------- Категорийный допуск ----------
+
+class RequirementStatusOut(BaseModel):
+    """Состояние одного обязательного доказательства."""
+
+    code: str
+    title: str
+    legal_reference: str
+    blocking: bool
+    state: str
+    state_label: str
+    seller_hint: str
+    buyer_note: str
+    document_ids: list[uuid.UUID] = Field(default_factory=list)
+
+
+class CategoryAdmissionOut(BaseModel):
+    category: str
+    subcategory: str | None
+    state: str
+    state_label: str
+    supported: bool
+    profile_title: str | None
+    summary: str
+    requirements: list[RequirementStatusOut]
+    advisories: list[str]
+    blocking_open: int
+    blocking_message: str = ""
+    checked_at: datetime
+
+
+class CategoryRequirementsOut(BaseModel):
+    """Публичный чек-лист покупателя: что проверить до сделки."""
+
+    category: str
+    subcategory: str | None
+    profile_title: str | None
+    supported: bool
+    summary: str
+    checklist: list[RequirementStatusOut]
+    advisories: list[str]
+    note: str
+
+
+class AdmissionChecklistOut(BaseModel):
+    """Состояние допуска опубликованного товара глазами покупателя."""
+
+    product_id: uuid.UUID
+    category: str
+    subcategory: str | None
+    state: str
+    state_label: str
+    supported: bool
+    summary: str
+    checklist: list[RequirementStatusOut]
+    advisories: list[str]
+    note: str
+    checked_at: datetime
 
 
 # ---------- Capability Passport ----------

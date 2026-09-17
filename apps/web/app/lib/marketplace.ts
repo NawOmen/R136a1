@@ -85,7 +85,87 @@ export interface Document {
   file_key: string;
   content_type: string;
   verification_status: "unverified" | "verified" | "rejected";
+  /** Область действия: без неё документ не считается доказательством допуска. */
+  scope_category: string | null;
+  scope_subcategory: string | null;
+  valid_until: string | null;
+  verified_by_user_id: string | null;
+  verified_at: string | null;
+  verification_note: string | null;
+  created_at: string | null;
 }
+
+export interface PendingDocument extends Document {
+  company_display_name: string | null;
+}
+
+export interface DocumentVerificationInput {
+  decision: "verified" | "rejected" | "unverified";
+  scope_category?: string | null;
+  scope_subcategory?: string | null;
+  valid_until?: string | null;
+  note?: string | null;
+}
+
+/** Состояние обязательного доказательства по категории. */
+export interface RequirementStatus {
+  code: string;
+  title: string;
+  legal_reference: string;
+  blocking: boolean;
+  state: string;
+  state_label: string;
+  seller_hint: string;
+  buyer_note: string;
+  document_ids: string[];
+}
+
+export interface CategoryAdmission {
+  category: string;
+  subcategory: string | null;
+  state: string;
+  state_label: string;
+  supported: boolean;
+  profile_title: string | null;
+  summary: string;
+  requirements: RequirementStatus[];
+  advisories: string[];
+  blocking_open: number;
+  blocking_message: string;
+  checked_at: string;
+}
+
+export interface CategoryRequirements {
+  category: string;
+  subcategory: string | null;
+  profile_title: string | null;
+  supported: boolean;
+  summary: string;
+  checklist: RequirementStatus[];
+  advisories: string[];
+  note: string;
+}
+
+export interface ProductAdmissionChecklist {
+  product_id: string;
+  category: string;
+  subcategory: string | null;
+  state: string;
+  state_label: string;
+  supported: boolean;
+  summary: string;
+  checklist: RequirementStatus[];
+  advisories: string[];
+  note: string;
+  checked_at: string;
+}
+
+export const ADMISSION_STATE_LABELS: Record<string, string> = {
+  admitted: "Допуск подтверждён",
+  blocked: "Публикация заблокирована",
+  not_configured: "Обязательные доказательства не заданы",
+  not_supported: "Категория не поддерживается",
+};
 
 export interface CapabilityDetails {
   business_kind: "manufacturer" | "stock_supplier" | "both";
@@ -490,8 +570,15 @@ export const DOCUMENT_TYPES: { value: string; label: string }[] = [
   { value: "certificate", label: "Сертификат" },
   { value: "declaration", label: "Декларация соответствия" },
   { value: "test_report", label: "Протокол испытаний" },
+  { value: "license", label: "Лицензия или разрешение" },
   { value: "other", label: "Прочее" },
 ];
+
+export const DOCUMENT_STATUS_LABELS: Record<string, string> = {
+  unverified: "Загружено, не проверено",
+  verified: "Проверено человеком",
+  rejected: "Не соответствует",
+};
 
 const CHARACTERISTIC_LABELS: Record<string, string> = {
   volume_ml: "Объём, мл",
@@ -859,11 +946,15 @@ export const marketplace = {
     file: File,
     name: string,
     documentType: string,
+    scope?: { category?: string | null; subcategory?: string | null; validUntil?: string | null },
   ): Promise<Document> {
     const formData = new FormData();
     formData.append("file", file);
     formData.append("name", name);
     formData.append("document_type", documentType);
+    if (scope?.category) formData.append("scope_category", scope.category);
+    if (scope?.subcategory) formData.append("scope_subcategory", scope.subcategory);
+    if (scope?.validUntil) formData.append("valid_until", scope.validUntil);
     return marketplaceFetch(`/api/v1/companies/${companyId}/documents`, {
       method: "POST",
       token,
@@ -873,6 +964,48 @@ export const marketplace = {
 
   deleteDocument(token: string, documentId: string): Promise<void> {
     return marketplaceFetch(`/api/v1/documents/${documentId}`, { method: "DELETE", token });
+  },
+
+  // Категорийный допуск: решение по документу принимает администратор площадки.
+  verifyDocument(
+    token: string,
+    documentId: string,
+    input: DocumentVerificationInput,
+  ): Promise<Document> {
+    return marketplaceFetch(`/api/v1/documents/${documentId}/verification`, {
+      method: "POST",
+      token,
+      body: JSON.stringify(input),
+    });
+  },
+
+  getPendingDocuments(token: string): Promise<PendingDocument[]> {
+    return marketplaceFetch("/api/v1/admin/documents/pending", { token }).then((body) =>
+      unwrapList<PendingDocument>(body, ["documents", "items"]),
+    );
+  },
+
+  getCategoryAdmission(
+    token: string,
+    companyId: string,
+    category: string,
+    subcategory?: string | null,
+  ): Promise<CategoryAdmission> {
+    const query = new URLSearchParams({ category });
+    if (subcategory) query.set("subcategory", subcategory);
+    return marketplaceFetch(`/api/v1/companies/${companyId}/category-admission?${query.toString()}`, {
+      token,
+    });
+  },
+
+  getCategoryRequirements(category: string, subcategory?: string | null): Promise<CategoryRequirements> {
+    const query = new URLSearchParams({ category });
+    if (subcategory) query.set("subcategory", subcategory);
+    return marketplaceFetch(`/api/v1/category-requirements?${query.toString()}`);
+  },
+
+  getProductAdmission(productId: string): Promise<ProductAdmissionChecklist> {
+    return marketplaceFetch(`/api/v1/products/${productId}/admission`);
   },
 
   // Capability Passport

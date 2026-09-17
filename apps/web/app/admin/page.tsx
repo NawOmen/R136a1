@@ -13,7 +13,7 @@ import {
   VerificationEvent,
   VERIFICATION_STATUS_LABELS,
 } from "../lib/api";
-import { marketplace, SupportTicket } from "../lib/marketplace";
+import { DOCUMENT_TYPES, marketplace, PendingDocument, SupportTicket } from "../lib/marketplace";
 
 export default function AdminPage() {
   const router = useRouter();
@@ -34,6 +34,9 @@ export default function AdminPage() {
   const [security, setSecurity] = useState<{event: string; created_at: string; correlation_id: string}[]>([]);
   const [securityError, setSecurityError] = useState(false);
   const [securityAlert, setSecurityAlert] = useState(false);
+  const [pendingDocuments, setPendingDocuments] = useState<PendingDocument[]>([]);
+  const [docBusyId, setDocBusyId] = useState<string | null>(null);
+  const [docScope, setDocScope] = useState<Record<string, { category: string; subcategory: string; note: string }>>({});
 
   useEffect(() => {
     if (!user?.is_marketplace_admin) return;
@@ -57,8 +60,12 @@ export default function AdminPage() {
   const refreshPending = useCallback(async (token: string, selectedStatus: VerificationStatus = "pending_review", query = "") => {
     const result = await api.getAdminCompanies(token, selectedStatus, query || undefined);
     setCompanies(result.companies);
-    const [support, userResult] = await Promise.all([marketplace.getAdminSupportTickets(token), api.getAdminUsers(token)]);
-    setTickets(support); setUsers(userResult.users);
+    const [support, userResult, documents] = await Promise.all([
+      marketplace.getAdminSupportTickets(token),
+      api.getAdminUsers(token),
+      marketplace.getPendingDocuments(token),
+    ]);
+    setTickets(support); setUsers(userResult.users); setPendingDocuments(documents);
   }, []);
 
   const load = useCallback(async () => {
@@ -118,6 +125,47 @@ export default function AdminPage() {
       setActionError(err instanceof ApiError ? err.message : "Не удалось отклонить компанию.");
     } finally {
       setBusyId(null);
+    }
+  }
+
+  function documentDecision(document: PendingDocument) {
+    return docScope[document.id] ?? {
+      category: document.scope_category ?? "",
+      subcategory: document.scope_subcategory ?? "",
+      note: "",
+    };
+  }
+
+  function updateDocumentDecision(document: PendingDocument, patch: Partial<{ category: string; subcategory: string; note: string }>) {
+    setDocScope((current) => ({ ...current, [document.id]: { ...documentDecision(document), ...patch } }));
+  }
+
+  async function handleDocumentDecision(document: PendingDocument, decision: "verified" | "rejected") {
+    const token = getToken();
+    if (!token) return;
+    const value = documentDecision(document);
+    if (decision === "verified" && !value.category.trim()) {
+      setActionError("Укажите область действия документа: без неё подтверждение невозможно.");
+      return;
+    }
+    if (decision === "rejected" && !value.note.trim()) {
+      setActionError("Укажите причину отклонения документа.");
+      return;
+    }
+    setDocBusyId(document.id);
+    setActionError(null);
+    try {
+      await marketplace.verifyDocument(token, document.id, {
+        decision,
+        scope_category: value.category.trim() || null,
+        scope_subcategory: value.subcategory.trim() || null,
+        note: value.note.trim() || null,
+      });
+      await refreshPending(token, statusFilter, search);
+    } catch (err) {
+      setActionError(err instanceof ApiError ? err.message : "Не удалось сохранить решение по документу.");
+    } finally {
+      setDocBusyId(null);
     }
   }
 
@@ -251,6 +299,81 @@ export default function AdminPage() {
           ))}
         </ul>
       )}
+
+      <section className="card" style={{ marginTop: 24 }}>
+        <h2>Документы на проверке ({pendingDocuments.length})</h2>
+        <p className="hint">
+          Решение принимает администратор площадки. Документ без области действия не считается
+          доказательством допуска, поэтому подтверждение требует указать категорию.
+        </p>
+        {pendingDocuments.length === 0 ? <p className="hint">Новых документов нет.</p> : (
+          <ul className="company-list">
+            {pendingDocuments.map((document) => {
+              const value = documentDecision(document);
+              const typeLabel = DOCUMENT_TYPES.find((item) => item.value === document.document_type)?.label ?? document.document_type;
+              return (
+                <li className="card" key={document.id}>
+                  <div className="company-row">
+                    <div>
+                      <div className="company-item__name">{document.name}</div>
+                      <div className="company-meta">{document.company_display_name ?? "Компания"} · {typeLabel}</div>
+                    </div>
+                  </div>
+                  <div className="form-grid">
+                    <div className="field">
+                      <label htmlFor={`doc-category-${document.id}`}>Область действия: категория<span className="req">*</span></label>
+                      <input
+                        id={`doc-category-${document.id}`}
+                        type="text"
+                        value={value.category}
+                        onChange={(event) => updateDocumentDecision(document, { category: event.target.value })}
+                        placeholder="Например, Упаковка и тара"
+                      />
+                    </div>
+                    <div className="field">
+                      <label htmlFor={`doc-subcategory-${document.id}`}>Подкатегория</label>
+                      <input
+                        id={`doc-subcategory-${document.id}`}
+                        type="text"
+                        value={value.subcategory}
+                        onChange={(event) => updateDocumentDecision(document, { subcategory: event.target.value })}
+                        placeholder="Например, Бумажные стаканы"
+                      />
+                    </div>
+                    <div className="field">
+                      <label htmlFor={`doc-note-${document.id}`}>Комментарий или причина отклонения</label>
+                      <input
+                        id={`doc-note-${document.id}`}
+                        type="text"
+                        value={value.note}
+                        onChange={(event) => updateDocumentDecision(document, { note: event.target.value })}
+                      />
+                    </div>
+                    <div className="actions">
+                      <button
+                        type="button"
+                        className="btn btn-success btn-sm"
+                        disabled={docBusyId === document.id}
+                        onClick={() => void handleDocumentDecision(document, "verified")}
+                      >
+                        {docBusyId === document.id ? "..." : "Подтвердить применимость"}
+                      </button>
+                      <button
+                        type="button"
+                        className="btn btn-danger btn-sm"
+                        disabled={docBusyId === document.id}
+                        onClick={() => void handleDocumentDecision(document, "rejected")}
+                      >
+                        Отклонить
+                      </button>
+                    </div>
+                  </div>
+                </li>
+              );
+            })}
+          </ul>
+        )}
+      </section>
 
       <section className="card" style={{ marginTop: 24 }}><h2>Пользователи ({users.length})</h2><div className="admin-user-grid">{users.map((item) => <div className="company-row" key={item.id}><div><b>{item.last_name} {item.first_name}</b><p className="hint mode-hint">{item.email} · {item.is_marketplace_admin ? "Администратор" : "Пользователь"}</p></div>{!item.is_marketplace_admin && <button className="btn btn-secondary btn-sm" onClick={() => { const token=getToken(); if(!token)return; void api.setUserBlocked(token,item.id,item.account_status!=="blocked").then(() => refreshPending(token,statusFilter,search)); }}>{item.account_status === "blocked" ? "Разблокировать" : "Заблокировать"}</button>}</div>)}</div></section>
 

@@ -112,6 +112,14 @@ class Document(Base):
     verification_status: Mapped[str] = mapped_column(
         String(24), nullable=False, default="unverified", server_default="unverified"
     )
+    # Область действия и решение проверяющего: без них документ не считается
+    # доказательством допуска, даже если файл загружен.
+    scope_category: Mapped[str | None] = mapped_column(String(120), nullable=True)
+    scope_subcategory: Mapped[str | None] = mapped_column(String(120), nullable=True)
+    valid_until: Mapped[date | None] = mapped_column(Date, nullable=True)
+    verified_by_user_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), nullable=True)
+    verified_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    verification_note: Mapped[str | None] = mapped_column(String(500), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now())
 
 

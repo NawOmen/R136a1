@@ -16,8 +16,17 @@ from ..deps import (
 from ..experience import notify_market_watchers
 from ..models import Product, ProductImage, ProductPriceObservation
 from ..matching import run_market_rematch
-from ..schemas import ProductImageOut, ProductIn, ProductOut, ProductPatch, PublishIn
+from ..schemas import (
+    AdmissionChecklistOut,
+    ProductImageOut,
+    ProductIn,
+    ProductOut,
+    ProductPatch,
+    PublishIn,
+)
 from ..storage import delete_object, download_object, upload_object
+from ..trust import append_audit_event
+from .documents import BUYER_CHECKLIST_NOTE, admission_audit_payload, company_admission
 
 router = APIRouter(tags=["products"])
 MAX_IMAGE_SIZE = 8 * 1024 * 1024
@@ -93,6 +102,22 @@ async def update_product(
     # Повторно проверяем объединённое состояние: частичный PATCH не должен
     # рассинхронизировать МОЗ, базовую цену и ценовые ступени.
     validated = ProductIn.model_validate({**current, **patch})
+    category_changed = (validated.category, validated.subcategory) != (old_category, product.subcategory)
+    if product.is_published and category_changed:
+        # Опубликованный товар нельзя молча перевести в категорию без доказательств.
+        admission = await company_admission(
+            db,
+            product.company_id,
+            validated.category,
+            validated.subcategory,
+            characteristics=validated.characteristics,
+            moq_units=validated.moq_units,
+        )
+        if admission.blocking_open:
+            raise HTTPException(
+                status.HTTP_409_CONFLICT,
+                detail=f"Смена категории отклонена, пока товар опубликован: {admission.blocking_message}",
+            )
     for field, value in validated.model_dump().items():
         setattr(product, field, value)
     if product.is_published and (product.price_rub != old_price or product.category != old_category):
@@ -117,12 +142,35 @@ async def publish_product(
         raise HTTPException(status.HTTP_404_NOT_FOUND, detail="Товар не найден")
     await require_company_seller(product.company_id, user, db)
     await require_company_admin(product.company_id, user, db)
+    admission = None
     if data.published:
         await require_verified_company(product.company_id, user, db)
+        # Проверка компании не подтверждает документы конкретного товара.
+        admission = await company_admission(
+            db,
+            product.company_id,
+            product.category,
+            product.subcategory,
+            characteristics=product.characteristics,
+            moq_units=product.moq_units,
+        )
+        if admission.blocking_open:
+            raise HTTPException(status.HTTP_409_CONFLICT, detail=admission.blocking_message)
     was_published = product.is_published
     product.is_published = data.published
-    if data.published and not was_published:
+    if data.published and not was_published and admission is not None:
         db.add(ProductPriceObservation(product_id=product.id, category=product.category, unit_price_rub=product.price_rub))
+        await append_audit_event(
+            db,
+            event_type="product_published_with_admission",
+            entity_type="product",
+            entity_id=product.id,
+            actor_user_id=user.id,
+            actor_company_id=product.company_id,
+            source_refs=[{"type": "product", "id": str(product.id)}],
+            explanation="Товар опубликован после программной проверки категорийного допуска.",
+            payload={"category": product.category, "admission": admission_audit_payload(admission)},
+        )
         await notify_market_watchers(db, product.category, "supply", exclude_user_id=user.id)
     await run_market_rematch(db, "product_publication_changed", product.id)
     await db.commit()
@@ -172,6 +220,51 @@ async def upload_product_image(
         raise
     await db.refresh(image)
     return image
+
+
+@router.get("/products/{product_id}/admission", response_model=AdmissionChecklistOut)
+async def product_admission(product_id: uuid.UUID, db: AsyncSession = Depends(get_db)):
+    """Чек-лист покупателя: какие обязательные доказательства проверены у продавца.
+
+    Отдаются только состояния требований, без имён файлов и внутренних данных документов.
+    """
+    product = await db.get(Product, product_id)
+    if product is None or not product.is_published:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, detail="Товар не найден")
+    admission = await company_admission(
+        db,
+        product.company_id,
+        product.category,
+        product.subcategory,
+        characteristics=product.characteristics,
+        moq_units=product.moq_units,
+    )
+    return AdmissionChecklistOut(
+        product_id=product.id,
+        category=product.category,
+        subcategory=product.subcategory,
+        state=admission.state,
+        state_label=admission.state_label,
+        supported=admission.supported,
+        summary=admission.summary,
+        checklist=[
+            {
+                "code": item.code,
+                "title": item.title,
+                "legal_reference": item.legal_reference,
+                "blocking": item.blocking,
+                "state": item.state,
+                "state_label": item.state_label,
+                "seller_hint": item.seller_hint,
+                "buyer_note": item.buyer_note,
+                "document_ids": [],
+            }
+            for item in admission.requirements
+        ],
+        advisories=admission.advisories,
+        note=BUYER_CHECKLIST_NOTE,
+        checked_at=admission.checked_at,
+    )
 
 
 @router.get("/product-images/{image_id}")
