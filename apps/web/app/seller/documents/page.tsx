@@ -1,13 +1,26 @@
 "use client";
 
 // Документы компании (GET/POST /companies/{id}/documents, DELETE /documents/{id}).
-// Загрузка — multipart (file + name + document_type).
+// Загрузка — multipart (file + name + document_type + область действия).
+// Рядом — отчёт о категорийном допуске: загрузка файла сама допуск не выдаёт,
+// решение принимает проверяющий площадки.
 
 import Link from "next/link";
 import { FormEvent, useEffect, useState } from "react";
 import { getToken } from "../../lib/api";
-import { ApiError, DOCUMENT_TYPES, Document, marketplace } from "../../lib/marketplace";
+import {
+  ApiError,
+  CategoryAdmission,
+  DOCUMENT_STATUS_LABELS,
+  DOCUMENT_TYPES,
+  Document,
+  PRODUCT_CATEGORY_TREE,
+  marketplace,
+} from "../../lib/marketplace";
 import { useCompanySelector } from "../../lib/useMe";
+
+const CATEGORIES = Object.keys(PRODUCT_CATEGORY_TREE);
+const OTHER_SCOPE = "Другое";
 
 export default function SellerDocumentsPage() {
   const {
@@ -25,9 +38,23 @@ export default function SellerDocumentsPage() {
 
   const [name, setName] = useState("");
   const [documentType, setDocumentType] = useState(DOCUMENT_TYPES[0].value);
+  const [scopeCategory, setScopeCategory] = useState(CATEGORIES[0]);
+  const [scopeSubcategory, setScopeSubcategory] = useState("");
+  const [validUntil, setValidUntil] = useState("");
   const [file, setFile] = useState<File | null>(null);
   const [uploading, setUploading] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+
+  const [admissionCategory, setAdmissionCategory] = useState(CATEGORIES[0]);
+  const [admissionSubcategory, setAdmissionSubcategory] = useState("");
+  const [admission, setAdmission] = useState<CategoryAdmission | null>(null);
+  const [admissionError, setAdmissionError] = useState<string | null>(null);
+  const [checkingAdmission, setCheckingAdmission] = useState(false);
+
+  const subcategoryOptions =
+    scopeCategory === OTHER_SCOPE ? [] : PRODUCT_CATEGORY_TREE[scopeCategory] ?? [];
+  const admissionSubcategoryOptions =
+    admissionCategory === OTHER_SCOPE ? [] : PRODUCT_CATEGORY_TREE[admissionCategory] ?? [];
 
   useEffect(() => {
     const token = getToken();
@@ -60,11 +87,16 @@ export default function SellerDocumentsPage() {
     setUploading(true);
     setError(null);
     try {
-      await marketplace.uploadDocument(token, company.id, file, name.trim() || file.name, documentType);
+      await marketplace.uploadDocument(token, company.id, file, name.trim() || file.name, documentType, {
+        category: scopeCategory === OTHER_SCOPE ? null : scopeCategory,
+        subcategory: scopeSubcategory || null,
+        validUntil: validUntil || null,
+      });
       const updated = await marketplace.getDocuments(token, company.id);
       setDocuments(updated);
       setName("");
       setFile(null);
+      setValidUntil("");
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "Не удалось загрузить документ.");
     } finally {
@@ -85,6 +117,27 @@ export default function SellerDocumentsPage() {
       setError(err instanceof ApiError ? err.message : "Не удалось удалить документ.");
     } finally {
       setDeletingId(null);
+    }
+  }
+
+  async function handleCheckAdmission() {
+    const token = getToken();
+    if (!token || !companyId) return;
+    setCheckingAdmission(true);
+    setAdmissionError(null);
+    try {
+      const report = await marketplace.getCategoryAdmission(
+        token,
+        companyId,
+        admissionCategory === OTHER_SCOPE ? "Другое" : admissionCategory,
+        admissionSubcategory || null,
+      );
+      setAdmission(report);
+    } catch (err) {
+      setAdmission(null);
+      setAdmissionError(err instanceof ApiError ? err.message : "Не удалось проверить допуск.");
+    } finally {
+      setCheckingAdmission(false);
     }
   }
 
@@ -124,12 +177,15 @@ export default function SellerDocumentsPage() {
   return (
     <div>
       <div className="company-row">
-        <h1 className="page-title">Документы</h1>
+        <h1 className="page-title">Документы и допуск</h1>
         <Link href="/dashboard" className="btn btn-secondary btn-sm">
           На главную
         </Link>
       </div>
-      <p className="subtitle">Загрузка не подтверждает подлинность: до проверки документ не используется как доказательство.</p>
+      <p className="subtitle">
+        Загрузка не подтверждает подлинность и применимость. Доказательством считается только документ,
+        который проверяющий площадки подтвердил для нужной категории и срок которого не истёк.
+      </p>
 
       {available.length > 1 && (
         <div className="field">
@@ -145,6 +201,117 @@ export default function SellerDocumentsPage() {
       )}
 
       {error && <div className="alert alert-error">{error}</div>}
+
+      <section className="card">
+        <h2>Проверка допуска по категории</h2>
+        <p className="hint">
+          Отчёт показывает, каких доказательств не хватает для публикации товара. Обязательные требования
+          блокируют публикацию до решения проверяющего.
+        </p>
+        <div className="form-grid">
+          <div className="field">
+            <label htmlFor="admission_category">Категория</label>
+            <select
+              id="admission_category"
+              value={admissionCategory}
+              onChange={(event) => {
+                setAdmissionCategory(event.target.value);
+                setAdmissionSubcategory("");
+                setAdmission(null);
+              }}
+            >
+              {CATEGORIES.map((item) => (
+                <option key={item} value={item}>
+                  {item}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div className="field">
+            <label htmlFor="admission_subcategory">
+              Подкатегория<span className="opt">если известна</span>
+            </label>
+            <select
+              id="admission_subcategory"
+              value={admissionSubcategory}
+              onChange={(event) => {
+                setAdmissionSubcategory(event.target.value);
+                setAdmission(null);
+              }}
+            >
+              <option value="">Не указана</option>
+              {admissionSubcategoryOptions.map((item) => (
+                <option key={item} value={item}>
+                  {item}
+                </option>
+              ))}
+            </select>
+          </div>
+          <button
+            type="button"
+            className="btn btn-secondary"
+            disabled={checkingAdmission}
+            onClick={() => void handleCheckAdmission()}
+          >
+            {checkingAdmission ? "Проверяем..." : "Проверить допуск"}
+          </button>
+        </div>
+
+        {admissionError && <div className="alert alert-error">{admissionError}</div>}
+
+        {admission && (
+          <div>
+            <div className="company-row">
+              <div>
+                <div className="company-item__name">
+                  {admission.profile_title ?? "Правила категории не заданы"}
+                </div>
+                <div className="company-meta">{admission.summary}</div>
+              </div>
+              <span className={`badge ${admission.blocking_open ? "badge-rejected" : "badge-verified"}`}>
+                {admission.state_label}
+              </span>
+            </div>
+            {admission.blocking_open > 0 && (
+              <div className="alert alert-error">{admission.blocking_message}</div>
+            )}
+            {admission.requirements.length === 0 ? (
+              <p className="hint mode-hint">
+                Обязательные доказательства для этой категории в прототипе не заданы. Допуск опирается на
+                проверку компании.
+              </p>
+            ) : (
+              <ul className="company-list">
+                {admission.requirements.map((item) => (
+                  <li key={item.code} className="card">
+                    <div className="company-row">
+                      <div>
+                        <div className="company-item__name">{item.title}</div>
+                        <div className="company-meta">{item.legal_reference}</div>
+                        <div className="company-meta">{item.seller_hint}</div>
+                      </div>
+                      <span
+                        className={`badge ${item.state === "satisfied" ? "badge-verified" : "badge-rejected"}`}
+                      >
+                        {item.state_label}
+                      </span>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            )}
+            {admission.advisories.length > 0 && (
+              <ul className="company-list">
+                {admission.advisories.map((text) => (
+                  <li key={text}>
+                    <span className="company-meta">Предупреждение: {text}</span>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        )}
+      </section>
 
       <section className="card">
         <h2>Загрузить документ</h2>
@@ -178,6 +345,54 @@ export default function SellerDocumentsPage() {
             </select>
           </div>
           <div className="field">
+            <label htmlFor="scope_category">
+              Область действия: категория<span className="opt">обязательна для проверки применимости</span>
+            </label>
+            <select
+              id="scope_category"
+              value={scopeCategory}
+              onChange={(event) => {
+                setScopeCategory(event.target.value);
+                setScopeSubcategory("");
+              }}
+            >
+              {CATEGORIES.map((item) => (
+                <option key={item} value={item}>
+                  {item}
+                </option>
+              ))}
+              <option value={OTHER_SCOPE}>{OTHER_SCOPE}</option>
+            </select>
+          </div>
+          <div className="field">
+            <label htmlFor="scope_subcategory">
+              Область действия: подкатегория<span className="opt">уточняет изделие</span>
+            </label>
+            <select
+              id="scope_subcategory"
+              value={scopeSubcategory}
+              onChange={(event) => setScopeSubcategory(event.target.value)}
+            >
+              <option value="">Не указана</option>
+              {subcategoryOptions.map((item) => (
+                <option key={item} value={item}>
+                  {item}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div className="field">
+            <label htmlFor="valid_until">
+              Действует до<span className="opt">проверяющий укажет фактический срок</span>
+            </label>
+            <input
+              id="valid_until"
+              type="date"
+              value={validUntil}
+              onChange={(event) => setValidUntil(event.target.value)}
+            />
+          </div>
+          <div className="field">
             <label htmlFor="document_file">
               Файл<span className="req">*</span>
               <span className="opt">изображения, PDF, аудио · до 25 МБ</span>
@@ -209,6 +424,9 @@ export default function SellerDocumentsPage() {
               const typeLabel =
                 DOCUMENT_TYPES.find((item) => item.value === document.document_type)?.label ??
                 document.document_type;
+              const scope = [document.scope_category, document.scope_subcategory]
+                .filter(Boolean)
+                .join(" · ");
               return (
                 <li key={document.id} className="card">
                   <div className="company-row">
@@ -217,8 +435,17 @@ export default function SellerDocumentsPage() {
                       <div className="company-meta">
                         {typeLabel} · {document.content_type}
                       </div>
+                      <div className="company-meta">
+                        Область действия: {scope || "не указана — проверка применимости невозможна"}
+                      </div>
+                      {document.valid_until && (
+                        <div className="company-meta">Действует до {document.valid_until}</div>
+                      )}
+                      {document.verification_note && (
+                        <div className="company-meta">Решение проверяющего: {document.verification_note}</div>
+                      )}
                       <span className={`badge badge-${document.verification_status}`}>
-                        {document.verification_status === "verified" ? "Проверен" : document.verification_status === "rejected" ? "Отклонён" : "Не проверен"}
+                        {DOCUMENT_STATUS_LABELS[document.verification_status] ?? document.verification_status}
                       </span>
                     </div>
                     <button

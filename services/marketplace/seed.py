@@ -6,11 +6,13 @@ Capability Passport и товары — для отдельной компани
 
 import asyncio
 import os
+import uuid
+from datetime import datetime, timedelta, timezone
 
 from sqlalchemy import select, text
 
 from app.database import SessionLocal
-from app.models import CapabilityPassport, DeliveryAddress, Product, ProductionProfile
+from app.models import CapabilityPassport, DeliveryAddress, Document, Product, ProductionProfile
 
 BUYER_COMPANY_NAME = "ООО «Демо-Кофе»"
 SELLER_COMPANY_NAME = "ООО «СтаканОпт Демо»"
@@ -133,7 +135,68 @@ async def seed() -> None:
                 )
             )
 
+        await _seed_category_documents(db, seller_company_id)
+
         await db.commit()
+
+
+DEMO_DOCUMENTS = (
+    {
+        "name": "Декларация о соответствии ТР ТС 005/2011 (синтетический документ)",
+        "document_type": "declaration",
+        "verification_note": "Синтетический демонстрационный документ, проверен для стаканов 150–600 мл.",
+    },
+    {
+        "name": "Протокол испытаний контакта с пищевой продукцией (синтетический документ)",
+        "document_type": "test_report",
+        "verification_note": "Синтетический демонстрационный документ: материал и PE-покрытие.",
+    },
+)
+
+
+async def _seed_category_documents(db, seller_company_id) -> None:
+    """Доказательства допуска демо-производителя.
+
+    Загрузка файла сама по себе не даёт допуск: документы отмечены как проверенные
+    человеком и имеют область действия, иначе публикация товаров была бы заблокирована.
+    """
+    admin_row = (
+        await db.execute(
+            text(
+                "SELECT id FROM auth.users WHERE is_marketplace_admin = true "
+                "AND account_status = 'active' ORDER BY created_at LIMIT 1"
+            )
+        )
+    ).first()
+    admin_id = admin_row[0] if admin_row else None
+    valid_until = datetime.now(timezone.utc).date() + timedelta(days=730)
+    for item in DEMO_DOCUMENTS:
+        existing = (
+            await db.execute(
+                select(Document).where(
+                    Document.company_id == seller_company_id, Document.name == item["name"]
+                )
+            )
+        ).scalars().first()
+        if existing is not None:
+            continue
+        db.add(
+            Document(
+                company_id=seller_company_id,
+                created_by_user_id=admin_id,
+                name=item["name"],
+                document_type=item["document_type"],
+                file_key=f"demo/synthetic/{uuid.uuid4()}",
+                content_type="application/pdf",
+                verification_status="verified",
+                scope_category="Упаковка и тара",
+                scope_subcategory="Бумажные стаканы",
+                valid_until=valid_until,
+                verified_by_user_id=admin_id,
+                verified_at=datetime.now(timezone.utc),
+                verification_note=item["verification_note"],
+            )
+        )
 
 
 if __name__ == "__main__":

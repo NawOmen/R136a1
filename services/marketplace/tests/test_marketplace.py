@@ -1,6 +1,6 @@
 from sqlalchemy import select, text
 
-from conftest import make_company, make_token, make_user
+from conftest import grant_packaging_documents, make_company, make_token, make_user
 
 
 def _auth(token: str) -> dict:
@@ -15,6 +15,9 @@ async def test_full_flow(client, db_session):
     buyer_user = await make_user(db_session)
     buyer_company = await make_company(db_session, buyer_user, can_buy=True, can_sell=False)
     buyer_token = make_token(buyer_user)
+
+    # категорийный допуск: без подтверждённых документов публикация упаковки запрещена
+    await grant_packaging_documents(db_session, seller_company, decision_user_id=seller_user)
 
     # продавец создаёт и публикует товар
     r = await client.post(
