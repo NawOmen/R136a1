@@ -53,6 +53,8 @@ export default function SellerProductsPage() {
   const [price, setPrice] = useState("");
   const [moq, setMoq] = useState("");
   const [leadTime, setLeadTime] = useState("");
+  // Остаток склада: нужен для роли «поставка со склада» и для черновика КП.
+  const [stock, setStock] = useState("");
   const [tiers, setTiers] = useState<ProductPriceTier[]>([]);
   const [image, setImage] = useState<File | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -114,6 +116,7 @@ export default function SellerProductsPage() {
         price_tiers: tiers,
         moq_units: Number(moq),
         lead_time_days: Number(leadTime),
+        stock_units: stock.trim() === "" ? null : Number(stock),
       };
       const saved = editingId
         ? await marketplace.updateProduct(token, editingId, input)
@@ -126,6 +129,7 @@ export default function SellerProductsPage() {
       setPrice("");
       setMoq("");
       setLeadTime("");
+      setStock("");
       setTiers([]);
       setImage(null);
       setEditingId(null);
@@ -145,6 +149,7 @@ export default function SellerProductsPage() {
     setPrice(String(product.price_rub));
     setMoq(String(product.moq_units));
     setLeadTime(String(product.lead_time_days));
+    setStock(product.stock_units != null ? String(product.stock_units) : "");
     setTiers(product.price_tiers);
     window.scrollTo({ top: 0, behavior: "smooth" });
   }
@@ -359,6 +364,19 @@ export default function SellerProductsPage() {
               onChange={(event) => setLeadTime(event.target.value)}
               placeholder="Например, 9"
               required
+            />
+          </div>
+          <div className="field">
+            <label htmlFor="product_stock">
+              Остаток на складе, шт.<span className="opt">для поставки со склада; пусто — под заказ</span>
+            </label>
+            <input
+              id="product_stock"
+              type="number"
+              min="0"
+              value={stock}
+              onChange={(event) => setStock(event.target.value)}
+              placeholder="Например, 4000"
             />
           </div>
           <div className="actions">

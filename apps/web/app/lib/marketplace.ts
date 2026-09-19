@@ -54,6 +54,9 @@ export interface Product {
   price_tiers: ProductPriceTier[];
   moq_units: number;
   lead_time_days: number;
+  /** Остаток на складе: нужен для роли «поставка со склада». */
+  stock_units: number | null;
+  stock_updated_at: string | null;
   is_published: boolean;
   images: ProductImage[];
 }
@@ -519,6 +522,67 @@ export interface CreateOfferInput {
   moq_units?: number;
   price_tiers?: { min_units: number; unit_price_rub: number }[];
   valid_until?: string;
+  /** Черновик агента, из которого подготовлено предложение. */
+  draft_id?: string;
+}
+
+/** Поле черновика КП: значение и источник, чтобы человек видел основание. */
+export interface OfferDraftField {
+  name: string;
+  label: string;
+  value: number | null;
+  source: string;
+  confirmed: boolean;
+  note: string | null;
+}
+
+export interface OfferDraft {
+  id: string;
+  need_id: string;
+  company_id: string;
+  status: "draft" | "used" | "discarded";
+  payload: {
+    price_rub: number | null;
+    available_units: number | null;
+    moq_units: number | null;
+    lead_time_days: number | null;
+    delivery_cost_rub: number | null;
+    price_tiers: { min_units: number; unit_price_rub: number }[];
+  };
+  fields: OfferDraftField[];
+  missing: string[];
+  warnings: string[];
+  explanation: string;
+  created_at: string | null;
+}
+
+/** Оценка работы агентов: конверсия сценариев и участие человека. */
+export interface AgentScorecard {
+  scope: string;
+  window_days: number;
+  offer_drafts_total: number;
+  offer_drafts_used: number;
+  offer_draft_conversion_pct: number;
+  average_changed_fields: number;
+  offers_total: number;
+  offers_from_drafts: number;
+  deals_total: number;
+  deals_from_drafts: number;
+  recommendations_total: number;
+  recommendations_converted: number;
+  recommendation_conversion_pct: number;
+  human_approvals: number;
+  blocked_actions: number;
+  admission_checks: number;
+  admission_blocked: number;
+  agent_runs_total: number;
+  agent_runs_failed: number;
+  agent_runs_local_route: number;
+  agent_runs_external_route: number;
+  agent_average_duration_ms: number;
+  agent_estimated_cost_rub: number;
+  llm_metrics_available: boolean;
+  notes: string[];
 }
 
 export interface UpdateCapabilityPassportInput {
@@ -1097,6 +1161,22 @@ export const marketplace = {
       token,
       body: JSON.stringify(input),
     });
+  },
+
+  prepareOfferDraft(token: string, needId: string, companyId: string): Promise<OfferDraft> {
+    return marketplaceFetch(`/api/v1/needs/${needId}/offer-draft`, {
+      method: "POST",
+      token,
+      body: JSON.stringify({ company_id: companyId }),
+    });
+  },
+
+  getAgentScorecard(token: string, companyId: string): Promise<AgentScorecard> {
+    return marketplaceFetch(`/api/v1/companies/${companyId}/agent-scorecard`, { token });
+  },
+
+  getPlatformAgentScorecard(token: string): Promise<AgentScorecard> {
+    return marketplaceFetch("/api/v1/platform/agent-scorecard", { token });
   },
 
   optimizeNeed(token: string, needId: string): Promise<OptimizationVariant[]> {

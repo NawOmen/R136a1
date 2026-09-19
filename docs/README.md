@@ -7,6 +7,7 @@
 - Этап 0 — фиксация идеи и архитектуры (см. `plan_sborka_b2b.md`).
 - Этап 1 — границы MVP, пользовательские сценарии и синтетические данные. Материалы находятся в `docs/mvp/`, `docs/demo/` и `packages/test-fixtures/`.
 - Этап 4 — LLM Gateway, агенты и доказательства: `docs/architecture/stage-4-agents.md` и `docs/api/llm-gateway-api.md`.
+- Конкурс RLT.StartUp: полный текст положения — `Положение RLT.StartUp.md` в корне; требования и статус — `docs/contest/submission-requirements.md`; приложения к презентации — `docs/contest/appendix-01-agents-environment.md`, `appendix-02-agent-interaction-scenarios.md`, `appendix-03-architecture-and-roles.md`, `appendix-04-automation-demo.md`, `appendix-05-security-trust-evaluation.md`; техническая демонстрация — `docs/contest/code-review-scenario.md`.
 
 ## Структура
 
@@ -16,4 +17,6 @@
 | `docs/demo/` | Сценарий демонстрации, сценарии сбоя, эталонная спецификация, улики и производители |
 | `docs/architecture/` | Архитектурные документы (заполняется с этапа 2) |
 | `docs/api/` | Версионированные API-контракты (заполняется с этапа 2) |
+| `docs/contest/` | Материалы конкурса: требования положения, приложения к презентации, сценарий защиты и технической демонстрации |
+| `docs/legal/` | Правовые материалы: матрица применимости, проекты документов, перечень лицензий сторонних компонентов |
 | `packages/test-fixtures/` | Машиночитаемые синтетические данные: производители, паспорта, улики, покупатели, карточки потребностей, объединение спроса, лента возможностей |
