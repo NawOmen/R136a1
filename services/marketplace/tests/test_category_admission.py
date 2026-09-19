@@ -131,6 +131,7 @@ async def test_admission_after_verifier_confirms_both_documents(client, db_sessi
                 "scope_category": "Упаковка и тара",
                 "scope_subcategory": "Бумажные стаканы",
                 "valid_until": (datetime.now(timezone.utc).date() + timedelta(days=365)).isoformat(),
+                "confirms": {"material": ["крафт-картон"], "coating": ["PE"]},
                 "note": "Применимость подтверждена для стаканов 150–600 мл.",
             },
             headers=_auth(admin_token),
@@ -360,7 +361,9 @@ async def test_unsupported_category_is_not_published(client, db_session):
 
 async def test_published_product_cannot_change_category_without_evidence(client, db_session):
     user, company, token, product_id = await _seller_with_product(client, db_session)
-    await grant_packaging_documents(db_session, company, decision_user_id=user)
+    await grant_packaging_documents(
+        db_session, company, decision_user_id=user, confirms={"material": ["крафт-картон"], "coating": ["PE"]}
+    )
 
     publish = await client.post(
         f"/api/v1/products/{product_id}/publish", json={"published": True}, headers=_auth(token)
@@ -394,7 +397,9 @@ async def test_category_without_configured_rules_stays_publishable(client, db_se
 
 async def test_admission_report_keeps_history_of_publication(client, db_session):
     user, company, token, product_id = await _seller_with_product(client, db_session)
-    await grant_packaging_documents(db_session, company, decision_user_id=user)
+    await grant_packaging_documents(
+        db_session, company, decision_user_id=user, confirms={"material": ["крафт-картон"], "coating": ["PE"]}
+    )
     publish = await client.post(
         f"/api/v1/products/{product_id}/publish", json={"published": True}, headers=_auth(token)
     )

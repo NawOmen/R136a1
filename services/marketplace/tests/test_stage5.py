@@ -78,7 +78,7 @@ async def test_5000_and_45000_create_explainable_coalition_and_private_orders(
     await passport(client, seller_token, seller_company)
     # Групповое обязательство требует подтверждённых документов по категории.
     await grant_packaging_documents(
-        db_session, seller_company, decision_user_id=seller_user, confirms={"coating": ["PE"]}
+        db_session, seller_company, decision_user_id=seller_user, confirms={"material": ["крафт-картон"], "coating": ["PE"]}
     )
 
     _, buyer_one, token_one, need_one = await create_published_need(

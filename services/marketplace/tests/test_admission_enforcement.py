@@ -13,6 +13,8 @@ from conftest import grant_packaging_documents, make_company, make_token, make_m
 
 from test_category_admission import _auth, _seller_with_product, _upload_document
 
+CONFIRMS = {"material": ["крафт-картон"], "coating": ["PE"]}
+
 
 def test_document_applies_only_to_matching_subcategory():
     """Чистая проверка применимости: общая категория не заменяет совпадение подкатегории."""
@@ -69,6 +71,7 @@ async def test_wide_scope_requires_verifier_decision(client, db_session):
             json={
                 "decision": "verified",
                 "scope_category": "Упаковка и тара",
+                "confirms": {"material": ["крафт-картон"], "coating": ["PE"]},
                 "note": "Подтверждено применение ко всей категории упаковки.",
             },
             headers=_auth(admin_token),
@@ -91,7 +94,9 @@ async def test_wide_scope_requires_verifier_decision(client, db_session):
 async def test_unrefined_specification_gets_scope_note(client, db_session):
     """Потребность без подкатегории получает пояснение, а не молчаливое подтверждение."""
     user, company, token, product_id = await _seller_with_product(client, db_session)
-    await grant_packaging_documents(db_session, company, decision_user_id=user)
+    await grant_packaging_documents(
+        db_session, company, decision_user_id=user, confirms={"material": ["крафт-картон"], "coating": ["PE"]}
+    )
 
     # Товар без подкатегории, документы подтверждены для стаканов.
     changed = await client.patch(
@@ -158,8 +163,8 @@ def test_confirmed_coating_must_match_product():
     assert "PE" in (requirement.scope_note or "")
 
 
-def test_missing_confirmed_values_are_only_a_warning():
-    """Если проверяющий не зафиксировал значения, требование не блокируется, но даёт предупреждение."""
+def test_unconfirmed_characteristics_block_requirement():
+    """Если проверяющий не сопоставил документ с характеристикой, требование не закрыто."""
     from app.category_admission import evaluate_admission
 
     report = evaluate_admission(
@@ -171,15 +176,29 @@ def test_missing_confirmed_values_are_only_a_warning():
             _verified_document("test_report", {}),
         ],
     )
-    assert report.state == "admitted"
-    assert any("не зафиксировал подтверждённые значения" in text for text in report.advisories)
+    assert report.state == "blocked"
+    requirement = next(item for item in report.requirements if item.code == "food_contact")
+    assert requirement.state == "needs_confirmation"
+    assert "покрытие" in (requirement.scope_note or "")
+
+    # Без указанного покрытия требование закрывается: сравнивать нечего.
+    without_attribute = evaluate_admission(
+        category="Упаковка и тара",
+        subcategory="Бумажные стаканы",
+        characteristics={"volume_ml": 400},
+        documents=[
+            _verified_document("declaration", {}),
+            _verified_document("test_report", {}),
+        ],
+    )
+    assert without_attribute.state == "admitted"
 
 
 async def test_published_product_rejects_unconfirmed_coating(client, db_session):
     """Опубликованный товар нельзя перевести на покрытие, которое документы не подтверждают."""
     user, company, token, product_id = await _seller_with_product(client, db_session)
     await grant_packaging_documents(
-        db_session, company, decision_user_id=user, confirms={"coating": ["PE"]}
+        db_session, company, decision_user_id=user, confirms={"material": ["крафт-картон"], "coating": ["PE"]}
     )
 
     published = await client.post(
@@ -370,6 +389,31 @@ async def test_documents_endpoints_work_end_to_end(client, db_session):
     assert deleted.status_code == 204
 
 
+async def test_buyer_checklist_shows_applicability_explanation(client, db_session):
+    """Покупатель видит, к чему именно применён документ, а не только статус."""
+    user, company, token, product_id = await _seller_with_product(client, db_session)
+    await grant_packaging_documents(
+        db_session, company, decision_user_id=user, confirms=CONFIRMS
+    )
+
+    published = await client.post(
+        f"/api/v1/products/{product_id}/publish", json={"published": True}, headers=_auth(token)
+    )
+    assert published.status_code == 200, published.text
+
+    # Товар без подкатегории: документы подтверждены для стаканов.
+    changed = await client.patch(
+        f"/api/v1/products/{product_id}", json={"subcategory": None}, headers=_auth(token)
+    )
+    assert changed.status_code == 200, changed.text
+
+    checklist = await client.get(f"/api/v1/products/{product_id}/admission")
+    assert checklist.status_code == 200, checklist.text
+    notes = [item["scope_note"] for item in checklist.json()["checklist"] if item["scope_note"]]
+    assert notes and "Подкатегория товара не указана" in notes[0]
+    assert all(item["document_ids"] == [] for item in checklist.json()["checklist"])
+
+
 async def test_evidence_change_notifies_active_deal(client, db_session):
     """Изменение допуска по действующей сделке требует ручного решения, а не молчаливой отмены."""
     seller_user = await make_user(db_session)
@@ -380,7 +424,9 @@ async def test_evidence_change_notifies_active_deal(client, db_session):
     buyer_token = make_token(buyer_user)
     admin_token = make_token(await make_marketplace_admin(db_session))
 
-    await grant_packaging_documents(db_session, seller_company, decision_user_id=seller_user)
+    await grant_packaging_documents(
+        db_session, seller_company, decision_user_id=seller_user, confirms={"material": ["крафт-картон"], "coating": ["PE"]}
+    )
     product = await client.post(
         f"/api/v1/companies/{seller_company}/products",
         json={

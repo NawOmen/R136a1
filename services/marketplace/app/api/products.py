@@ -273,6 +273,7 @@ async def product_admission(product_id: uuid.UUID, db: AsyncSession = Depends(ge
                 "seller_hint": item.seller_hint,
                 "buyer_note": item.buyer_note,
                 "document_ids": [],
+                "scope_note": item.scope_note,
             }
             for item in admission.requirements
         ],

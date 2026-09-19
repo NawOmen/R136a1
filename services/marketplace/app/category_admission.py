@@ -31,6 +31,7 @@ STATE_LABELS = {
     "expired": "Данные проверки устарели",
     "scope_mismatch": "Документ относится к другой категории или подкатегории",
     "attribute_mismatch": "Документ не подтверждает характеристики товара",
+    "needs_confirmation": "Нужно подтверждение применимости к характеристикам",
 }
 
 UNSUPPORTED_STATE = "not_supported"
@@ -467,39 +468,20 @@ def _coverage_state(
             for document in documents
             for value in (document.confirms or {}).get(attribute, [])
         ]
-        if confirmed and not any(_values_relate(product_value, value) for value in confirmed):
-            label = ATTRIBUTE_LABELS.get(attribute, attribute)
+        label = ATTRIBUTE_LABELS.get(attribute, attribute)
+        if not confirmed:
+            # Проверяющий не сопоставил документ с характеристикой изделия:
+            # считать требование закрытым нельзя.
+            return "needs_confirmation", (
+                f"Проверяющий не зафиксировал подтверждённые значения для «{label}»: "
+                f"у товара указано «{product_value}». Подтвердите применимость документа к этой характеристике."
+            )
+        if not any(_values_relate(product_value, value) for value in confirmed):
             return "attribute_mismatch", (
                 f"Документ подтверждает {label}: {', '.join(sorted(set(confirmed)))}; "
                 f"у товара указано «{product_value}». Нужен документ на этот материал или покрытие."
             )
     return None, None
-
-
-def _unconfirmed_advisories(
-    requirements: tuple[CategoryRequirement, ...],
-    documents: list[Document],
-    characteristics: dict | None,
-) -> list[str]:
-    """Предупреждения: характеристика указана, но проверяющий её не зафиксировал."""
-    advisories: list[str] = []
-    for requirement in requirements:
-        for attribute in requirement.confirmable:
-            product_value = characteristic_value(characteristics, attribute)
-            if not product_value:
-                continue
-            confirmed = [
-                str(value)
-                for document in documents
-                for value in (document.confirms or {}).get(attribute, [])
-            ]
-            if not confirmed:
-                label = ATTRIBUTE_LABELS.get(attribute, attribute)
-                advisories.append(
-                    f"Проверяющий не зафиксировал подтверждённые значения для «{label}»: "
-                    f"у товара указано «{product_value}». Уточните применимость при новом обязательстве."
-                )
-    return advisories
 
 
 def _requirement_state(
@@ -634,16 +616,7 @@ def evaluate_admission(
         )
 
     _, characteristic_warnings = validate_characteristics(category, subcategory, characteristics, moq_units)
-    confirmed_documents = [
-        document
-        for document in documents
-        if document.verification_status == "verified" and not _is_expired(document, today)
-    ]
-    advisories = (
-        list(profile.advisories)
-        + characteristic_warnings
-        + _unconfirmed_advisories(profile.requirements, confirmed_documents, characteristics)
-    )
+    advisories = list(profile.advisories) + characteristic_warnings
     blocking_open = sum(
         1 for item in requirement_states if item.blocking and item.state != "satisfied"
     )
