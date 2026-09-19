@@ -2,10 +2,10 @@ import uuid
 from datetime import date, datetime, timezone
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, UploadFile, status
-from sqlalchemy import select, text
+from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from ..admission import BUYER_CHECKLIST_NOTE, admission_audit_payload, company_admission
+from ..admission import BUYER_CHECKLIST_NOTE, company_admission, company_documents
 from ..category_admission import STATE_LABELS, canonical_scope, classification_hint, match_profile
 from ..database import get_db
 from ..deps import (
@@ -88,7 +88,7 @@ async def list_documents(
     db: AsyncSession = Depends(get_db),
 ):
     await require_company_seller(company_id, user, db)
-    return await _company_documents(db, company_id)
+    return await company_documents(db, company_id)
 
 
 @router.post("/companies/{company_id}/documents", response_model=DocumentOut, status_code=status.HTTP_201_CREATED)

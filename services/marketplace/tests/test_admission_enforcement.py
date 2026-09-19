@@ -340,6 +340,36 @@ async def test_reserve_commitment_requires_documents(client, db_session, monkeyp
     assert allowed.status_code == 200, allowed.text
 
 
+async def test_documents_endpoints_work_end_to_end(client, db_session):
+    """Список, отчёт о допуске и очередь проверки не должны падать на живом API."""
+    _, company, token, _ = await _seller_with_product(client, db_session)
+    document = await _upload_document(
+        client, token, company, scope_category="Упаковка и тара", scope_subcategory="Бумажные стаканы"
+    )
+
+    listed = await client.get(f"/api/v1/companies/{company}/documents", headers=_auth(token))
+    assert listed.status_code == 200, listed.text
+    assert [item["id"] for item in listed.json()] == [document["id"]]
+    assert listed.json()[0]["confirms"] == {}
+
+    report = await client.get(
+        f"/api/v1/companies/{company}/category-admission",
+        params={"category": "Упаковка и тара", "subcategory": "Бумажные стаканы"},
+        headers=_auth(token),
+    )
+    assert report.status_code == 200, report.text
+    assert report.json()["blocking_open"] == 2
+    assert report.json()["blocking_reasons"]
+
+    admin_token = make_token(await make_marketplace_admin(db_session))
+    queue = await client.get("/api/v1/admin/documents/pending", headers=_auth(admin_token))
+    assert queue.status_code == 200, queue.text
+    assert any(item["id"] == document["id"] for item in queue.json())
+
+    deleted = await client.delete(f"/api/v1/documents/{document['id']}", headers=_auth(token))
+    assert deleted.status_code == 204
+
+
 async def test_evidence_change_notifies_active_deal(client, db_session):
     """Изменение допуска по действующей сделке требует ручного решения, а не молчаливой отмены."""
     seller_user = await make_user(db_session)
