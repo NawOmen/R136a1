@@ -67,6 +67,10 @@ class Product(Base):
     price_tiers: Mapped[list] = mapped_column(JSONB, nullable=False, default=list, server_default="[]")
     moq_units: Mapped[int] = mapped_column(Integer, nullable=False)
     lead_time_days: Mapped[int] = mapped_column(Integer, nullable=False)
+    # Остаток на складе нужен для роли «поставка со склада»; производственная
+    # мощность по датам хранится отдельно, в capacity_entries.
+    stock_units: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    stock_updated_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     is_published: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False, server_default=text("false"))
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(
@@ -210,6 +214,37 @@ class Offer(Base):
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, server_default=func.now(), onupdate=func.now()
     )
+
+
+class OfferDraft(Base):
+    """Черновик коммерческого предложения, подготовленный агентом.
+
+    Черновик не является обязательством: он показывает предложенные значения
+    и источник каждого поля, а продавец подтверждает или исправляет их.
+    """
+
+    __tablename__ = "offer_drafts"
+    __table_args__ = {"schema": SCHEMA}
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=_uuid)
+    need_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey(f"{SCHEMA}.needs.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    company_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), nullable=False, index=True)
+    created_by_user_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), nullable=True)
+    status: Mapped[str] = mapped_column(
+        String(16), nullable=False, default="draft", server_default="draft"
+    )
+    payload: Mapped[dict] = mapped_column(JSONB, nullable=False, default=dict)
+    fields: Mapped[list] = mapped_column(JSONB, nullable=False, default=list)
+    missing: Mapped[list] = mapped_column(JSONB, nullable=False, default=list)
+    warnings: Mapped[list] = mapped_column(JSONB, nullable=False, default=list)
+    explanation: Mapped[str] = mapped_column(Text, nullable=False, default="")
+    used_offer_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), nullable=True)
+    # Поля, которые человек изменил перед отправкой: нужны для оценки агента.
+    changed_fields: Mapped[list] = mapped_column(JSONB, nullable=False, default=list)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now())
+    used_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
 
 class Deal(Base):

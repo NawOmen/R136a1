@@ -102,6 +102,8 @@ class ProductOut(BaseModel):
     price_tiers: list[ProductPriceTier]
     moq_units: int
     lead_time_days: int
+    stock_units: int | None = None
+    stock_updated_at: datetime | None = None
     is_published: bool
     images: list[ProductImageOut] = Field(default_factory=list)
 
@@ -115,6 +117,7 @@ class ProductIn(ProductRules):
     price_tiers: list[ProductPriceTier] = Field(default_factory=list)
     moq_units: int = Field(gt=0)
     lead_time_days: int = Field(gt=0)
+    stock_units: int | None = Field(default=None, ge=0)
 
     @model_validator(mode="after")
     def validate_tiers_against_moq(self):
@@ -134,10 +137,65 @@ class ProductPatch(ProductRules):
     price_tiers: list[ProductPriceTier] | None = None
     moq_units: int | None = Field(default=None, gt=0)
     lead_time_days: int | None = Field(default=None, gt=0)
+    stock_units: int | None = Field(default=None, ge=0)
 
 
 class PublishIn(BaseModel):
     published: bool
+
+
+class OfferDraftFieldOut(BaseModel):
+    name: str
+    label: str
+    value: float | int | None
+    source: str
+    confirmed: bool
+    note: str | None = None
+
+
+class OfferDraftOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: uuid.UUID
+    need_id: uuid.UUID
+    company_id: uuid.UUID
+    status: str
+    payload: dict[str, Any]
+    fields: list[OfferDraftFieldOut]
+    missing: list[str]
+    warnings: list[str]
+    explanation: str
+    created_at: datetime | None = None
+
+
+class AgentScorecardOut(BaseModel):
+    """Оценка работы агентов: конверсия сценариев и участие человека."""
+
+    scope: str
+    window_days: int
+    offer_drafts_total: int
+    offer_drafts_used: int
+    offer_draft_conversion_pct: float
+    average_changed_fields: float
+    offers_total: int
+    offers_from_drafts: int
+    deals_total: int
+    deals_from_drafts: int
+    recommendations_total: int
+    recommendations_converted: int
+    recommendation_conversion_pct: float
+    human_approvals: int
+    blocked_actions: int
+    admission_checks: int
+    admission_blocked: int
+    agent_runs_total: int
+    agent_runs_failed: int
+    agent_runs_local_route: int
+    agent_runs_external_route: int
+    agent_average_duration_ms: float
+    agent_estimated_cost_rub: float
+    llm_metrics_available: bool
+    notes: list[str]
 
 
 class DealMessageIn(BaseModel):
@@ -452,6 +510,13 @@ class OfferIn(BaseModel):
     moq_units: int = Field(default=1, gt=0)
     price_tiers: list[OfferPriceTierIn] = Field(default_factory=list)
     valid_until: date | None = None
+    # Черновик агента, из которого подготовлено предложение: нужен для оценки
+    # конверсии сценария и числа правок человека.
+    draft_id: uuid.UUID | None = None
+
+
+class OfferDraftIn(BaseModel):
+    company_id: uuid.UUID
 
 
 class OfferPatch(BaseModel):

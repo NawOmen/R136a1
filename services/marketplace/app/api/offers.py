@@ -1,5 +1,5 @@
 import uuid
-from datetime import date
+from datetime import date, datetime, timezone
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import select, text
@@ -18,9 +18,10 @@ from ..deps import (
     require_company_seller,
     require_verified_company,
 )
-from ..models import Deal, Need, Offer
+from ..models import CapacityEntry, CapabilityPassport, Deal, Need, Offer, OfferDraft, Product
 from ..matching import ACTIVE_NEED_STATUSES, offer_unit_price, run_market_rematch
-from ..schemas import DealOut, OfferIn, OfferOut, OfferPatch
+from ..offer_draft import available_capacity_units, build_offer_draft, changed_fields
+from ..schemas import DealOut, OfferDraftIn, OfferDraftOut, OfferIn, OfferOut, OfferPatch
 from ..trust import append_audit_event, record_human_approval
 
 router = APIRouter(tags=["offers"])
@@ -62,6 +63,75 @@ async def list_offers(
     return result.scalars().all()
 
 
+@router.post("/needs/{need_id}/offer-draft", response_model=OfferDraftOut, status_code=status.HTTP_201_CREATED)
+async def prepare_offer_draft(
+    need_id: uuid.UUID,
+    data: OfferDraftIn,
+    user: CurrentUser = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Черновик КП из подтверждённых данных. Обязательство создаёт только человек."""
+    need = await db.get(Need, need_id)
+    if need is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, detail="Потребность не найдена")
+    await require_company_seller(data.company_id, user, db)
+    await require_verified_company(data.company_id, user, db)
+    if need.company_id == data.company_id:
+        raise HTTPException(
+            status.HTTP_409_CONFLICT,
+            detail="Нельзя готовить предложение на потребность своей компании",
+        )
+
+    products = list(
+        (await db.execute(select(Product).where(Product.company_id == data.company_id))).scalars().all()
+    )
+    passport = await db.get(CapabilityPassport, data.company_id)
+    capacity = list(
+        (await db.execute(select(CapacityEntry).where(CapacityEntry.company_id == data.company_id)))
+        .scalars()
+        .all()
+    )
+    result = await build_offer_draft(
+        need=need,
+        products=products,
+        passport=passport,
+        capacity_units=available_capacity_units(capacity, need),
+    )
+
+    draft = OfferDraft(
+        need_id=need.id,
+        company_id=data.company_id,
+        created_by_user_id=user.id,
+        status="draft",
+        payload=result.payload(),
+        fields=[item.as_dict() for item in result.fields],
+        missing=result.missing,
+        warnings=result.warnings,
+        explanation=result.explanation,
+    )
+    db.add(draft)
+    await db.flush()
+    await append_audit_event(
+        db,
+        event_type="offer_draft_generated",
+        entity_type="offer_draft",
+        entity_id=draft.id,
+        actor_user_id=user.id,
+        actor_company_id=data.company_id,
+        source_refs=[{"type": "need", "id": str(need.id)}],
+        explanation="Агент подготовил черновик предложения из подтверждённых данных продавца.",
+        payload={
+            "need_id": str(need.id),
+            "fields": [item.as_dict() for item in result.fields],
+            "missing": result.missing,
+            "warnings": result.warnings,
+        },
+    )
+    await db.commit()
+    await db.refresh(draft)
+    return draft
+
+
 @router.post("/needs/{need_id}/offers", response_model=OfferOut, status_code=status.HTTP_201_CREATED)
 async def create_offer(
     need_id: uuid.UUID,
@@ -100,6 +170,14 @@ async def create_offer(
             detail="Компания уже отправила предложение по этой потребности",
         )
 
+    draft: OfferDraft | None = None
+    if data.draft_id is not None:
+        draft = await db.get(OfferDraft, data.draft_id)
+        if draft is None or draft.company_id != data.company_id or draft.need_id != need.id:
+            raise HTTPException(status.HTTP_404_NOT_FOUND, detail="Черновик предложения не найден")
+        if draft.status != "draft":
+            raise HTTPException(status.HTTP_409_CONFLICT, detail="Черновик уже использован")
+
     offer = Offer(
         need_id=need.id,
         company_id=data.company_id,
@@ -114,6 +192,35 @@ async def create_offer(
     )
     db.add(offer)
     await db.flush()
+    if draft is not None:
+        # Фиксируем, что человек исправил перед отправкой: это метрика работы агента.
+        draft.status = "used"
+        draft.used_offer_id = offer.id
+        draft.used_at = datetime.now(timezone.utc)
+        draft.changed_fields = changed_fields(
+            draft.payload or {},
+            {
+                "price_rub": offer.price_rub,
+                "available_units": offer.available_units,
+                "lead_time_days": offer.lead_time_days,
+                "delivery_cost_rub": offer.delivery_cost_rub,
+                "moq_units": offer.moq_units,
+            },
+        )
+        await append_audit_event(
+            db,
+            event_type="offer_draft_used",
+            entity_type="offer_draft",
+            entity_id=draft.id,
+            actor_user_id=user.id,
+            actor_company_id=data.company_id,
+            source_refs=[
+                {"type": "need", "id": str(need.id)},
+                {"type": "offer", "id": str(offer.id)},
+            ],
+            explanation="Продавец подтвердил черновик агента и отправил предложение.",
+            payload={"changed_fields": draft.changed_fields},
+        )
     await run_market_rematch(db, "offer_created", offer.id, {"need_id": str(need.id)})
     if need.created_by_user_id:
         await notify(db, need.created_by_user_id, "По вашей потребности поступило новое предложение", "offer_received")

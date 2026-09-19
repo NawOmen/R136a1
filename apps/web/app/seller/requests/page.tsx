@@ -15,6 +15,7 @@ import {
   marketplace,
   NeedFeedItem,
   NEED_STATUS_LABELS,
+  OfferDraft,
 } from "../../lib/marketplace";
 import { useCompanySelector } from "../../lib/useMe";
 
@@ -43,6 +44,8 @@ export default function SellerRequestsPage() {
   const [explainingId, setExplainingId] = useState<string | null>(null);
   const [explanations, setExplanations] = useState<Record<string, string>>({});
   const [query, setQuery] = useState("");
+  const [draftingId, setDraftingId] = useState<string | null>(null);
+  const [drafts, setDrafts] = useState<Record<string, OfferDraft>>({});
 
   useEffect(() => {
     setQuery(new URLSearchParams(window.location.search).get("q") ?? "");
@@ -70,12 +73,15 @@ export default function SellerRequestsPage() {
   }, [companyId]);
 
   function toggleForm(needId: string) {
+    const draft = drafts[needId];
     setOpenFormId((current) => (current === needId ? null : needId));
-    setPrice("");
-    setUnits("");
-    setLeadTime("");
-    setDeliveryCost("0");
-    setMoq("");
+    setPrice(draft?.payload.price_rub != null ? String(draft.payload.price_rub) : "");
+    setUnits(draft?.payload.available_units != null ? String(draft.payload.available_units) : "");
+    setLeadTime(draft?.payload.lead_time_days != null ? String(draft.payload.lead_time_days) : "");
+    setDeliveryCost(
+      draft?.payload.delivery_cost_rub != null ? String(draft.payload.delivery_cost_rub) : "0",
+    );
+    setMoq(draft?.payload.moq_units != null ? String(draft.payload.moq_units) : "");
     setError(null);
   }
 
@@ -93,6 +99,7 @@ export default function SellerRequestsPage() {
         lead_time_days: Number(leadTime),
         delivery_cost_rub: Number(deliveryCost),
         moq_units: Number(moq || 1),
+        draft_id: drafts[need.id]?.id,
       });
       setSubmittedIds((current) => new Set(current).add(need.id));
       setOpenFormId(null);
@@ -100,6 +107,28 @@ export default function SellerRequestsPage() {
       setError(err instanceof ApiError ? err.message : "Не удалось отправить предложение.");
     } finally {
       setSubmitting(false);
+    }
+  }
+
+  async function handlePrepareDraft(need: NeedFeedItem) {
+    const token = getToken();
+    if (!token || !company) return;
+    setDraftingId(need.id);
+    setError(null);
+    try {
+      const draft = await marketplace.prepareOfferDraft(token, need.id, company.id);
+      setDrafts((current) => ({ ...current, [need.id]: draft }));
+      // Черновик заполняет форму, но человек проверяет и при необходимости правит значения.
+      setOpenFormId(need.id);
+      setPrice(draft.payload.price_rub != null ? String(draft.payload.price_rub) : "");
+      setUnits(draft.payload.available_units != null ? String(draft.payload.available_units) : "");
+      setMoq(draft.payload.moq_units != null ? String(draft.payload.moq_units) : "");
+      setLeadTime(draft.payload.lead_time_days != null ? String(draft.payload.lead_time_days) : "");
+      setDeliveryCost(draft.payload.delivery_cost_rub != null ? String(draft.payload.delivery_cost_rub) : "0");
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : "Не удалось подготовить черновик.");
+    } finally {
+      setDraftingId(null);
     }
   }
 
@@ -216,6 +245,35 @@ export default function SellerRequestsPage() {
                 <p className="match-explanation"><b>Почему подходит</b>{explanations[need.id]}</p>
               )}
 
+              {drafts[need.id] && (
+                <div className="draft-panel">
+                  <p className="draft-panel__title">
+                    Черновик КП подготовлен агентом — проверьте значения и подтвердите отправку
+                  </p>
+                  <ul className="draft-fields">
+                    {drafts[need.id].fields.map((field) => (
+                      <li key={field.name}>
+                        <b>{field.label}:</b>{" "}
+                        {field.value != null ? String(field.value) : "нужно указать"}
+                        <span className="draft-source"> источник: {field.source}</span>
+                        {!field.confirmed && <span className="draft-manual"> решение человека</span>}
+                        {field.note && <span className="draft-note"> {field.note}</span>}
+                      </li>
+                    ))}
+                  </ul>
+                  {drafts[need.id].missing.length > 0 && (
+                    <p className="draft-missing">
+                      Заполните перед отправкой: {drafts[need.id].missing.join("; ")}
+                    </p>
+                  )}
+                  {drafts[need.id].warnings.map((warning) => (
+                    <p className="draft-warning" key={warning}>
+                      {warning}
+                    </p>
+                  ))}
+                </div>
+              )}
+
               {submittedIds.has(need.id) ? (
                 <p className="hint mode-hint">Предложение отправлено. Ожидайте решения покупателя.</p>
               ) : openFormId === need.id ? (
@@ -313,6 +371,14 @@ export default function SellerRequestsPage() {
                     onClick={() => void handleExplain(need)}
                   >
                     {explainingId === need.id ? "Проверяю..." : "Почему подходит?"}
+                  </button>
+                  <button
+                    type="button"
+                    className="btn btn-secondary btn-sm"
+                    disabled={draftingId === need.id}
+                    onClick={() => void handlePrepareDraft(need)}
+                  >
+                    {draftingId === need.id ? "Готовлю..." : "Подготовить черновик КП"}
                   </button>
                   <button type="button" className="btn btn-primary btn-sm" onClick={() => toggleForm(need.id)}>
                     Предложить условия

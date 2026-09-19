@@ -1,4 +1,5 @@
 import uuid
+from datetime import datetime, timezone
 from urllib.parse import quote
 
 from fastapi import APIRouter, Depends, File, HTTPException, Response, UploadFile, status
@@ -71,7 +72,10 @@ async def create_product(
 ):
     await require_company_seller(company_id, user, db)
     await require_company_admin(company_id, user, db)
-    product = Product(company_id=company_id, created_by_user_id=user.id, **data.model_dump())
+    payload = data.model_dump()
+    product = Product(company_id=company_id, created_by_user_id=user.id, **payload)
+    if payload.get("stock_units") is not None:
+        product.stock_updated_at = datetime.now(timezone.utc)
     db.add(product)
     await db.commit()
     await db.refresh(product)
@@ -127,8 +131,12 @@ async def update_product(
                     "Сначала снимите товар с публикации."
                 ),
             )
+    previous_stock = product.stock_units
     for field, value in validated.model_dump().items():
         setattr(product, field, value)
+    if product.stock_units != previous_stock:
+        # Остаток влияет на доступный объём предложения, поэтому фиксируем время.
+        product.stock_updated_at = datetime.now(timezone.utc)
     if product.is_published and (product.price_rub != old_price or product.category != old_category):
         db.add(ProductPriceObservation(product_id=product.id, category=product.category, unit_price_rub=product.price_rub))
     await run_market_rematch(db, "product_terms_changed", product.id)

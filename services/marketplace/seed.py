@@ -14,6 +14,18 @@ from sqlalchemy import select, text
 from app.database import SessionLocal
 from app.models import CapabilityPassport, DeliveryAddress, Document, Product, ProductionProfile
 
+DETAILS = {
+    "business_kind": "both",
+    "product_types": "Бумажные стаканы 150–600 мл",
+    "complexity": "Флексопечать, макет согласовывается до производства",
+    "material_grades": "Крафт-картон с PE-покрытием",
+    "limitations": "PLA и нестандартные формы требуют отдельного согласования",
+    "packaging": "Короба по 500 шт., паллетирование по запросу",
+    "delivery": "Самовывоз или перевозчик покупателя; доставка оплачивается отдельно",
+    "quality_control": "Выборочная проверка размеров и герметичности",
+    "trial_batch": "Непечатные образцы по запросу; цена и срок согласуются отдельно",
+}
+
 BUYER_COMPANY_NAME = "ООО «Демо-Кофе»"
 SELLER_COMPANY_NAME = "ООО «СтаканОпт Демо»"
 SELLER_USER_EMAIL = os.getenv("SEED_SELLER_EMAIL", "seller@demo.ru")
@@ -75,21 +87,17 @@ async def seed() -> None:
                 )
             )
 
-        if await db.get(CapabilityPassport, seller_company_id) is None:
+        passport = await db.get(CapabilityPassport, seller_company_id)
+        if passport is not None and not passport.details:
+            # Паспорта, созданные до появления структурированных сведений, остаются
+            # пустыми: без вида деятельности черновик КП не учитывает остаток склада.
+            passport.details = DETAILS
+        if passport is None:
             db.add(
                 CapabilityPassport(
                     company_id=seller_company_id,
                     technologies=["высечка бумажных стаканов", "ламинирование PE-покрытием"],
-                    details={
-                        "business_kind": "both", "product_types": "Бумажные стаканы 150–600 мл",
-                        "complexity": "Флексопечать, макет согласовывается до производства",
-                        "material_grades": "Крафт-картон с PE-покрытием",
-                        "limitations": "PLA и нестандартные формы требуют отдельного согласования",
-                        "packaging": "Короба по 500 шт., паллетирование по запросу",
-                        "delivery": "Самовывоз или перевозчик покупателя; доставка оплачивается отдельно",
-                        "quality_control": "Выборочная проверка размеров и герметичности",
-                        "trial_batch": "Непечатные образцы по запросу; цена и срок согласуются отдельно",
-                    },
+                    details=DETAILS,
                     equipment=["высекальный пресс", "флексопечатная машина"],
                     materials=["крафт-картон 260–320 г/м²"],
                     size_ranges={"cup_volume_ml": [150, 600]},
@@ -118,6 +126,7 @@ async def seed() -> None:
                     price_rub=11.2,
                     moq_units=20000,
                     lead_time_days=9,
+                    stock_units=12000,
                     is_published=True,
                 )
             )
