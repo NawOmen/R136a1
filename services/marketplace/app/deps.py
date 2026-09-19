@@ -110,6 +110,19 @@ async def require_company_admin(company_id: uuid.UUID, user: CurrentUser, db: As
     return membership
 
 
+async def is_marketplace_admin(db: AsyncSession, user_id: uuid.UUID) -> bool:
+    result = await db.execute(
+        text("SELECT is_marketplace_admin FROM auth.users WHERE id = :uid"), {"uid": user_id}
+    )
+    return bool(result.scalar_one_or_none())
+
+
+async def require_marketplace_admin(user: CurrentUser, db: AsyncSession) -> None:
+    """Проверка допуска и документов выполняется проверяющим площадки, а не продавцом."""
+    if not await is_marketplace_admin(db, user.id):
+        raise HTTPException(status.HTTP_403_FORBIDDEN, detail="Требуются права администратора площадки")
+
+
 async def notify(db: AsyncSession, user_id: uuid.UUID, message: str, type_: str = "info") -> None:
     """Создать внутреннее уведомление для пользователя."""
     from .models import Notification

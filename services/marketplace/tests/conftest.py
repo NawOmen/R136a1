@@ -1,5 +1,6 @@
 import os
 import uuid
+from datetime import datetime, timedelta, timezone
 
 import jwt
 import pytest
@@ -81,6 +82,31 @@ async def clean_db(session_factory):
         await session.execute(text(TRUNCATE))
         await session.commit()
     yield
+
+
+@pytest.fixture(autouse=True)
+def stub_object_storage(monkeypatch):
+    """Тесты не должны зависеть от запущенного MinIO: файлы держим в памяти."""
+    from app import storage
+    from app.api import documents as documents_api, needs as needs_api, products as products_api, stage9 as stage9_api
+
+    stored: dict[str, bytes] = {}
+
+    def upload_object(key: str, data: bytes, content_type: str) -> str:
+        stored[key] = data
+        return key
+
+    def download_object(key: str) -> bytes:
+        return stored.get(key, b"")
+
+    def delete_object(key: str) -> None:
+        stored.pop(key, None)
+
+    for module in (storage, documents_api, needs_api, products_api, stage9_api):
+        monkeypatch.setattr(module, "upload_object", upload_object, raising=False)
+        monkeypatch.setattr(module, "download_object", download_object, raising=False)
+        monkeypatch.setattr(module, "delete_object", delete_object, raising=False)
+    return stored
 
 
 @pytest.fixture
@@ -168,3 +194,54 @@ def make_token(user_id: uuid.UUID) -> str:
     from app.config import settings
 
     return jwt.encode({"sub": str(user_id), "exp": __import__("time").time() + 3600}, settings.jwt_secret, algorithm=settings.jwt_algorithm)
+
+
+async def make_marketplace_admin(db_session: AsyncSession, email: str = "admin@demo.ru") -> uuid.UUID:
+    uid = await make_user(db_session, email=email)
+    await db_session.execute(
+        text("UPDATE auth.users SET is_marketplace_admin = true WHERE id = :id"), {"id": uid}
+    )
+    await db_session.commit()
+    return uid
+
+
+async def grant_packaging_documents(
+    db_session: AsyncSession,
+    company_id: uuid.UUID,
+    *,
+    category: str = "Упаковка и тара",
+    subcategory: str | None = "Бумажные стаканы",
+    decision_user_id: uuid.UUID | None = None,
+    confirms: dict[str, list[str]] | None = None,
+) -> list[uuid.UUID]:
+    """Подтверждённые проверяющим документы для категории упаковки.
+
+    Тесты, которым нужна успешная публикация товара категории упаковки, должны
+    явно подготовить доказательства: загрузка файла сама допуск не выдаёт.
+    """
+    from app.models import Document
+
+    today = datetime.now(timezone.utc).date()
+    created: list[uuid.UUID] = []
+    for document_type in ("declaration", "test_report"):
+        document = Document(
+            company_id=company_id,
+            created_by_user_id=decision_user_id,
+            name=f"Тестовый документ {document_type}",
+            document_type=document_type,
+            file_key=f"tests/{uuid.uuid4()}",
+            content_type="application/pdf",
+            verification_status="verified",
+            scope_category=category,
+            scope_subcategory=subcategory,
+            valid_until=today + timedelta(days=365),
+            confirms=(confirms or {}) if document_type == "test_report" else {},
+            verified_by_user_id=decision_user_id,
+            verified_at=datetime.now(timezone.utc),
+            verification_note="Тестовое подтверждение применимости.",
+        )
+        db_session.add(document)
+        await db_session.flush()
+        created.append(document.id)
+    await db_session.commit()
+    return created

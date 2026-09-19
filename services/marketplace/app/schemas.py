@@ -196,6 +196,116 @@ class DocumentOut(BaseModel):
     file_key: str
     content_type: str
     verification_status: str
+    scope_category: str | None = None
+    scope_subcategory: str | None = None
+    valid_until: date | None = None
+    confirms: dict[str, list[str]] = Field(default_factory=dict)
+    verified_by_user_id: uuid.UUID | None = None
+    verified_at: datetime | None = None
+    verification_note: str | None = None
+    created_at: datetime | None = None
+
+
+class PendingDocumentOut(DocumentOut):
+    """Документ в очереди проверки площадки: имя компании нужно проверяющему."""
+
+    company_display_name: str | None = None
+
+
+class DocumentVerificationIn(BaseModel):
+    """Решение проверяющего. Допуск выдаёт человек, а не загрузка файла."""
+
+    decision: Literal["verified", "rejected", "unverified"]
+    scope_category: str | None = Field(default=None, max_length=120)
+    scope_subcategory: str | None = Field(default=None, max_length=120)
+    valid_until: date | None = None
+    # Значения характеристик, которые проверяющий подтвердил именно этим документом.
+    confirms: dict[str, list[str]] | None = None
+    note: str | None = Field(default=None, max_length=500)
+
+    @model_validator(mode="after")
+    def validate_decision(self):
+        if self.decision == "verified" and not self.scope_category:
+            raise ValueError("Для подтверждения укажите область действия документа")
+        if self.decision == "rejected" and not (self.note or "").strip():
+            raise ValueError("Для отклонения укажите причину")
+        if self.confirms:
+            cleaned: dict[str, list[str]] = {}
+            for key, values in self.confirms.items():
+                if not key.strip():
+                    raise ValueError("Название подтверждаемой характеристики не может быть пустым")
+                items = [str(value).strip() for value in values if str(value).strip()]
+                if not items:
+                    raise ValueError("Для подтверждаемой характеристики укажите хотя бы одно значение")
+                cleaned[key.strip().lower()] = items
+            self.confirms = cleaned
+        return self
+
+
+# ---------- Категорийный допуск ----------
+
+class RequirementStatusOut(BaseModel):
+    """Состояние одного обязательного доказательства."""
+
+    code: str
+    title: str
+    legal_reference: str
+    blocking: bool
+    state: str
+    state_label: str
+    seller_hint: str
+    buyer_note: str
+    document_ids: list[uuid.UUID] = Field(default_factory=list)
+    # Пояснение по применимости: например, документ подтверждён для другой подкатегории.
+    scope_note: str | None = None
+
+
+class CategoryAdmissionOut(BaseModel):
+    category: str
+    subcategory: str | None
+    state: str
+    state_label: str
+    supported: bool
+    profile_title: str | None
+    summary: str
+    requirements: list[RequirementStatusOut]
+    advisories: list[str]
+    blocking_open: int
+    blocking_message: str = ""
+    # Перечень причин без контекста: публикация, сделка или резерв добавляют свой префикс.
+    blocking_reasons: str = ""
+    checked_at: datetime
+    profile_key: str | None = None
+    rules_version: str = ""
+
+
+class CategoryRequirementsOut(BaseModel):
+    """Публичный чек-лист покупателя: что проверить до сделки."""
+
+    category: str
+    subcategory: str | None
+    profile_title: str | None
+    supported: bool
+    summary: str
+    checklist: list[RequirementStatusOut]
+    advisories: list[str]
+    note: str
+
+
+class AdmissionChecklistOut(BaseModel):
+    """Состояние допуска опубликованного товара глазами покупателя."""
+
+    product_id: uuid.UUID
+    category: str
+    subcategory: str | None
+    state: str
+    state_label: str
+    supported: bool
+    summary: str
+    checklist: list[RequirementStatusOut]
+    advisories: list[str]
+    note: str
+    checked_at: datetime
 
 
 # ---------- Capability Passport ----------

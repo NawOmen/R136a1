@@ -5,6 +5,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import delete, or_, select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from ..admission import SpecificationCheck, require_admission_for_specifications
 from ..database import get_db
 from ..deps import (
     CurrentUser,
@@ -28,6 +29,7 @@ from ..models import (
     ParticipantOrder,
 )
 from ..optimizer_client import days_until, evaluate_coalition, optimize_allocations
+from ..trust import append_audit_event
 from ..schemas import (
     CoalitionDecisionIn,
     CoalitionMemberOut,
@@ -236,6 +238,23 @@ async def publish_group_offer(
             select(CoalitionMember).where(CoalitionMember.coalition_id == coalition.id)
         )
     ).scalars().all()
+    # Обязательство производителя по группе: документы проверяются по спецификации
+    # каждой потребности, потому что участники заказывают разные изделия.
+    member_needs = {member.need_id: await db.get(Need, member.need_id) for member in members}
+    await require_admission_for_specifications(
+        db,
+        group_offer.company_id,
+        [
+            SpecificationCheck(
+                category=need.category,
+                characteristics=need.characteristics,
+                moq_units=need.volume_units,
+                label=f"потребность {need.id}",
+            )
+            for need in member_needs.values()
+        ],
+        context="Групповое предложение не опубликовано",
+    )
     terms = {item.need_id: item for item in data.participant_terms}
     if set(terms) != {item.need_id for item in members}:
         raise HTTPException(
@@ -422,6 +441,38 @@ async def decide_coalition(
     elif all(item.approval_status == "approved" for item in members):
         if group_offer.seller_approval_status != "approved":
             raise HTTPException(status.HTTP_409_CONFLICT, detail="Производитель ещё не подтвердил условия")
+        # Обязательства создаются сейчас: допуск производителя проверяется заново,
+        # потому что документ мог истечь или быть отозван после публикации условий.
+        member_needs = {item.need_id: await db.get(Need, item.need_id) for item in members}
+        await require_admission_for_specifications(
+            db,
+            coalition.producer_company_id,
+            [
+                SpecificationCheck(
+                    category=need.category,
+                    characteristics=need.characteristics,
+                    moq_units=need.volume_units,
+                    label=f"потребность {need.id}",
+                )
+                for need in member_needs.values()
+            ],
+            context="Групповые обязательства не созданы",
+        )
+        await append_audit_event(
+            db,
+            event_type="coalition_obligations_checked",
+            entity_type="coalition",
+            entity_id=coalition.id,
+            actor_user_id=user.id,
+            actor_company_id=data.company_id,
+            source_refs=[{"type": "coalition", "id": str(coalition.id)}],
+            explanation="Перед созданием групповых обязательств допуск производителя проверен повторно.",
+            payload={
+                "version": coalition.version,
+                "category": coalition.category,
+                "needs": [str(item.need_id) for item in members],
+            },
+        )
         for item in members:
             db.add(
                 ParticipantOrder(
