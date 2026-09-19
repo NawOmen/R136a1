@@ -89,6 +89,8 @@ export interface Document {
   scope_category: string | null;
   scope_subcategory: string | null;
   valid_until: string | null;
+  /** Подтверждённые проверяющим значения характеристик: материал, покрытие и так далее. */
+  confirms: Record<string, string[]>;
   verified_by_user_id: string | null;
   verified_at: string | null;
   verification_note: string | null;
@@ -104,6 +106,7 @@ export interface DocumentVerificationInput {
   scope_category?: string | null;
   scope_subcategory?: string | null;
   valid_until?: string | null;
+  confirms?: Record<string, string[]> | null;
   note?: string | null;
 }
 
@@ -118,6 +121,8 @@ export interface RequirementStatus {
   seller_hint: string;
   buyer_note: string;
   document_ids: string[];
+  /** Пояснение применимости: например, документ подтверждён для другой подкатегории. */
+  scope_note?: string | null;
 }
 
 export interface CategoryAdmission {
@@ -132,7 +137,10 @@ export interface CategoryAdmission {
   advisories: string[];
   blocking_open: number;
   blocking_message: string;
+  blocking_reasons?: string;
   checked_at: string;
+  profile_key?: string | null;
+  rules_version?: string;
 }
 
 export interface CategoryRequirements {
@@ -162,10 +170,18 @@ export interface ProductAdmissionChecklist {
 
 export const ADMISSION_STATE_LABELS: Record<string, string> = {
   admitted: "Допуск подтверждён",
-  blocked: "Публикация заблокирована",
+  blocked: "Доказательства не подтверждены",
   not_configured: "Обязательные доказательства не заданы",
   not_supported: "Категория не поддерживается",
+  needs_classification: "Нужна классификация товара",
 };
+
+/** Характеристики, которые проверяющий сопоставляет с изделием. */
+export const CONFIRMABLE_ATTRIBUTES: { value: string; label: string }[] = [
+  { value: "material", label: "Материал" },
+  { value: "coating", label: "Покрытие" },
+  { value: "purpose", label: "Назначение" },
+];
 
 export interface CapabilityDetails {
   business_kind: "manufacturer" | "stock_supplier" | "both";

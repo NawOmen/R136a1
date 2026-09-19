@@ -145,11 +145,13 @@ DEMO_DOCUMENTS = (
         "name": "Декларация о соответствии ТР ТС 005/2011 (синтетический документ)",
         "document_type": "declaration",
         "verification_note": "Синтетический демонстрационный документ, проверен для стаканов 150–600 мл.",
+        "confirms": {},
     },
     {
         "name": "Протокол испытаний контакта с пищевой продукцией (синтетический документ)",
         "document_type": "test_report",
         "verification_note": "Синтетический демонстрационный документ: материал и PE-покрытие.",
+        "confirms": {"material": ["крафт-картон"], "coating": ["PE"]},
     },
 )
 
@@ -179,6 +181,10 @@ async def _seed_category_documents(db, seller_company_id) -> None:
             )
         ).scalars().first()
         if existing is not None:
+            # Демо-документ мог быть загружен до появления подтверждённых
+            # характеристик: обновляем их, чтобы чек-лист соответствовал данным.
+            if existing.verification_status == "verified" and existing.confirms != item["confirms"]:
+                existing.confirms = item["confirms"]
             continue
         db.add(
             Document(
@@ -192,6 +198,7 @@ async def _seed_category_documents(db, seller_company_id) -> None:
                 scope_category="Упаковка и тара",
                 scope_subcategory="Бумажные стаканы",
                 valid_until=valid_until,
+                confirms=item["confirms"],
                 verified_by_user_id=admin_id,
                 verified_at=datetime.now(timezone.utc),
                 verification_note=item["verification_note"],

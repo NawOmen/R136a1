@@ -13,7 +13,7 @@ import {
   VerificationEvent,
   VERIFICATION_STATUS_LABELS,
 } from "../lib/api";
-import { DOCUMENT_TYPES, marketplace, PendingDocument, SupportTicket } from "../lib/marketplace";
+import { CONFIRMABLE_ATTRIBUTES, DOCUMENT_TYPES, marketplace, PendingDocument, SupportTicket } from "../lib/marketplace";
 
 export default function AdminPage() {
   const router = useRouter();
@@ -36,7 +36,9 @@ export default function AdminPage() {
   const [securityAlert, setSecurityAlert] = useState(false);
   const [pendingDocuments, setPendingDocuments] = useState<PendingDocument[]>([]);
   const [docBusyId, setDocBusyId] = useState<string | null>(null);
-  const [docScope, setDocScope] = useState<Record<string, { category: string; subcategory: string; note: string }>>({});
+  const [docScope, setDocScope] = useState<
+    Record<string, { category: string; subcategory: string; note: string; confirms: Record<string, string> }>
+  >({});
 
   useEffect(() => {
     if (!user?.is_marketplace_admin) return;
@@ -133,11 +135,33 @@ export default function AdminPage() {
       category: document.scope_category ?? "",
       subcategory: document.scope_subcategory ?? "",
       note: "",
+      confirms: {},
     };
   }
 
-  function updateDocumentDecision(document: PendingDocument, patch: Partial<{ category: string; subcategory: string; note: string }>) {
+  function updateDocumentDecision(
+    document: PendingDocument,
+    patch: Partial<{ category: string; subcategory: string; note: string; confirms: Record<string, string> }>,
+  ) {
     setDocScope((current) => ({ ...current, [document.id]: { ...documentDecision(document), ...patch } }));
+  }
+
+  function updateConfirms(document: PendingDocument, attribute: string, value: string) {
+    const current = documentDecision(document).confirms;
+    updateDocumentDecision(document, { confirms: { ...current, [attribute]: value } });
+  }
+
+  function parseConfirms(document: PendingDocument): Record<string, string[]> {
+    const raw = documentDecision(document).confirms;
+    const result: Record<string, string[]> = {};
+    for (const [key, value] of Object.entries(raw)) {
+      const items = value
+        .split(",")
+        .map((item) => item.trim())
+        .filter(Boolean);
+      if (items.length > 0) result[key] = items;
+    }
+    return result;
   }
 
   async function handleDocumentDecision(document: PendingDocument, decision: "verified" | "rejected") {
@@ -159,6 +183,7 @@ export default function AdminPage() {
         decision,
         scope_category: value.category.trim() || null,
         scope_subcategory: value.subcategory.trim() || null,
+        confirms: decision === "verified" ? parseConfirms(document) : null,
         note: value.note.trim() || null,
       });
       await refreshPending(token, statusFilter, search);
@@ -340,6 +365,20 @@ export default function AdminPage() {
                         placeholder="Например, Бумажные стаканы"
                       />
                     </div>
+                    {CONFIRMABLE_ATTRIBUTES.map((attribute) => (
+                      <div className="field" key={attribute.value}>
+                        <label htmlFor={`doc-confirm-${attribute.value}-${document.id}`}>
+                          {attribute.label}<span className="opt">значения через запятую</span>
+                        </label>
+                        <input
+                          id={`doc-confirm-${attribute.value}-${document.id}`}
+                          type="text"
+                          value={value.confirms[attribute.value] ?? ""}
+                          onChange={(event) => updateConfirms(document, attribute.value, event.target.value)}
+                          placeholder={attribute.value === "coating" ? "Например, PE" : "Например, крафт-картон"}
+                        />
+                      </div>
+                    ))}
                     <div className="field">
                       <label htmlFor={`doc-note-${document.id}`}>Комментарий или причина отклонения</label>
                       <input

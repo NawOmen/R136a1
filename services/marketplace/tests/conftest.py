@@ -212,6 +212,7 @@ async def grant_packaging_documents(
     category: str = "Упаковка и тара",
     subcategory: str | None = "Бумажные стаканы",
     decision_user_id: uuid.UUID | None = None,
+    confirms: dict[str, list[str]] | None = None,
 ) -> list[uuid.UUID]:
     """Подтверждённые проверяющим документы для категории упаковки.
 
@@ -234,6 +235,7 @@ async def grant_packaging_documents(
             scope_category=category,
             scope_subcategory=subcategory,
             valid_until=today + timedelta(days=365),
+            confirms=(confirms or {}) if document_type == "test_report" else {},
             verified_by_user_id=decision_user_id,
             verified_at=datetime.now(timezone.utc),
             verification_note="Тестовое подтверждение применимости.",

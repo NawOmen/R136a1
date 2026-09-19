@@ -355,7 +355,7 @@ async def test_unsupported_category_is_not_published(client, db_session):
         f"/api/v1/products/{product_id}/publish", json={"published": True}, headers=_auth(token)
     )
     assert publish.status_code == 409
-    assert "заблокирована" in publish.json()["detail"]
+    assert "не поддерживается" in publish.json()["detail"] or "заблокирована" in publish.json()["detail"]
 
 
 async def test_published_product_cannot_change_category_without_evidence(client, db_session):
@@ -373,7 +373,7 @@ async def test_published_product_cannot_change_category_without_evidence(client,
         headers=_auth(token),
     )
     assert changed.status_code == 409
-    assert "Смена категории отклонена" in changed.json()["detail"]
+    assert "Изменение отклонено" in changed.json()["detail"]
 
 
 async def test_category_without_configured_rules_stays_publishable(client, db_session):

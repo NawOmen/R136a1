@@ -289,6 +289,9 @@ export default function SellerDocumentsPage() {
                         <div className="company-item__name">{item.title}</div>
                         <div className="company-meta">{item.legal_reference}</div>
                         <div className="company-meta">{item.seller_hint}</div>
+                        {item.scope_note && (
+                          <div className="company-meta">Применимость: {item.scope_note}</div>
+                        )}
                       </div>
                       <span
                         className={`badge ${item.state === "satisfied" ? "badge-verified" : "badge-rejected"}`}
@@ -438,6 +441,14 @@ export default function SellerDocumentsPage() {
                       <div className="company-meta">
                         Область действия: {scope || "не указана — проверка применимости невозможна"}
                       </div>
+                      {Object.entries(document.confirms ?? {}).length > 0 && (
+                        <div className="company-meta">
+                          Подтверждено проверяющим:{" "}
+                          {Object.entries(document.confirms)
+                            .map(([key, values]) => `${key}: ${values.join(", ")}`)
+                            .join(" · ")}
+                        </div>
+                      )}
                       {document.valid_until && (
                         <div className="company-meta">Действует до {document.valid_until}</div>
                       )}

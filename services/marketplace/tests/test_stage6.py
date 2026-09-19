@@ -3,7 +3,7 @@ from itertools import combinations
 from uuid import UUID
 
 from app.models import Need, Offer, OptimizationVariantRecord, ResiliencePlan
-from conftest import make_company, make_token, make_user
+from conftest import grant_packaging_documents, make_company, make_token, make_user
 
 
 def auth(token: str) -> dict[str, str]:
@@ -62,6 +62,8 @@ async def test_resilience_plan_privacy_confirmation_simulation_and_failure(
     reserve_user = await make_user(db_session)
     reserve = await make_company(db_session, reserve_user, can_buy=False, can_sell=True)
     reserve_token = make_token(reserve_user)
+    # Резерв — обязательство: у компании резерва должны быть подтверждённые документы.
+    await grant_packaging_documents(db_session, reserve, decision_user_id=reserve_user)
 
     need = Need(
         company_id=buyer,

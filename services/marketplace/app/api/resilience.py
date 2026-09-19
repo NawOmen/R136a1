@@ -5,6 +5,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import delete, select, text, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from ..admission import SpecificationCheck, admission_audit_payload, require_company_admission
 from ..database import get_db
 from ..deps import (
     CurrentUser,
@@ -320,7 +321,50 @@ async def _calculate_and_store(
         and live_result["auto_eligible"]
         and plan.confirmed_at is not None
     ):
-        await _activate_scenario(db, plan, live, actor_user_id, automatic=True)
+        # Автоматическая замена — тоже обязательство: без подтверждённых
+        # документов решение остаётся человеку, а не выполняется молча.
+        plan_need = await db.get(Need, plan.need_id)
+        blockers: list[str] = []
+        for allocation in live_result["replacement_allocations"]:
+            try:
+                await require_company_admission(
+                    db,
+                    uuid.UUID(str(allocation["company_id"])),
+                    SpecificationCheck(
+                        category=plan_need.category,
+                        characteristics=plan_need.characteristics,
+                        moq_units=int(allocation.get("units") or plan_need.volume_units),
+                        label="поставщик замены",
+                    ),
+                    context="Автоматическая замена не выполнена",
+                )
+            except HTTPException as error:
+                blockers.append(str(error.detail))
+        if blockers:
+            plan.status = "recovery_proposed"
+            db.add(
+                ResilienceEvent(
+                    plan_id=plan.id,
+                    event_type="automatic_replacement_blocked",
+                    actor_user_id=actor_user_id,
+                    payload={"scenario_id": str(live.id), "reasons": blockers},
+                )
+            )
+            for user_id in (
+                await db.execute(
+                    text("SELECT user_id FROM auth.company_members WHERE company_id = :cid"),
+                    {"cid": plan.buyer_company_id},
+                )
+            ).scalars().all():
+                await notify(
+                    db,
+                    user_id,
+                    "Автоматическая замена поставщика не выполнена: обязательные документы не подтверждены. "
+                    f"Требуется ручное решение. {' '.join(blockers)}",
+                    "reserve_confirmation_required",
+                )
+        else:
+            await _activate_scenario(db, plan, live, actor_user_id, automatic=True)
     else:
         plan.status = "recovery_proposed"
     return result
@@ -665,7 +709,30 @@ async def decide_reserve_commitment(
             .with_for_update()
         )
     ).scalar_one()
+    admission_payload: dict | None = None
     if data.decision == "approved":
+        # Резерв — это обязательство: документы компании должны подтверждать
+        # спецификацию потребности, для которой удерживается мощность.
+        plan_need = await db.get(Need, plan.need_id)
+        admission = await require_company_admission(
+            db,
+            data.company_id,
+            SpecificationCheck(
+                category=plan_need.category,
+                characteristics=plan_need.characteristics,
+                moq_units=data.moq_units or plan_need.volume_units,
+                label="спецификация потребности",
+            ),
+            context="Резерв не подтверждён",
+        )
+        admission_payload = admission_audit_payload(
+            admission,
+            specification={
+                "category": plan_need.category,
+                "characteristics": plan_need.characteristics,
+                "moq_units": data.moq_units,
+            },
+        )
         required = {
             "capacity_units": data.capacity_units,
             "moq_units": data.moq_units,
@@ -727,6 +794,7 @@ async def decide_reserve_commitment(
             "delivery_cost_rub": data.delivery_cost_rub,
             "lead_time_days": data.lead_time_days,
             "held_until": data.held_until.isoformat() if data.held_until else None,
+            "admission": admission_payload,
         },
         source_refs=[
             {"type": "resilience_plan", "id": str(plan.id)},
@@ -897,6 +965,34 @@ async def approve_recovery(
             status.HTTP_409_CONFLICT,
             detail="Нельзя активировать неполную или неподтверждённую замену",
         )
+    plan_need = await db.get(Need, plan.need_id)
+    # Замена поставщика — новое обязательство: допуск проверяется для каждой
+    # компании, которая получит заказ.
+    replacement_admissions: list[dict] = []
+    for allocation in result["replacement_allocations"]:
+        admission = await require_company_admission(
+            db,
+            uuid.UUID(str(allocation["company_id"])),
+            SpecificationCheck(
+                category=plan_need.category,
+                characteristics=plan_need.characteristics,
+                moq_units=int(allocation.get("units") or plan_need.volume_units),
+                label="поставщик замены",
+            ),
+            context="Замена поставщика не активирована",
+        )
+        replacement_admissions.append(
+            {
+                "company_id": str(allocation["company_id"]),
+                "admission": admission_audit_payload(
+                    admission,
+                    specification={
+                        "category": plan_need.category,
+                        "characteristics": plan_need.characteristics,
+                    },
+                ),
+            }
+        )
     await record_human_approval(
         db,
         action="approve_recovery",
@@ -911,6 +1007,7 @@ async def approve_recovery(
             "new_total_cost_rub": result["new_total_cost_rub"],
             "new_lead_time_days": result["new_lead_time_days"],
             "replacement_allocations": result["replacement_allocations"],
+            "admissions": replacement_admissions,
         },
         source_refs=[
             {"type": "resilience_plan", "id": str(plan.id)},

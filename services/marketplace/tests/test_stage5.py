@@ -10,7 +10,7 @@ from app.models import (
     Need,
     ParticipantOrder,
 )
-from conftest import make_company, make_token, make_user
+from conftest import grant_packaging_documents, make_company, make_token, make_user
 
 
 def auth(token: str) -> dict[str, str]:
@@ -76,6 +76,10 @@ async def test_5000_and_45000_create_explainable_coalition_and_private_orders(
     )
     seller_token = make_token(seller_user)
     await passport(client, seller_token, seller_company)
+    # Групповое обязательство требует подтверждённых документов по категории.
+    await grant_packaging_documents(
+        db_session, seller_company, decision_user_id=seller_user, confirms={"coating": ["PE"]}
+    )
 
     _, buyer_one, token_one, need_one = await create_published_need(
         client, db_session, 5_000, "2+0"

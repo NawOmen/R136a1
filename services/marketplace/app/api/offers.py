@@ -5,6 +5,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from ..admission import (SpecificationCheck, admission_audit_payload, require_company_admission)
 from ..database import get_db
 from ..deps import (
     CurrentUser,
@@ -202,6 +203,19 @@ async def select_offer(
             status.HTTP_409_CONFLICT,
             detail="Стоимость предложения превышает бюджет потребности",
         )
+    # Момент обязательства: документы продавца должны подтверждать спецификацию
+    # потребности. Проверка выполняется заново, а не берётся из прошлого решения.
+    admission = await require_company_admission(
+        db,
+        offer.company_id,
+        SpecificationCheck(
+            category=need.category,
+            characteristics=need.characteristics,
+            moq_units=offer.moq_units,
+            label="спецификация потребности",
+        ),
+        context="Сделка не создана",
+    )
 
     deal = Deal(
         offer_id=offer.id,
@@ -228,6 +242,14 @@ async def select_offer(
         "seller_company_id": str(offer.company_id),
         "units": need.volume_units,
         "total_price_rub": total_price,
+        "admission": admission_audit_payload(
+            admission,
+            specification={
+                "category": need.category,
+                "characteristics": need.characteristics,
+                "moq_units": offer.moq_units,
+            },
+        ),
     }
     await record_human_approval(
         db,

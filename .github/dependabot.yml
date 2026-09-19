@@ -1,8 +1,14 @@
 version: 2
+# Обновления группируются, чтобы вместо десятков отдельных PR приходил один
+# пакет на экосистему. Внутри группы сохраняется отдельная строка на пакет.
 updates:
   - package-ecosystem: npm
     directory: /
     schedule: {interval: weekly}
+    groups:
+      web-dependencies:
+        patterns: ["*"]
+        update-types: ["minor", "patch", "major"]
   - package-ecosystem: pip
     directories:
       - /services/gateway-auth
@@ -10,6 +16,12 @@ updates:
       - /services/llm-gateway
       - /services/optimizer
     schedule: {interval: weekly}
+    groups:
+      # Runtime- и dev-зависимости сервисов обновляются одним PR на сервис,
+      # потому что lock-файл пересобирается целиком и должен быть согласован.
+      service-dependencies:
+        patterns: ["*"]
+        update-types: ["minor", "patch", "major"]
   - package-ecosystem: docker
     directories:
       - /apps/web
@@ -18,6 +30,12 @@ updates:
       - /services/llm-gateway
       - /services/optimizer
     schedule: {interval: weekly}
+    groups:
+      docker-images:
+        patterns: ["*"]
   - package-ecosystem: github-actions
     directory: /
     schedule: {interval: weekly}
+    groups:
+      actions:
+        patterns: ["*"]

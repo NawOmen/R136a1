@@ -117,6 +117,9 @@ class Document(Base):
     scope_category: Mapped[str | None] = mapped_column(String(120), nullable=True)
     scope_subcategory: Mapped[str | None] = mapped_column(String(120), nullable=True)
     valid_until: Mapped[date | None] = mapped_column(Date, nullable=True)
+    # Подтверждённые проверяющим значения характеристик изделия: например,
+    # {"material": ["крафт-картон"], "coating": ["PE"]}.
+    confirms: Mapped[dict] = mapped_column(JSONB, nullable=False, default=dict, server_default="{}")
     verified_by_user_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), nullable=True)
     verified_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     verification_note: Mapped[str | None] = mapped_column(String(500), nullable=True)

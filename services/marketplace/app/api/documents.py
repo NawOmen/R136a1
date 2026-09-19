@@ -5,7 +5,8 @@ from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, Upload
 from sqlalchemy import select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from ..category_admission import STATE_LABELS, evaluate_admission, match_profile
+from ..admission import BUYER_CHECKLIST_NOTE, admission_audit_payload, company_admission
+from ..category_admission import STATE_LABELS, canonical_scope, classification_hint, match_profile
 from ..database import get_db
 from ..deps import (
     CurrentUser,
@@ -30,66 +31,6 @@ router = APIRouter(tags=["documents"])
 
 MAX_SIZE = 25 * 1024 * 1024
 
-BUYER_CHECKLIST_NOTE = (
-    "Чек-лист показывает, какие обязательные доказательства проверены у продавца. "
-    "Он не заменяет проверку конкретной партии при приёмке и не является юридическим заключением."
-)
-
-
-async def _company_documents(db: AsyncSession, company_id: uuid.UUID) -> list[Document]:
-    result = await db.execute(
-        select(Document).where(Document.company_id == company_id).order_by(Document.created_at.desc())
-    )
-    return list(result.scalars().all())
-
-
-async def company_admission(
-    db: AsyncSession,
-    company_id: uuid.UUID,
-    category: str,
-    subcategory: str | None,
-    *,
-    characteristics: dict | None = None,
-    moq_units: int = 1,
-) -> CategoryAdmissionOut:
-    """Отчёт о допуске по документам компании. Используется публикацией товара."""
-    documents = await _company_documents(db, company_id)
-    report = evaluate_admission(
-        category=category,
-        subcategory=subcategory,
-        characteristics=characteristics or {},
-        documents=documents,
-        moq_units=moq_units,
-    )
-    return CategoryAdmissionOut(
-        category=report.category,
-        subcategory=report.subcategory,
-        state=report.state,
-        state_label=report.state_label,
-        supported=report.supported,
-        profile_title=report.profile_title,
-        summary=report.summary,
-        requirements=[
-            {
-                "code": item.code,
-                "title": item.title,
-                "legal_reference": item.legal_reference,
-                "blocking": item.blocking,
-                "state": item.state,
-                "state_label": item.state_label,
-                "seller_hint": item.seller_hint,
-                "buyer_note": item.buyer_note,
-                "document_ids": item.document_ids,
-            }
-            for item in report.requirements
-        ],
-        advisories=report.advisories,
-        blocking_open=report.blocking_open,
-        blocking_message=report.blocking_message,
-        checked_at=report.checked_at,
-    )
-
-
 async def _notify_company(db: AsyncSession, company_id: uuid.UUID, message: str) -> None:
     """Сообщить участникам компании, что доказательство допуска изменилось."""
     user_ids = (
@@ -101,18 +42,43 @@ async def _notify_company(db: AsyncSession, company_id: uuid.UUID, message: str)
         await notify(db, user_id, message, "document_verification_changed")
 
 
-def admission_audit_payload(admission: CategoryAdmissionOut) -> dict:
-    """Снимок допуска для журнала: какие доказательства учтены при публикации."""
-    return {
-        "state": admission.state,
-        "supported": admission.supported,
-        "profile": admission.profile_title,
-        "blocking_open": admission.blocking_open,
-        "requirements": [
-            {"code": item.code, "state": item.state, "documents": [str(doc) for doc in item.document_ids]}
-            for item in admission.requirements
-        ],
-    }
+async def _notify_affected_deals(
+    db: AsyncSession,
+    company_id: uuid.UUID,
+    document_name: str,
+    scope_category: str | None,
+    scope_subcategory: str | None,
+) -> int:
+    """Действующие сделки: изменение допуска требует ручного решения, а не отмены договорённостей."""
+    document_scope = canonical_scope(scope_category, scope_subcategory)
+    rows = (
+        await db.execute(
+            text(
+                "SELECT DISTINCT d.id, d.buyer_company_id, n.category "
+                "FROM marketplace.deals d "
+                "JOIN marketplace.needs n ON n.id = d.need_id "
+                "WHERE d.seller_company_id = :cid"
+            ),
+            {"cid": company_id},
+        )
+    ).mappings().all()
+    affected = 0
+    for row in rows:
+        need_scope = canonical_scope(row["category"], None)
+        if need_scope[0] != document_scope[0]:
+            continue
+        if document_scope[1] and need_scope[1] != document_scope[1]:
+            continue
+        affected += 1
+        scope_label = scope_category or "категория не указана"
+        for target in {row["buyer_company_id"], company_id}:
+            await _notify_company(
+                db,
+                target,
+                f"Допуск по документу «{document_name}» для «{scope_label}» изменился. "
+                "Действующие договорённости не отменяются автоматически: проверьте сделку и примите решение.",
+            )
+    return affected
 
 
 @router.get("/companies/{company_id}/documents", response_model=list[DocumentOut])
@@ -192,6 +158,8 @@ async def delete_document(
     document_name = document.name
     scope = document.scope_category or "категории без указанной области действия"
     company_id = document.company_id
+    scope_category = document.scope_category
+    scope_subcategory = document.scope_subcategory
     delete_object(document.file_key)
     await db.delete(document)
     if was_verified:
@@ -202,6 +170,7 @@ async def delete_document(
             f"Документ «{document_name}» удалён и больше не подтверждает допуск для «{scope}». "
             "Проверьте опубликованные товары: публикация может быть отклонена.",
         )
+        await _notify_affected_deals(db, company_id, document_name, scope_category, scope_subcategory)
     await db.commit()
 
 
@@ -230,6 +199,11 @@ async def verify_document(
     document.scope_category = (data.scope_category or document.scope_category or None)
     document.scope_subcategory = (data.scope_subcategory or document.scope_subcategory or None)
     document.valid_until = data.valid_until
+    if data.decision == "verified":
+        # Проверяющий фиксирует, какие материал и покрытие подтверждены документом.
+        document.confirms = data.confirms if data.confirms is not None else {}
+    else:
+        document.confirms = {}
     document.verification_note = data.note
     document.verified_by_user_id = user.id
     document.verified_at = datetime.now(timezone.utc)
@@ -250,6 +224,7 @@ async def verify_document(
             "scope_category": document.scope_category,
             "scope_subcategory": document.scope_subcategory,
             "valid_until": document.valid_until.isoformat() if document.valid_until else None,
+            "confirms": document.confirms,
         },
         source_refs=[{"type": "document", "id": str(document.id)}],
         explanation="Проверяющий площадки принял решение по документу допуска.",
@@ -279,6 +254,9 @@ async def verify_document(
             document.company_id,
             f"Документ «{document.name}»: статус «{decision_label}». Он больше не подтверждает допуск "
             f"для «{scope}». Загрузите документ заново или уточните область действия.",
+        )
+        await _notify_affected_deals(
+            db, document.company_id, document.name, document.scope_category, document.scope_subcategory
         )
     await db.commit()
     await db.refresh(document)
@@ -333,6 +311,21 @@ async def category_requirements(
     """Публичный чек-лист покупателя. Без авторизации и без данных о компании."""
     profile = match_profile(category, subcategory)
     if profile is None:
+        hint = classification_hint(category)
+        if hint is not None:
+            # Правила зависят от подкатегории: без классификации чек-лист неполный.
+            return CategoryRequirementsOut(
+                category=category,
+                subcategory=subcategory,
+                profile_title=None,
+                supported=True,
+                summary=hint,
+                checklist=[],
+                advisories=[
+                    "Уточните подкатегорию товара: до классификации нельзя определить применимые документы.",
+                ],
+                note=BUYER_CHECKLIST_NOTE,
+            )
         return CategoryRequirementsOut(
             category=category,
             subcategory=subcategory,

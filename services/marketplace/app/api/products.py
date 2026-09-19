@@ -26,7 +26,7 @@ from ..schemas import (
 )
 from ..storage import delete_object, download_object, upload_object
 from ..trust import append_audit_event
-from .documents import BUYER_CHECKLIST_NOTE, admission_audit_payload, company_admission
+from ..admission import BUYER_CHECKLIST_NOTE, admission_audit_payload, company_admission
 
 router = APIRouter(tags=["products"])
 MAX_IMAGE_SIZE = 8 * 1024 * 1024
@@ -102,9 +102,14 @@ async def update_product(
     # Повторно проверяем объединённое состояние: частичный PATCH не должен
     # рассинхронизировать МОЗ, базовую цену и ценовые ступени.
     validated = ProductIn.model_validate({**current, **patch})
-    category_changed = (validated.category, validated.subcategory) != (old_category, product.subcategory)
-    if product.is_published and category_changed:
-        # Опубликованный товар нельзя молча перевести в категорию без доказательств.
+    # Допуск зависит не только от категории: материал, покрытие и назначение
+    # определяют применимость документов, поэтому изменение характеристик тоже
+    # требует повторной проверки опубликованного товара.
+    admission_inputs_changed = (
+        (validated.category, validated.subcategory, validated.characteristics)
+        != (old_category, product.subcategory, product.characteristics)
+    )
+    if product.is_published and admission_inputs_changed:
         admission = await company_admission(
             db,
             product.company_id,
@@ -116,7 +121,11 @@ async def update_product(
         if admission.blocking_open:
             raise HTTPException(
                 status.HTTP_409_CONFLICT,
-                detail=f"Смена категории отклонена, пока товар опубликован: {admission.blocking_message}",
+                detail=(
+                    "Изменение отклонено, пока товар опубликован: "
+                    f"{admission.blocking_reasons or admission.summary} "
+                    "Сначала снимите товар с публикации."
+                ),
             )
     for field, value in validated.model_dump().items():
         setattr(product, field, value)
@@ -155,7 +164,13 @@ async def publish_product(
             moq_units=product.moq_units,
         )
         if admission.blocking_open:
-            raise HTTPException(status.HTTP_409_CONFLICT, detail=admission.blocking_message)
+            raise HTTPException(
+                status.HTTP_409_CONFLICT,
+                detail=(
+                    "Публикация заблокирована: "
+                    f"{admission.blocking_reasons or admission.summary}"
+                ),
+            )
     was_published = product.is_published
     product.is_published = data.published
     if data.published and not was_published and admission is not None:
