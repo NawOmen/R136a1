@@ -9,4 +9,4 @@ PyJWT>=2.14.0,<3.0
 httpx>=0.28.1,<1.0
 python-multipart>=0.0.9,<1.0
 PyMuPDF>=1.24,<2.0
-faster-whisper>=1.1,<2.0
+faster-whisper>=1.2.1,<2.0
