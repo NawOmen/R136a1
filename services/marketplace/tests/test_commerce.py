@@ -4,7 +4,7 @@ from decimal import Decimal
 
 import pytest
 from sqlalchemy import select
-from app.models import Deal, DealCheckpoint, DealExecutionEvent, DeliveryAddress, Need, Offer, Product
+from app.models import Deal, DealCheckpoint, DealExecutionEvent, DeliveryAddress, Need, Notification, Offer, Product
 from conftest import make_company, make_token, make_user
 
 
@@ -140,6 +140,18 @@ async def test_stock_offer_requires_matching_product_on_send_and_selection(clien
                                  json={"expected_revision": 1, "human_approved": True})
     assert selected.status_code == 409
     assert (await db_session.scalars(select(Deal).where(Deal.offer_id == uuid.UUID(sent.json()["id"])))).first() is None
+
+
+@pytest.mark.asyncio
+async def test_scoped_document_change_notifies_existing_category_deal(order, db_session):
+    from app.api.documents import _notify_affected_deals
+
+    _, _, seller, _, _ = order
+    affected = await _notify_affected_deals(db_session, seller, "Документ-образец", "Мебель", "Столы")
+    notifications = (await db_session.scalars(select(Notification))).all()
+    assert affected == 1
+    assert len(notifications) == 2
+    assert all("Действующие договорённости не отменяются автоматически" in item.message for item in notifications)
 
 
 @pytest.mark.asyncio
