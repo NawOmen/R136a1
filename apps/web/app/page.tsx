@@ -3,14 +3,14 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { api, AUTH_CHANGED_EVENT, getToken, MeResponse } from "./lib/api";
-import { formatRub, formatUnits, marketplace, Product } from "./lib/marketplace";
+import { formatRub, formatUnits, itemUnit, marketplace, Product } from "./lib/marketplace";
 
 function ProductShowcase({ products }: { products: Product[] }) {
   return <section className="market-section">
     <div className="section-heading"><div><span className="eyebrow">Готовые предложения</span><h2>Товары российских производителей</h2></div><Link href="/catalog">Открыть весь каталог <span>→</span></Link></div>
     {products.length ? <div className="product-grid product-grid--showcase">{products.slice(0, 4).map((product) => <Link className="market-product" href={`/catalog/${product.id}`} key={product.id}>
       <div className="market-product__visual">{product.images[0] ? <img src={marketplace.productImageUrl(product.images[0].id)} alt={product.name} /> : <span aria-hidden="true">{product.category.slice(0, 1)}</span>}<small>РОССИЯ</small></div>
-      <div className="market-product__body"><strong className="market-price">{formatRub(product.price_rub)}</strong><span className="market-muted">за единицу · MOQ {formatUnits(product.moq_units)}</span><h3>{product.name}</h3><span className="market-supplier">✓ Проверенный производитель</span><span className="market-product__cta">Подробнее</span></div>
+      <div className="market-product__body"><strong className="market-price">{formatRub(product.price_rub)}</strong><span className="market-muted">за {itemUnit(product.characteristics)} · MOQ {formatUnits(product.moq_units, itemUnit(product.characteristics))}</span><h3>{product.name}</h3><span className="market-supplier">✓ Проверенный производитель</span><span className="market-product__cta">Подробнее</span></div>
     </Link>)}</div> : <div className="empty-market"><span aria-hidden="true">◫</span><div><b>Каталог готов к публикации</b><p>После добавления товаров здесь появятся актуальные предложения производителей.</p></div><Link className="btn btn-primary" href="/catalog">Перейти в каталог</Link></div>}
   </section>;
 }

@@ -66,6 +66,16 @@ class ProductPriceTier(BaseModel):
     unit_price_rub: float = Field(gt=0)
 
 
+def validate_order_unit(characteristics: dict[str, Any] | None) -> None:
+    if not characteristics:
+        return
+    for key in ("unit", "единица измерения"):
+        if key in characteristics:
+            value = characteristics[key]
+            if not isinstance(value, str) or not value.strip() or len(value.strip()) > 32:
+                raise ValueError("Единица заказа должна быть строкой длиной от 1 до 32 символов")
+
+
 class ProductRules(BaseModel):
     model_config = ConfigDict(allow_inf_nan=False)
     @field_validator("characteristics", check_fields=False)
@@ -73,6 +83,7 @@ class ProductRules(BaseModel):
     def validate_characteristics(cls, value: dict[str, Any] | None):
         if value is not None and len(value) > 25:
             raise ValueError("Можно добавить не более 25 характеристик")
+        validate_order_unit(value)
         return value
 
     @field_validator("price_tiers", check_fields=False)
@@ -496,6 +507,12 @@ class NeedIn(BaseModel):
     visibility: str = Field(default="open_anonymized", pattern="^(open_anonymized|selected_producers|closed)$")
     valid_until: date | None = None
 
+    @field_validator("characteristics")
+    @classmethod
+    def validate_unit(cls, value: dict[str, Any]):
+        validate_order_unit(value)
+        return value
+
 
 class NeedEditIn(NeedIn):
     expected_revision: int = Field(gt=0)
@@ -578,6 +595,7 @@ class MarketOpportunityOut(BaseModel):
     id: uuid.UUID
     company_id: uuid.UUID
     category: str
+    unit: str
     score: int
     competition_level: str
     saturation_risk: str
@@ -651,6 +669,7 @@ class CoalitionOut(BaseModel):
     id: uuid.UUID
     producer_company_id: uuid.UUID | None
     category: str
+    unit: str
     combined_volume_units: int
     target_moq_units: int | None
     status: str

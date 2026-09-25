@@ -129,7 +129,7 @@ def _matches_need(product: Product, need: Need) -> tuple[bool, str]:
     return True, ""
 
 
-def _tier_price(product: Product, volume: int) -> tuple[float, str]:
+def _tier_price(product: Product, volume: int, unit: str) -> tuple[float, str]:
     """Цена за единицу с учётом ступеней: берём лучшую подходящую ступень."""
     price = float(product.price_rub)
     source = "товар каталога: базовая цена"
@@ -141,7 +141,7 @@ def _tier_price(product: Product, volume: int) -> tuple[float, str]:
             continue
         if unit_price > 0 and volume >= min_units:
             price = unit_price
-            source = f"товар каталога: ступень от {min_units} шт."
+            source = f"товар каталога: ступень от {min_units} {unit}"
     return round(price, 2), source
 
 
@@ -167,6 +167,7 @@ async def build_offer_draft(
             warnings.append(f"Товар «{product.name}» не использован: {reason}.")
 
     requested_volume = int(need.volume_units)
+    unit = str((need.characteristics or {}).get("unit") or "шт").strip()
     stock_sources: list[str] = []
     stock_total = 0
     # One SKU supplies both price and stock; never sum unlike products.
@@ -174,7 +175,7 @@ async def build_offer_draft(
         quantity = stock_by_product.get(product.id, 0) if stock_by_product is not None else product.stock_units
         if quantity:
             stock_total = int(quantity)
-            stock_sources.append(f"свободный остаток «{product.name}»: {quantity} шт.")
+            stock_sources.append(f"свободный остаток «{product.name}»: {quantity} {unit}")
 
     business_kind = "manufacturer"
     if passport is not None:
@@ -187,24 +188,24 @@ async def build_offer_draft(
             missing.append("Остаток склада не заполнен: укажите наличие товара")
     elif business_kind == "both":
         available = stock_total or capacity_units or None
-        source = "; ".join(stock_sources) if stock_total else f"свободная мощность к сроку: {capacity_units} шт."
+        source = "; ".join(stock_sources) if stock_total else f"свободная мощность к сроку: {capacity_units} {unit}"
         if available is None:
             missing.append("Нет ни остатка, ни подтверждённой мощности к сроку")
     else:
         available = capacity_units or None
-        source = f"календарь мощностей до срока: {capacity_units} шт." if capacity_units else "мощность к сроку не заполнена"
+        source = f"календарь мощностей до срока: {capacity_units} {unit}" if capacity_units else "мощность к сроку не заполнена"
         if not available:
             missing.append("Не заполнена доступная мощность к сроку потребности")
 
     if available is not None and available < requested_volume:
         warnings.append(
-            f"Доступный объём {available} шт. меньше запрошенных {requested_volume} шт.: "
+            f"Доступный объём {available} {unit} меньше запрошенных {requested_volume} {unit}: "
             "укажите реально доступный объём или откажитесь от предложения."
         )
     fields.append(
         DraftField(
             name="available_units",
-            label="Доступный объём, шт.",
+            label=f"Доступный объём, {unit}",
             value=available,
             source=source,
             confirmed=available is not None,
@@ -214,7 +215,7 @@ async def build_offer_draft(
 
     if suitable:
         product = suitable[0]
-        price, price_source = _tier_price(product, requested_volume)
+        price, price_source = _tier_price(product, requested_volume, unit)
         fields.append(
             DraftField(
                 name="price_rub",
@@ -257,7 +258,7 @@ async def build_offer_draft(
     fields.append(
         DraftField(
             name="moq_units",
-            label="MOQ предложения, шт.",
+            label=f"MOQ предложения, {unit}",
             value=moq,
             source=moq_source,
             confirmed=moq is not None,

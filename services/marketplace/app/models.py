@@ -436,13 +436,14 @@ class MatchEvent(Base):
 class MarketOpportunity(Base):
     __tablename__ = "market_opportunities"
     __table_args__ = (
-        UniqueConstraint("company_id", "category", name="uq_opportunity_company_category"),
+        UniqueConstraint("company_id", "category", "unit", name="uq_opportunity_company_category_unit"),
         {"schema": SCHEMA},
     )
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=_uuid)
     company_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), nullable=False, index=True)
     category: Mapped[str] = mapped_column(String(120), nullable=False)
+    unit: Mapped[str] = mapped_column(String(32), nullable=False, default="шт", server_default="шт")
     score: Mapped[int] = mapped_column(Integer, nullable=False)
     competition_level: Mapped[str] = mapped_column(String(32), nullable=False)
     saturation_risk: Mapped[str] = mapped_column(String(32), nullable=False)

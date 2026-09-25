@@ -293,6 +293,7 @@ export interface MarketOpportunity {
   id: string;
   company_id: string;
   category: string;
+  unit: string;
   score: number;
   competition_level: string;
   saturation_risk: string;
@@ -337,6 +338,7 @@ export interface Coalition {
   id: string;
   producer_company_id: string | null;
   category: string;
+  unit: string;
   combined_volume_units: number;
   target_moq_units: number | null;
   status: string;

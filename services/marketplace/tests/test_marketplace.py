@@ -1,4 +1,4 @@
-from sqlalchemy import select, text
+from sqlalchemy import func, select, text
 
 from conftest import grant_capacity, grant_packaging_documents, make_company, make_token, make_user
 
@@ -287,4 +287,11 @@ async def test_demo_seed_separates_buyer_address_and_seller_data(
     assert buyer_addresses[0].is_default is True
     assert seller_addresses == []
     assert await db_session.get(ProductionProfile, seller_company) is not None
-    assert len(products) == 2
+    from app.assortment import ASSORTMENT
+    assert len(products) == 2 + len(ASSORTMENT)
+    assert len({product.category for product in products}) >= 4
+    await marketplace_seed.seed()
+    count_after_retry = await db_session.scalar(
+        select(func.count()).select_from(Product).where(Product.company_id == seller_company)
+    )
+    assert count_after_retry == len(products)

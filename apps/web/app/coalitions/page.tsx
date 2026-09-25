@@ -87,13 +87,13 @@ export default function CoalitionsPage() {
                   </span>
                 </div>
                 <p>
-                  Общая партия: {formatUnits(coalition.combined_volume_units)} · MOQ: {coalition.target_moq_units ? formatUnits(coalition.target_moq_units) : "—"}
+                  Общая партия: {formatUnits(coalition.combined_volume_units, coalition.unit)} · MOQ: {coalition.target_moq_units ? formatUnits(coalition.target_moq_units, coalition.unit) : "—"}
                 </p>
                 <ul>{coalition.explanation.map((reason) => <li key={reason}>{reason}</li>)}</ul>
                 {ownMember && (
                   <section className="participant-terms">
                     <h3>Условия вашей компании</h3>
-                    <p>Ваш объём: {formatUnits(ownMember.units)}</p>
+                    <p>Ваш объём: {formatUnits(ownMember.units, coalition.unit)}</p>
                     <p>
                       Общая часть: {formatRub(ownMember.common_cost_rub)} · Индивидуальные операции: {formatRub(ownMember.individual_cost_rub)} · Логистика: {formatRub(ownMember.delivery_cost_rub)}
                     </p>

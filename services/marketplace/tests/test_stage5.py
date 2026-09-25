@@ -4,13 +4,16 @@ from datetime import date, timedelta
 from sqlalchemy import select
 
 from app.models import (
+    CapabilityPassport,
     Coalition,
     CoalitionMember,
     CompatibilityProfile,
     GroupOffer,
     Need,
     ParticipantOrder,
+    MarketOpportunity,
 )
+from app.matching import run_market_rematch
 from conftest import grant_packaging_documents, make_company, make_token, make_user
 
 
@@ -325,5 +328,23 @@ def test_unknown_specifications_are_not_silently_individual_operations():
     from app.matching import _need_parts
     need = SimpleNamespace(characteristics={"thread": "M8", "strength_class": "8.8", "color": "чёрный", "logo": "А"})
     common, hard, flexible, individual = _need_parts(need)
-    assert common == {"thread": "M8", "strength_class": "8.8", "color": "чёрный"}
+    assert common == {"thread": "M8", "strength_class": "8.8", "color": "чёрный", "unit": "шт"}
     assert individual == {"logo": "А"}
+
+
+async def test_market_opportunities_do_not_add_rolls_to_pieces(db_session):
+    seller = await make_user(db_session)
+    company = await make_company(db_session, seller, can_buy=False, can_sell=True)
+    db_session.add(CapabilityPassport(company_id=company, technologies=["сырьё и материалы"],
+        materials=[], equipment=[], certifications=[], size_ranges={}, delivery_regions=["Москва"],
+        completed_order_types=[], min_order_units=1, max_order_units=1000))
+    for unit, units in (("шт", 15), ("рулон", 8)):
+        buyer = await make_user(db_session)
+        buyer_company = await make_company(db_session, buyer, can_buy=True, can_sell=False)
+        db_session.add(Need(company_id=buyer_company, created_by_user_id=buyer,
+            category="Сырьё и материалы", characteristics={"unit": unit}, volume_units=units,
+            deadline_date=date.today() + timedelta(days=20), visibility="open_anonymized", status="open_for_offers"))
+    await db_session.flush()
+    await run_market_rematch(db_session, "test_unit_separation", None)
+    opportunities = (await db_session.scalars(select(MarketOpportunity).where(MarketOpportunity.company_id == company))).all()
+    assert {(item.unit, item.unmet_volume_units) for item in opportunities} == {("шт", 15), ("рулон", 8)}

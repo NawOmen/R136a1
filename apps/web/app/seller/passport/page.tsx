@@ -256,7 +256,7 @@ export default function SellerPassportPage() {
           <div className="char-row">
             <div className="field" style={{ flex: 1 }}>
               <label htmlFor="min_order">
-                Минимальный заказ, шт.<span className="req">*</span>
+                Минимальный заказ, ед.<span className="req">*</span>
               </label>
               <input
                 id="min_order"
@@ -270,7 +270,7 @@ export default function SellerPassportPage() {
             </div>
             <div className="field" style={{ flex: 1 }}>
               <label htmlFor="max_order">
-                Максимальный заказ, шт.<span className="req">*</span>
+                Максимальный заказ, ед.<span className="req">*</span>
               </label>
               <input
                 id="max_order"

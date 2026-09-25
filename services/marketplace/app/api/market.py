@@ -57,6 +57,7 @@ def _opportunity_out(item: MarketOpportunity) -> MarketOpportunityOut:
         id=item.id,
         company_id=item.company_id,
         category=item.category,
+        unit=item.unit,
         score=item.score,
         competition_level=item.competition_level,
         saturation_risk=item.saturation_risk,
@@ -83,6 +84,8 @@ async def _coalition_out(
             .order_by(GroupOffer.created_at.desc())
         )
     ).scalars().first()
+    profile = await db.get(CompatibilityProfile, coalition.compatibility_profile_id)
+    unit = str((profile.common_base or {}).get("unit") or "шт") if profile else "шт"
     visible_members = []
     is_producer = coalition.producer_company_id in viewer_companies
     for member in members:
@@ -107,6 +110,7 @@ async def _coalition_out(
         id=coalition.id,
         producer_company_id=coalition.producer_company_id,
         category=coalition.category,
+        unit=unit,
         combined_volume_units=coalition.combined_volume_units,
         target_moq_units=coalition.target_moq_units,
         status=coalition.status,

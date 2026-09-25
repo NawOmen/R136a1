@@ -12,6 +12,7 @@ import {
   ApiError,
   formatCharacteristics,
   formatUnits,
+  itemUnit,
   marketplace,
   NeedFeedItem,
   NEED_STATUS_LABELS,
@@ -252,7 +253,7 @@ export default function SellerRequestsPage() {
               <div className="demand-card__top"><span className="demand-kind">Производство</span><span className="demand-deadline">до {need.deadline_date}</span></div>
               <h2>{need.category}</h2>
               <p className="demand-description">{formatCharacteristics(need.characteristics)}</p>
-              <dl className="demand-facts"><div><dt>Необходимый объём</dt><dd>{formatUnits(need.volume_units)}</dd></div><div><dt>Статус запроса</dt><dd>{NEED_STATUS_LABELS[need.status]}</dd></div></dl>
+              <dl className="demand-facts"><div><dt>Необходимый объём</dt><dd>{formatUnits(need.volume_units, itemUnit(need.characteristics))}</dd></div><div><dt>Статус запроса</dt><dd>{NEED_STATUS_LABELS[need.status]}</dd></div></dl>
 
               {explanations[need.id] && (
                 <p className="match-explanation"><b>Почему подходит</b>{explanations[need.id]}</p>
@@ -310,7 +311,7 @@ export default function SellerRequestsPage() {
                   {resourceKind === "stock" && <div className="field"><label htmlFor={`offer_product_${need.id}`}>Товар на складе</label><select id={`offer_product_${need.id}`} required value={productId} disabled={Boolean(drafts[need.id])} onChange={e=>setProductId(e.target.value)}><option value="">Выберите товар</option>{products.map(product=><option key={product.id} value={product.id}>{product.name}</option>)}</select></div>}
                   <div className="field">
                     <label htmlFor={`offer_units_${need.id}`}>
-                      Доступный объём, шт.<span className="req">*</span>
+                      Доступный объём, {itemUnit(need.characteristics)}<span className="req">*</span>
                     </label>
                     <input
                       id={`offer_units_${need.id}`}
@@ -324,7 +325,7 @@ export default function SellerRequestsPage() {
                   </div>
                   <div className="field">
                     <label htmlFor={`offer_moq_${need.id}`}>
-                      MOQ предложения, шт.<span className="req">*</span>
+                      MOQ предложения, {itemUnit(need.characteristics)}<span className="req">*</span>
                     </label>
                     <input
                       id={`offer_moq_${need.id}`}

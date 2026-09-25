@@ -41,6 +41,11 @@ ACTIVE_NEED_STATUSES = {
 }
 
 
+def order_unit(characteristics: dict | None) -> str:
+    value = str((characteristics or {}).get("unit") or (characteristics or {}).get("единица измерения") or "шт").strip().lower().rstrip(".") or "шт"
+    return "шт" if value in {"шт", "штука", "штуки", "штук"} else value
+
+
 def offer_unit_price(offer: Offer, volume_units: int) -> float:
     price = offer.price_rub
     tiers = sorted(
@@ -65,8 +70,9 @@ def _canonical_json(value: object) -> str:
 
 def _need_parts(need: Need) -> tuple[dict, dict, dict, dict]:
     characteristics = need.characteristics or {}
-    common = {key: characteristics[key] for key in sorted(characteristics)
+    common = {key: order_unit(characteristics) if key == "unit" else characteristics[key] for key in sorted(characteristics)
               if key not in INDIVIDUAL_KEYS | HARD_KEYS | FLEXIBLE_KEYS}
+    common.setdefault("unit", "шт")
     hard = {key: characteristics[key] for key in sorted(HARD_KEYS) if key in characteristics}
     flexible = {key: characteristics[key] for key in sorted(FLEXIBLE_KEYS) if key in characteristics}
     individual = {
@@ -162,7 +168,7 @@ async def _has_direct_match(db: AsyncSession, need: Need) -> tuple[bool, str]:
         if item.min_order_units and _passport_matches(item, need.category, _need_parts(need)[0])
     ]
     if moqs and min(moqs) > need.volume_units:
-        return False, f"Не достигнут минимальный объём производителя (MOQ {min(moqs):,} шт.)".replace(",", " ")
+        return False, f"Не достигнут минимальный объём производителя (MOQ {min(moqs):,} {order_unit(need.characteristics)})".replace(",", " ")
     return False, "Пока нет выполнимого предложения от подходящего производителя"
 
 
@@ -238,7 +244,7 @@ async def _build_coalitions(db: AsyncSession, needs: list[Need]) -> None:
                 status="candidate",
                 explanation=[
                     "Общая производственная основа и жёсткие ограничения совпадают",
-                    f"Общий объём {total_units:,} шт. достигает MOQ {passport.min_order_units or 0:,} шт.".replace(",", " "),
+                    f"Общий объём {total_units:,} {order_unit(members[0].characteristics)} достигает MOQ {passport.min_order_units or 0:,} {order_unit(members[0].characteristics)}".replace(",", " "),
                     "Индивидуальная печать, упаковка и логистика будут рассчитаны отдельно",
                 ],
             )
@@ -266,15 +272,16 @@ async def _rebuild_opportunities(db: AsyncSession, needs: list[Need]) -> None:
         )
     ).scalars().all()
     verified = set(companies)
-    grouped: dict[str, list[Need]] = defaultdict(list)
+    grouped: dict[tuple[str, str], list[Need]] = defaultdict(list)
     for need in needs:
-        grouped[need.category.strip().lower()].append(need)
+        unit = order_unit(need.characteristics)
+        grouped[(need.category.strip().lower(), unit)].append(need)
 
     active_keys = set()
     for passport in passports:
         if passport.company_id not in verified:
             continue
-        for category_key, category_needs in grouped.items():
+        for (_, unit), category_needs in grouped.items():
             category = category_needs[0].category
             common = _need_parts(category_needs[0])[0]
             if not _passport_matches(passport, category, common):
@@ -304,17 +311,18 @@ async def _rebuild_opportunities(db: AsyncSession, needs: list[Need]) -> None:
             )).all())
             supplied = sum(item.volume_units for item in category_needs if item.id in covered_ids)
             unmet = max(0, total_demand - supplied)
-            active_keys.add((passport.company_id, category))
+            active_keys.add((passport.company_id, category, unit))
             opportunity = (
                 await db.execute(
                     select(MarketOpportunity).where(
                         MarketOpportunity.company_id == passport.company_id,
                         MarketOpportunity.category == category,
+                        MarketOpportunity.unit == unit,
                     )
                 )
             ).scalar_one_or_none()
             if opportunity is None:
-                opportunity = MarketOpportunity(company_id=passport.company_id, category=category, score=0,
+                opportunity = MarketOpportunity(company_id=passport.company_id, category=category, unit=unit, score=0,
                     competition_level="нет", saturation_risk="низкий", unmet_volume_units=0,
                     buyers_count=0, need_ids=[], reasons=[], missing_data=[])
                 db.add(opportunity)
@@ -380,7 +388,7 @@ async def _rebuild_opportunities(db: AsyncSession, needs: list[Need]) -> None:
 
     existing = (await db.execute(select(MarketOpportunity))).scalars().all()
     for opportunity in existing:
-        if (opportunity.company_id, opportunity.category) not in active_keys:
+        if (opportunity.company_id, opportunity.category, opportunity.unit) not in active_keys:
             opportunity.status = "inactive"
 
 

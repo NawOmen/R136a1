@@ -167,7 +167,7 @@ export default function SellerCapacityPage() {
               <thead>
                 <tr>
                   <th>Дата</th>
-                  <th>Всего, шт.</th><th>Занято, шт.</th><th>Свободно, шт.</th>
+                  <th>Всего, ед.</th><th>Занято, ед.</th><th>Свободно, ед.</th>
                 </tr>
               </thead>
               <tbody>
