@@ -55,6 +55,7 @@ async def test_control_example_partial_delivery_return_profit_and_privacy(client
     assert cost.status_code == 200, cost.text
     report = (await client.get(f"/api/v1/companies/{seller}/commercial-analytics?role=seller", headers=sh)).json()
     row = report["orders"][0]
+    assert row["unit"] == "шт"
     assert (row["ordered_units"], row["accepted_units"], row["returned_units"], row["net_units"], row["open_units"]) == (10, 6, 1, 5, 4)
     for key, value in {"net_goods_revenue_rub":5000, "cost_of_goods_rub":3000, "gross_profit_rub":2000, "contribution_rub":1800}.items():
         assert Decimal(str(row[key])) == value

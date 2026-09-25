@@ -11,6 +11,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from ..commerce import execution_totals, financials
 from ..database import get_db
 from ..deps import CurrentUser, get_current_user, require_company_admin, require_company_buyer, require_company_seller, require_membership
+from ..matching import order_unit
 from ..models import Deal, DealCheckpoint, DealCostSnapshot, DealExecutionEvent, Need, Offer, ParticipantOrder
 from ..resources import release
 from ..trust import record_human_approval
@@ -200,7 +201,7 @@ async def analytics(company_id: uuid.UUID, role: Literal["buyer", "seller"], sta
         raise HTTPException(422, "Начало периода должно быть не позже окончания")
     # Explicit order cohort: period filters creation, execution is current for that cohort.
     owner = Deal.seller_company_id if role == "seller" else Deal.buyer_company_id
-    query = select(Deal, Need.category).join(Need, Need.id == Deal.need_id).where(owner == company_id)
+    query = select(Deal, Need).join(Need, Need.id == Deal.need_id).where(owner == company_id)
     if start:
         query = query.where(Deal.created_at >= datetime.combine(start, time.min, tzinfo=timezone.utc))
     if end:
@@ -215,12 +216,12 @@ async def analytics(company_id: uuid.UUID, role: Literal["buyer", "seller"], sta
     for event in all_events:
         by_deal.setdefault(event.deal_id, []).append(event)
     rows = []
-    for deal, category_name in pairs:
+    for deal, need in pairs:
         totals = execution_totals(deal, by_deal.get(deal.id, []))
         values = financials(deal, totals, costs_by_id.get(deal.id))
         if role == "buyer":
             values = {key: value for key, value in values.items() if key in {"unit_price_rub", "ordered_value_rub", "delivery_price_rub", "net_goods_revenue_rub", "payments_rub"}}
-        rows.append({"deal_id": deal.id, "category": category_name, "created_at": deal.created_at, "status": deal.status, **totals, **values})
+        rows.append({"deal_id": deal.id, "category": need.category, "unit": order_unit(need.characteristics), "created_at": deal.created_at, "status": deal.status, **totals, **values})
     aggregate = {}
     keys = ("ordered_value_rub", "net_goods_revenue_rub", "cost_of_goods_rub", "gross_profit_rub", "attributable_expenses_rub", "contribution_rub") if role == "seller" else ("ordered_value_rub", "net_goods_revenue_rub")
     for key in keys:
@@ -234,14 +235,14 @@ async def analytics(company_id: uuid.UUID, role: Literal["buyer", "seller"], sta
     if category: offer_query = offer_query.where(Need.category == category)
     offers = list((await db.scalars(offer_query)).all())
     group_owner = ParticipantOrder.seller_company_id if role == "seller" else ParticipantOrder.buyer_company_id
-    group_query = select(ParticipantOrder, Need.category).join(Need, Need.id == ParticipantOrder.need_id).where(group_owner == company_id)
+    group_query = select(ParticipantOrder, Need).join(Need, Need.id == ParticipantOrder.need_id).where(group_owner == company_id)
     if start: group_query = group_query.where(ParticipantOrder.created_at >= datetime.combine(start, time.min, tzinfo=timezone.utc))
     if end: group_query = group_query.where(ParticipantOrder.created_at <= datetime.combine(end, time.max, tzinfo=timezone.utc))
     if category: group_query = group_query.where(Need.category == category)
-    group_orders = [{"order_id": item.id, "coalition_id": item.coalition_id, "category": category_name,
-                     "created_at": item.created_at, "status": item.status, "units": item.units,
+    group_orders = [{"order_id": item.id, "coalition_id": item.coalition_id, "category": need.category,
+                     "unit": order_unit(need.characteristics), "created_at": item.created_at, "status": item.status, "units": item.units,
                      "contract_value_rub": Decimal(str(item.total_price_rub)), "payments_rub": None}
-                    for item, category_name in (await db.execute(group_query.order_by(ParticipantOrder.created_at.desc()))).all()]
+                    for item, need in (await db.execute(group_query.order_by(ParticipantOrder.created_at.desc()))).all()]
     return {"company_id": company_id, "role": role, "period_basis": "order_created_at_utc", "orders_count": len(rows),
             "offers_count": len(offers), "rejected_offers_count": sum(o.status == "rejected" for o in offers),
             "payments_rub": None, "totals": aggregate, "orders": rows,

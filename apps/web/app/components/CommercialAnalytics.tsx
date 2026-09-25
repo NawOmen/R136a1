@@ -16,13 +16,19 @@ function csvCell(value: unknown): string {
 }
 
 function downloadReport(report: CommercialReport) {
-  const header = ["Заказ", "Категория", "Создан (UTC)", "Статус", "Заказано", "Принято", "Возвращено", "Отменено", "Ожидается", "Цена за единицу, ₽", "Сумма заказа, ₽", "Товары после возвратов, ₽"];
+  const header = ["Тип заказа", "Заказ", "Категория", "Единица измерения", "Создан (UTC)", "Статус", "Заказано", "Принято", "Возвращено", "Отменено", "Ожидается", "Цена за единицу, ₽", "Сумма заказа, ₽", "Товары после возвратов, ₽"];
   if (report.role === "seller") header.push("Себестоимость принятых товаров, ₽", "Валовая прибыль, ₽", "Прочие затраты, ₽", "Результат после затрат, ₽");
   const rows: unknown[][] = report.orders.map(row => {
-    const values: unknown[] = [row.deal_id, row.category, row.created_at, statuses[row.status] ?? row.status, row.ordered_units, row.accepted_units, row.returned_units, row.cancelled_units, row.open_units, row.unit_price_rub, row.ordered_value_rub, row.net_goods_revenue_rub];
+    const values: unknown[] = ["Прямой", row.deal_id, row.category, row.unit, row.created_at, statuses[row.status] ?? row.status, row.ordered_units, row.accepted_units, row.returned_units, row.cancelled_units, row.open_units, row.unit_price_rub, row.ordered_value_rub, row.net_goods_revenue_rub];
     if (report.role === "seller") values.push(row.cost_of_goods_rub, row.gross_profit_rub, row.attributable_expenses_rub, row.contribution_rub);
     return values;
   });
+  for (const row of report.group_orders) {
+    const values: unknown[] = ["Групповой", row.order_id, row.category, row.unit, row.created_at, statuses[row.status] ?? row.status, row.units,
+      null, null, null, null, null, row.contract_value_rub, null];
+    if (report.role === "seller") values.push(null, null, null, null);
+    rows.push(values);
+  }
   const blob = new Blob(["\ufeff", [header, ...rows].map(row => row.map(csvCell).join(";")).join("\r\n")], { type: "text/csv;charset=utf-8" });
   const url = URL.createObjectURL(blob);
   const link = document.createElement("a"); link.href = url; link.download = "porukam-orders.csv"; link.click();
@@ -70,12 +76,12 @@ export default function CommercialAnalytics({ role }: { role: "buyer" | "seller"
         </div>
         <p className="hint">{visible.explanation}</p>
         <p className="hint">«Нет данных» означает, что сумма неизвестна. Количество указано в единицах конкретного заказа; объёмы разных товаров не складываются. Платёжные поступления и чистая прибыль не рассчитываются.</p>
-        <section className="card"><div className="company-row"><h2>Подробности заказов</h2><button className="btn btn-secondary" type="button" disabled={!visible.orders.length} onClick={() => downloadReport(visible)}>Скачать CSV</button></div>
-          {!visible.orders.length ? <p>В выбранном периоде заказов нет. Измените фильтры или оформите первый заказ.</p> : <div style={{ overflowX: "auto" }} tabIndex={0} aria-label="Таблица заказов, можно прокручивать по горизонтали"><table><thead><tr><th>Заказ / категория</th><th>Цена за единицу</th><th>Заказано</th><th>Принято</th><th>Возвращено</th><th>Отменено</th><th>Ожидается</th><th>Товары после возвратов</th>{role === "seller" && <><th>Валовая прибыль</th><th>После затрат</th></>}</tr></thead><tbody>{visible.orders.map(row => <tr key={row.deal_id}><td><Link href={`/deals?deal=${row.deal_id}`}>{row.deal_id.slice(0, 8)}</Link><br />{row.category}<br /><small>{statuses[row.status] ?? row.status}</small></td><td>{amount(row.unit_price_rub)}</td><td>{row.ordered_units}</td><td>{row.accepted_units}</td><td>{row.returned_units}</td><td>{row.cancelled_units}</td><td>{row.open_units}</td><td>{amount(row.net_goods_revenue_rub)}</td>{role === "seller" && <><td>{amount(row.gross_profit_rub)}</td><td>{amount(row.contribution_rub)}</td></>}</tr>)}</tbody></table></div>}
+        <section className="card"><div className="company-row"><h2>Подробности заказов</h2><button className="btn btn-secondary" type="button" disabled={!visible.orders.length && !visible.group_orders.length} onClick={() => downloadReport(visible)}>Скачать CSV</button></div>
+          {!visible.orders.length ? <p>В выбранном периоде заказов нет. Измените фильтры или оформите первый заказ.</p> : <div style={{ overflowX: "auto" }} tabIndex={0} aria-label="Таблица заказов, можно прокручивать по горизонтали"><table><thead><tr><th>Заказ / категория</th><th>Цена за единицу</th><th>Заказано</th><th>Принято</th><th>Возвращено</th><th>Отменено</th><th>Ожидается</th><th>Товары после возвратов</th>{role === "seller" && <><th>Валовая прибыль</th><th>После затрат</th></>}</tr></thead><tbody>{visible.orders.map(row => <tr key={row.deal_id}><td><Link href={`/deals?deal=${row.deal_id}`}>{row.deal_id.slice(0, 8)}</Link><br />{row.category} · {row.unit}<br /><small>{statuses[row.status] ?? row.status}</small></td><td>{amount(row.unit_price_rub)}</td><td>{row.ordered_units}</td><td>{row.accepted_units}</td><td>{row.returned_units}</td><td>{row.cancelled_units}</td><td>{row.open_units}</td><td>{amount(row.net_goods_revenue_rub)}</td>{role === "seller" && <><td>{amount(row.gross_profit_rub)}</td><td>{amount(row.contribution_rub)}</td></>}</tr>)}</tbody></table></div>}
         </section>
         <section className="card"><h2>Групповые обязательства: {visible.group_orders_count}</h2>
           <p className="hint">Суммы согласованных условий показаны отдельно от продаж и закупок с подтверждённой приёмкой. Исполнение и платежи по ним здесь не подтверждены.</p>
-          {!visible.group_orders.length ? <p>В выбранном периоде групповых обязательств нет.</p> : <ul className="company-list">{visible.group_orders.map(row => <li className="company-item" key={row.order_id}><strong>{row.category} · {row.units} ед. · {amount(row.contract_value_rub)}</strong><span className="company-meta">{new Date(row.created_at).toLocaleDateString("ru-RU")} · {row.status} · группа {row.coalition_id.slice(0, 8)}</span></li>)}</ul>}
+          {!visible.group_orders.length ? <p>В выбранном периоде групповых обязательств нет.</p> : <ul className="company-list">{visible.group_orders.map(row => <li className="company-item" key={row.order_id}><strong>{row.category} · {row.units} {row.unit} · {amount(row.contract_value_rub)}</strong><span className="company-meta">{new Date(row.created_at).toLocaleDateString("ru-RU")} · {statuses[row.status] ?? row.status} · группа {row.coalition_id.slice(0, 8)}</span></li>)}</ul>}
         </section>
       </>}
     </>}

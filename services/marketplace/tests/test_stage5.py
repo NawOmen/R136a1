@@ -221,6 +221,7 @@ async def test_5000_and_45000_create_explainable_coalition_and_private_orders(
     assert buyer_report.json()["group_orders_count"] == 1
     assert buyer_report.json()["orders_count"] == 0
     assert buyer_report.json()["group_orders"][0]["units"] == 5_000
+    assert buyer_report.json()["group_orders"][0]["unit"] == "шт"
     assert buyer_report.json()["group_orders"][0]["payments_rub"] is None
 
     own_view = await client.get("/api/v1/coalitions/mine", headers=auth(token_one))

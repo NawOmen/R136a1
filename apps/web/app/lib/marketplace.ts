@@ -883,14 +883,14 @@ export interface DealExecution extends ExecutionTotals {
   cost_revision?: number; unit_cost_rub?: number | null; cost_note?: string;
 }
 export interface CommercialOrder extends ExecutionTotals, CommercialValues {
-  deal_id: string; category: string; created_at: string; status: string;
+  deal_id: string; category: string; unit: string; created_at: string; status: string;
 }
 export interface CommercialReport {
   company_id: string; role: "buyer" | "seller"; period_basis: string;
   orders_count: number; offers_count: number; rejected_offers_count: number;
   payments_rub: null; totals: Record<string, number | null>; orders: CommercialOrder[]; explanation: string;
   group_orders_count: number;
-  group_orders: { order_id: string; coalition_id: string; category: string; created_at: string; status: string; units: number; contract_value_rub: number; payments_rub: null }[];
+  group_orders: { order_id: string; coalition_id: string; category: string; unit: string; created_at: string; status: string; units: number; contract_value_rub: number; payments_rub: null }[];
 }
 
 export const marketplace = {
