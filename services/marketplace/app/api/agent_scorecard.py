@@ -46,14 +46,12 @@ async def _llm_metrics(db: AsyncSession, since: datetime, company_id: uuid.UUID 
     available = await db.scalar(text("SELECT to_regclass('agents.agent_runs') IS NOT NULL"))
     if not available:
         return {"available": False}
-    if company_id is not None:
-        scoped = await db.scalar(text(
-            "SELECT EXISTS (SELECT 1 FROM information_schema.columns "
-            "WHERE table_schema='agents' AND table_name='agent_runs' AND column_name='company_id')"
-        ))
-        if not scoped:
-            return {"available": False}
-    condition = " AND company_id = :company_id" if company_id is not None else ""
+    scoped = await db.scalar(text(
+        "SELECT EXISTS (SELECT 1 FROM information_schema.columns "
+        "WHERE table_schema='agents' AND table_name='agent_runs' AND column_name='company_id')"
+    ))
+    if not scoped:
+        return {"available": False}
     row = (await db.execute(text(
         "SELECT count(*) AS total, "
         "count(*) FILTER (WHERE error IS NOT NULL OR state = 'failed') AS failed, "
@@ -66,8 +64,9 @@ async def _llm_metrics(db: AsyncSession, since: datetime, company_id: uuid.UUID 
         "count(estimated_cost_rub) AS costed, "
         "coalesce(avg(duration_ms), 0) AS avg_duration, "
         "coalesce(sum(estimated_cost_rub), 0) AS cost "
-        "FROM agents.agent_runs WHERE created_at >= :since" + condition
-    ), {"since": since, **({"company_id": company_id} if company_id is not None else {})})).mappings().one()
+        "FROM agents.agent_runs WHERE created_at >= :since "
+        "AND (CAST(:company_id AS uuid) IS NULL OR company_id = CAST(:company_id AS uuid))"
+    ), {"since": since, "company_id": company_id})).mappings().one()
     return {"available": True, **dict(row)}
 
 
