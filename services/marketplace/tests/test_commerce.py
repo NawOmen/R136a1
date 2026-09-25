@@ -115,6 +115,34 @@ async def test_product_patch_preserves_stock(client, order, db_session):
 
 
 @pytest.mark.asyncio
+async def test_stock_offer_requires_matching_product_on_send_and_selection(client, order, db_session):
+    _, buyer, seller, buyer_headers, seller_headers = order
+    need = Need(company_id=buyer, category="Мебель", characteristics={"material": "дерево", "unit": "шт"},
+                volume_units=2, deadline_date=date.today() + timedelta(days=20),
+                visibility="open_anonymized", status="open_for_offers")
+    product = Product(company_id=seller, name="Стол синтетический", category="Строительство",
+                      characteristics={"material": "дерево", "unit": "шт"}, price_rub=1000,
+                      price_tiers=[], moq_units=1, lead_time_days=1, stock_units=5)
+    db_session.add_all([need, product]); await db_session.commit()
+    payload = {"company_id": str(seller), "product_id": str(product.id), "resource_kind": "stock",
+               "price_rub": 1000, "available_units": 2, "lead_time_days": 1,
+               "delivery_cost_rub": 0, "moq_units": 1}
+    endpoint = f"/api/v1/needs/{need.id}/offers"
+    mismatch = await client.post(endpoint, headers=seller_headers, json=payload)
+    assert mismatch.status_code == 409
+    product.category = "Мебель"
+    await db_session.commit()
+    sent = await client.post(endpoint, headers=seller_headers, json=payload)
+    assert sent.status_code == 201, sent.text
+    product.characteristics = {"material": "металл", "unit": "шт"}
+    await db_session.commit()
+    selected = await client.post(f"/api/v1/offers/{sent.json()['id']}/select", headers=buyer_headers,
+                                 json={"expected_revision": 1, "human_approved": True})
+    assert selected.status_code == 409
+    assert (await db_session.scalars(select(Deal).where(Deal.offer_id == uuid.UUID(sent.json()["id"])))).first() is None
+
+
+@pytest.mark.asyncio
 async def test_need_retry_and_file_retry_do_not_duplicate(client, order, db_session):
     _, buyer, _, bh, _ = order
     payload = {"request_key": str(uuid.uuid4()), "company_id": str(buyer), "category": "Мебель", "characteristics": {"material":"дерево"}, "volume_units":2,

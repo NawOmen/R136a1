@@ -21,7 +21,7 @@ from ..deps import (
 )
 from ..models import CapacityEntry, CapabilityPassport, Deal, Need, Offer, OfferDraft, Product
 from ..matching import ACTIVE_NEED_STATUSES, offer_unit_price, order_unit, run_market_rematch
-from ..offer_draft import available_capacity_units, build_offer_draft, changed_fields
+from ..offer_draft import _matches_need, available_capacity_units, build_offer_draft, changed_fields
 from ..schemas import DealOut, OfferDraftIn, OfferDraftOut, OfferIn, OfferOut, OfferPatch, OfferSelectIn
 from ..resources import reserve, reservations, free_stock, occupies
 from ..trust import append_audit_event, record_human_approval
@@ -206,6 +206,9 @@ async def create_offer(
         product = await db.get(Product, product_id)
         if not product or product.company_id != data.company_id:
             raise HTTPException(422, "Товар не принадлежит компании продавца")
+        compatible, reason = _matches_need(product, need)
+        if not compatible:
+            raise HTTPException(409, f"Товар не соответствует потребности: {reason}")
     offer = Offer(
         resource_kind=resource_kind,
         product_id=product_id,
@@ -271,7 +274,7 @@ async def update_offer(
         raise HTTPException(status.HTTP_404_NOT_FOUND, detail="Предложение не найдено")
     await require_company_seller(offer.company_id, user, db)
     await require_company_admin(offer.company_id, user, db)
-    await db.scalar(select(Need).where(Need.id == offer.need_id).with_for_update())
+    need = await db.scalar(select(Need).where(Need.id == offer.need_id).with_for_update())
     await db.refresh(offer, with_for_update=True)
     if offer.revision != data.expected_revision:
         raise HTTPException(409, "Предложение изменилось. Обновите условия перед подтверждением")
@@ -287,6 +290,15 @@ async def update_offer(
         raise HTTPException(422, "; ".join(error["msg"] for error in exc.errors())) from exc
     for field, value in patch.items():
         setattr(offer, field, value)
+    if offer.resource_kind == "stock" and not offer.product_id:
+        raise HTTPException(422, "Для складского предложения укажите товар")
+    if offer.product_id:
+        product = await db.get(Product, offer.product_id)
+        if not product or product.company_id != offer.company_id:
+            raise HTTPException(422, "Товар не принадлежит компании продавца")
+        compatible, reason = _matches_need(product, need)
+        if not compatible:
+            raise HTTPException(409, f"Товар не соответствует потребности: {reason}")
     offer.revision += 1
     if offer.moq_units > offer.available_units:
         raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, detail="MOQ превышает доступный объём")
@@ -349,6 +361,13 @@ async def select_offer(
             status.HTTP_409_CONFLICT,
             detail="Объём потребности не достигает MOQ предложения",
         )
+    if offer.product_id:
+        product = await db.get(Product, offer.product_id)
+        if not product or product.company_id != offer.company_id:
+            raise HTTPException(409, "Товар предложения больше не доступен продавцу")
+        compatible, reason = _matches_need(product, need)
+        if not compatible:
+            raise HTTPException(409, f"Товар предложения изменился: {reason}. Запросите новое КП")
     if offer.valid_until is not None and offer.valid_until < date.today():
         raise HTTPException(status.HTTP_409_CONFLICT, detail="Срок действия предложения истёк")
     if offer.lead_time_days > max(0, (need.deadline_date - date.today()).days):
