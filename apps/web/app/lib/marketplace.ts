@@ -25,7 +25,7 @@ export type NeedStatus =
   | "cancelled"
   | "expired";
 export type OfferStatus = "sent" | "selected" | "rejected";
-export type DealStatus = "created";
+export type DealStatus = "created" | "in_production" | "shipped" | "delivered" | "partially_accepted" | "fulfilled" | "cancelled" | "returned";
 
 export interface DeliveryAddress {
   id: string;
@@ -63,7 +63,7 @@ export interface Product {
 
 export interface ProductImage { id: string; file_name: string; content_type: string; position: number }
 export interface ProductPriceTier { min_units: number; unit_price_rub: number }
-export interface SellerAnalytics { company_id: string; products_total: number; products_published: number; deals_total: number; sold_units: number; revenue_rub: number; available_capacity_units: number; capacity_utilization_pct: number }
+export interface SellerAnalytics { company_id: string; products_total: number; products_published: number; deals_total: number; sold_units: number; revenue_rub: number | null; available_capacity_units: number; capacity_utilization_pct: number | null }
 export interface DealMessage { id: string; deal_id: string; author_user_id: string; author_company_id: string; message: string; created_at: string }
 export interface PublicProducer { company_id: string; display_name: string; legal_form: string; region: string | null; about: string | null; production_site_address: string | null; has_photo: boolean; rating: number | null; reviews_count: number; capability_details?: CapabilityDetails | null }
 export interface PublicProductDetail extends Product { producer: PublicProducer }
@@ -75,6 +75,8 @@ export interface MarketWatch { id: string; category: string; demand_changes: boo
 export interface BuyerSavings { company_id: string; confirmed_savings_rub: number; calculated_variants_rub: number; coalitions_count: number; explanation: string }
 
 export interface CapacityEntry {
+  reserved_units?: number;
+  free_units?: number;
   /** Дата в формате YYYY-MM-DD. */
   date: string;
   available_units: number;
@@ -220,6 +222,7 @@ export interface NeedFile {
 }
 
 export interface Need {
+  revision: number;
   id: string;
   company_id: string;
   created_by_user_id: string | null;
@@ -249,6 +252,7 @@ export interface NeedFeedItem {
 }
 
 export interface Offer {
+  revision: number;
   id: string;
   need_id: string;
   company_id: string;
@@ -274,7 +278,7 @@ export interface OptimizationVariant {
     total_units: number;
     total_cost_rub: number;
     max_lead_time_days: number;
-    reliability_score: number;
+    reliability_score: number | null;
     reasons: string[];
     allocations: {
       company_id: string;
@@ -489,6 +493,7 @@ export interface UpdateProductionProfileInput {
 }
 
 export interface CreateProductInput {
+  stock_units?: number | null;
   name: string;
   category: string;
   subcategory?: string | null;
@@ -502,6 +507,7 @@ export interface CreateProductInput {
 export type UpdateProductInput = Partial<CreateProductInput>;
 
 export interface CreateNeedInput {
+  request_key?: string;
   company_id: string;
   category: string;
   characteristics: Record<string, unknown>;
@@ -514,6 +520,8 @@ export interface CreateNeedInput {
 }
 
 export interface CreateOfferInput {
+  resource_kind?: "stock" | "capacity";
+  product_id?: string;
   company_id: string;
   price_rub: number;
   available_units: number;
@@ -542,6 +550,9 @@ export interface OfferDraft {
   company_id: string;
   status: "draft" | "used" | "discarded";
   payload: {
+    product_id: string | null;
+    resource_kind: "stock" | "capacity";
+    source_updated_at: string | null;
     price_rub: number | null;
     available_units: number | null;
     moq_units: number | null;
@@ -579,6 +590,10 @@ export interface AgentScorecard {
   agent_runs_failed: number;
   agent_runs_local_route: number;
   agent_runs_external_route: number;
+  agent_runs_mixed_route: number;
+  agent_runs_rules_route: number;
+  agent_runs_unknown_route: number;
+  agent_costed_runs: number;
   agent_average_duration_ms: number;
   agent_estimated_cost_rub: number;
   llm_metrics_available: boolean;
@@ -621,7 +636,8 @@ export const OFFER_STATUS_LABELS: Record<OfferStatus, string> = {
 };
 
 export const DEAL_STATUS_LABELS: Record<DealStatus, string> = {
-  created: "Создана",
+  created: "Создана", in_production: "В производстве", shipped: "Отгружена", delivered: "Доставлена",
+  partially_accepted: "Частично принята", fulfilled: "Исполнена", cancelled: "Отменена", returned: "Возвращена",
 };
 
 export const NEED_VISIBILITY_LABELS: Record<NeedVisibility, string> = {
@@ -631,7 +647,7 @@ export const NEED_VISIBILITY_LABELS: Record<NeedVisibility, string> = {
 };
 
 export const PRODUCT_CATEGORY_TREE: Record<string, string[]> = {
-  "Упаковка и тара": ["Бумажные стаканы", "Пищевая упаковка", "Пакеты", "Коробки", "Бутылки и канистры"],
+  "Упаковка и тара": ["Бумажные стаканы", "Пищевая упаковка", "Пакеты", "Коробки", "Бутылки и канистры", "Плёнка"],
   "Сырьё и материалы": ["Бумага и картон", "Полимеры", "Металлы", "Текстиль", "Химическое сырьё"],
   "Оборудование": ["Производственное", "Торговое", "Складское", "Пищевое", "Запасные части"],
   "Строительство": ["Отделочные материалы", "Крепёж", "Инженерные системы", "Инструмент"],
@@ -684,8 +700,13 @@ export function formatRub(value: number | null | undefined): string {
   return new Intl.NumberFormat("ru-RU", { maximumFractionDigits: 2 }).format(value) + " ₽";
 }
 
-export function formatUnits(value: number): string {
-  return new Intl.NumberFormat("ru-RU", { maximumFractionDigits: 0 }).format(value) + " шт.";
+export function itemUnit(characteristics?: Record<string, unknown>): string {
+  const value = characteristics?.unit ?? characteristics?.["единица измерения"];
+  return typeof value === "string" && value.trim() ? value.trim() : "шт.";
+}
+
+export function formatUnits(value: number, unit = "шт."): string {
+  return new Intl.NumberFormat("ru-RU", { maximumFractionDigits: 0 }).format(value) + " " + unit;
 }
 
 // ---------- Разбор ошибок валидации FastAPI (422) ----------
@@ -824,7 +845,52 @@ function unwrapList<T>(body: unknown, keys: string[]): T[] {
 
 // ---------- Эндпоинты ----------
 
+export type ExecutionKind = "acceptance" | "return" | "cancellation";
+export interface ExecutionEvent {
+  id: string; actor_company_id: string; kind: ExecutionKind; units: number; note: string;
+  status: "pending" | "confirmed" | "rejected"; created_at: string; decided_at: string | null;
+}
+export interface ExecutionTotals {
+  ordered_units: number; accepted_units: number; returned_units: number;
+  cancelled_units: number; net_units: number; open_units: number;
+}
+export interface CommercialValues {
+  unit_price_rub: number | null; ordered_value_rub: number; delivery_price_rub: number | null;
+  net_goods_revenue_rub: number | null; payments_rub: number | null;
+  cost_of_goods_rub?: number | null; gross_profit_rub?: number | null;
+  attributable_expenses_rub?: number | null; contribution_rub?: number | null;
+}
+export interface DealExecution extends ExecutionTotals {
+  deal_id: string; status: string; events: ExecutionEvent[]; financials: CommercialValues;
+  cost_revision?: number; unit_cost_rub?: number | null; cost_note?: string;
+}
+export interface CommercialOrder extends ExecutionTotals, CommercialValues {
+  deal_id: string; category: string; created_at: string; status: string;
+}
+export interface CommercialReport {
+  company_id: string; role: "buyer" | "seller"; period_basis: string;
+  orders_count: number; offers_count: number; rejected_offers_count: number;
+  payments_rub: null; totals: Record<string, number | null>; orders: CommercialOrder[]; explanation: string;
+}
+
 export const marketplace = {
+  getExecution(token: string, dealId: string, companyId: string): Promise<DealExecution> {
+    return marketplaceFetch(`/api/v1/deals/${dealId}/execution?company_id=${companyId}`, { token });
+  },
+  recordExecution(token: string, dealId: string, data: { company_id: string; kind: ExecutionKind; units: number; note: string; idempotency_key: string }): Promise<ExecutionEvent> {
+    return marketplaceFetch(`/api/v1/deals/${dealId}/execution`, { token, method: "POST", body: JSON.stringify({ ...data, human_approved: true }) });
+  },
+  decideExecution(token: string, dealId: string, eventId: string, companyId: string, approved: boolean): Promise<ExecutionEvent> {
+    return marketplaceFetch(`/api/v1/deals/${dealId}/execution/${eventId}/decision`, { token, method: "POST", body: JSON.stringify({ company_id: companyId, approved, human_approved: true }) });
+  },
+  saveDealCosts(token: string, dealId: string, data: { company_id: string; expected_revision: number; unit_cost_rub: string | null; attributable_expenses_rub: string | null; note: string }): Promise<{ revision: number }> {
+    return marketplaceFetch(`/api/v1/deals/${dealId}/costs`, { token, method: "PUT", body: JSON.stringify({ ...data, human_approved: true }) });
+  },
+  getCommercialReport(token: string, companyId: string, role: "buyer" | "seller", filters: { start?: string; end?: string; category?: string } = {}): Promise<CommercialReport> {
+    const params = new URLSearchParams({ role });
+    Object.entries(filters).forEach(([key, value]) => { if (value) params.set(key, value); });
+    return marketplaceFetch(`/api/v1/companies/${companyId}/commercial-analytics?${params}`, { token });
+  },
   // Публичный каталог (без Bearer)
   getCatalog(): Promise<Product[]> {
     return marketplaceFetch("/api/v1/products", {}).then((body) => unwrapList<Product>(body, ["products", "items"]));
@@ -847,8 +913,14 @@ export const marketplace = {
     return marketplaceFetch(`/api/v1/companies/${companyId}/production-photo`, { method: "POST", token, body });
   },
 
-  getPriceIndex(category: string): Promise<PriceIndexPoint[]> {
-    return marketplaceFetch(`/api/v1/price-index/${encodeURIComponent(category)}`);
+  getPriceIndex(category: string, productId: string): Promise<PriceIndexPoint[]> {
+    return marketplaceFetch(`/api/v1/price-index/${encodeURIComponent(category)}?product_id=${encodeURIComponent(productId)}`);
+  },
+
+  importCatalog(token: string, companyId: string, file: File, confirmation?: { hash: string; requestKey: string }): Promise<{ content_hash: string; rows: { line: number; product: CreateProductInput }[]; errors: { line: number; message: string }[]; created_ids: string[] }> {
+    const body = new FormData(); body.set("file", file);
+    if (confirmation) { body.set("commit", "true"); body.set("human_approved", "true"); body.set("expected_hash", confirmation.hash); body.set("request_key", confirmation.requestKey); }
+    return marketplaceFetch(`/api/v1/companies/${companyId}/catalog-import`, { method: "POST", token, body });
   },
 
   // Адреса доставки
@@ -1122,6 +1194,10 @@ export const marketplace = {
     return marketplaceFetch("/api/v1/needs", { method: "POST", token, body: JSON.stringify(input) });
   },
 
+  editNeed(token: string, needId: string, input: Omit<CreateNeedInput, "budget_rub" | "delivery_address_id"> & { budget_rub: number | null; delivery_address_id: string | null; expected_revision: number }): Promise<Need> {
+    return marketplaceFetch(`/api/v1/needs/${needId}`, { method: "PUT", token, body: JSON.stringify(input) });
+  },
+
   publishNeed(token: string, needId: string): Promise<Need> {
     return marketplaceFetch(`/api/v1/needs/${needId}/publish`, { method: "POST", token });
   },
@@ -1211,9 +1287,9 @@ export const marketplace = {
     );
   },
 
-  confirmResiliencePlan(token: string, planId: string): Promise<ResiliencePlan> {
+  confirmResiliencePlan(token: string, planId: string, expectedRevision: number): Promise<ResiliencePlan> {
     return marketplaceFetch(`/api/v1/resilience-plans/${planId}/confirm`, {
-      method: "POST", token, body: JSON.stringify({ approved: true }),
+      method: "POST", token, body: JSON.stringify({ approved: true, expected_revision: expectedRevision }),
     });
   },
 
@@ -1298,8 +1374,8 @@ export const marketplace = {
   },
 
   // Сделка (покупатель выбирает предложение)
-  selectOffer(token: string, offerId: string): Promise<Deal> {
-    return marketplaceFetch(`/api/v1/offers/${offerId}/select`, { method: "POST", token });
+  selectOffer(token: string, offerId: string, revision: number): Promise<Deal> {
+    return marketplaceFetch(`/api/v1/offers/${offerId}/select`, { method: "POST", token, body: JSON.stringify({ expected_revision: revision, human_approved: true }) });
   },
 
   // Уведомления

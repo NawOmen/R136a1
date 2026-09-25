@@ -1,3 +1,4 @@
+from conftest import grant_capacity
 from datetime import date, timedelta
 
 from sqlalchemy import select
@@ -147,6 +148,7 @@ async def test_5000_and_45000_create_explainable_coalition_and_private_orders(
 
     monkeypatch.setattr("app.api.market.evaluate_coalition", fake_evaluate)
     production_start = date.today() + timedelta(days=10)
+    await grant_capacity(db_session, seller_company, 60_000, production_start)
     published = await client.post(
         f"/api/v1/group-offers/{draft.json()['id']}/publish",
         json={
@@ -309,3 +311,12 @@ async def test_rejection_returns_every_need_to_matching_without_orders(client, d
     await db_session.refresh(first_need)
     await db_session.refresh(second_need)
     assert first_need.status == second_need.status == "waiting_for_match"
+
+
+def test_unknown_specifications_are_not_silently_individual_operations():
+    from types import SimpleNamespace
+    from app.matching import _need_parts
+    need = SimpleNamespace(characteristics={"thread": "M8", "strength_class": "8.8", "color": "чёрный", "logo": "А"})
+    common, hard, flexible, individual = _need_parts(need)
+    assert common == {"thread": "M8", "strength_class": "8.8", "color": "чёрный"}
+    assert individual == {"logo": "А"}

@@ -61,11 +61,13 @@ class ProductImageOut(BaseModel):
 
 
 class ProductPriceTier(BaseModel):
+    model_config = ConfigDict(allow_inf_nan=False)
     min_units: int = Field(gt=0)
     unit_price_rub: float = Field(gt=0)
 
 
 class ProductRules(BaseModel):
+    model_config = ConfigDict(allow_inf_nan=False)
     @field_validator("characteristics", check_fields=False)
     @classmethod
     def validate_characteristics(cls, value: dict[str, Any] | None):
@@ -192,6 +194,10 @@ class AgentScorecardOut(BaseModel):
     agent_runs_failed: int
     agent_runs_local_route: int
     agent_runs_external_route: int
+    agent_runs_mixed_route: int = 0
+    agent_runs_rules_route: int = 0
+    agent_runs_unknown_route: int = 0
+    agent_costed_runs: int = 0
     agent_average_duration_ms: float
     agent_estimated_cost_rub: float
     llm_metrics_available: bool
@@ -226,9 +232,9 @@ class SellerAnalyticsOut(BaseModel):
     products_published: int
     deals_total: int
     sold_units: int
-    revenue_rub: float
+    revenue_rub: float | None
     available_capacity_units: int
-    capacity_utilization_pct: float
+    capacity_utilization_pct: float | None
 
 
 # ---------- Мощности ----------
@@ -238,8 +244,19 @@ class CapacityEntryIn(BaseModel):
     available_units: int = Field(ge=0)
 
 
+class CapacityEntryOut(CapacityEntryIn):
+    reserved_units: int
+    free_units: int
+
+
 class CapacityPutIn(BaseModel):
-    entries: list[CapacityEntryIn]
+    entries: list[CapacityEntryIn] = Field(max_length=366)
+
+    @model_validator(mode="after")
+    def distinct_dates(self):
+        if len({entry.date for entry in self.entries}) != len(self.entries):
+            raise ValueError("Дата мощности не должна повторяться")
+        return self
 
 
 # ---------- Документы ----------
@@ -431,6 +448,7 @@ class NeedFileOut(BaseModel):
 
 
 class NeedOut(BaseModel):
+    revision: int = 1
     model_config = ConfigDict(from_attributes=True)
 
     id: uuid.UUID
@@ -466,6 +484,8 @@ class NeedFeedOut(BaseModel):
 
 
 class NeedIn(BaseModel):
+    model_config = ConfigDict(allow_inf_nan=False)
+    request_key: uuid.UUID | None = None
     company_id: uuid.UUID
     category: str = Field(min_length=2, max_length=120)
     characteristics: dict[str, Any] = Field(default_factory=dict)
@@ -477,9 +497,16 @@ class NeedIn(BaseModel):
     valid_until: date | None = None
 
 
+class NeedEditIn(NeedIn):
+    expected_revision: int = Field(gt=0)
+
+
 # ---------- Предложения ----------
 
 class OfferOut(BaseModel):
+    resource_kind: str = "capacity"
+    product_id: uuid.UUID | None = None
+    revision: int = 1
     model_config = ConfigDict(from_attributes=True)
 
     id: uuid.UUID
@@ -497,11 +524,15 @@ class OfferOut(BaseModel):
 
 
 class OfferPriceTierIn(BaseModel):
+    model_config = ConfigDict(allow_inf_nan=False)
     min_units: int = Field(gt=0)
     unit_price_rub: float = Field(gt=0)
 
 
-class OfferIn(BaseModel):
+class OfferIn(ProductRules):
+    resource_kind: Literal["stock", "capacity"] = "capacity"
+    product_id: uuid.UUID | None = None
+    model_config = ConfigDict(allow_inf_nan=False)
     company_id: uuid.UUID
     price_rub: float = Field(gt=0)
     available_units: int = Field(gt=0)
@@ -519,7 +550,9 @@ class OfferDraftIn(BaseModel):
     company_id: uuid.UUID
 
 
-class OfferPatch(BaseModel):
+class OfferPatch(ProductRules):
+    model_config = ConfigDict(allow_inf_nan=False)
+    expected_revision: int = Field(gt=0)
     price_rub: float | None = Field(default=None, gt=0)
     available_units: int | None = Field(default=None, gt=0)
     lead_time_days: int | None = Field(default=None, gt=0)
@@ -643,6 +676,7 @@ class ResiliencePlanCreateIn(BaseModel):
 
 class ResiliencePlanConfirmIn(BaseModel):
     approved: Literal[True]
+    expected_revision: int | None = Field(default=None, gt=0)
 
 
 class ReserveDecisionIn(BaseModel):
@@ -962,3 +996,8 @@ class BuyerSavingsOut(BaseModel):
     calculated_variants_rub: float
     coalitions_count: int
     explanation: str
+
+
+class OfferSelectIn(BaseModel):
+    expected_revision: int = Field(gt=0)
+    human_approved: Literal[True]

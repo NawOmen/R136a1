@@ -1,7 +1,8 @@
 import uuid
 from datetime import date, datetime, timezone
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Body, Depends, HTTPException, status
+from pydantic import ValidationError
 from sqlalchemy import select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -21,7 +22,8 @@ from ..deps import (
 from ..models import CapacityEntry, CapabilityPassport, Deal, Need, Offer, OfferDraft, Product
 from ..matching import ACTIVE_NEED_STATUSES, offer_unit_price, run_market_rematch
 from ..offer_draft import available_capacity_units, build_offer_draft, changed_fields
-from ..schemas import DealOut, OfferDraftIn, OfferDraftOut, OfferIn, OfferOut, OfferPatch
+from ..schemas import DealOut, OfferDraftIn, OfferDraftOut, OfferIn, OfferOut, OfferPatch, OfferSelectIn
+from ..resources import reserve, reservations, free_stock, occupies
 from ..trust import append_audit_event, record_human_approval
 
 router = APIRouter(tags=["offers"])
@@ -82,6 +84,8 @@ async def prepare_offer_draft(
             detail="Нельзя готовить предложение на потребность своей компании",
         )
 
+    if need.status not in ACTIVE_NEED_STATUSES or need.visibility != "open_anonymized":
+        raise HTTPException(404, "Потребность недоступна")
     products = list(
         (await db.execute(select(Product).where(Product.company_id == data.company_id))).scalars().all()
     )
@@ -91,11 +95,15 @@ async def prepare_offer_draft(
         .scalars()
         .all()
     )
+    held = await reservations(db, data.company_id)
+    free_capacity = sum(max(0, row.available_units - sum(r.units for r in held if r.capacity_entry_id == row.id and occupies(r))) for row in capacity if date.today() <= row.date <= need.deadline_date)
+    stocks = {product.id: await free_stock(db, product, held) for product in products}
     result = await build_offer_draft(
         need=need,
         products=products,
         passport=passport,
-        capacity_units=available_capacity_units(capacity, need),
+        capacity_units=free_capacity,
+        stock_by_product=stocks,
     )
 
     draft = OfferDraft(
@@ -177,8 +185,28 @@ async def create_offer(
             raise HTTPException(status.HTTP_404_NOT_FOUND, detail="Черновик предложения не найден")
         if draft.status != "draft":
             raise HTTPException(status.HTTP_409_CONFLICT, detail="Черновик уже использован")
+        if draft.payload.get("need_revision", 1) != need.revision:
+            raise HTTPException(409, "Спецификация изменилась. Подготовьте новый черновик")
+        source_id = draft.payload.get("product_id")
+        if source_id:
+            source = await db.get(Product, uuid.UUID(source_id))
+            if not source or source.updated_at.isoformat() != draft.payload.get("source_updated_at"):
+                raise HTTPException(409, "Товар или остаток изменился. Обновите черновик перед отправкой")
 
+    resource_kind = data.resource_kind
+    product_id = data.product_id
+    if draft is not None:
+        resource_kind = draft.payload.get("resource_kind", "capacity")
+        product_id = uuid.UUID(draft.payload["product_id"]) if draft.payload.get("product_id") else None
+    if resource_kind == "stock" and product_id is None:
+        raise HTTPException(422, "Для складского предложения укажите товар")
+    if product_id:
+        product = await db.get(Product, product_id)
+        if not product or product.company_id != data.company_id:
+            raise HTTPException(422, "Товар не принадлежит компании продавца")
     offer = Offer(
+        resource_kind=resource_kind,
+        product_id=product_id,
         need_id=need.id,
         company_id=data.company_id,
         created_by_user_id=user.id,
@@ -240,10 +268,24 @@ async def update_offer(
     if offer is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, detail="Предложение не найдено")
     await require_company_seller(offer.company_id, user, db)
+    await require_company_admin(offer.company_id, user, db)
+    await db.scalar(select(Need).where(Need.id == offer.need_id).with_for_update())
+    await db.refresh(offer, with_for_update=True)
+    if offer.revision != data.expected_revision:
+        raise HTTPException(409, "Предложение изменилось. Обновите условия перед подтверждением")
     if offer.status != "sent":
         raise HTTPException(status.HTTP_409_CONFLICT, detail="Можно изменить только действующее предложение")
-    for field, value in data.model_dump(exclude_unset=True).items():
+    patch = data.model_dump(exclude_unset=True, exclude={"expected_revision"})
+    if any(value is None for key, value in patch.items() if key != "valid_until"):
+        raise HTTPException(422, "Обязательное условие предложения не может быть пустым")
+    try:
+        merged = {key: getattr(offer, key) for key in ("company_id", "price_rub", "available_units", "lead_time_days", "delivery_cost_rub", "moq_units", "price_tiers", "valid_until", "resource_kind", "product_id")}
+        OfferIn.model_validate({**merged, **patch})
+    except ValidationError as exc:
+        raise HTTPException(422, "; ".join(error["msg"] for error in exc.errors())) from exc
+    for field, value in patch.items():
         setattr(offer, field, value)
+    offer.revision += 1
     if offer.moq_units > offer.available_units:
         raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, detail="MOQ превышает доступный объём")
     if offer.valid_until is not None and offer.valid_until < date.today():
@@ -260,6 +302,7 @@ async def update_offer(
 @router.post("/offers/{offer_id}/select", response_model=DealOut, status_code=status.HTTP_201_CREATED)
 async def select_offer(
     offer_id: uuid.UUID,
+    data: OfferSelectIn | None = Body(default=None),
     user: CurrentUser = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
@@ -276,6 +319,14 @@ async def select_offer(
     await require_company_buyer(need.company_id, user, db)
     await require_company_admin(need.company_id, user, db)
     await require_verified_company(need.company_id, user, db)
+    await db.refresh(offer, with_for_update=True)
+    if data is None:
+        raise HTTPException(428, "Обновите предложение и подтвердите показанную версию условий")
+    if data.expected_revision != offer.revision:
+        raise HTTPException(409, "Условия предложения изменились. Обновите их и подтвердите заново")
+    existing_deal = await db.scalar(select(Deal).where(Deal.offer_id == offer.id))
+    if existing_deal is not None:
+        return existing_deal
     if need.status not in ACTIVE_NEED_STATUSES:
         raise HTTPException(status.HTTP_409_CONFLICT, detail="Потребность уже не открыта для предложений")
     if offer.status != "sent":
@@ -332,6 +383,8 @@ async def select_offer(
         performed_by_user_id=user.id,
         units=need.volume_units,
         total_price_rub=total_price,
+        unit_price_rub=offer_unit_price(offer, need.volume_units),
+        delivery_price_rub=offer.delivery_cost_rub,
         status="created",
     )
     offer.status = "selected"
@@ -343,8 +396,13 @@ async def select_offer(
 
     db.add(deal)
     await db.flush()
+    await reserve(db, company_id=offer.company_id, anchor_type="deal", anchor_id=deal.id,
+                  units=need.volume_units, deadline=need.deadline_date,
+                  resource_kind=offer.resource_kind, product_id=offer.product_id)
     approval_payload = {
         "offer_id": str(offer.id),
+        "offer_revision": offer.revision,
+        "need_revision": need.revision,
         "need_id": str(need.id),
         "seller_company_id": str(offer.company_id),
         "units": need.volume_units,

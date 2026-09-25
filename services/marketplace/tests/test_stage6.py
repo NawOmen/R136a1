@@ -1,3 +1,4 @@
+from conftest import grant_capacity
 from datetime import date, timedelta
 from itertools import combinations
 from uuid import UUID
@@ -62,6 +63,7 @@ async def test_resilience_plan_privacy_confirmation_simulation_and_failure(
     reserve_user = await make_user(db_session)
     reserve = await make_company(db_session, reserve_user, can_buy=False, can_sell=True)
     reserve_token = make_token(reserve_user)
+    await grant_capacity(db_session, reserve, 5_000)
     # Резерв — обязательство: у компании резерва должны быть подтверждённые документы.
     await grant_packaging_documents(db_session, reserve, decision_user_id=reserve_user)
 
@@ -91,6 +93,11 @@ async def test_resilience_plan_privacy_confirmation_simulation_and_failure(
             status="sent",
         )
     )
+    await grant_capacity(db_session, primary, 5_000)
+    await grant_packaging_documents(db_session, primary, decision_user_id=primary_user)
+    db_session.add(Offer(need_id=need.id, company_id=primary, created_by_user_id=primary_user,
+        price_rub=10, available_units=5_000, lead_time_days=10, delivery_cost_rub=2_000,
+        moq_units=1_000, price_tiers=[], status="sent"))
     variant = OptimizationVariantRecord(
         need_id=need.id,
         kind="reliable",
@@ -147,7 +154,7 @@ async def test_resilience_plan_privacy_confirmation_simulation_and_failure(
 
     confirmed = await client.post(
         f"/api/v1/resilience-plans/{plan['id']}/confirm",
-        json={"approved": True}, headers=auth(buyer_token),
+        json={"approved": True, "expected_revision": plan["version"]}, headers=auth(buyer_token),
     )
     assert confirmed.status_code == 200
 

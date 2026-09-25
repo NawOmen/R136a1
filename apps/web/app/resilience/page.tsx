@@ -25,7 +25,7 @@ export default function ResiliencePage() {
     const token = getToken();
     if (!token || !window.confirm("Подтвердить план и заданные пороги замены?")) return;
     setWorking(plan.id);
-    try { await marketplace.confirmResiliencePlan(token, plan.id); await reload(); }
+    try { await marketplace.confirmResiliencePlan(token, plan.id, plan.version); await reload(); }
     catch (err) { setError(err instanceof ApiError ? err.message : "Не удалось подтвердить план."); }
     finally { setWorking(null); }
   }

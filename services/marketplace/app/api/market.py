@@ -29,6 +29,7 @@ from ..models import (
     ParticipantOrder,
 )
 from ..optimizer_client import days_until, evaluate_coalition, optimize_allocations
+from ..resources import reserve, release
 from ..trust import append_audit_event
 from ..schemas import (
     CoalitionDecisionIn,
@@ -458,6 +459,9 @@ async def decide_coalition(
             ],
             context="Групповые обязательства не созданы",
         )
+        await reserve(db, company_id=group_offer.company_id, anchor_type="coalition", anchor_id=coalition.id,
+                      units=sum(item.units for item in members), start=group_offer.production_start,
+                      deadline=group_offer.production_end)
         await append_audit_event(
             db,
             event_type="coalition_obligations_checked",
@@ -529,7 +533,7 @@ async def optimize_need(
                 "capacity_units": offer.available_units,
                 "lead_time_days": offer.lead_time_days,
                 "delivery_cost_rub": offer.delivery_cost_rub,
-                "reliability": 0.8,
+                "reliability": None,
                 "price_tiers": offer.price_tiers,
                 "serves_region": True,
                 "country": country or "RU",

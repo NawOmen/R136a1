@@ -5,6 +5,7 @@
 // создаётся сделка, потребность переходит в статус matched.
 
 import Link from "next/link";
+import NeedDraftEditor from "../../components/NeedDraftEditor";
 import { useParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import { getToken } from "../../lib/api";
@@ -82,7 +83,7 @@ export default function NeedDetailPage() {
     setSelectingId(offer.id);
     setError(null);
     try {
-      const created = await marketplace.selectOffer(token, offer.id);
+      const created = await marketplace.selectOffer(token, offer.id, offer.revision);
       setDeal(created);
       const [needData, offersData] = await Promise.all([
         marketplace.getNeed(token, need.id),
@@ -213,6 +214,7 @@ export default function NeedDetailPage() {
       {isBuyer && need.status === "draft" && (
         <section className="card">
           <h2>Черновик потребности</h2>
+          {buyerCompany?.membership?.is_admin && <NeedDraftEditor key={`${need.id}:${need.revision}`} need={need} onSaved={setNeed} />}
           {buyerCompany?.verification_status === "verified" ? (
             <div className="actions">
               <button

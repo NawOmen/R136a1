@@ -191,7 +191,7 @@ async def verify_document(
         if profile is not None and not profile.supported:
             raise HTTPException(
                 status.HTTP_409_CONFLICT,
-                detail="Категория не поддерживается прототипом: подтверждение допуска невозможно",
+                detail="Для категории не настроена проверка: подтверждение допуска невозможно",
             )
 
     previous_status = document.verification_status
@@ -331,7 +331,7 @@ async def category_requirements(
             subcategory=subcategory,
             profile_title=None,
             supported=True,
-            summary="Для этой категории обязательные доказательства в прототипе не заданы.",
+            summary="Для этой категории обязательные доказательства ещё не заданы.",
             checklist=[],
             advisories=[],
             note=BUYER_CHECKLIST_NOTE,

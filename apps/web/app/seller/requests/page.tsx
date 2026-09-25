@@ -16,6 +16,7 @@ import {
   NeedFeedItem,
   NEED_STATUS_LABELS,
   OfferDraft,
+  Product,
 } from "../../lib/marketplace";
 import { useCompanySelector } from "../../lib/useMe";
 
@@ -34,6 +35,9 @@ export default function SellerRequestsPage() {
   const [error, setError] = useState<string | null>(null);
 
   const [openFormId, setOpenFormId] = useState<string | null>(null);
+  const [products, setProducts] = useState<Product[]>([]);
+  const [resourceKind, setResourceKind] = useState<"capacity" | "stock">("capacity");
+  const [productId, setProductId] = useState("");
   const [price, setPrice] = useState("");
   const [units, setUnits] = useState("");
   const [leadTime, setLeadTime] = useState("");
@@ -52,6 +56,8 @@ export default function SellerRequestsPage() {
     const token = getToken();
     if (!token || !companyId) return;
     let cancelled = false;
+    setDrafts({}); setExplanations({}); setSubmittedIds(new Set()); setOpenFormId(null); setProducts([]);
+    void marketplace.getCompanyProducts(token, companyId).then(items=>{if(!cancelled)setProducts(items);}).catch((e:Error)=>{if(!cancelled)setError(e.message);});
     setLoaded(false);
     setError(null);
     marketplace
@@ -74,12 +80,14 @@ export default function SellerRequestsPage() {
 
   function toggleForm(needId: string) {
     const draft = drafts[needId];
+    setResourceKind(draft?.payload.resource_kind ?? "capacity");
+    setProductId(draft?.payload.product_id ?? "");
     setOpenFormId((current) => (current === needId ? null : needId));
     setPrice(draft?.payload.price_rub != null ? String(draft.payload.price_rub) : "");
     setUnits(draft?.payload.available_units != null ? String(draft.payload.available_units) : "");
     setLeadTime(draft?.payload.lead_time_days != null ? String(draft.payload.lead_time_days) : "");
     setDeliveryCost(
-      draft?.payload.delivery_cost_rub != null ? String(draft.payload.delivery_cost_rub) : "0",
+      draft?.payload.delivery_cost_rub != null ? String(draft.payload.delivery_cost_rub) : "",
     );
     setMoq(draft?.payload.moq_units != null ? String(draft.payload.moq_units) : "");
     setError(null);
@@ -100,6 +108,9 @@ export default function SellerRequestsPage() {
         delivery_cost_rub: Number(deliveryCost),
         moq_units: Number(moq || 1),
         draft_id: drafts[need.id]?.id,
+        resource_kind: resourceKind,
+        product_id: productId || undefined,
+        price_tiers: drafts[need.id]?.payload.price_tiers ?? [],
       });
       setSubmittedIds((current) => new Set(current).add(need.id));
       setOpenFormId(null);
@@ -120,11 +131,13 @@ export default function SellerRequestsPage() {
       setDrafts((current) => ({ ...current, [need.id]: draft }));
       // Черновик заполняет форму, но человек проверяет и при необходимости правит значения.
       setOpenFormId(need.id);
+      setResourceKind(draft.payload.resource_kind);
+      setProductId(draft.payload.product_id ?? "");
       setPrice(draft.payload.price_rub != null ? String(draft.payload.price_rub) : "");
       setUnits(draft.payload.available_units != null ? String(draft.payload.available_units) : "");
       setMoq(draft.payload.moq_units != null ? String(draft.payload.moq_units) : "");
       setLeadTime(draft.payload.lead_time_days != null ? String(draft.payload.lead_time_days) : "");
-      setDeliveryCost(draft.payload.delivery_cost_rub != null ? String(draft.payload.delivery_cost_rub) : "0");
+      setDeliveryCost(draft.payload.delivery_cost_rub != null ? String(draft.payload.delivery_cost_rub) : "");
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "Не удалось подготовить черновик.");
     } finally {
@@ -293,6 +306,8 @@ export default function SellerRequestsPage() {
                       required
                     />
                   </div>
+                  <div className="field"><label htmlFor={`offer_resource_${need.id}`}>Источник доступного объёма</label><select id={`offer_resource_${need.id}`} value={resourceKind} disabled={Boolean(drafts[need.id])} onChange={e=>setResourceKind(e.target.value as "stock" | "capacity")}><option value="capacity">Календарь производства</option><option value="stock">Остаток конкретного товара</option></select><p className="hint">Система проверит свободный ресурс при подтверждении сделки. Объём, уже занятый другими заказами или резервом, недоступен.</p></div>
+                  {resourceKind === "stock" && <div className="field"><label htmlFor={`offer_product_${need.id}`}>Товар на складе</label><select id={`offer_product_${need.id}`} required value={productId} disabled={Boolean(drafts[need.id])} onChange={e=>setProductId(e.target.value)}><option value="">Выберите товар</option>{products.map(product=><option key={product.id} value={product.id}>{product.name}</option>)}</select></div>}
                   <div className="field">
                     <label htmlFor={`offer_units_${need.id}`}>
                       Доступный объём, шт.<span className="req">*</span>

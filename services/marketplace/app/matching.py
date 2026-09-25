@@ -30,7 +30,7 @@ COMMON_KEYS = {
     "top_diameter_mm",
     "bottom_diameter_mm",
 }
-INDIVIDUAL_KEYS = {"print", "logo", "packaging", "color"}
+INDIVIDUAL_KEYS = {"print", "logo", "packaging"}
 HARD_KEYS = {"food_contact", "tr_ts_005_2011", "mandatory_requirements"}
 FLEXIBLE_KEYS = {"allowed_analogues", "volume_tolerance", "deadline_tolerance_days"}
 ACTIVE_NEED_STATUSES = {
@@ -65,13 +65,14 @@ def _canonical_json(value: object) -> str:
 
 def _need_parts(need: Need) -> tuple[dict, dict, dict, dict]:
     characteristics = need.characteristics or {}
-    common = {key: characteristics[key] for key in sorted(COMMON_KEYS) if key in characteristics}
+    common = {key: characteristics[key] for key in sorted(characteristics)
+              if key not in INDIVIDUAL_KEYS | HARD_KEYS | FLEXIBLE_KEYS}
     hard = {key: characteristics[key] for key in sorted(HARD_KEYS) if key in characteristics}
     flexible = {key: characteristics[key] for key in sorted(FLEXIBLE_KEYS) if key in characteristics}
     individual = {
         key: characteristics[key]
         for key in sorted(characteristics)
-        if key in INDIVIDUAL_KEYS or key not in COMMON_KEYS | HARD_KEYS | FLEXIBLE_KEYS
+        if key in INDIVIDUAL_KEYS
     }
     return common, hard, flexible, individual
 
@@ -106,14 +107,14 @@ async def _active_needs(db: AsyncSession) -> list[Need]:
     needs = (
         await db.execute(
             select(Need)
-            .where(Need.status.in_(ACTIVE_NEED_STATUSES))
+            .where(Need.status.in_(ACTIVE_NEED_STATUSES), Need.visibility == "open_anonymized")
             .order_by(Need.created_at.desc())
         )
     ).scalars().all()
     result = []
     seen = set()
     for need in needs:
-        if need.valid_until is not None and need.valid_until < today:
+        if need.deadline_date < today or (need.valid_until is not None and need.valid_until < today):
             need.status = "expired"
             need.no_match_reason = "Срок актуальности карточки истёк"
             continue
@@ -121,7 +122,8 @@ async def _active_needs(db: AsyncSession) -> list[Need]:
             need.company_id,
             need.category.strip().lower(),
             _canonical_json(need.characteristics or {}),
-            need.volume_units,
+            need.volume_units, need.deadline_date, need.valid_until, need.delivery_address_id,
+            need.budget_rub, need.visibility,
         )
         if signature in seen:
             continue
@@ -282,24 +284,25 @@ async def _rebuild_opportunities(db: AsyncSession, needs: list[Need]) -> None:
             offers = (
                 await db.execute(
                     select(Offer).join(Need, Offer.need_id == Need.id).where(
-                        Need.category == category,
+                        Need.id.in_([item.id for item in category_needs]),
                         Offer.status == "sent",
+                        (Offer.valid_until.is_(None) | (Offer.valid_until >= date.today())),
                     )
                 )
             ).scalars().all()
-            group_offers = (
-                await db.execute(
-                    select(GroupOffer)
-                    .join(Coalition, GroupOffer.coalition_id == Coalition.id)
-                    .where(
-                        Coalition.category == category,
-                        GroupOffer.status.in_(("preliminary", "confirmed")),
-                    )
-                )
-            ).scalars().all()
-            supplied = sum(item.available_units for item in offers) + sum(
-                item.max_total_units or 0 for item in group_offers
-            )
+            # Count only the actual members of a current, feasible group proposal.
+            # A proposal's upper capacity is not delivered demand for unrelated buyers.
+            covered_ids = set((await db.scalars(
+                select(CoalitionMember.need_id)
+                .join(Coalition, Coalition.id == CoalitionMember.coalition_id)
+                .join(GroupOffer, GroupOffer.coalition_id == Coalition.id)
+                .where(CoalitionMember.need_id.in_([item.id for item in category_needs]),
+                       Coalition.status == "awaiting_approvals", GroupOffer.status == "preliminary",
+                       GroupOffer.fill_deadline >= date.today(),
+                       GroupOffer.min_total_units <= Coalition.combined_volume_units,
+                       GroupOffer.max_total_units >= Coalition.combined_volume_units)
+            )).all())
+            supplied = sum(item.volume_units for item in category_needs if item.id in covered_ids)
             unmet = max(0, total_demand - supplied)
             active_keys.add((passport.company_id, category))
             opportunity = (

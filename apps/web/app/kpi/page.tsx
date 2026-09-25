@@ -24,16 +24,18 @@ export default function KpiPage() {
   }, [companies, initialized, user]);
   useEffect(() => {
     const token = getToken(); if (!initialized || !token || (!companyId && !user?.is_marketplace_admin)) return;
-    marketplace.getKpi(token, companyId || undefined).then(setKpi).catch(() => setError("Не удалось рассчитать KPI."));
-    // Оценка агентов: для компании — своя, для администратора — по всей площадке.
+    let active = true;
+    setKpi(null); setScorecard(null); setError(null);
+    marketplace.getKpi(token, companyId || undefined).then((value) => { if (active) setKpi(value); }).catch(() => { if (active) setError("Не удалось рассчитать показатели."); });
     const scorecardRequest = companyId
       ? marketplace.getAgentScorecard(token, companyId)
       : marketplace.getPlatformAgentScorecard(token);
-    scorecardRequest.then(setScorecard).catch(() => setScorecard(null));
+    scorecardRequest.then((value) => { if (active) setScorecard(value); }).catch(() => { if (active) setScorecard(null); });
+    return () => { active = false; };
   }, [companyId, initialized, user]);
 
   return <div><div className="company-row"><h1 className="page-title">Проверяемые KPI</h1><Link href="/dashboard" className="btn btn-secondary btn-sm">На главную</Link></div>
-    <p className="subtitle">Показатели рассчитываются из неизменяемого журнала событий.</p>
+    <p className="subtitle">Показатели рассчитываются из записей операций и журнала событий.</p>
     <div className="field"><label htmlFor="kpi-company">Компания</label><select id="kpi-company" value={companyId} onChange={(e) => setCompanyId(e.target.value)}>{user?.is_marketplace_admin && <option value="">Весь маркетплейс</option>}{companies.map((company) => <option key={company.id} value={company.id}>{company.display_name}</option>)}</select></div>
     {error && <div className="alert alert-error">{error}</div>}
     {scorecard && (
@@ -67,8 +69,9 @@ export default function KpiPage() {
                 <p>Запусков агентов: {scorecard.agent_runs_total}</p>
                 <p>Отказов модели: {scorecard.agent_runs_failed}</p>
                 <p>Локальный маршрут: {scorecard.agent_runs_local_route}; внешний: {scorecard.agent_runs_external_route}</p>
+                <p>Смешанный маршрут: {scorecard.agent_runs_mixed_route}; по правилам: {scorecard.agent_runs_rules_route}; не определён: {scorecard.agent_runs_unknown_route}</p>
                 <p>Средняя длительность: {scorecard.agent_average_duration_ms} мс</p>
-                <p>Оценочная стоимость инференса: {rub(scorecard.agent_estimated_cost_rub)}</p>
+                <p>Известные оценки затрат: {scorecard.agent_costed_runs ? rub(scorecard.agent_estimated_cost_rub) : "Нет данных"} ({scorecard.agent_costed_runs} из {scorecard.agent_runs_total} запусков)</p>
               </>
             ) : (
               <p className="hint">Журнал вызовов LLM Gateway недоступен: метрики модели не рассчитаны.</p>

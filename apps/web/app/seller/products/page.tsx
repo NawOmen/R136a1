@@ -4,6 +4,7 @@
 // публикация/снятие с публикации (POST /products/{id}/publish).
 
 import Link from "next/link";
+import CatalogImport from "../../components/CatalogImport";
 import { FormEvent, useEffect, useState } from "react";
 import { getToken } from "../../lib/api";
 import {
@@ -11,6 +12,7 @@ import {
   formatCharacteristics,
   formatRub,
   formatUnits,
+  itemUnit,
   marketplace,
   Product,
   PRODUCT_CATEGORIES,
@@ -47,8 +49,8 @@ export default function SellerProductsPage() {
   const [category, setCategory] = useState(PRODUCT_CATEGORIES[0]);
   const [subcategory, setSubcategory] = useState(PRODUCT_CATEGORY_TREE[PRODUCT_CATEGORIES[0]][0]);
   const [rows, setRows] = useState<CharacteristicRow[]>([
-    newRow("volume_ml", ""),
-    newRow("coating", ""),
+    newRow("unit", "шт"),
+    newRow("материал", ""),
   ]);
   const [price, setPrice] = useState("");
   const [moq, setMoq] = useState("");
@@ -125,7 +127,7 @@ export default function SellerProductsPage() {
       const updated = await marketplace.getCompanyProducts(token, company.id);
       setProducts(updated);
       setName("");
-      setRows([newRow("volume_ml", ""), newRow("coating", "")]);
+      setRows([newRow("unit", "шт"), newRow("материал", "")]);
       setPrice("");
       setMoq("");
       setLeadTime("");
@@ -213,6 +215,8 @@ export default function SellerProductsPage() {
       </div>
       <p className="subtitle">Товары компании и управление публикацией</p>
 
+      {company?.membership?.is_admin && <CatalogImport key={companyId} companyId={companyId} onImported={setProducts} />}
+
       {available.length > 1 && (
         <div className="field">
           <label htmlFor="seller_company">Компания</label>
@@ -274,7 +278,7 @@ export default function SellerProductsPage() {
               <div key={index} className="char-row">
                 <input
                   type="text"
-                  placeholder="Ключ (например, volume_ml)"
+                  placeholder="Характеристика (например, материал)"
                   value={row.key}
                   onChange={(event) => updateRow(index, { key: event.target.value })}
                 />
@@ -340,7 +344,7 @@ export default function SellerProductsPage() {
           </div>
           <div className="field">
             <label htmlFor="product_moq">
-              Минимальный объём заказа, шт.<span className="req">*</span>
+              Минимальное количество единиц заказа<span className="req">*</span>
             </label>
             <input
               id="product_moq"
@@ -368,7 +372,7 @@ export default function SellerProductsPage() {
           </div>
           <div className="field">
             <label htmlFor="product_stock">
-              Остаток на складе, шт.<span className="opt">для поставки со склада; пусто — под заказ</span>
+              Остаток в единицах заказа<span className="opt">для поставки со склада; пусто — под заказ</span>
             </label>
             <input
               id="product_stock"
@@ -402,12 +406,12 @@ export default function SellerProductsPage() {
                   <div>
                     <div className="company-item__name">{product.name}</div>
                     <div className="company-meta">
-                      {product.category} / {product.subcategory ?? "Без подкатегории"} · {formatRub(product.price_rub)} за шт. · МОЗ{" "}
-                      {formatUnits(product.moq_units)} · {product.lead_time_days} дн.
+                      {product.category} / {product.subcategory ?? "Без подкатегории"} · {formatRub(product.price_rub)} / {itemUnit(product.characteristics)} · МОЗ{" "}
+                      {formatUnits(product.moq_units, itemUnit(product.characteristics))} · {product.lead_time_days} дн.
                     </div>
                     <div className="company-meta">{formatCharacteristics(product.characteristics)}</div>
                     {product.price_tiers.map((tier) => <div className="company-meta" key={tier.min_units}>
-                      От {formatUnits(tier.min_units)}: {formatRub(tier.unit_price_rub)} за шт. · {formatRub(tier.min_units * tier.unit_price_rub)} за партию
+                      От {formatUnits(tier.min_units, itemUnit(product.characteristics))}: {formatRub(tier.unit_price_rub)} / {itemUnit(product.characteristics)} · {formatRub(tier.min_units * tier.unit_price_rub)} за партию
                     </div>)}
                   </div>
                   <span className={`badge ${product.is_published ? "badge-verified" : "badge-draft"}`}>

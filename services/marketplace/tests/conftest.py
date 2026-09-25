@@ -245,3 +245,10 @@ async def grant_packaging_documents(
         created.append(document.id)
     await db_session.commit()
     return created
+
+
+async def grant_capacity(db_session, company_id, units, day=None):
+    """Explicit physical capacity for tests that create binding obligations."""
+    from app.models import CapacityEntry
+    db_session.add(CapacityEntry(company_id=company_id, date=day or datetime.now(timezone.utc).date(), available_units=units))
+    await db_session.commit()

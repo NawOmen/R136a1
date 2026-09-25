@@ -8,7 +8,7 @@ export function OnboardingTour({ canBuy, canSell }: { canBuy: boolean; canSell: 
   useEffect(() => { setOpen(window.localStorage.getItem("porukam-onboarding-complete") !== "yes"); }, []);
   const steps = [
     { title: "Выберите рабочий путь", body: canBuy && canSell ? "Одна компания может одновременно покупать и продавать. Режим меняет только рабочие инструменты." : canBuy ? "Начните с каталога или создайте карточку потребности." : canSell ? "Заполните паспорт производства и опубликуйте товар." : "Сначала создайте компанию и выберите права покупки или продажи.", href: "/dashboard", action: "Понятно" },
-    { title: "Заполните данные компании", body: "Публикация и сделки станут доступны после проверки. В демо используются только синтетические данные.", href: "/company/new", action: "К компании" },
+    { title: "Заполните данные компании", body: "Публикация и сделки станут доступны после проверки.", href: "/company/new", action: "К компании" },
     { title: "Совершите первое действие", body: canSell ? "Добавьте товар или посмотрите подтверждённый спрос покупателей." : "Опишите потребность голосом или текстом — агент подготовит требования.", href: canSell ? "/seller/products" : "/needs/new", action: "Начать" },
   ];
   function finish() { window.localStorage.setItem("porukam-onboarding-complete", "yes"); setOpen(false); }
