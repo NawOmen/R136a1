@@ -1,4 +1,6 @@
 import uuid
+import hashlib
+import json
 from datetime import datetime, timezone
 
 from fastapi import APIRouter, Depends, File, HTTPException, Response, UploadFile, status
@@ -146,11 +148,29 @@ async def repeat_need(need_id: uuid.UUID, data: NeedRepeatIn, user: CurrentUser 
     today = datetime.now(timezone.utc).date()
     if data.deadline_date < today or (data.valid_until and data.valid_until < today):
         raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, detail="Новые сроки не могут быть в прошлом")
+    if data.valid_until and data.valid_until > data.deadline_date:
+        raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, detail="Срок актуальности не может быть позже срока поставки")
+    request_hash = hashlib.sha256(json.dumps({"source_need_id": str(need_id), "deadline_date": data.deadline_date.isoformat(),
+        "valid_until": (data.valid_until or data.deadline_date).isoformat()}, sort_keys=True).encode()).hexdigest()
+    if data.request_key:
+        await db.execute(text("SELECT pg_advisory_xact_lock(hashtextextended(:key, 0))"),
+            {"key": f"need-request:{original.company_id}:{data.request_key}"})
+        existing = await db.scalar(select(Need).where(Need.company_id == original.company_id, Need.request_key == data.request_key))
+        if existing:
+            if existing.request_hash != request_hash:
+                raise HTTPException(status.HTTP_409_CONFLICT, detail="Ключ повторного заказа уже использован для других условий")
+            return NeedOut.model_validate({**{column.name: getattr(existing, column.name) for column in Need.__table__.columns}, "files": []})
+    if original.delivery_address_id is not None:
+        address_owner = await db.scalar(text("SELECT company_id FROM marketplace.delivery_addresses WHERE id = :id"),
+            {"id": original.delivery_address_id})
+        if address_owner != original.company_id:
+            raise HTTPException(status.HTTP_409_CONFLICT, detail="Адрес прежнего заказа больше недоступен. Выберите новый адрес")
     copy = Need(
         company_id=original.company_id, created_by_user_id=user.id, category=original.category,
         characteristics=original.characteristics, volume_units=original.volume_units, budget_rub=original.budget_rub,
         deadline_date=data.deadline_date, delivery_address_id=original.delivery_address_id,
         visibility=original.visibility, status="draft", valid_until=data.valid_until or data.deadline_date,
+        request_key=data.request_key, request_hash=request_hash,
     )
     db.add(copy); await db.commit(); await db.refresh(copy)
     return NeedOut.model_validate({**{column.name: getattr(copy, column.name) for column in Need.__table__.columns}, "files": []})

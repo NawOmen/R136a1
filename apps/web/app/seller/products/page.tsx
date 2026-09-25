@@ -244,7 +244,7 @@ export default function SellerProductsPage() {
               type="text"
               value={name}
               onChange={(event) => setName(event.target.value)}
-              placeholder="Например, Стакан 400 мл PE"
+              placeholder="Например, Гофрокороб 400×300×300 мм"
               required
             />
           </div>

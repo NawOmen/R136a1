@@ -329,6 +329,7 @@ async def publish_group_offer(
     group_offer.status = "preliminary"
     group_offer.seller_approval_status = "approved"
     coalition.status = "awaiting_approvals"
+    coalition.version += 1
     coalition.explanation = result["reasons"]
     await run_market_rematch(db, "group_offer_published", group_offer.id)
     await db.commit()
@@ -398,6 +399,10 @@ async def decide_coalition(
     ).scalar_one_or_none()
     if coalition is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, detail="Коалиция не найдена")
+    if coalition.version != data.expected_revision:
+        raise HTTPException(status.HTTP_409_CONFLICT, detail="Условия группы изменились. Обновите страницу и проверьте их заново")
+    if coalition.status != "awaiting_approvals":
+        raise HTTPException(status.HTTP_409_CONFLICT, detail="Подтверждение для этой группы сейчас недоступно")
     group_offer = (
         await db.execute(
             select(GroupOffer)
@@ -407,6 +412,8 @@ async def decide_coalition(
     ).scalars().first()
     if group_offer is None or group_offer.status != "preliminary":
         raise HTTPException(status.HTTP_409_CONFLICT, detail="Нет предварительных условий для подтверждения")
+    if group_offer.fill_deadline is None or group_offer.fill_deadline < date.today():
+        raise HTTPException(status.HTTP_409_CONFLICT, detail="Срок подтверждения групповых условий истёк")
     member = (
         await db.execute(
             select(CoalitionMember).where(
@@ -420,6 +427,8 @@ async def decide_coalition(
     await require_company_buyer(data.company_id, user, db)
     await require_company_admin(data.company_id, user, db)
     await require_verified_company(data.company_id, user, db)
+    if member.approval_status != "pending":
+        raise HTTPException(status.HTTP_409_CONFLICT, detail="Решение этой компании уже принято")
     member.approval_status = data.decision
     members = (
         await db.execute(select(CoalitionMember).where(CoalitionMember.coalition_id == coalition.id))

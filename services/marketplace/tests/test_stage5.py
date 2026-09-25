@@ -182,6 +182,7 @@ async def test_5000_and_45000_create_explainable_coalition_and_private_orders(
     assert published.status_code == 200
     coalition_id = published.json()["id"]
     assert published.json()["status"] == "awaiting_approvals"
+    revision = published.json()["version"]
 
     # Достаточное групповое предложение снимает дефицитную рекомендацию.
     refreshed = await client.get(
@@ -192,7 +193,7 @@ async def test_5000_and_45000_create_explainable_coalition_and_private_orders(
 
     first = await client.post(
         f"/api/v1/coalitions/{coalition_id}/decision",
-        json={"company_id": str(buyer_one), "decision": "approved"},
+        json={"company_id": str(buyer_one), "decision": "approved", "expected_revision": revision},
         headers=auth(token_one),
     )
     assert first.status_code == 200
@@ -204,7 +205,7 @@ async def test_5000_and_45000_create_explainable_coalition_and_private_orders(
 
     second = await client.post(
         f"/api/v1/coalitions/{coalition_id}/decision",
-        json={"company_id": str(buyer_two), "decision": "approved"},
+        json={"company_id": str(buyer_two), "decision": "approved", "expected_revision": revision},
         headers=auth(token_two),
     )
     assert second.status_code == 200
@@ -212,6 +213,12 @@ async def test_5000_and_45000_create_explainable_coalition_and_private_orders(
     orders = (await db_session.execute(select(ParticipantOrder))).scalars().all()
     assert len(orders) == 2
     assert {item.buyer_company_id for item in orders} == {buyer_one, buyer_two}
+    buyer_report = await client.get(f"/api/v1/companies/{buyer_one}/commercial-analytics?role=buyer", headers=auth(token_one))
+    assert buyer_report.status_code == 200
+    assert buyer_report.json()["group_orders_count"] == 1
+    assert buyer_report.json()["orders_count"] == 0
+    assert buyer_report.json()["group_orders"][0]["units"] == 5_000
+    assert buyer_report.json()["group_orders"][0]["payments_rub"] is None
 
     own_view = await client.get("/api/v1/coalitions/mine", headers=auth(token_one))
     foreign_member = next(
@@ -301,7 +308,7 @@ async def test_rejection_returns_every_need_to_matching_without_orders(client, d
 
     rejected = await client.post(
         f"/api/v1/coalitions/{coalition.id}/decision",
-        json={"company_id": str(first_company), "decision": "rejected"},
+        json={"company_id": str(first_company), "decision": "rejected", "expected_revision": coalition.version},
         headers=auth(make_token(first_user)),
     )
     assert rejected.status_code == 200

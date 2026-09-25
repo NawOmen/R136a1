@@ -663,6 +663,7 @@ class CoalitionOut(BaseModel):
 class CoalitionDecisionIn(BaseModel):
     company_id: uuid.UUID
     decision: Literal["approved", "rejected"]
+    expected_revision: int = Field(ge=1)
 
 
 # ---------- Устойчивость, N-1 / N-2 и резерв ----------
@@ -887,6 +888,7 @@ class PublicProductDetailOut(ProductOut):
 class NeedRepeatIn(BaseModel):
     deadline_date: date
     valid_until: date | None = None
+    request_key: uuid.UUID | None = None
 
 
 class CharacteristicValidationIn(BaseModel):

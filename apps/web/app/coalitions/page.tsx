@@ -45,7 +45,7 @@ export default function CoalitionsPage() {
     setWorkingId(coalition.id);
     setError(null);
     try {
-      const updated = await marketplace.decideCoalition(token, coalition.id, companyId, decision);
+      const updated = await marketplace.decideCoalition(token, coalition.id, companyId, decision, coalition.version);
       setItems((current) => current.map((item) => (item.id === updated.id ? updated : item)));
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "Не удалось сохранить решение.");

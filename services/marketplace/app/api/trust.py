@@ -140,7 +140,14 @@ async def list_audit_events(
             )
     elif company_id:
         query = query.where(TrustAuditEvent.actor_company_id == company_id)
-    return (await db.execute(query)).scalars().all()
+    events = (await db.execute(query)).scalars().all()
+    if admin:
+        return events
+    # Events may reference other coalition participants. Keep the event and
+    # explanation visible to the member while hiding cross-company details.
+    return [TrustAuditEventOut.model_validate(event).model_copy(update={
+        "source_refs": [], "payload": {},
+    }) for event in events]
 
 
 @router.get("/audit/verify", response_model=AuditVerificationOut)
@@ -189,8 +196,10 @@ async def calculate_kpi(
         for event in rows
     )
     recoveries = [p for e, p in zip(rows, payloads) if e.event_type == "recovery_activated"]
-    buyer_value = sum(float(p.get("buyer_value_rub", 0)) for p in payloads)
-    seller_value = sum(float(p.get("seller_value_rub", 0)) for p in payloads)
+    buyer_value_events = [p for p in payloads if p.get("buyer_value_rub") is not None]
+    seller_value_events = [p for p in payloads if p.get("seller_value_rub") is not None]
+    buyer_value = sum(float(p["buyer_value_rub"]) for p in buyer_value_events)
+    seller_value = sum(float(p["seller_value_rub"]) for p in seller_value_events)
     deal_events = [p for e, p in zip(rows, payloads) if e.event_type == "deal_created"]
     gmv = sum(float(p.get("gmv_rub", 0)) for p in deal_events)
     reserve_units = sum(
@@ -204,15 +213,17 @@ async def calculate_kpi(
         generated_from_events=len(rows),
         buyer={
             "created_value_rub": round(buyer_value, 2),
+            "value_events": len(buyer_value_events),
             "human_approvals": buyer_approvals,
             "successful_recoveries": len(recoveries),
         },
         seller={
             "created_value_rub": round(seller_value, 2),
+            "value_events": len(seller_value_events),
             "confirmed_reserve_units": reserve_units,
             "sales_gmv_rub": round(gmv, 2),
             "human_approvals": seller_approvals,
         },
         marketplace={"gmv_rub": round(gmv, 2), "audited_events": len(rows), "deals": len(deal_events)},
-        baseline_note="Созданная ценность — разница с зафиксированной до оптимизации базовой конфигурацией; нулевое значение означает отсутствие подтверждённого события.",
+        baseline_note="Созданная ценность — разница с зафиксированной до оптимизации базовой конфигурацией. При нуле событий с сопоставимой базой данных для оценки нет.",
     )

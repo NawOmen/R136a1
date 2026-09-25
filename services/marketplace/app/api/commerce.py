@@ -11,7 +11,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from ..commerce import execution_totals, financials
 from ..database import get_db
 from ..deps import CurrentUser, get_current_user, require_company_admin, require_company_buyer, require_company_seller, require_membership
-from ..models import Deal, DealCheckpoint, DealCostSnapshot, DealExecutionEvent, Need, Offer
+from ..models import Deal, DealCheckpoint, DealCostSnapshot, DealExecutionEvent, Need, Offer, ParticipantOrder
 from ..resources import release
 from ..trust import record_human_approval
 
@@ -233,7 +233,17 @@ async def analytics(company_id: uuid.UUID, role: Literal["buyer", "seller"], sta
     if end: offer_query = offer_query.where(Offer.created_at <= datetime.combine(end, time.max, tzinfo=timezone.utc))
     if category: offer_query = offer_query.where(Need.category == category)
     offers = list((await db.scalars(offer_query)).all())
+    group_owner = ParticipantOrder.seller_company_id if role == "seller" else ParticipantOrder.buyer_company_id
+    group_query = select(ParticipantOrder, Need.category).join(Need, Need.id == ParticipantOrder.need_id).where(group_owner == company_id)
+    if start: group_query = group_query.where(ParticipantOrder.created_at >= datetime.combine(start, time.min, tzinfo=timezone.utc))
+    if end: group_query = group_query.where(ParticipantOrder.created_at <= datetime.combine(end, time.max, tzinfo=timezone.utc))
+    if category: group_query = group_query.where(Need.category == category)
+    group_orders = [{"order_id": item.id, "coalition_id": item.coalition_id, "category": category_name,
+                     "created_at": item.created_at, "status": item.status, "units": item.units,
+                     "contract_value_rub": Decimal(str(item.total_price_rub)), "payments_rub": None}
+                    for item, category_name in (await db.execute(group_query.order_by(ParticipantOrder.created_at.desc()))).all()]
     return {"company_id": company_id, "role": role, "period_basis": "order_created_at_utc", "orders_count": len(rows),
             "offers_count": len(offers), "rejected_offers_count": sum(o.status == "rejected" for o in offers),
             "payments_rub": None, "totals": aggregate, "orders": rows,
-            "explanation": "Период — дата создания заказа (UTC); исполнение — текущее состояние этих заказов. Выручка от товаров учитывает приёмку минус подтверждённые возвраты, без доставки. Прибыль рассчитана по указанным продавцом затратам; платежи не подключены. Отказы относятся к предложениям, созданным в выбранный период. Количества сравниваются внутри заказа."}
+            "group_orders_count": len(group_orders), "group_orders": group_orders,
+            "explanation": "Период — дата создания заказа (UTC); исполнение — текущее состояние этих заказов. Групповые обязательства показаны отдельно: их сумма не включена в выручку до учёта исполнения. Выручка от товаров учитывает приёмку минус подтверждённые возвраты, без доставки. Прибыль рассчитана по указанным продавцом затратам; платежи не подключены. Отказы относятся к предложениям, созданным в выбранный период. Количества сравниваются внутри заказа."}

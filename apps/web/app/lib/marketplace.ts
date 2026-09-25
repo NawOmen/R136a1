@@ -600,6 +600,22 @@ export interface AgentScorecard {
   notes: string[];
 }
 
+export interface AuditEvent {
+  id: string;
+  sequence: number;
+  event_type: string;
+  entity_type: string;
+  entity_id: string | null;
+  explanation: string;
+  created_at: string;
+}
+
+export interface AuditVerification {
+  valid: boolean;
+  checked_events: number;
+  broken_sequence: number | null;
+}
+
 export interface UpdateCapabilityPassportInput {
   details?: CapabilityDetails;
   technologies: string[];
@@ -871,6 +887,8 @@ export interface CommercialReport {
   company_id: string; role: "buyer" | "seller"; period_basis: string;
   orders_count: number; offers_count: number; rejected_offers_count: number;
   payments_rub: null; totals: Record<string, number | null>; orders: CommercialOrder[]; explanation: string;
+  group_orders_count: number;
+  group_orders: { order_id: string; coalition_id: string; category: string; created_at: string; status: string; units: number; contract_value_rub: number; payments_rub: null }[];
 }
 
 export const marketplace = {
@@ -1056,8 +1074,8 @@ export const marketplace = {
     return marketplaceFetch(`/api/v1/deals/${dealId}/reviews`, { method: "POST", token, body: JSON.stringify({ company_id: companyId, rating, comment }) });
   },
 
-  repeatNeed(token: string, needId: string, deadlineDate: string): Promise<Need> {
-    return marketplaceFetch(`/api/v1/needs/${needId}/repeat`, { method: "POST", token, body: JSON.stringify({ deadline_date: deadlineDate }) });
+  repeatNeed(token: string, needId: string, deadlineDate: string, requestKey: string): Promise<Need> {
+    return marketplaceFetch(`/api/v1/needs/${needId}/repeat`, { method: "POST", token, body: JSON.stringify({ deadline_date: deadlineDate, request_key: requestKey }) });
   },
 
   validateCharacteristics(input: { category: string; subcategory?: string; characteristics: Record<string, unknown>; moq_units: number }): Promise<{ valid: boolean; errors: string[]; warnings: string[] }> {
@@ -1365,11 +1383,12 @@ export const marketplace = {
     coalitionId: string,
     companyId: string,
     decision: "approved" | "rejected",
+    expectedRevision: number,
   ): Promise<Coalition> {
     return marketplaceFetch(`/api/v1/coalitions/${coalitionId}/decision`, {
       method: "POST",
       token,
-      body: JSON.stringify({ company_id: companyId, decision }),
+      body: JSON.stringify({ company_id: companyId, decision, expected_revision: expectedRevision }),
     });
   },
 
@@ -1424,5 +1443,13 @@ export const marketplace = {
   getKpi(token: string, companyId?: string): Promise<TrustKpi> {
     const query = companyId ? `?company_id=${companyId}` : "";
     return marketplaceFetch(`/api/v1/kpi${query}`, { token });
+  },
+  getAuditEvents(token: string, companyId?: string): Promise<AuditEvent[]> {
+    const query = new URLSearchParams({ limit: "50" });
+    if (companyId) query.set("company_id", companyId);
+    return marketplaceFetch(`/api/v1/audit/events?${query}`, { token });
+  },
+  verifyAudit(token: string): Promise<AuditVerification> {
+    return marketplaceFetch("/api/v1/audit/verify", { token });
   },
 };

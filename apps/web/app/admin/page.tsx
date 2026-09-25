@@ -362,7 +362,7 @@ export default function AdminPage() {
                         type="text"
                         value={value.subcategory}
                         onChange={(event) => updateDocumentDecision(document, { subcategory: event.target.value })}
-                        placeholder="Например, Бумажные стаканы"
+                        placeholder="Например, Коробки"
                       />
                     </div>
                     {CONFIRMABLE_ATTRIBUTES.map((attribute) => (

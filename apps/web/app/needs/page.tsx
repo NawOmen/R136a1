@@ -41,7 +41,12 @@ export default function MyNeedsPage() {
     setRepeating(true); setError(null);
     try {
       const deadline = new Date(); deadline.setDate(deadline.getDate() + 30);
-      const copy = await marketplace.repeatNeed(token, need.id, deadline.toISOString().slice(0, 10));
+      const deadlineDate = deadline.toISOString().slice(0, 10);
+      const storageKey = `porukam:repeat:${need.id}:${deadlineDate}`;
+      const requestKey = sessionStorage.getItem(storageKey) ?? crypto.randomUUID();
+      sessionStorage.setItem(storageKey, requestKey);
+      const copy = await marketplace.repeatNeed(token, need.id, deadlineDate, requestKey);
+      sessionStorage.removeItem(storageKey);
       setNeeds((current) => [copy, ...current]); setRepeatId(null);
     } catch (err) { setError(err instanceof ApiError ? err.message : "Не удалось повторить потребность."); }
     finally { setRepeating(false); }
@@ -78,7 +83,7 @@ export default function MyNeedsPage() {
                 </span>
                 <span className={`badge badge-${need.status}`}>{NEED_STATUS_LABELS[need.status]}</span>
               </Link>
-              {repeatId === need.id ? <div className="repeat-confirm"><span>Создать такой же черновик со сроком +30 дней?</span><button className="btn btn-primary btn-sm" disabled={repeating} onClick={() => void repeat(need)}>Да, создать</button><button className="btn btn-secondary btn-sm" onClick={() => setRepeatId(null)}>Отмена</button></div> : <button className="btn btn-secondary btn-sm" onClick={() => setRepeatId(need.id)}>Повторить заказ</button>}
+              {repeatId === need.id ? <div className="repeat-confirm"><span>Создать новый черновик со сроком +30 дней? Файлы, цены, допуск поставщика и прежние согласия не переносятся. Перед публикацией проверьте характеристики, адрес и бюджет.</span><button className="btn btn-primary btn-sm" disabled={repeating} onClick={() => void repeat(need)}>Да, создать</button><button className="btn btn-secondary btn-sm" onClick={() => setRepeatId(null)}>Отмена</button></div> : <button className="btn btn-secondary btn-sm" onClick={() => setRepeatId(need.id)}>Повторить заказ</button>}
             </li>
           ))}
         </ul>

@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { getToken } from "../lib/api";
-import { AgentScorecard, marketplace, TrustKpi } from "../lib/marketplace";
+import { AgentScorecard, AuditEvent, AuditVerification, marketplace, TrustKpi } from "../lib/marketplace";
 import { useMe } from "../lib/useMe";
 
 function rub(value: number) { return new Intl.NumberFormat("ru-RU", { style: "currency", currency: "RUB" }).format(value); }
@@ -14,6 +14,9 @@ export default function KpiPage() {
   const [initialized, setInitialized] = useState(false);
   const [kpi, setKpi] = useState<TrustKpi | null>(null);
   const [scorecard, setScorecard] = useState<AgentScorecard | null>(null);
+  const [auditEvents, setAuditEvents] = useState<AuditEvent[]>([]);
+  const [auditError, setAuditError] = useState<string | null>(null);
+  const [verification, setVerification] = useState<AuditVerification | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -25,12 +28,18 @@ export default function KpiPage() {
   useEffect(() => {
     const token = getToken(); if (!initialized || !token || (!companyId && !user?.is_marketplace_admin)) return;
     let active = true;
-    setKpi(null); setScorecard(null); setError(null);
+    setKpi(null); setScorecard(null); setError(null); setAuditEvents([]); setAuditError(null); setVerification(null);
     marketplace.getKpi(token, companyId || undefined).then((value) => { if (active) setKpi(value); }).catch(() => { if (active) setError("Не удалось рассчитать показатели."); });
     const scorecardRequest = companyId
       ? marketplace.getAgentScorecard(token, companyId)
       : marketplace.getPlatformAgentScorecard(token);
     scorecardRequest.then((value) => { if (active) setScorecard(value); }).catch(() => { if (active) setScorecard(null); });
+    marketplace.getAuditEvents(token, companyId || undefined)
+      .then((value) => { if (active) setAuditEvents(value); })
+      .catch(() => { if (active) setAuditError("Не удалось загрузить журнал решений."); });
+    if (user?.is_marketplace_admin) marketplace.verifyAudit(token)
+      .then((value) => { if (active) setVerification(value); })
+      .catch(() => { if (active) setAuditError("Не удалось проверить цепочку журнала."); });
     return () => { active = false; };
   }, [companyId, initialized, user]);
 
@@ -83,6 +92,12 @@ export default function KpiPage() {
         )}
       </section>
     )}
-    {kpi && <><div className="form-grid"><div className="card"><h2>Покупатель</h2><p>Созданная ценность: {rub(kpi.buyer.created_value_rub ?? 0)}</p><p>Подтверждений: {kpi.buyer.human_approvals ?? 0}</p></div><div className="card"><h2>Производитель</h2><p>Созданная ценность: {rub(kpi.seller.created_value_rub ?? 0)}</p></div><div className="card"><h2>Маркетплейс</h2><p>GMV: {rub(kpi.marketplace.gmv_rub ?? 0)}</p><p>Событий: {kpi.generated_from_events}</p></div></div><p className="hint">{kpi.baseline_note}</p></>}
+    {kpi && <><div className="form-grid"><div className="card"><h2>Покупатель</h2><p>Созданная ценность: {kpi.buyer.value_events ? rub(kpi.buyer.created_value_rub) : "Нет данных для сравнения"}</p><p>Подтверждений: {kpi.buyer.human_approvals ?? 0}</p></div><div className="card"><h2>Производитель</h2><p>Созданная ценность: {kpi.seller.value_events ? rub(kpi.seller.created_value_rub) : "Нет данных для сравнения"}</p></div><div className="card"><h2>Маркетплейс</h2><p>GMV: {rub(kpi.marketplace.gmv_rub ?? 0)}</p><p>Событий: {kpi.generated_from_events}</p></div></div><p className="hint">{kpi.baseline_note}</p></>}
+    <section className="card"><h2>Журнал решений</h2>
+      <p className="hint">Последние 50 событий выбранной компании. Запись показывает действие и его причину; история другой компании недоступна.</p>
+      {verification && <p role="status">Проверка последовательности и хешей: {verification.valid ? `успешна, ${verification.checked_events} событий` : `ошибка на событии № ${verification.broken_sequence}`}. Это не защита от изменения базы администратором.</p>}
+      {auditError && <div className="alert alert-error">{auditError}</div>}
+      {!auditError && auditEvents.length === 0 ? <p className="hint">Событий пока нет.</p> : <ul className="company-list">{auditEvents.map((event) => <li key={event.id} className="company-item"><strong>№ {event.sequence} · {event.event_type}</strong><span className="company-meta">{new Date(event.created_at).toLocaleString("ru-RU")} · {event.entity_type}{event.entity_id ? ` · ${event.entity_id}` : ""}</span><p>{event.explanation}</p></li>)}</ul>}
+    </section>
   </div>;
 }
