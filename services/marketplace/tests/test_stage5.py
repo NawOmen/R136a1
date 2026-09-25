@@ -1,10 +1,12 @@
 from conftest import grant_capacity
 from datetime import date, timedelta
+import uuid
 
 from sqlalchemy import select
 
 from app.models import (
     CapabilityPassport,
+    CapacityEntry,
     Coalition,
     CoalitionMember,
     CompatibilityProfile,
@@ -14,6 +16,7 @@ from app.models import (
     MarketOpportunity,
 )
 from app.matching import run_market_rematch
+from app.resources import reserve
 from conftest import grant_packaging_documents, make_company, make_token, make_user
 
 
@@ -349,3 +352,12 @@ async def test_market_opportunities_do_not_add_rolls_to_pieces(db_session):
     await run_market_rematch(db_session, "test_unit_separation", None)
     opportunities = (await db_session.scalars(select(MarketOpportunity).where(MarketOpportunity.company_id == company))).all()
     assert {(item.unit, item.unmet_volume_units) for item in opportunities} == {("шт", 15), ("рулон", 8)}
+    before = {item.unit: item.score for item in opportunities}
+    day = date.today() + timedelta(days=1)
+    db_session.add(CapacityEntry(company_id=company, date=day, category="Сырьё и материалы", unit="шт", available_units=15))
+    await db_session.flush()
+    await reserve(db_session, company_id=company, anchor_type="deal", anchor_id=uuid.uuid4(),
+                  units=15, deadline=day, category="Сырьё и материалы", unit="шт")
+    await run_market_rematch(db_session, "test_occupied_capacity", None)
+    assert next(item.score for item in opportunities if item.unit == "шт") < before["шт"]
+    assert next(item.score for item in opportunities if item.unit == "рулон") == before["рулон"]

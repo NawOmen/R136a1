@@ -16,6 +16,7 @@ from datetime import date
 from decimal import Decimal, InvalidOperation
 
 from .category_admission import normalize
+from .matching import order_unit
 from .models import CapacityEntry, CapabilityPassport, Need, Product
 
 
@@ -340,6 +341,8 @@ def available_capacity_units(entries: list[CapacityEntry], need: Need, today: da
         int(entry.available_units)
         for entry in entries
         if today <= entry.date <= need.deadline_date
+        and entry.category in {"", need.category}
+        and entry.unit == order_unit(need.characteristics)
     )
 
 

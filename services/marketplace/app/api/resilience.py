@@ -16,7 +16,7 @@ from ..deps import (
     require_company_seller,
     require_verified_company,
 )
-from ..matching import _need_parts, _passport_matches, offer_unit_price, ACTIVE_NEED_STATUSES
+from ..matching import _need_parts, _passport_matches, offer_unit_price, order_unit, ACTIVE_NEED_STATUSES
 from ..models import (
     CapabilityPassport,
     Need,
@@ -626,7 +626,8 @@ async def confirm_resilience_plan(
         await require_company_admission(db, company_id, SpecificationCheck(category=need.category,
             characteristics=need.characteristics, moq_units=allocation["units"]), context="Основной объём не подтверждён")
         await reserve(db, company_id=company_id, anchor_type="resilience_primary", anchor_id=plan.id,
-            units=allocation["units"], deadline=need.deadline_date, resource_kind=offer.resource_kind, product_id=offer.product_id)
+            units=allocation["units"], deadline=need.deadline_date, resource_kind=offer.resource_kind, product_id=offer.product_id,
+            category=need.category, unit=order_unit(need.characteristics))
     need.status = "matched"
     plan.status = "active"
     plan.confirmed_by_user_id = user.id
@@ -805,7 +806,8 @@ async def decide_reserve_commitment(
                       units=data.capacity_units, deadline=plan_need.deadline_date,
                       resource_kind=source_offer.resource_kind if source_offer else "capacity",
                       product_id=source_offer.product_id if source_offer else None,
-                      expires_at=datetime.combine(data.held_until, time.max, tzinfo=timezone.utc))
+                      expires_at=datetime.combine(data.held_until, time.max, tzinfo=timezone.utc),
+                      category=plan_need.category, unit=order_unit(plan_need.characteristics))
         commitment.reserve_tier = "hot"
         commitment.confirmation_status = "approved"
         commitment.confirmed_capacity_units = data.capacity_units

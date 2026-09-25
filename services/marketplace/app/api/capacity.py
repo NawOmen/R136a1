@@ -34,7 +34,7 @@ async def list_capacity(
     output = []
     for entry in result.scalars().all():
         occupied = sum(row.units for row in held if row.capacity_entry_id == entry.id and occupies(row))
-        output.append(CapacityEntryOut(date=entry.date, available_units=entry.available_units, reserved_units=occupied, free_units=max(0, entry.available_units-occupied)))
+        output.append(CapacityEntryOut(date=entry.date, category=entry.category, unit=entry.unit, available_units=entry.available_units, reserved_units=occupied, free_units=max(0, entry.available_units-occupied)))
     return output
 
 
@@ -49,17 +49,17 @@ async def put_capacity(
     await require_company_admin(company_id, user, db)
     dates = [e.date for e in data.entries]
     await lock_company(db, company_id)
-    existing = {row.date: row for row in (await db.scalars(select(CapacityEntry).where(CapacityEntry.company_id == company_id, CapacityEntry.date.in_(dates)))).all()}
+    existing = {(row.date, row.category, row.unit): row for row in (await db.scalars(select(CapacityEntry).where(CapacityEntry.company_id == company_id, CapacityEntry.date.in_(dates)))).all()}
     held = await reservations(db, company_id)
     for entry in data.entries:
-        current = existing.get(entry.date)
+        current = existing.get((entry.date, entry.category, entry.unit))
         occupied = sum(row.units for row in held if current and row.capacity_entry_id == current.id and occupies(row))
         if entry.available_units < occupied:
             raise HTTPException(409, f"На {entry.date} уже распределено {occupied} единиц мощности")
         if current:
             current.available_units = entry.available_units
         else:
-            db.add(CapacityEntry(company_id=company_id, date=entry.date, available_units=entry.available_units))
+            db.add(CapacityEntry(company_id=company_id, date=entry.date, category=entry.category, unit=entry.unit, available_units=entry.available_units))
     await run_market_rematch(db, "capacity_changed", company_id)
     await db.commit()
     return data.entries

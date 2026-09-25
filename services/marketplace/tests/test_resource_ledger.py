@@ -80,3 +80,29 @@ async def test_capacity_shared_by_deal_and_coalition_and_cannot_shrink(warehouse
     await db_session.commit()
     rows=(await db_session.scalars(select(ResourceReservation).where(ResourceReservation.status=="committed"))).all()
     assert sum(r.units for r in rows)==10
+
+
+@pytest.mark.asyncio
+async def test_capacity_scopes_keep_categories_and_units_separate(warehouse, db_session, client):
+    user, company, _ = warehouse
+    day = date.today() + timedelta(days=1)
+    headers = {"Authorization": f"Bearer {make_token(user)}"}
+    payload = {"entries": [
+        {"date": str(day), "category": "Мебель", "unit": "шт", "available_units": 5},
+        {"date": str(day), "category": "Сырьё и материалы", "unit": "м", "available_units": 8},
+    ]}
+    response = await client.put(f"/api/v1/companies/{company}/capacity", headers=headers, json=payload)
+    assert response.status_code == 200, response.text
+    rows = (await client.get(f"/api/v1/companies/{company}/capacity", headers=headers)).json()
+    assert {(row["category"], row["unit"], row["available_units"]) for row in rows} == {
+        ("Мебель", "шт", 5), ("Сырьё и материалы", "м", 8),
+    }
+    await reserve(db_session, company_id=company, anchor_type="deal", anchor_id=uuid.uuid4(),
+                  units=5, deadline=day, category="Мебель", unit="шт")
+    await db_session.commit()
+    with pytest.raises(HTTPException):
+        await reserve(db_session, company_id=company, anchor_type="deal", anchor_id=uuid.uuid4(),
+                      units=1, deadline=day, category="Упаковка и тара", unit="шт")
+    await db_session.rollback()
+    await reserve(db_session, company_id=company, anchor_type="deal", anchor_id=uuid.uuid4(),
+                  units=8, deadline=day, category="Сырьё и материалы", unit="м")

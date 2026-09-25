@@ -16,7 +16,7 @@ from ..deps import (
     require_company_seller,
     require_verified_company,
 )
-from ..matching import _need_parts, run_market_rematch
+from ..matching import _need_parts, order_unit, run_market_rematch
 from ..models import (
     Coalition,
     CoalitionMember,
@@ -474,7 +474,8 @@ async def decide_coalition(
         )
         await reserve(db, company_id=group_offer.company_id, anchor_type="coalition", anchor_id=coalition.id,
                       units=sum(item.units for item in members), start=group_offer.production_start,
-                      deadline=group_offer.production_end)
+                      deadline=group_offer.production_end, category=coalition.category,
+                      unit=order_unit(next(iter(member_needs.values())).characteristics))
         await append_audit_event(
             db,
             event_type="coalition_obligations_checked",

@@ -1,12 +1,12 @@
 "use client";
 
 // Календарь мощностей (GET/PUT /companies/{id}/capacity).
-// Таблица на ближайшие 10 дней, поле available_units на каждую дату.
+// Таблица на ближайшие 30 дней для выбранного ресурса и единицы измерения.
 
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { getToken } from "../../lib/api";
-import { ApiError, formatUnits, marketplace } from "../../lib/marketplace";
+import { ApiError, CapacityEntry, formatUnits, marketplace, PRODUCT_CATEGORIES } from "../../lib/marketplace";
 import { useCompanySelector } from "../../lib/useMe";
 
 const DAYS_COUNT = 30;
@@ -41,6 +41,9 @@ export default function SellerCapacityPage() {
 
   const [reserved, setReserved] = useState<Record<string, number>>({});
   const [values, setValues] = useState<Record<string, string>>({});
+  const [allEntries, setAllEntries] = useState<CapacityEntry[]>([]);
+  const [scopeCategory, setScopeCategory] = useState("");
+  const [scopeUnit, setScopeUnit] = useState("шт");
   const [loaded, setLoaded] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
@@ -50,18 +53,13 @@ export default function SellerCapacityPage() {
     const token = getToken();
     if (!token || !companyId) return;
     let cancelled = false;
-    setLoaded(false); setValues({}); setReserved({}); setSaved(false);
+    setLoaded(false); setAllEntries([]); setSaved(false);
     setError(null);
     marketplace
       .getCapacity(token, companyId)
       .then((entries) => {
         if (cancelled) return;
-        const next: Record<string, string> = {};
-        for (const entry of entries) {
-          if (dates.includes(entry.date)) next[entry.date] = String(entry.available_units);
-        }
-        setValues(next);
-        setReserved(Object.fromEntries(entries.map(entry=>[entry.date, entry.reserved_units ?? 0])));
+        setAllEntries(entries);
       })
       .catch((err: unknown) => {
         if (!cancelled) {
@@ -76,6 +74,12 @@ export default function SellerCapacityPage() {
     };
   }, [companyId, dates]);
 
+  useEffect(() => {
+    const scoped = allEntries.filter(entry => entry.category === scopeCategory && entry.unit === scopeUnit);
+    setValues(Object.fromEntries(scoped.filter(entry => dates.includes(entry.date)).map(entry => [entry.date, String(entry.available_units)])));
+    setReserved(Object.fromEntries(scoped.map(entry => [entry.date, entry.reserved_units ?? 0])));
+  }, [allEntries, scopeCategory, scopeUnit, dates]);
+
   async function handleSave() {
     const token = getToken();
     if (!token || !company) return;
@@ -83,14 +87,20 @@ export default function SellerCapacityPage() {
     setError(null);
     setSaved(false);
     try {
+      const enteredUnit = scopeUnit.trim().toLowerCase().replace(/\.$/, "");
+      const unit = ["штука", "штуки", "штук"].includes(enteredUnit) ? "шт" : enteredUnit;
+      if (!unit || unit.length > 32) throw new Error("Укажите единицу измерения до 32 символов.");
       const entries = dates.map((date) => ({
         date,
+        category: scopeCategory,
+        unit,
         available_units: Number(values[date] || 0),
       }));
       if (entries.some(entry=>!Number.isSafeInteger(entry.available_units) || entry.available_units < 0)) throw new Error("Укажите целое количество единиц для каждого дня.");
       await marketplace.updateCapacity(token, company.id, entries);
       const updated = await marketplace.getCapacity(token, company.id);
-      setReserved(Object.fromEntries(updated.map(entry=>[entry.date, entry.reserved_units ?? 0])));
+      setScopeUnit(unit);
+      setAllEntries(updated);
       setSaved(true);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Не удалось сохранить мощности.");
@@ -140,7 +150,7 @@ export default function SellerCapacityPage() {
           На главную
         </Link>
       </div>
-      <p className="subtitle">Общая и свободная мощность производства по дням (ближайшие {DAYS_COUNT} дней)</p>
+      <p className="subtitle">Мощность производства по категориям и единицам измерения (ближайшие {DAYS_COUNT} дней)</p>
 
       {available.length > 1 && (
         <div className="field">
@@ -158,6 +168,12 @@ export default function SellerCapacityPage() {
       {saved && <div className="alert alert-success">Мощности сохранены.</div>}
       {error && <div className="alert alert-error">{error}</div>}
 
+      <div className="form-grid card">
+        <div className="field"><label htmlFor="capacity-category">Категория ресурса</label><select id="capacity-category" value={scopeCategory} disabled={saving} onChange={event => { setScopeCategory(event.target.value); setSaved(false); }}><option value="">Общий ресурс для выбранной единицы</option>{PRODUCT_CATEGORIES.map(item => <option key={item} value={item}>{item}</option>)}</select></div>
+        <div className="field"><label htmlFor="capacity-unit">Единица измерения</label><input id="capacity-unit" value={scopeUnit} maxLength={32} disabled={saving} onChange={event => { setScopeUnit(event.target.value); setSaved(false); }} /></div>
+        <p className="hint">Отдельная категория доступна только для заказов этой категории. Общий ресурс делят все категории с той же единицей измерения; занятый объём учитывается совместно.</p>
+      </div>
+
       <section className="card">
         {!loaded ? (
           <p className="hint">Загрузка календаря...</p>
@@ -167,7 +183,7 @@ export default function SellerCapacityPage() {
               <thead>
                 <tr>
                   <th>Дата</th>
-                  <th>Всего, ед.</th><th>Занято, ед.</th><th>Свободно, ед.</th>
+                  <th>Всего, {scopeUnit}</th><th>Занято, {scopeUnit}</th><th>Свободно, {scopeUnit}</th>
                 </tr>
               </thead>
               <tbody>
@@ -183,7 +199,7 @@ export default function SellerCapacityPage() {
                         value={values[date] ?? ""}
                         placeholder="0"
                         onChange={(event) =>
-                          setValues((current) => ({ ...current, [date]: event.target.value }))
+                          { setValues((current) => ({ ...current, [date]: event.target.value })); setSaved(false); }
                         }
                       />
                     </td><td>{reserved[date] ?? 0}</td><td>{Math.max(0, Number(values[date] || 0) - (reserved[date] ?? 0))}</td>
@@ -192,7 +208,7 @@ export default function SellerCapacityPage() {
               </tbody>
             </table>
             <p className="hint mode-hint">
-              Например, {formatUnits(4800)} — общий объём производства в этот день. Занятый объём включает заказы, удержания и уже выполненную работу. Уменьшить общую мощность ниже занятого объёма нельзя.
+              Например, {formatUnits(4800, scopeUnit)} — объём выбранного ресурса в этот день. Занятый объём включает заказы, удержания и уже выполненную работу. Уменьшить мощность ниже занятого объёма нельзя.
             </p>
             <div className="actions">
               <button type="button" className="btn btn-primary" disabled={saving} onClick={() => void handleSave()}>

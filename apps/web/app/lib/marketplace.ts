@@ -79,6 +79,8 @@ export interface CapacityEntry {
   free_units?: number;
   /** Дата в формате YYYY-MM-DD. */
   date: string;
+  category: string;
+  unit: string;
   available_units: number;
 }
 
@@ -1091,7 +1093,10 @@ export const marketplace = {
 
   // Мощности
   getCapacity(token: string, companyId: string, from?: string, to?: string): Promise<CapacityEntry[]> {
-    const query = from || to ? `?from=${from ?? ""}&to=${to ?? ""}` : "";
+    const params = new URLSearchParams();
+    if (from) params.set("start", from);
+    if (to) params.set("end", to);
+    const query = params.size ? `?${params}` : "";
     return marketplaceFetch(`/api/v1/companies/${companyId}/capacity${query}`, { token }).then((body) =>
       unwrapList<CapacityEntry>(body, ["entries", "items"]),
     );

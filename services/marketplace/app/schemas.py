@@ -252,7 +252,22 @@ class SellerAnalyticsOut(BaseModel):
 
 class CapacityEntryIn(BaseModel):
     date: date
+    category: str = Field(default="", max_length=120)
+    unit: str = Field(default="шт", min_length=1, max_length=32)
     available_units: int = Field(ge=0)
+
+    @field_validator("category")
+    @classmethod
+    def clean_category(cls, value: str) -> str:
+        return value.strip()
+
+    @field_validator("unit")
+    @classmethod
+    def clean_unit(cls, value: str) -> str:
+        value = value.strip().lower().rstrip(".")
+        if not value:
+            raise ValueError("Укажите единицу измерения")
+        return "шт" if value in {"шт", "штука", "штуки", "штук"} else value
 
 
 class CapacityEntryOut(CapacityEntryIn):
@@ -265,8 +280,8 @@ class CapacityPutIn(BaseModel):
 
     @model_validator(mode="after")
     def distinct_dates(self):
-        if len({entry.date for entry in self.entries}) != len(self.entries):
-            raise ValueError("Дата мощности не должна повторяться")
+        if len({(entry.date, entry.category, entry.unit) for entry in self.entries}) != len(self.entries):
+            raise ValueError("Дата, категория и единица измерения мощности не должны повторяться")
         return self
 
 

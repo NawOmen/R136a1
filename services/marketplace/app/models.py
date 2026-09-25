@@ -94,11 +94,13 @@ class ProductImage(Base):
 
 class CapacityEntry(Base):
     __tablename__ = "capacity_entries"
-    __table_args__ = (UniqueConstraint("company_id", "date", name="uq_capacity_company_date"), {"schema": SCHEMA})
+    __table_args__ = (UniqueConstraint("company_id", "date", "category", "unit", name="uq_capacity_company_date_scope"), {"schema": SCHEMA})
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=_uuid)
     company_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), nullable=False)
     date: Mapped[date] = mapped_column(Date, nullable=False)
+    category: Mapped[str] = mapped_column(String(120), nullable=False, default="", server_default="")
+    unit: Mapped[str] = mapped_column(String(32), nullable=False, default="шт", server_default="шт")
     available_units: Mapped[int] = mapped_column(Integer, nullable=False)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now())
 

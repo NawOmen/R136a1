@@ -7,7 +7,7 @@ again. A return never silently restocks goods of unknown quality.
 from datetime import date, datetime, timedelta, timezone
 
 from fastapi import HTTPException
-from sqlalchemy import select
+from sqlalchemy import or_, select
 
 from .models import CapacityEntry, Product, ResourceReservation
 from sqlalchemy import text
@@ -32,7 +32,7 @@ async def free_stock(db, product, rows=None):
     return max(0, (product.stock_units or 0) - sum(row.units for row in rows if row.product_id == product.id and occupies(row, stock=True)))
 
 
-async def reserve(db, *, company_id, anchor_type, anchor_id, units, deadline, resource_kind="capacity", product_id=None, expires_at=None, start=None):
+async def reserve(db, *, company_id, anchor_type, anchor_id, units, deadline, resource_kind="capacity", product_id=None, expires_at=None, start=None, category="", unit="шт"):
     await lock_company(db, company_id)
     rows = await reservations(db, company_id)
     previous = [row for row in rows if row.anchor_type == anchor_type and row.anchor_id == anchor_id]
@@ -56,7 +56,13 @@ async def reserve(db, *, company_id, anchor_type, anchor_id, units, deadline, re
             raise HTTPException(409, "Свободного остатка недостаточно: часть товара уже зарезервирована")
         allocation.append(ResourceReservation(company_id=company_id, anchor_type=anchor_type, anchor_id=anchor_id, product_id=product.id, units=units, status=state, expires_at=expires_at))
     else:
-        entries = list((await db.scalars(select(CapacityEntry).where(CapacityEntry.company_id == company_id, CapacityEntry.date >= max(date.today(), start or date.today()), CapacityEntry.date <= deadline).order_by(CapacityEntry.date))).all())
+        entries = list((await db.scalars(select(CapacityEntry).where(
+            CapacityEntry.company_id == company_id,
+            CapacityEntry.date >= max(date.today(), start or date.today()),
+            CapacityEntry.date <= deadline,
+            CapacityEntry.unit == unit,
+            or_(CapacityEntry.category == category, CapacityEntry.category == ""),
+        ).order_by(CapacityEntry.date, CapacityEntry.category.desc()))).all())
         remaining = units
         for entry in entries:
             occupied = sum(row.units for row in rows if row.capacity_entry_id == entry.id and occupies(row))

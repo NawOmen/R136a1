@@ -5,7 +5,7 @@ import uuid
 from collections import defaultdict
 from datetime import date, datetime, timezone
 
-from sqlalchemy import func, select, text
+from sqlalchemy import select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from .models import (
@@ -20,6 +20,7 @@ from .models import (
     Need,
     Offer,
 )
+from .resources import occupies, reservations
 
 COMMON_KEYS = {
     "volume_ml",
@@ -335,15 +336,16 @@ async def _rebuild_opportunities(db: AsyncSession, needs: list[Need]) -> None:
             supply_ratio = min(1, supplied / total_demand) if total_demand else 1
             volume_factor = min(1, unmet / 50_000)
             share_factor = unmet / total_demand
-            recorded_capacity = (
-                await db.execute(
-                    select(func.sum(CapacityEntry.available_units)).where(
-                        CapacityEntry.company_id == passport.company_id,
-                        CapacityEntry.date >= date.today(),
-                        CapacityEntry.date <= max(item.deadline_date for item in category_needs),
-                    )
-                )
-            ).scalar_one_or_none()
+            capacity_entries = (await db.scalars(select(CapacityEntry).where(
+                CapacityEntry.company_id == passport.company_id,
+                CapacityEntry.date >= date.today(),
+                CapacityEntry.date <= max(item.deadline_date for item in category_needs),
+                CapacityEntry.category.in_(["", category]),
+                CapacityEntry.unit == unit,
+            ))).all()
+            held = await reservations(db, passport.company_id) if capacity_entries else []
+            recorded_capacity = sum(max(0, entry.available_units - sum(row.units for row in held
+                if row.capacity_entry_id == entry.id and occupies(row))) for entry in capacity_entries) if capacity_entries else None
             capacity_limit = (
                 recorded_capacity
                 if recorded_capacity is not None

@@ -20,7 +20,7 @@ from ..deps import (
     require_verified_company,
 )
 from ..models import CapacityEntry, CapabilityPassport, Deal, Need, Offer, OfferDraft, Product
-from ..matching import ACTIVE_NEED_STATUSES, offer_unit_price, run_market_rematch
+from ..matching import ACTIVE_NEED_STATUSES, offer_unit_price, order_unit, run_market_rematch
 from ..offer_draft import available_capacity_units, build_offer_draft, changed_fields
 from ..schemas import DealOut, OfferDraftIn, OfferDraftOut, OfferIn, OfferOut, OfferPatch, OfferSelectIn
 from ..resources import reserve, reservations, free_stock, occupies
@@ -96,7 +96,9 @@ async def prepare_offer_draft(
         .all()
     )
     held = await reservations(db, data.company_id)
-    free_capacity = sum(max(0, row.available_units - sum(r.units for r in held if r.capacity_entry_id == row.id and occupies(r))) for row in capacity if date.today() <= row.date <= need.deadline_date)
+    free_capacity = sum(max(0, row.available_units - sum(r.units for r in held if r.capacity_entry_id == row.id and occupies(r))) for row in capacity
+                        if date.today() <= row.date <= need.deadline_date and row.unit == order_unit(need.characteristics)
+                        and row.category in {"", need.category})
     stocks = {product.id: await free_stock(db, product, held) for product in products}
     result = await build_offer_draft(
         need=need,
@@ -398,7 +400,8 @@ async def select_offer(
     await db.flush()
     await reserve(db, company_id=offer.company_id, anchor_type="deal", anchor_id=deal.id,
                   units=need.volume_units, deadline=need.deadline_date,
-                  resource_kind=offer.resource_kind, product_id=offer.product_id)
+                  resource_kind=offer.resource_kind, product_id=offer.product_id,
+                  category=need.category, unit=order_unit(need.characteristics))
     approval_payload = {
         "offer_id": str(offer.id),
         "offer_revision": offer.revision,
