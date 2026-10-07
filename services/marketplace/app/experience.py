@@ -23,6 +23,11 @@ def validate_characteristics(
     category: str, subcategory: str | None, characteristics: dict, moq_units: int
 ) -> tuple[list[str], list[str]]:
     errors = validate_profile_values(category, subcategory, characteristics, require_product_fields=True)
+    # Preserve the existing v1 validation messages for required packaging fields.
+    if category == "Упаковка и тара":
+        errors = ["Для упаковки укажите материал" if error == "Укажите характеристику «Материал»" else error for error in errors]
+        if subcategory == "Бумажные стаканы":
+            errors = ["Для бумажных стаканов укажите объём" if error == "Укажите характеристику «Объём, мл»" else error for error in errors]
     warnings: list[str] = []
     if len(characteristics) > 25:
         errors.append("Можно указать не более 25 характеристик")

@@ -76,6 +76,12 @@ class TechnicalProfileTests(unittest.TestCase):
         with self.assertRaises(ValidationError): NeedEditIn(**{**payload,'characteristics':{'volume_ml':False}},expected_revision=1)
         with self.assertRaises(ValidationError): NeedIn(**{**payload,'characteristics':{str(n):'x' for n in range(26)}})
 
+    def test_existing_required_packaging_messages_are_preserved(self):
+        errors, warnings = validate_characteristics('Упаковка и тара','Бумажные стаканы',{'цвет':'крафт'},5000)
+        self.assertIn('Для упаковки укажите материал',errors)
+        self.assertIn('Для бумажных стаканов укажите объём',errors)
+        self.assertTrue(warnings)
+
     def test_same_errors_are_returned_by_existing_validation_service(self):
         errors,_=validate_characteristics('Упаковка и тара','Бумажные стаканы',{'material':'','volume_ml':-1},1)
         self.assertEqual(len(errors),2)
