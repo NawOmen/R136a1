@@ -4,6 +4,8 @@ from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
+from .category_characteristics import validate_profile_values
+
 
 # ---------- Адреса доставки ----------
 
@@ -131,6 +133,13 @@ class ProductIn(ProductRules):
     moq_units: int = Field(gt=0)
     lead_time_days: int = Field(gt=0)
     stock_units: int | None = Field(default=None, ge=0)
+
+    @model_validator(mode="after")
+    def validate_category_values(self):
+        errors = validate_profile_values(self.category, self.subcategory, self.characteristics)
+        if errors:
+            raise ValueError("; ".join(errors))
+        return self
 
     @model_validator(mode="after")
     def validate_tiers_against_moq(self):
@@ -528,8 +537,17 @@ class NeedIn(BaseModel):
     @field_validator("characteristics")
     @classmethod
     def validate_unit(cls, value: dict[str, Any]):
+        if len(value) > 25:
+            raise ValueError("Можно добавить не более 25 характеристик")
         validate_order_unit(value)
         return value
+
+    @model_validator(mode="after")
+    def validate_category_values(self):
+        errors = validate_profile_values(self.category, self.subcategory, self.characteristics)
+        if errors:
+            raise ValueError("; ".join(errors))
+        return self
 
 
 class NeedEditIn(NeedIn):

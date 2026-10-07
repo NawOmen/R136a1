@@ -58,6 +58,28 @@ def validate_registry(data: dict) -> None:
                 if not isinstance(values, list) or not values or any(not isinstance(value, str) or not value.strip() for value in values):
                     raise ValueError(f"Некорректное поле категории: {field}")
 
+    fields = data.get("characteristic_fields", {})
+    for key, definition in fields.items():
+        if not isinstance(key, str) or definition.get("type") not in {"text", "number", "integer"}:
+            raise ValueError("Некорректный тип характеристики")
+        if not definition.get("label") or not isinstance(definition.get("aliases"), list):
+            raise ValueError("Некорректное описание характеристики")
+    for group in groups:
+        for leaf in group["leaves"]:
+            profile = leaf.get("technical_profile")
+            if not profile or type(profile.get("version")) is not int or profile["version"] < 1:
+                raise ValueError("Не задана версия технического профиля")
+            keys = profile.get("fields", [])
+            if not keys or len(keys) != len(set(keys)) or any(key not in fields for key in keys):
+                raise ValueError("Некорректные поля технического профиля")
+            if any(key not in keys for key in profile.get("required_for_product", [])):
+                raise ValueError("Обязательная характеристика отсутствует в профиле")
+            names = []
+            for key in keys:
+                names.extend({normalize_label(alias) for alias in [key, *fields[key]["aliases"]]})
+            if len(names) != len(set(names)):
+                raise ValueError("Синонимы характеристик неоднозначны")
+
 
 _REGISTRY = json.loads(Path(__file__).with_name("category_registry.json").read_text(encoding="utf-8"))
 validate_registry(_REGISTRY)

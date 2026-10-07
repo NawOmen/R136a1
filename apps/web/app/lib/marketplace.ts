@@ -5,6 +5,7 @@
 import { ApiError, handleUnauthorized } from "./api";
 import { serviceUrl } from "./serviceUrl";
 import categoryRegistry from "./category-registry.generated.json";
+import { registryCharacteristicLabel } from "./categoryProfiles";
 
 // Тот же класс ошибок, что у gateway-auth — страницы ловят единый тип.
 export { ApiError };
@@ -700,7 +701,7 @@ const CHARACTERISTIC_LABELS: Record<string, string> = {
 };
 
 export function characteristicLabel(key: string): string {
-  return CHARACTERISTIC_LABELS[key] ?? key;
+  return registryCharacteristicLabel(key) ?? CHARACTERISTIC_LABELS[key] ?? key;
 }
 
 export function formatCharacteristics(characteristics: Record<string, unknown>): string {

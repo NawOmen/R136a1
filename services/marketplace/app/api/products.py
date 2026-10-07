@@ -16,7 +16,7 @@ from ..deps import (
     require_company_seller,
     require_verified_company,
 )
-from ..experience import notify_market_watchers
+from ..experience import notify_market_watchers, validate_characteristics
 from ..models import Product, ProductImage, ProductPriceObservation
 from ..resources import lock_company, reservations, occupies
 from ..matching import run_market_rematch
@@ -143,6 +143,9 @@ async def update_product(
                     "Сначала снимите товар с публикации."
                 ),
             )
+        errors, _ = validate_characteristics(validated.category, validated.subcategory, validated.characteristics, validated.moq_units)
+        if errors:
+            raise HTTPException(422, "; ".join(errors))
     for field, value in validated.model_dump().items():
         setattr(product, field, value)
     if "stock_units" in patch:
@@ -173,6 +176,9 @@ async def publish_product(
     admission = None
     if data.published:
         await require_verified_company(product.company_id, user, db)
+        errors, _ = validate_characteristics(product.category, product.subcategory, product.characteristics, product.moq_units)
+        if errors:
+            raise HTTPException(422, "; ".join(errors))
         # Проверка компании не подтверждает документы конкретного товара.
         admission = await company_admission(
             db,

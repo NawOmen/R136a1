@@ -5,6 +5,8 @@
 
 import Link from "next/link";
 import CatalogImport from "../../components/CatalogImport";
+import CharacteristicSuggestions from "../../components/CharacteristicSuggestions";
+import { characteristicField } from "../../lib/categoryProfiles";
 import { FormEvent, useEffect, useState } from "react";
 import { getToken } from "../../lib/api";
 import {
@@ -95,8 +97,13 @@ export default function SellerProductsPage() {
     event.preventDefault();
     const token = getToken();
     if (!token || !company) return;
-    if (rows.length === 0 || rows.some((row) => !row.key.trim() || !row.value.trim())) {
+    if (rows.some((row) => !row.key.trim() || !row.value.trim())) {
       setError("Заполните ключ и значение каждой характеристики.");
+      return;
+    }
+    const keys = rows.map((row) => row.key.trim().toLowerCase().replaceAll("ё", "е"));
+    if (new Set(keys).size !== keys.length) {
+      setError("Названия характеристик не должны повторяться.");
       return;
     }
     const characteristics: Record<string, unknown> = {};
@@ -272,19 +279,24 @@ export default function SellerProductsPage() {
           </div>
           <div className="field">
             <label>
-              Характеристики<span className="req">*</span>
+              Характеристики
             </label>
+            <CharacteristicSuggestions category={category} subcategory={subcategory} keys={rows.map((row) => row.key)}
+              disabled={creating} product onAdd={(key) => setRows((current) => current.length < 25 ? [...current, newRow(key)] : current)} />
             {rows.map((row, index) => (
               <div key={index} className="char-row">
                 <input
                   type="text"
                   placeholder="Характеристика (например, материал)"
+                  aria-label={`Характеристика ${index + 1}: название`}
                   value={row.key}
                   onChange={(event) => updateRow(index, { key: event.target.value })}
                 />
                 <input
                   type="text"
-                  placeholder="Значение (например, 400)"
+                  placeholder={characteristicField(category, subcategory, row.key)?.label ?? "Значение (например, 400)"}
+                  aria-label={`Характеристика ${index + 1}: ${characteristicField(category, subcategory, row.key)?.label ?? "значение"}`}
+                  inputMode={characteristicField(category, subcategory, row.key)?.type !== "text" && characteristicField(category, subcategory, row.key) ? "decimal" : "text"}
                   value={row.value}
                   onChange={(event) => updateRow(index, { value: event.target.value })}
                 />

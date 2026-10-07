@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "registry_version": "catalog-1",
+  "registry_version": "catalog-3",
   "change_policy": "ID сохраняются при переименовании. Изменение состава, меток или правил требует новой версии реестра и проверки потребителей; допуск определяется category_admission, а не этим реестром.",
   "groups": [
     {
@@ -13,7 +13,7 @@
           "parent_id": "packaging",
           "label": "Бумажные стаканы",
           "aliases": [],
-          "revision": 1,
+          "revision": 2,
           "owner_role": "Специалист категории",
           "functional_state": "classification_only",
           "admission_profile_key": "paper_cups",
@@ -31,27 +31,43 @@
             "repeat"
           ],
           "limitations": [
-            "Полный предметный паспорт и единицы заказа ещё не проверены.",
+            "Начальный профиль характеристик подключён; обязательные свойства остальных категорий, зависимости, единицы заказа и полный паспорт ещё требуют предметной проверки.",
             "Наличие категории не является допуском товара и не доказывает готовность полного сценария."
           ],
           "test_refs": [
             "services/marketplace/unit/test_category_registry.py",
             "services/marketplace/unit/test_category_admission_registry.py",
-            "services/marketplace/tests/test_need_classification.py"
+            "services/marketplace/tests/test_need_classification.py",
+            "services/marketplace/unit/test_category_characteristics.py"
           ],
           "next_tasks": [
             "S01.02",
             "S01.03",
             "S01.04",
             "S15.01"
-          ]
+          ],
+          "technical_profile": {
+            "version": 1,
+            "state": "initial",
+            "fields": [
+              "unit",
+              "material",
+              "volume_ml",
+              "coating",
+              "purpose"
+            ],
+            "required_for_product": [
+              "material",
+              "volume_ml"
+            ]
+          }
         },
         {
           "id": "packaging.food-packaging",
           "parent_id": "packaging",
           "label": "Пищевая упаковка",
           "aliases": [],
-          "revision": 1,
+          "revision": 3,
           "owner_role": "Специалист категории",
           "functional_state": "classification_only",
           "admission_profile_key": "paper_cups_by_title",
@@ -69,27 +85,41 @@
             "repeat"
           ],
           "limitations": [
-            "Полный предметный паспорт и единицы заказа ещё не проверены.",
+            "Начальный профиль характеристик подключён; обязательные свойства остальных категорий, зависимости, единицы заказа и полный паспорт ещё требуют предметной проверки.",
             "Наличие категории не является допуском товара и не доказывает готовность полного сценария."
           ],
           "test_refs": [
             "services/marketplace/unit/test_category_registry.py",
             "services/marketplace/unit/test_category_admission_registry.py",
-            "services/marketplace/tests/test_need_classification.py"
+            "services/marketplace/tests/test_need_classification.py",
+            "services/marketplace/unit/test_category_characteristics.py"
           ],
           "next_tasks": [
             "S01.02",
             "S01.03",
             "S01.04",
             "S15.01"
-          ]
+          ],
+          "technical_profile": {
+            "version": 2,
+            "state": "initial",
+            "fields": [
+              "unit",
+              "material",
+              "dimensions_mm",
+              "purpose"
+            ],
+            "required_for_product": [
+              "material"
+            ]
+          }
         },
         {
           "id": "packaging.bags",
           "parent_id": "packaging",
           "label": "Пакеты",
           "aliases": [],
-          "revision": 1,
+          "revision": 3,
           "owner_role": "Специалист категории",
           "functional_state": "classification_only",
           "admission_profile_key": "packaging_other",
@@ -107,27 +137,41 @@
             "repeat"
           ],
           "limitations": [
-            "Полный предметный паспорт и единицы заказа ещё не проверены.",
+            "Начальный профиль характеристик подключён; обязательные свойства остальных категорий, зависимости, единицы заказа и полный паспорт ещё требуют предметной проверки.",
             "Наличие категории не является допуском товара и не доказывает готовность полного сценария."
           ],
           "test_refs": [
             "services/marketplace/unit/test_category_registry.py",
             "services/marketplace/unit/test_category_admission_registry.py",
-            "services/marketplace/tests/test_need_classification.py"
+            "services/marketplace/tests/test_need_classification.py",
+            "services/marketplace/unit/test_category_characteristics.py"
           ],
           "next_tasks": [
             "S01.02",
             "S01.03",
             "S01.04",
             "S15.01"
-          ]
+          ],
+          "technical_profile": {
+            "version": 2,
+            "state": "initial",
+            "fields": [
+              "unit",
+              "material",
+              "dimensions_mm",
+              "thickness_mm"
+            ],
+            "required_for_product": [
+              "material"
+            ]
+          }
         },
         {
           "id": "packaging.boxes",
           "parent_id": "packaging",
           "label": "Коробки",
           "aliases": [],
-          "revision": 1,
+          "revision": 3,
           "owner_role": "Специалист категории",
           "functional_state": "classification_only",
           "admission_profile_key": "packaging_other",
@@ -145,27 +189,40 @@
             "repeat"
           ],
           "limitations": [
-            "Полный предметный паспорт и единицы заказа ещё не проверены.",
+            "Начальный профиль характеристик подключён; обязательные свойства остальных категорий, зависимости, единицы заказа и полный паспорт ещё требуют предметной проверки.",
             "Наличие категории не является допуском товара и не доказывает готовность полного сценария."
           ],
           "test_refs": [
             "services/marketplace/unit/test_category_registry.py",
             "services/marketplace/unit/test_category_admission_registry.py",
-            "services/marketplace/tests/test_need_classification.py"
+            "services/marketplace/tests/test_need_classification.py",
+            "services/marketplace/unit/test_category_characteristics.py"
           ],
           "next_tasks": [
             "S01.02",
             "S01.03",
             "S01.04",
             "S15.01"
-          ]
+          ],
+          "technical_profile": {
+            "version": 2,
+            "state": "initial",
+            "fields": [
+              "unit",
+              "material",
+              "dimensions_mm"
+            ],
+            "required_for_product": [
+              "material"
+            ]
+          }
         },
         {
           "id": "packaging.bottles-canisters",
           "parent_id": "packaging",
           "label": "Бутылки и канистры",
           "aliases": [],
-          "revision": 1,
+          "revision": 2,
           "owner_role": "Специалист категории",
           "functional_state": "classification_only",
           "admission_profile_key": "packaging_other",
@@ -183,27 +240,41 @@
             "repeat"
           ],
           "limitations": [
-            "Полный предметный паспорт и единицы заказа ещё не проверены.",
+            "Начальный профиль характеристик подключён; обязательные свойства остальных категорий, зависимости, единицы заказа и полный паспорт ещё требуют предметной проверки.",
             "Наличие категории не является допуском товара и не доказывает готовность полного сценария."
           ],
           "test_refs": [
             "services/marketplace/unit/test_category_registry.py",
             "services/marketplace/unit/test_category_admission_registry.py",
-            "services/marketplace/tests/test_need_classification.py"
+            "services/marketplace/tests/test_need_classification.py",
+            "services/marketplace/unit/test_category_characteristics.py"
           ],
           "next_tasks": [
             "S01.02",
             "S01.03",
             "S01.04",
             "S15.01"
-          ]
+          ],
+          "technical_profile": {
+            "version": 1,
+            "state": "initial",
+            "fields": [
+              "unit",
+              "material",
+              "volume_ml",
+              "purpose"
+            ],
+            "required_for_product": [
+              "material"
+            ]
+          }
         },
         {
           "id": "packaging.film",
           "parent_id": "packaging",
           "label": "Плёнка",
           "aliases": [],
-          "revision": 1,
+          "revision": 2,
           "owner_role": "Специалист категории",
           "functional_state": "classification_only",
           "admission_profile_key": "packaging_other",
@@ -221,20 +292,34 @@
             "repeat"
           ],
           "limitations": [
-            "Полный предметный паспорт и единицы заказа ещё не проверены.",
+            "Начальный профиль характеристик подключён; обязательные свойства остальных категорий, зависимости, единицы заказа и полный паспорт ещё требуют предметной проверки.",
             "Наличие категории не является допуском товара и не доказывает готовность полного сценария."
           ],
           "test_refs": [
             "services/marketplace/unit/test_category_registry.py",
             "services/marketplace/unit/test_category_admission_registry.py",
-            "services/marketplace/tests/test_need_classification.py"
+            "services/marketplace/tests/test_need_classification.py",
+            "services/marketplace/unit/test_category_characteristics.py"
           ],
           "next_tasks": [
             "S01.02",
             "S01.03",
             "S01.04",
             "S15.01"
-          ]
+          ],
+          "technical_profile": {
+            "version": 1,
+            "state": "initial",
+            "fields": [
+              "unit",
+              "material",
+              "width_mm",
+              "thickness_mm"
+            ],
+            "required_for_product": [
+              "material"
+            ]
+          }
         }
       ]
     },
@@ -248,7 +333,7 @@
           "parent_id": "materials",
           "label": "Бумага и картон",
           "aliases": [],
-          "revision": 1,
+          "revision": 2,
           "owner_role": "Специалист категории",
           "functional_state": "classification_only",
           "admission_profile_key": null,
@@ -266,27 +351,39 @@
             "repeat"
           ],
           "limitations": [
-            "Полный предметный паспорт и единицы заказа ещё не проверены.",
+            "Начальный профиль характеристик подключён; обязательные свойства остальных категорий, зависимости, единицы заказа и полный паспорт ещё требуют предметной проверки.",
             "Наличие категории не является допуском товара и не доказывает готовность полного сценария."
           ],
           "test_refs": [
             "services/marketplace/unit/test_category_registry.py",
             "services/marketplace/unit/test_category_admission_registry.py",
-            "services/marketplace/tests/test_need_classification.py"
+            "services/marketplace/tests/test_need_classification.py",
+            "services/marketplace/unit/test_category_characteristics.py"
           ],
           "next_tasks": [
             "S01.02",
             "S01.03",
             "S01.04",
             "S15.01"
-          ]
+          ],
+          "technical_profile": {
+            "version": 1,
+            "state": "initial",
+            "fields": [
+              "unit",
+              "material",
+              "format",
+              "grammage_g_m2"
+            ],
+            "required_for_product": []
+          }
         },
         {
           "id": "materials.polymers",
           "parent_id": "materials",
           "label": "Полимеры",
           "aliases": [],
-          "revision": 1,
+          "revision": 2,
           "owner_role": "Специалист категории",
           "functional_state": "classification_only",
           "admission_profile_key": null,
@@ -304,27 +401,39 @@
             "repeat"
           ],
           "limitations": [
-            "Полный предметный паспорт и единицы заказа ещё не проверены.",
+            "Начальный профиль характеристик подключён; обязательные свойства остальных категорий, зависимости, единицы заказа и полный паспорт ещё требуют предметной проверки.",
             "Наличие категории не является допуском товара и не доказывает готовность полного сценария."
           ],
           "test_refs": [
             "services/marketplace/unit/test_category_registry.py",
             "services/marketplace/unit/test_category_admission_registry.py",
-            "services/marketplace/tests/test_need_classification.py"
+            "services/marketplace/tests/test_need_classification.py",
+            "services/marketplace/unit/test_category_characteristics.py"
           ],
           "next_tasks": [
             "S01.02",
             "S01.03",
             "S01.04",
             "S15.01"
-          ]
+          ],
+          "technical_profile": {
+            "version": 1,
+            "state": "initial",
+            "fields": [
+              "unit",
+              "material",
+              "grade",
+              "process"
+            ],
+            "required_for_product": []
+          }
         },
         {
           "id": "materials.metals",
           "parent_id": "materials",
           "label": "Металлы",
           "aliases": [],
-          "revision": 1,
+          "revision": 3,
           "owner_role": "Специалист категории",
           "functional_state": "classification_only",
           "admission_profile_key": null,
@@ -342,27 +451,40 @@
             "repeat"
           ],
           "limitations": [
-            "Полный предметный паспорт и единицы заказа ещё не проверены.",
+            "Начальный профиль характеристик подключён; обязательные свойства остальных категорий, зависимости, единицы заказа и полный паспорт ещё требуют предметной проверки.",
             "Наличие категории не является допуском товара и не доказывает готовность полного сценария."
           ],
           "test_refs": [
             "services/marketplace/unit/test_category_registry.py",
             "services/marketplace/unit/test_category_admission_registry.py",
-            "services/marketplace/tests/test_need_classification.py"
+            "services/marketplace/tests/test_need_classification.py",
+            "services/marketplace/unit/test_category_characteristics.py"
           ],
           "next_tasks": [
             "S01.02",
             "S01.03",
             "S01.04",
             "S15.01"
-          ]
+          ],
+          "technical_profile": {
+            "version": 2,
+            "state": "initial",
+            "fields": [
+              "unit",
+              "material",
+              "grade",
+              "dimensions_mm",
+              "standard"
+            ],
+            "required_for_product": []
+          }
         },
         {
           "id": "materials.textile",
           "parent_id": "materials",
           "label": "Текстиль",
           "aliases": [],
-          "revision": 1,
+          "revision": 2,
           "owner_role": "Специалист категории",
           "functional_state": "classification_only",
           "admission_profile_key": null,
@@ -380,27 +502,39 @@
             "repeat"
           ],
           "limitations": [
-            "Полный предметный паспорт и единицы заказа ещё не проверены.",
+            "Начальный профиль характеристик подключён; обязательные свойства остальных категорий, зависимости, единицы заказа и полный паспорт ещё требуют предметной проверки.",
             "Наличие категории не является допуском товара и не доказывает готовность полного сценария."
           ],
           "test_refs": [
             "services/marketplace/unit/test_category_registry.py",
             "services/marketplace/unit/test_category_admission_registry.py",
-            "services/marketplace/tests/test_need_classification.py"
+            "services/marketplace/tests/test_need_classification.py",
+            "services/marketplace/unit/test_category_characteristics.py"
           ],
           "next_tasks": [
             "S01.02",
             "S01.03",
             "S01.04",
             "S15.01"
-          ]
+          ],
+          "technical_profile": {
+            "version": 1,
+            "state": "initial",
+            "fields": [
+              "unit",
+              "material",
+              "composition",
+              "width_cm"
+            ],
+            "required_for_product": []
+          }
         },
         {
           "id": "materials.chemical-feedstock",
           "parent_id": "materials",
           "label": "Химическое сырьё",
           "aliases": [],
-          "revision": 1,
+          "revision": 2,
           "owner_role": "Специалист категории",
           "functional_state": "classification_only",
           "admission_profile_key": null,
@@ -418,20 +552,33 @@
             "repeat"
           ],
           "limitations": [
-            "Полный предметный паспорт и единицы заказа ещё не проверены.",
+            "Начальный профиль характеристик подключён; обязательные свойства остальных категорий, зависимости, единицы заказа и полный паспорт ещё требуют предметной проверки.",
             "Наличие категории не является допуском товара и не доказывает готовность полного сценария."
           ],
           "test_refs": [
             "services/marketplace/unit/test_category_registry.py",
             "services/marketplace/unit/test_category_admission_registry.py",
-            "services/marketplace/tests/test_need_classification.py"
+            "services/marketplace/tests/test_need_classification.py",
+            "services/marketplace/unit/test_category_characteristics.py"
           ],
           "next_tasks": [
             "S01.02",
             "S01.03",
             "S01.04",
             "S15.01"
-          ]
+          ],
+          "technical_profile": {
+            "version": 1,
+            "state": "initial",
+            "fields": [
+              "unit",
+              "composition",
+              "grade",
+              "purpose",
+              "storage_conditions"
+            ],
+            "required_for_product": []
+          }
         }
       ]
     },
@@ -445,7 +592,7 @@
           "parent_id": "equipment",
           "label": "Производственное",
           "aliases": [],
-          "revision": 1,
+          "revision": 2,
           "owner_role": "Специалист категории",
           "functional_state": "classification_only",
           "admission_profile_key": "electronics",
@@ -463,27 +610,39 @@
             "repeat"
           ],
           "limitations": [
-            "Полный предметный паспорт и единицы заказа ещё не проверены.",
+            "Начальный профиль характеристик подключён; обязательные свойства остальных категорий, зависимости, единицы заказа и полный паспорт ещё требуют предметной проверки.",
             "Наличие категории не является допуском товара и не доказывает готовность полного сценария."
           ],
           "test_refs": [
             "services/marketplace/unit/test_category_registry.py",
             "services/marketplace/unit/test_category_admission_registry.py",
-            "services/marketplace/tests/test_need_classification.py"
+            "services/marketplace/tests/test_need_classification.py",
+            "services/marketplace/unit/test_category_characteristics.py"
           ],
           "next_tasks": [
             "S01.02",
             "S01.03",
             "S01.04",
             "S15.01"
-          ]
+          ],
+          "technical_profile": {
+            "version": 1,
+            "state": "initial",
+            "fields": [
+              "unit",
+              "model",
+              "process",
+              "power_kw"
+            ],
+            "required_for_product": []
+          }
         },
         {
           "id": "equipment.retail",
           "parent_id": "equipment",
           "label": "Торговое",
           "aliases": [],
-          "revision": 1,
+          "revision": 3,
           "owner_role": "Специалист категории",
           "functional_state": "classification_only",
           "admission_profile_key": "electronics",
@@ -501,27 +660,39 @@
             "repeat"
           ],
           "limitations": [
-            "Полный предметный паспорт и единицы заказа ещё не проверены.",
+            "Начальный профиль характеристик подключён; обязательные свойства остальных категорий, зависимости, единицы заказа и полный паспорт ещё требуют предметной проверки.",
             "Наличие категории не является допуском товара и не доказывает готовность полного сценария."
           ],
           "test_refs": [
             "services/marketplace/unit/test_category_registry.py",
             "services/marketplace/unit/test_category_admission_registry.py",
-            "services/marketplace/tests/test_need_classification.py"
+            "services/marketplace/tests/test_need_classification.py",
+            "services/marketplace/unit/test_category_characteristics.py"
           ],
           "next_tasks": [
             "S01.02",
             "S01.03",
             "S01.04",
             "S15.01"
-          ]
+          ],
+          "technical_profile": {
+            "version": 2,
+            "state": "initial",
+            "fields": [
+              "unit",
+              "model",
+              "dimensions_mm",
+              "purpose"
+            ],
+            "required_for_product": []
+          }
         },
         {
           "id": "equipment.warehouse",
           "parent_id": "equipment",
           "label": "Складское",
           "aliases": [],
-          "revision": 1,
+          "revision": 3,
           "owner_role": "Специалист категории",
           "functional_state": "classification_only",
           "admission_profile_key": "electronics",
@@ -539,27 +710,39 @@
             "repeat"
           ],
           "limitations": [
-            "Полный предметный паспорт и единицы заказа ещё не проверены.",
+            "Начальный профиль характеристик подключён; обязательные свойства остальных категорий, зависимости, единицы заказа и полный паспорт ещё требуют предметной проверки.",
             "Наличие категории не является допуском товара и не доказывает готовность полного сценария."
           ],
           "test_refs": [
             "services/marketplace/unit/test_category_registry.py",
             "services/marketplace/unit/test_category_admission_registry.py",
-            "services/marketplace/tests/test_need_classification.py"
+            "services/marketplace/tests/test_need_classification.py",
+            "services/marketplace/unit/test_category_characteristics.py"
           ],
           "next_tasks": [
             "S01.02",
             "S01.03",
             "S01.04",
             "S15.01"
-          ]
+          ],
+          "technical_profile": {
+            "version": 2,
+            "state": "initial",
+            "fields": [
+              "unit",
+              "model",
+              "dimensions_mm",
+              "weight_kg"
+            ],
+            "required_for_product": []
+          }
         },
         {
           "id": "equipment.food",
           "parent_id": "equipment",
           "label": "Пищевое",
           "aliases": [],
-          "revision": 1,
+          "revision": 2,
           "owner_role": "Специалист категории",
           "functional_state": "classification_only",
           "admission_profile_key": "electronics",
@@ -577,27 +760,39 @@
             "repeat"
           ],
           "limitations": [
-            "Полный предметный паспорт и единицы заказа ещё не проверены.",
+            "Начальный профиль характеристик подключён; обязательные свойства остальных категорий, зависимости, единицы заказа и полный паспорт ещё требуют предметной проверки.",
             "Наличие категории не является допуском товара и не доказывает готовность полного сценария."
           ],
           "test_refs": [
             "services/marketplace/unit/test_category_registry.py",
             "services/marketplace/unit/test_category_admission_registry.py",
-            "services/marketplace/tests/test_need_classification.py"
+            "services/marketplace/tests/test_need_classification.py",
+            "services/marketplace/unit/test_category_characteristics.py"
           ],
           "next_tasks": [
             "S01.02",
             "S01.03",
             "S01.04",
             "S15.01"
-          ]
+          ],
+          "technical_profile": {
+            "version": 1,
+            "state": "initial",
+            "fields": [
+              "unit",
+              "model",
+              "process",
+              "power_kw"
+            ],
+            "required_for_product": []
+          }
         },
         {
           "id": "equipment.spare-parts",
           "parent_id": "equipment",
           "label": "Запасные части",
           "aliases": [],
-          "revision": 1,
+          "revision": 2,
           "owner_role": "Специалист категории",
           "functional_state": "classification_only",
           "admission_profile_key": "electronics",
@@ -615,20 +810,32 @@
             "repeat"
           ],
           "limitations": [
-            "Полный предметный паспорт и единицы заказа ещё не проверены.",
+            "Начальный профиль характеристик подключён; обязательные свойства остальных категорий, зависимости, единицы заказа и полный паспорт ещё требуют предметной проверки.",
             "Наличие категории не является допуском товара и не доказывает готовность полного сценария."
           ],
           "test_refs": [
             "services/marketplace/unit/test_category_registry.py",
             "services/marketplace/unit/test_category_admission_registry.py",
-            "services/marketplace/tests/test_need_classification.py"
+            "services/marketplace/tests/test_need_classification.py",
+            "services/marketplace/unit/test_category_characteristics.py"
           ],
           "next_tasks": [
             "S01.02",
             "S01.03",
             "S01.04",
             "S15.01"
-          ]
+          ],
+          "technical_profile": {
+            "version": 1,
+            "state": "initial",
+            "fields": [
+              "unit",
+              "model",
+              "compatibility",
+              "material"
+            ],
+            "required_for_product": []
+          }
         }
       ]
     },
@@ -642,7 +849,7 @@
           "parent_id": "construction",
           "label": "Отделочные материалы",
           "aliases": [],
-          "revision": 1,
+          "revision": 3,
           "owner_role": "Специалист категории",
           "functional_state": "classification_only",
           "admission_profile_key": "construction_finishing",
@@ -660,27 +867,39 @@
             "repeat"
           ],
           "limitations": [
-            "Полный предметный паспорт и единицы заказа ещё не проверены.",
+            "Начальный профиль характеристик подключён; обязательные свойства остальных категорий, зависимости, единицы заказа и полный паспорт ещё требуют предметной проверки.",
             "Наличие категории не является допуском товара и не доказывает готовность полного сценария."
           ],
           "test_refs": [
             "services/marketplace/unit/test_category_registry.py",
             "services/marketplace/unit/test_category_admission_registry.py",
-            "services/marketplace/tests/test_need_classification.py"
+            "services/marketplace/tests/test_need_classification.py",
+            "services/marketplace/unit/test_category_characteristics.py"
           ],
           "next_tasks": [
             "S01.02",
             "S01.03",
             "S01.04",
             "S15.01"
-          ]
+          ],
+          "technical_profile": {
+            "version": 2,
+            "state": "initial",
+            "fields": [
+              "unit",
+              "material",
+              "dimensions_mm",
+              "finish"
+            ],
+            "required_for_product": []
+          }
         },
         {
           "id": "construction.fasteners",
           "parent_id": "construction",
           "label": "Крепёж",
           "aliases": [],
-          "revision": 1,
+          "revision": 2,
           "owner_role": "Специалист категории",
           "functional_state": "classification_only",
           "admission_profile_key": null,
@@ -698,27 +917,41 @@
             "repeat"
           ],
           "limitations": [
-            "Полный предметный паспорт и единицы заказа ещё не проверены.",
+            "Начальный профиль характеристик подключён; обязательные свойства остальных категорий, зависимости, единицы заказа и полный паспорт ещё требуют предметной проверки.",
             "Наличие категории не является допуском товара и не доказывает готовность полного сценария."
           ],
           "test_refs": [
             "services/marketplace/unit/test_category_registry.py",
             "services/marketplace/unit/test_category_admission_registry.py",
-            "services/marketplace/tests/test_need_classification.py"
+            "services/marketplace/tests/test_need_classification.py",
+            "services/marketplace/unit/test_category_characteristics.py"
           ],
           "next_tasks": [
             "S01.02",
             "S01.03",
             "S01.04",
             "S15.01"
-          ]
+          ],
+          "technical_profile": {
+            "version": 1,
+            "state": "initial",
+            "fields": [
+              "unit",
+              "material",
+              "diameter_mm",
+              "length_mm",
+              "thread",
+              "standard"
+            ],
+            "required_for_product": []
+          }
         },
         {
           "id": "construction.engineering",
           "parent_id": "construction",
           "label": "Инженерные системы",
           "aliases": [],
-          "revision": 1,
+          "revision": 3,
           "owner_role": "Специалист категории",
           "functional_state": "classification_only",
           "admission_profile_key": null,
@@ -736,27 +969,39 @@
             "repeat"
           ],
           "limitations": [
-            "Полный предметный паспорт и единицы заказа ещё не проверены.",
+            "Начальный профиль характеристик подключён; обязательные свойства остальных категорий, зависимости, единицы заказа и полный паспорт ещё требуют предметной проверки.",
             "Наличие категории не является допуском товара и не доказывает готовность полного сценария."
           ],
           "test_refs": [
             "services/marketplace/unit/test_category_registry.py",
             "services/marketplace/unit/test_category_admission_registry.py",
-            "services/marketplace/tests/test_need_classification.py"
+            "services/marketplace/tests/test_need_classification.py",
+            "services/marketplace/unit/test_category_characteristics.py"
           ],
           "next_tasks": [
             "S01.02",
             "S01.03",
             "S01.04",
             "S15.01"
-          ]
+          ],
+          "technical_profile": {
+            "version": 2,
+            "state": "initial",
+            "fields": [
+              "unit",
+              "model",
+              "dimensions_mm",
+              "purpose"
+            ],
+            "required_for_product": []
+          }
         },
         {
           "id": "construction.tools",
           "parent_id": "construction",
           "label": "Инструмент",
           "aliases": [],
-          "revision": 1,
+          "revision": 2,
           "owner_role": "Специалист категории",
           "functional_state": "classification_only",
           "admission_profile_key": null,
@@ -774,20 +1019,32 @@
             "repeat"
           ],
           "limitations": [
-            "Полный предметный паспорт и единицы заказа ещё не проверены.",
+            "Начальный профиль характеристик подключён; обязательные свойства остальных категорий, зависимости, единицы заказа и полный паспорт ещё требуют предметной проверки.",
             "Наличие категории не является допуском товара и не доказывает готовность полного сценария."
           ],
           "test_refs": [
             "services/marketplace/unit/test_category_registry.py",
             "services/marketplace/unit/test_category_admission_registry.py",
-            "services/marketplace/tests/test_need_classification.py"
+            "services/marketplace/tests/test_need_classification.py",
+            "services/marketplace/unit/test_category_characteristics.py"
           ],
           "next_tasks": [
             "S01.02",
             "S01.03",
             "S01.04",
             "S15.01"
-          ]
+          ],
+          "technical_profile": {
+            "version": 1,
+            "state": "initial",
+            "fields": [
+              "unit",
+              "model",
+              "material",
+              "purpose"
+            ],
+            "required_for_product": []
+          }
         }
       ]
     },
@@ -801,7 +1058,7 @@
           "parent_id": "food",
           "label": "Напитки",
           "aliases": [],
-          "revision": 1,
+          "revision": 2,
           "owner_role": "Специалист категории",
           "functional_state": "classification_only",
           "admission_profile_key": "food_products",
@@ -819,27 +1076,41 @@
             "repeat"
           ],
           "limitations": [
-            "Полный предметный паспорт и единицы заказа ещё не проверены.",
+            "Начальный профиль характеристик подключён; обязательные свойства остальных категорий, зависимости, единицы заказа и полный паспорт ещё требуют предметной проверки.",
             "Наличие категории не является допуском товара и не доказывает готовность полного сценария."
           ],
           "test_refs": [
             "services/marketplace/unit/test_category_registry.py",
             "services/marketplace/unit/test_category_admission_registry.py",
-            "services/marketplace/tests/test_need_classification.py"
+            "services/marketplace/tests/test_need_classification.py",
+            "services/marketplace/unit/test_category_characteristics.py"
           ],
           "next_tasks": [
             "S01.02",
             "S01.03",
             "S01.04",
             "S15.01"
-          ]
+          ],
+          "technical_profile": {
+            "version": 1,
+            "state": "initial",
+            "fields": [
+              "unit",
+              "composition",
+              "volume_ml",
+              "packaging",
+              "storage_conditions",
+              "shelf_life_days"
+            ],
+            "required_for_product": []
+          }
         },
         {
           "id": "food.groceries",
           "parent_id": "food",
           "label": "Бакалея",
           "aliases": [],
-          "revision": 1,
+          "revision": 2,
           "owner_role": "Специалист категории",
           "functional_state": "classification_only",
           "admission_profile_key": "food_products",
@@ -857,27 +1128,41 @@
             "repeat"
           ],
           "limitations": [
-            "Полный предметный паспорт и единицы заказа ещё не проверены.",
+            "Начальный профиль характеристик подключён; обязательные свойства остальных категорий, зависимости, единицы заказа и полный паспорт ещё требуют предметной проверки.",
             "Наличие категории не является допуском товара и не доказывает готовность полного сценария."
           ],
           "test_refs": [
             "services/marketplace/unit/test_category_registry.py",
             "services/marketplace/unit/test_category_admission_registry.py",
-            "services/marketplace/tests/test_need_classification.py"
+            "services/marketplace/tests/test_need_classification.py",
+            "services/marketplace/unit/test_category_characteristics.py"
           ],
           "next_tasks": [
             "S01.02",
             "S01.03",
             "S01.04",
             "S15.01"
-          ]
+          ],
+          "technical_profile": {
+            "version": 1,
+            "state": "initial",
+            "fields": [
+              "unit",
+              "composition",
+              "grade",
+              "packaging",
+              "storage_conditions",
+              "shelf_life_days"
+            ],
+            "required_for_product": []
+          }
         },
         {
           "id": "food.frozen",
           "parent_id": "food",
           "label": "Замороженная продукция",
           "aliases": [],
-          "revision": 1,
+          "revision": 2,
           "owner_role": "Специалист категории",
           "functional_state": "classification_only",
           "admission_profile_key": "food_products",
@@ -895,27 +1180,42 @@
             "repeat"
           ],
           "limitations": [
-            "Полный предметный паспорт и единицы заказа ещё не проверены.",
+            "Начальный профиль характеристик подключён; обязательные свойства остальных категорий, зависимости, единицы заказа и полный паспорт ещё требуют предметной проверки.",
             "Наличие категории не является допуском товара и не доказывает готовность полного сценария."
           ],
           "test_refs": [
             "services/marketplace/unit/test_category_registry.py",
             "services/marketplace/unit/test_category_admission_registry.py",
-            "services/marketplace/tests/test_need_classification.py"
+            "services/marketplace/tests/test_need_classification.py",
+            "services/marketplace/unit/test_category_characteristics.py"
           ],
           "next_tasks": [
             "S01.02",
             "S01.03",
             "S01.04",
             "S15.01"
-          ]
+          ],
+          "technical_profile": {
+            "version": 1,
+            "state": "initial",
+            "fields": [
+              "unit",
+              "composition",
+              "packaging",
+              "storage_conditions",
+              "temperature_min_c",
+              "temperature_max_c",
+              "shelf_life_days"
+            ],
+            "required_for_product": []
+          }
         },
         {
           "id": "food.ingredients",
           "parent_id": "food",
           "label": "Ингредиенты",
           "aliases": [],
-          "revision": 1,
+          "revision": 2,
           "owner_role": "Специалист категории",
           "functional_state": "classification_only",
           "admission_profile_key": "food_products",
@@ -933,20 +1233,34 @@
             "repeat"
           ],
           "limitations": [
-            "Полный предметный паспорт и единицы заказа ещё не проверены.",
+            "Начальный профиль характеристик подключён; обязательные свойства остальных категорий, зависимости, единицы заказа и полный паспорт ещё требуют предметной проверки.",
             "Наличие категории не является допуском товара и не доказывает готовность полного сценария."
           ],
           "test_refs": [
             "services/marketplace/unit/test_category_registry.py",
             "services/marketplace/unit/test_category_admission_registry.py",
-            "services/marketplace/tests/test_need_classification.py"
+            "services/marketplace/tests/test_need_classification.py",
+            "services/marketplace/unit/test_category_characteristics.py"
           ],
           "next_tasks": [
             "S01.02",
             "S01.03",
             "S01.04",
             "S15.01"
-          ]
+          ],
+          "technical_profile": {
+            "version": 1,
+            "state": "initial",
+            "fields": [
+              "unit",
+              "composition",
+              "grade",
+              "purpose",
+              "storage_conditions",
+              "shelf_life_days"
+            ],
+            "required_for_product": []
+          }
         }
       ]
     },
@@ -960,7 +1274,7 @@
           "parent_id": "business-supplies",
           "label": "Канцелярия",
           "aliases": [],
-          "revision": 1,
+          "revision": 2,
           "owner_role": "Специалист категории",
           "functional_state": "classification_only",
           "admission_profile_key": null,
@@ -978,27 +1292,39 @@
             "repeat"
           ],
           "limitations": [
-            "Полный предметный паспорт и единицы заказа ещё не проверены.",
+            "Начальный профиль характеристик подключён; обязательные свойства остальных категорий, зависимости, единицы заказа и полный паспорт ещё требуют предметной проверки.",
             "Наличие категории не является допуском товара и не доказывает готовность полного сценария."
           ],
           "test_refs": [
             "services/marketplace/unit/test_category_registry.py",
             "services/marketplace/unit/test_category_admission_registry.py",
-            "services/marketplace/tests/test_need_classification.py"
+            "services/marketplace/tests/test_need_classification.py",
+            "services/marketplace/unit/test_category_characteristics.py"
           ],
           "next_tasks": [
             "S01.02",
             "S01.03",
             "S01.04",
             "S15.01"
-          ]
+          ],
+          "technical_profile": {
+            "version": 1,
+            "state": "initial",
+            "fields": [
+              "unit",
+              "material",
+              "format",
+              "color"
+            ],
+            "required_for_product": []
+          }
         },
         {
           "id": "business-supplies.household",
           "parent_id": "business-supplies",
           "label": "Хозяйственные товары",
           "aliases": [],
-          "revision": 1,
+          "revision": 3,
           "owner_role": "Специалист категории",
           "functional_state": "classification_only",
           "admission_profile_key": null,
@@ -1016,27 +1342,39 @@
             "repeat"
           ],
           "limitations": [
-            "Полный предметный паспорт и единицы заказа ещё не проверены.",
+            "Начальный профиль характеристик подключён; обязательные свойства остальных категорий, зависимости, единицы заказа и полный паспорт ещё требуют предметной проверки.",
             "Наличие категории не является допуском товара и не доказывает готовность полного сценария."
           ],
           "test_refs": [
             "services/marketplace/unit/test_category_registry.py",
             "services/marketplace/unit/test_category_admission_registry.py",
-            "services/marketplace/tests/test_need_classification.py"
+            "services/marketplace/tests/test_need_classification.py",
+            "services/marketplace/unit/test_category_characteristics.py"
           ],
           "next_tasks": [
             "S01.02",
             "S01.03",
             "S01.04",
             "S15.01"
-          ]
+          ],
+          "technical_profile": {
+            "version": 2,
+            "state": "initial",
+            "fields": [
+              "unit",
+              "material",
+              "purpose",
+              "dimensions_mm"
+            ],
+            "required_for_product": []
+          }
         },
         {
           "id": "business-supplies.workwear",
           "parent_id": "business-supplies",
           "label": "Спецодежда",
           "aliases": [],
-          "revision": 1,
+          "revision": 2,
           "owner_role": "Специалист категории",
           "functional_state": "classification_only",
           "admission_profile_key": null,
@@ -1054,27 +1392,40 @@
             "repeat"
           ],
           "limitations": [
-            "Полный предметный паспорт и единицы заказа ещё не проверены.",
+            "Начальный профиль характеристик подключён; обязательные свойства остальных категорий, зависимости, единицы заказа и полный паспорт ещё требуют предметной проверки.",
             "Наличие категории не является допуском товара и не доказывает готовность полного сценария."
           ],
           "test_refs": [
             "services/marketplace/unit/test_category_registry.py",
             "services/marketplace/unit/test_category_admission_registry.py",
-            "services/marketplace/tests/test_need_classification.py"
+            "services/marketplace/tests/test_need_classification.py",
+            "services/marketplace/unit/test_category_characteristics.py"
           ],
           "next_tasks": [
             "S01.02",
             "S01.03",
             "S01.04",
             "S15.01"
-          ]
+          ],
+          "technical_profile": {
+            "version": 1,
+            "state": "initial",
+            "fields": [
+              "unit",
+              "material",
+              "composition",
+              "size",
+              "purpose"
+            ],
+            "required_for_product": []
+          }
         },
         {
           "id": "business-supplies.furniture",
           "parent_id": "business-supplies",
           "label": "Мебель",
           "aliases": [],
-          "revision": 1,
+          "revision": 3,
           "owner_role": "Специалист категории",
           "functional_state": "classification_only",
           "admission_profile_key": null,
@@ -1092,20 +1443,32 @@
             "repeat"
           ],
           "limitations": [
-            "Полный предметный паспорт и единицы заказа ещё не проверены.",
+            "Начальный профиль характеристик подключён; обязательные свойства остальных категорий, зависимости, единицы заказа и полный паспорт ещё требуют предметной проверки.",
             "Наличие категории не является допуском товара и не доказывает готовность полного сценария."
           ],
           "test_refs": [
             "services/marketplace/unit/test_category_registry.py",
             "services/marketplace/unit/test_category_admission_registry.py",
-            "services/marketplace/tests/test_need_classification.py"
+            "services/marketplace/tests/test_need_classification.py",
+            "services/marketplace/unit/test_category_characteristics.py"
           ],
           "next_tasks": [
             "S01.02",
             "S01.03",
             "S01.04",
             "S15.01"
-          ]
+          ],
+          "technical_profile": {
+            "version": 2,
+            "state": "initial",
+            "fields": [
+              "unit",
+              "material",
+              "dimensions_mm",
+              "finish"
+            ],
+            "required_for_product": []
+          }
         }
       ]
     },
@@ -1119,7 +1482,7 @@
           "parent_id": "electronics",
           "label": "Компоненты",
           "aliases": [],
-          "revision": 1,
+          "revision": 2,
           "owner_role": "Специалист категории",
           "functional_state": "classification_only",
           "admission_profile_key": "electronics",
@@ -1137,27 +1500,39 @@
             "repeat"
           ],
           "limitations": [
-            "Полный предметный паспорт и единицы заказа ещё не проверены.",
+            "Начальный профиль характеристик подключён; обязательные свойства остальных категорий, зависимости, единицы заказа и полный паспорт ещё требуют предметной проверки.",
             "Наличие категории не является допуском товара и не доказывает готовность полного сценария."
           ],
           "test_refs": [
             "services/marketplace/unit/test_category_registry.py",
             "services/marketplace/unit/test_category_admission_registry.py",
-            "services/marketplace/tests/test_need_classification.py"
+            "services/marketplace/tests/test_need_classification.py",
+            "services/marketplace/unit/test_category_characteristics.py"
           ],
           "next_tasks": [
             "S01.02",
             "S01.03",
             "S01.04",
             "S15.01"
-          ]
+          ],
+          "technical_profile": {
+            "version": 1,
+            "state": "initial",
+            "fields": [
+              "unit",
+              "model",
+              "voltage_v",
+              "interface"
+            ],
+            "required_for_product": []
+          }
         },
         {
           "id": "electronics.computers",
           "parent_id": "electronics",
           "label": "Компьютерная техника",
           "aliases": [],
-          "revision": 1,
+          "revision": 3,
           "owner_role": "Специалист категории",
           "functional_state": "classification_only",
           "admission_profile_key": "electronics",
@@ -1175,27 +1550,39 @@
             "repeat"
           ],
           "limitations": [
-            "Полный предметный паспорт и единицы заказа ещё не проверены.",
+            "Начальный профиль характеристик подключён; обязательные свойства остальных категорий, зависимости, единицы заказа и полный паспорт ещё требуют предметной проверки.",
             "Наличие категории не является допуском товара и не доказывает готовность полного сценария."
           ],
           "test_refs": [
             "services/marketplace/unit/test_category_registry.py",
             "services/marketplace/unit/test_category_admission_registry.py",
-            "services/marketplace/tests/test_need_classification.py"
+            "services/marketplace/tests/test_need_classification.py",
+            "services/marketplace/unit/test_category_characteristics.py"
           ],
           "next_tasks": [
             "S01.02",
             "S01.03",
             "S01.04",
             "S15.01"
-          ]
+          ],
+          "technical_profile": {
+            "version": 2,
+            "state": "initial",
+            "fields": [
+              "unit",
+              "model",
+              "interface",
+              "dimensions_mm"
+            ],
+            "required_for_product": []
+          }
         },
         {
           "id": "electronics.communication",
           "parent_id": "electronics",
           "label": "Связь",
           "aliases": [],
-          "revision": 1,
+          "revision": 2,
           "owner_role": "Специалист категории",
           "functional_state": "classification_only",
           "admission_profile_key": "electronics",
@@ -1213,27 +1600,39 @@
             "repeat"
           ],
           "limitations": [
-            "Полный предметный паспорт и единицы заказа ещё не проверены.",
+            "Начальный профиль характеристик подключён; обязательные свойства остальных категорий, зависимости, единицы заказа и полный паспорт ещё требуют предметной проверки.",
             "Наличие категории не является допуском товара и не доказывает готовность полного сценария."
           ],
           "test_refs": [
             "services/marketplace/unit/test_category_registry.py",
             "services/marketplace/unit/test_category_admission_registry.py",
-            "services/marketplace/tests/test_need_classification.py"
+            "services/marketplace/tests/test_need_classification.py",
+            "services/marketplace/unit/test_category_characteristics.py"
           ],
           "next_tasks": [
             "S01.02",
             "S01.03",
             "S01.04",
             "S15.01"
-          ]
+          ],
+          "technical_profile": {
+            "version": 1,
+            "state": "initial",
+            "fields": [
+              "unit",
+              "model",
+              "interface",
+              "purpose"
+            ],
+            "required_for_product": []
+          }
         },
         {
           "id": "electronics.automation",
           "parent_id": "electronics",
           "label": "Автоматизация",
           "aliases": [],
-          "revision": 1,
+          "revision": 2,
           "owner_role": "Специалист категории",
           "functional_state": "classification_only",
           "admission_profile_key": "electronics",
@@ -1251,20 +1650,33 @@
             "repeat"
           ],
           "limitations": [
-            "Полный предметный паспорт и единицы заказа ещё не проверены.",
+            "Начальный профиль характеристик подключён; обязательные свойства остальных категорий, зависимости, единицы заказа и полный паспорт ещё требуют предметной проверки.",
             "Наличие категории не является допуском товара и не доказывает готовность полного сценария."
           ],
           "test_refs": [
             "services/marketplace/unit/test_category_registry.py",
             "services/marketplace/unit/test_category_admission_registry.py",
-            "services/marketplace/tests/test_need_classification.py"
+            "services/marketplace/tests/test_need_classification.py",
+            "services/marketplace/unit/test_category_characteristics.py"
           ],
           "next_tasks": [
             "S01.02",
             "S01.03",
             "S01.04",
             "S15.01"
-          ]
+          ],
+          "technical_profile": {
+            "version": 1,
+            "state": "initial",
+            "fields": [
+              "unit",
+              "model",
+              "voltage_v",
+              "interface",
+              "process"
+            ],
+            "required_for_product": []
+          }
         }
       ]
     },
@@ -1278,7 +1690,7 @@
           "parent_id": "transport",
           "label": "Тара для перевозки",
           "aliases": [],
-          "revision": 1,
+          "revision": 3,
           "owner_role": "Специалист категории",
           "functional_state": "classification_only",
           "admission_profile_key": null,
@@ -1296,27 +1708,39 @@
             "repeat"
           ],
           "limitations": [
-            "Полный предметный паспорт и единицы заказа ещё не проверены.",
+            "Начальный профиль характеристик подключён; обязательные свойства остальных категорий, зависимости, единицы заказа и полный паспорт ещё требуют предметной проверки.",
             "Наличие категории не является допуском товара и не доказывает готовность полного сценария."
           ],
           "test_refs": [
             "services/marketplace/unit/test_category_registry.py",
             "services/marketplace/unit/test_category_admission_registry.py",
-            "services/marketplace/tests/test_need_classification.py"
+            "services/marketplace/tests/test_need_classification.py",
+            "services/marketplace/unit/test_category_characteristics.py"
           ],
           "next_tasks": [
             "S01.02",
             "S01.03",
             "S01.04",
             "S15.01"
-          ]
+          ],
+          "technical_profile": {
+            "version": 2,
+            "state": "initial",
+            "fields": [
+              "unit",
+              "material",
+              "dimensions_mm",
+              "weight_kg"
+            ],
+            "required_for_product": []
+          }
         },
         {
           "id": "transport.components",
           "parent_id": "transport",
           "label": "Комплектующие",
           "aliases": [],
-          "revision": 1,
+          "revision": 2,
           "owner_role": "Специалист категории",
           "functional_state": "classification_only",
           "admission_profile_key": null,
@@ -1334,27 +1758,39 @@
             "repeat"
           ],
           "limitations": [
-            "Полный предметный паспорт и единицы заказа ещё не проверены.",
+            "Начальный профиль характеристик подключён; обязательные свойства остальных категорий, зависимости, единицы заказа и полный паспорт ещё требуют предметной проверки.",
             "Наличие категории не является допуском товара и не доказывает готовность полного сценария."
           ],
           "test_refs": [
             "services/marketplace/unit/test_category_registry.py",
             "services/marketplace/unit/test_category_admission_registry.py",
-            "services/marketplace/tests/test_need_classification.py"
+            "services/marketplace/tests/test_need_classification.py",
+            "services/marketplace/unit/test_category_characteristics.py"
           ],
           "next_tasks": [
             "S01.02",
             "S01.03",
             "S01.04",
             "S15.01"
-          ]
+          ],
+          "technical_profile": {
+            "version": 1,
+            "state": "initial",
+            "fields": [
+              "unit",
+              "model",
+              "compatibility",
+              "material"
+            ],
+            "required_for_product": []
+          }
         },
         {
           "id": "transport.warehousing",
           "parent_id": "transport",
           "label": "Складские услуги",
           "aliases": [],
-          "revision": 1,
+          "revision": 2,
           "owner_role": "Специалист категории",
           "functional_state": "classification_only",
           "admission_profile_key": null,
@@ -1372,20 +1808,32 @@
             "repeat"
           ],
           "limitations": [
-            "Полный предметный паспорт и единицы заказа ещё не проверены.",
+            "Начальный профиль характеристик подключён; обязательные свойства остальных категорий, зависимости, единицы заказа и полный паспорт ещё требуют предметной проверки.",
             "Наличие категории не является допуском товара и не доказывает готовность полного сценария."
           ],
           "test_refs": [
             "services/marketplace/unit/test_category_registry.py",
             "services/marketplace/unit/test_category_admission_registry.py",
-            "services/marketplace/tests/test_need_classification.py"
+            "services/marketplace/tests/test_need_classification.py",
+            "services/marketplace/unit/test_category_characteristics.py"
           ],
           "next_tasks": [
             "S01.02",
             "S01.03",
             "S01.04",
             "S15.01"
-          ]
+          ],
+          "technical_profile": {
+            "version": 1,
+            "state": "initial",
+            "fields": [
+              "unit",
+              "service_scope",
+              "storage_conditions",
+              "output"
+            ],
+            "required_for_product": []
+          }
         }
       ]
     },
@@ -1399,7 +1847,7 @@
           "parent_id": "printing",
           "label": "Этикетки",
           "aliases": [],
-          "revision": 1,
+          "revision": 3,
           "owner_role": "Специалист категории",
           "functional_state": "classification_only",
           "admission_profile_key": null,
@@ -1417,27 +1865,39 @@
             "repeat"
           ],
           "limitations": [
-            "Полный предметный паспорт и единицы заказа ещё не проверены.",
+            "Начальный профиль характеристик подключён; обязательные свойства остальных категорий, зависимости, единицы заказа и полный паспорт ещё требуют предметной проверки.",
             "Наличие категории не является допуском товара и не доказывает готовность полного сценария."
           ],
           "test_refs": [
             "services/marketplace/unit/test_category_registry.py",
             "services/marketplace/unit/test_category_admission_registry.py",
-            "services/marketplace/tests/test_need_classification.py"
+            "services/marketplace/tests/test_need_classification.py",
+            "services/marketplace/unit/test_category_characteristics.py"
           ],
           "next_tasks": [
             "S01.02",
             "S01.03",
             "S01.04",
             "S15.01"
-          ]
+          ],
+          "technical_profile": {
+            "version": 2,
+            "state": "initial",
+            "fields": [
+              "unit",
+              "material",
+              "dimensions_mm",
+              "finish"
+            ],
+            "required_for_product": []
+          }
         },
         {
           "id": "printing.printing",
           "parent_id": "printing",
           "label": "Печать",
           "aliases": [],
-          "revision": 1,
+          "revision": 2,
           "owner_role": "Специалист категории",
           "functional_state": "classification_only",
           "admission_profile_key": null,
@@ -1455,27 +1915,40 @@
             "repeat"
           ],
           "limitations": [
-            "Полный предметный паспорт и единицы заказа ещё не проверены.",
+            "Начальный профиль характеристик подключён; обязательные свойства остальных категорий, зависимости, единицы заказа и полный паспорт ещё требуют предметной проверки.",
             "Наличие категории не является допуском товара и не доказывает готовность полного сценария."
           ],
           "test_refs": [
             "services/marketplace/unit/test_category_registry.py",
             "services/marketplace/unit/test_category_admission_registry.py",
-            "services/marketplace/tests/test_need_classification.py"
+            "services/marketplace/tests/test_need_classification.py",
+            "services/marketplace/unit/test_category_characteristics.py"
           ],
           "next_tasks": [
             "S01.02",
             "S01.03",
             "S01.04",
             "S15.01"
-          ]
+          ],
+          "technical_profile": {
+            "version": 1,
+            "state": "initial",
+            "fields": [
+              "unit",
+              "material",
+              "format",
+              "process",
+              "color"
+            ],
+            "required_for_product": []
+          }
         },
         {
           "id": "printing.signs",
           "parent_id": "printing",
           "label": "Вывески",
           "aliases": [],
-          "revision": 1,
+          "revision": 3,
           "owner_role": "Специалист категории",
           "functional_state": "classification_only",
           "admission_profile_key": null,
@@ -1493,27 +1966,39 @@
             "repeat"
           ],
           "limitations": [
-            "Полный предметный паспорт и единицы заказа ещё не проверены.",
+            "Начальный профиль характеристик подключён; обязательные свойства остальных категорий, зависимости, единицы заказа и полный паспорт ещё требуют предметной проверки.",
             "Наличие категории не является допуском товара и не доказывает готовность полного сценария."
           ],
           "test_refs": [
             "services/marketplace/unit/test_category_registry.py",
             "services/marketplace/unit/test_category_admission_registry.py",
-            "services/marketplace/tests/test_need_classification.py"
+            "services/marketplace/tests/test_need_classification.py",
+            "services/marketplace/unit/test_category_characteristics.py"
           ],
           "next_tasks": [
             "S01.02",
             "S01.03",
             "S01.04",
             "S15.01"
-          ]
+          ],
+          "technical_profile": {
+            "version": 2,
+            "state": "initial",
+            "fields": [
+              "unit",
+              "material",
+              "dimensions_mm",
+              "process"
+            ],
+            "required_for_product": []
+          }
         },
         {
           "id": "printing.merchandise",
           "parent_id": "printing",
           "label": "Сувенирная продукция",
           "aliases": [],
-          "revision": 1,
+          "revision": 3,
           "owner_role": "Специалист категории",
           "functional_state": "classification_only",
           "admission_profile_key": null,
@@ -1531,20 +2016,32 @@
             "repeat"
           ],
           "limitations": [
-            "Полный предметный паспорт и единицы заказа ещё не проверены.",
+            "Начальный профиль характеристик подключён; обязательные свойства остальных категорий, зависимости, единицы заказа и полный паспорт ещё требуют предметной проверки.",
             "Наличие категории не является допуском товара и не доказывает готовность полного сценария."
           ],
           "test_refs": [
             "services/marketplace/unit/test_category_registry.py",
             "services/marketplace/unit/test_category_admission_registry.py",
-            "services/marketplace/tests/test_need_classification.py"
+            "services/marketplace/tests/test_need_classification.py",
+            "services/marketplace/unit/test_category_characteristics.py"
           ],
           "next_tasks": [
             "S01.02",
             "S01.03",
             "S01.04",
             "S15.01"
-          ]
+          ],
+          "technical_profile": {
+            "version": 2,
+            "state": "initial",
+            "fields": [
+              "unit",
+              "material",
+              "dimensions_mm",
+              "process"
+            ],
+            "required_for_product": []
+          }
         }
       ]
     },
@@ -1558,7 +2055,7 @@
           "parent_id": "manufacturing-services",
           "label": "Контрактное производство",
           "aliases": [],
-          "revision": 1,
+          "revision": 2,
           "owner_role": "Специалист категории",
           "functional_state": "classification_only",
           "admission_profile_key": null,
@@ -1576,27 +2073,39 @@
             "repeat"
           ],
           "limitations": [
-            "Полный предметный паспорт и единицы заказа ещё не проверены.",
+            "Начальный профиль характеристик подключён; обязательные свойства остальных категорий, зависимости, единицы заказа и полный паспорт ещё требуют предметной проверки.",
             "Наличие категории не является допуском товара и не доказывает готовность полного сценария."
           ],
           "test_refs": [
             "services/marketplace/unit/test_category_registry.py",
             "services/marketplace/unit/test_category_admission_registry.py",
-            "services/marketplace/tests/test_need_classification.py"
+            "services/marketplace/tests/test_need_classification.py",
+            "services/marketplace/unit/test_category_characteristics.py"
           ],
           "next_tasks": [
             "S01.02",
             "S01.03",
             "S01.04",
             "S15.01"
-          ]
+          ],
+          "technical_profile": {
+            "version": 1,
+            "state": "initial",
+            "fields": [
+              "unit",
+              "process",
+              "material",
+              "output"
+            ],
+            "required_for_product": []
+          }
         },
         {
           "id": "manufacturing-services.packing",
           "parent_id": "manufacturing-services",
           "label": "Фасовка",
           "aliases": [],
-          "revision": 1,
+          "revision": 2,
           "owner_role": "Специалист категории",
           "functional_state": "classification_only",
           "admission_profile_key": null,
@@ -1614,27 +2123,39 @@
             "repeat"
           ],
           "limitations": [
-            "Полный предметный паспорт и единицы заказа ещё не проверены.",
+            "Начальный профиль характеристик подключён; обязательные свойства остальных категорий, зависимости, единицы заказа и полный паспорт ещё требуют предметной проверки.",
             "Наличие категории не является допуском товара и не доказывает готовность полного сценария."
           ],
           "test_refs": [
             "services/marketplace/unit/test_category_registry.py",
             "services/marketplace/unit/test_category_admission_registry.py",
-            "services/marketplace/tests/test_need_classification.py"
+            "services/marketplace/tests/test_need_classification.py",
+            "services/marketplace/unit/test_category_characteristics.py"
           ],
           "next_tasks": [
             "S01.02",
             "S01.03",
             "S01.04",
             "S15.01"
-          ]
+          ],
+          "technical_profile": {
+            "version": 1,
+            "state": "initial",
+            "fields": [
+              "unit",
+              "process",
+              "packaging",
+              "output"
+            ],
+            "required_for_product": []
+          }
         },
         {
           "id": "manufacturing-services.processing",
           "parent_id": "manufacturing-services",
           "label": "Обработка",
           "aliases": [],
-          "revision": 1,
+          "revision": 3,
           "owner_role": "Специалист категории",
           "functional_state": "classification_only",
           "admission_profile_key": null,
@@ -1652,27 +2173,40 @@
             "repeat"
           ],
           "limitations": [
-            "Полный предметный паспорт и единицы заказа ещё не проверены.",
+            "Начальный профиль характеристик подключён; обязательные свойства остальных категорий, зависимости, единицы заказа и полный паспорт ещё требуют предметной проверки.",
             "Наличие категории не является допуском товара и не доказывает готовность полного сценария."
           ],
           "test_refs": [
             "services/marketplace/unit/test_category_registry.py",
             "services/marketplace/unit/test_category_admission_registry.py",
-            "services/marketplace/tests/test_need_classification.py"
+            "services/marketplace/tests/test_need_classification.py",
+            "services/marketplace/unit/test_category_characteristics.py"
           ],
           "next_tasks": [
             "S01.02",
             "S01.03",
             "S01.04",
             "S15.01"
-          ]
+          ],
+          "technical_profile": {
+            "version": 2,
+            "state": "initial",
+            "fields": [
+              "unit",
+              "process",
+              "material",
+              "dimensions_mm",
+              "standard"
+            ],
+            "required_for_product": []
+          }
         },
         {
           "id": "manufacturing-services.assembly",
           "parent_id": "manufacturing-services",
           "label": "Сборка",
           "aliases": [],
-          "revision": 1,
+          "revision": 2,
           "owner_role": "Специалист категории",
           "functional_state": "classification_only",
           "admission_profile_key": null,
@@ -1690,20 +2224,32 @@
             "repeat"
           ],
           "limitations": [
-            "Полный предметный паспорт и единицы заказа ещё не проверены.",
+            "Начальный профиль характеристик подключён; обязательные свойства остальных категорий, зависимости, единицы заказа и полный паспорт ещё требуют предметной проверки.",
             "Наличие категории не является допуском товара и не доказывает готовность полного сценария."
           ],
           "test_refs": [
             "services/marketplace/unit/test_category_registry.py",
             "services/marketplace/unit/test_category_admission_registry.py",
-            "services/marketplace/tests/test_need_classification.py"
+            "services/marketplace/tests/test_need_classification.py",
+            "services/marketplace/unit/test_category_characteristics.py"
           ],
           "next_tasks": [
             "S01.02",
             "S01.03",
             "S01.04",
             "S15.01"
-          ]
+          ],
+          "technical_profile": {
+            "version": 1,
+            "state": "initial",
+            "fields": [
+              "unit",
+              "process",
+              "compatibility",
+              "output"
+            ],
+            "required_for_product": []
+          }
         }
       ]
     },
@@ -1717,7 +2263,7 @@
           "parent_id": "medical-hygiene",
           "label": "Расходные материалы",
           "aliases": [],
-          "revision": 1,
+          "revision": 2,
           "owner_role": "Специалист категории",
           "functional_state": "classification_only",
           "admission_profile_key": "medical_unsupported",
@@ -1735,27 +2281,39 @@
             "repeat"
           ],
           "limitations": [
-            "Полный предметный паспорт и единицы заказа ещё не проверены.",
+            "Начальный профиль характеристик подключён; обязательные свойства остальных категорий, зависимости, единицы заказа и полный паспорт ещё требуют предметной проверки.",
             "Наличие категории не является допуском товара и не доказывает готовность полного сценария."
           ],
           "test_refs": [
             "services/marketplace/unit/test_category_registry.py",
             "services/marketplace/unit/test_category_admission_registry.py",
-            "services/marketplace/tests/test_need_classification.py"
+            "services/marketplace/tests/test_need_classification.py",
+            "services/marketplace/unit/test_category_characteristics.py"
           ],
           "next_tasks": [
             "S01.02",
             "S01.03",
             "S01.04",
             "S15.01"
-          ]
+          ],
+          "technical_profile": {
+            "version": 1,
+            "state": "initial",
+            "fields": [
+              "unit",
+              "material",
+              "size",
+              "purpose"
+            ],
+            "required_for_product": []
+          }
         },
         {
           "id": "medical-hygiene.protection",
           "parent_id": "medical-hygiene",
           "label": "Средства защиты",
           "aliases": [],
-          "revision": 1,
+          "revision": 2,
           "owner_role": "Специалист категории",
           "functional_state": "classification_only",
           "admission_profile_key": "personal_protection",
@@ -1773,27 +2331,39 @@
             "repeat"
           ],
           "limitations": [
-            "Полный предметный паспорт и единицы заказа ещё не проверены.",
+            "Начальный профиль характеристик подключён; обязательные свойства остальных категорий, зависимости, единицы заказа и полный паспорт ещё требуют предметной проверки.",
             "Наличие категории не является допуском товара и не доказывает готовность полного сценария."
           ],
           "test_refs": [
             "services/marketplace/unit/test_category_registry.py",
             "services/marketplace/unit/test_category_admission_registry.py",
-            "services/marketplace/tests/test_need_classification.py"
+            "services/marketplace/tests/test_need_classification.py",
+            "services/marketplace/unit/test_category_characteristics.py"
           ],
           "next_tasks": [
             "S01.02",
             "S01.03",
             "S01.04",
             "S15.01"
-          ]
+          ],
+          "technical_profile": {
+            "version": 1,
+            "state": "initial",
+            "fields": [
+              "unit",
+              "material",
+              "size",
+              "purpose"
+            ],
+            "required_for_product": []
+          }
         },
         {
           "id": "medical-hygiene.hygiene",
           "parent_id": "medical-hygiene",
           "label": "Гигиеническая продукция",
           "aliases": [],
-          "revision": 1,
+          "revision": 2,
           "owner_role": "Специалист категории",
           "functional_state": "classification_only",
           "admission_profile_key": "personal_protection",
@@ -1811,20 +2381,32 @@
             "repeat"
           ],
           "limitations": [
-            "Полный предметный паспорт и единицы заказа ещё не проверены.",
+            "Начальный профиль характеристик подключён; обязательные свойства остальных категорий, зависимости, единицы заказа и полный паспорт ещё требуют предметной проверки.",
             "Наличие категории не является допуском товара и не доказывает готовность полного сценария."
           ],
           "test_refs": [
             "services/marketplace/unit/test_category_registry.py",
             "services/marketplace/unit/test_category_admission_registry.py",
-            "services/marketplace/tests/test_need_classification.py"
+            "services/marketplace/tests/test_need_classification.py",
+            "services/marketplace/unit/test_category_characteristics.py"
           ],
           "next_tasks": [
             "S01.02",
             "S01.03",
             "S01.04",
             "S15.01"
-          ]
+          ],
+          "technical_profile": {
+            "version": 1,
+            "state": "initial",
+            "fields": [
+              "unit",
+              "composition",
+              "purpose",
+              "packaging"
+            ],
+            "required_for_product": []
+          }
         }
       ]
     },
@@ -1838,7 +2420,7 @@
           "parent_id": "other",
           "label": "Другая продукция",
           "aliases": [],
-          "revision": 1,
+          "revision": 3,
           "owner_role": "Специалист категории",
           "functional_state": "classification_only",
           "admission_profile_key": null,
@@ -1856,22 +2438,263 @@
             "repeat"
           ],
           "limitations": [
-            "Полный предметный паспорт и единицы заказа ещё не проверены.",
+            "Начальный профиль характеристик подключён; обязательные свойства остальных категорий, зависимости, единицы заказа и полный паспорт ещё требуют предметной проверки.",
             "Наличие категории не является допуском товара и не доказывает готовность полного сценария."
           ],
           "test_refs": [
             "services/marketplace/unit/test_category_registry.py",
             "services/marketplace/unit/test_category_admission_registry.py",
-            "services/marketplace/tests/test_need_classification.py"
+            "services/marketplace/tests/test_need_classification.py",
+            "services/marketplace/unit/test_category_characteristics.py"
           ],
           "next_tasks": [
             "S01.02",
             "S01.03",
             "S01.04",
             "S15.01"
-          ]
+          ],
+          "technical_profile": {
+            "version": 2,
+            "state": "initial",
+            "fields": [
+              "unit",
+              "purpose",
+              "material",
+              "dimensions_mm"
+            ],
+            "required_for_product": []
+          }
         }
       ]
     }
-  ]
+  ],
+  "characteristic_fields": {
+    "unit": {
+      "label": "Единица заказа",
+      "type": "text",
+      "aliases": [
+        "единица измерения"
+      ],
+      "max_length": 32
+    },
+    "material": {
+      "label": "Материал",
+      "type": "text",
+      "aliases": [
+        "материал",
+        "body_material",
+        "материал корпуса"
+      ]
+    },
+    "volume_ml": {
+      "label": "Объём, мл",
+      "type": "number",
+      "aliases": [
+        "объём",
+        "объем"
+      ],
+      "unit": "мл",
+      "positive": true
+    },
+    "coating": {
+      "label": "Покрытие",
+      "type": "text",
+      "aliases": [
+        "покрытие",
+        "inner_coating",
+        "внутреннее покрытие"
+      ]
+    },
+    "purpose": {
+      "label": "Назначение",
+      "type": "text",
+      "aliases": [
+        "назначение"
+      ]
+    },
+    "model": {
+      "label": "Модель",
+      "type": "text",
+      "aliases": []
+    },
+    "grade": {
+      "label": "Марка / сорт",
+      "type": "text",
+      "aliases": []
+    },
+    "composition": {
+      "label": "Состав",
+      "type": "text",
+      "aliases": []
+    },
+    "color": {
+      "label": "Цвет",
+      "type": "text",
+      "aliases": []
+    },
+    "size": {
+      "label": "Размер",
+      "type": "text",
+      "aliases": []
+    },
+    "format": {
+      "label": "Формат",
+      "type": "text",
+      "aliases": []
+    },
+    "process": {
+      "label": "Технология / операция",
+      "type": "text",
+      "aliases": []
+    },
+    "standard": {
+      "label": "Стандарт / спецификация",
+      "type": "text",
+      "aliases": []
+    },
+    "thread": {
+      "label": "Резьба",
+      "type": "text",
+      "aliases": []
+    },
+    "storage_conditions": {
+      "label": "Условия хранения",
+      "type": "text",
+      "aliases": []
+    },
+    "packaging": {
+      "label": "Фасовка",
+      "type": "text",
+      "aliases": []
+    },
+    "finish": {
+      "label": "Отделка",
+      "type": "text",
+      "aliases": []
+    },
+    "interface": {
+      "label": "Интерфейс",
+      "type": "text",
+      "aliases": []
+    },
+    "compatibility": {
+      "label": "Совместимые модели",
+      "type": "text",
+      "aliases": []
+    },
+    "service_scope": {
+      "label": "Состав услуги",
+      "type": "text",
+      "aliases": []
+    },
+    "output": {
+      "label": "Результат работы",
+      "type": "text",
+      "aliases": []
+    },
+    "width_mm": {
+      "label": "Ширина, мм",
+      "type": "number",
+      "aliases": [],
+      "unit": "мм",
+      "positive": true
+    },
+    "length_mm": {
+      "label": "Длина, мм",
+      "type": "number",
+      "aliases": [],
+      "unit": "мм",
+      "positive": true
+    },
+    "thickness_mm": {
+      "label": "Толщина, мм",
+      "type": "number",
+      "aliases": [],
+      "unit": "мм",
+      "positive": true
+    },
+    "diameter_mm": {
+      "label": "Диаметр, мм",
+      "type": "number",
+      "aliases": [],
+      "unit": "мм",
+      "positive": true
+    },
+    "weight_kg": {
+      "label": "Масса единицы, кг",
+      "type": "number",
+      "aliases": [],
+      "unit": "кг",
+      "positive": true
+    },
+    "power_kw": {
+      "label": "Мощность, кВт",
+      "type": "number",
+      "aliases": [],
+      "unit": "кВт",
+      "positive": true
+    },
+    "voltage_v": {
+      "label": "Напряжение, В",
+      "type": "number",
+      "aliases": [],
+      "unit": "В",
+      "positive": true
+    },
+    "density_kg_m3": {
+      "label": "Плотность, кг/м³",
+      "type": "number",
+      "aliases": [],
+      "unit": "кг/м³",
+      "positive": true
+    },
+    "shelf_life_days": {
+      "label": "Срок годности, дней",
+      "type": "integer",
+      "aliases": [],
+      "unit": "дней",
+      "positive": true
+    },
+    "temperature_min_c": {
+      "label": "Минимальная температура, °C",
+      "type": "number",
+      "aliases": [],
+      "unit": "°C"
+    },
+    "temperature_max_c": {
+      "label": "Максимальная температура, °C",
+      "type": "number",
+      "aliases": [],
+      "unit": "°C"
+    },
+    "dimensions_mm": {
+      "label": "Габариты, мм",
+      "type": "text",
+      "aliases": []
+    },
+    "dimensions_cm": {
+      "label": "Габариты, см",
+      "type": "text",
+      "aliases": []
+    },
+    "width_cm": {
+      "label": "Ширина, см",
+      "type": "number",
+      "aliases": [],
+      "unit": "см",
+      "positive": true
+    },
+    "grammage_g_m2": {
+      "label": "Масса на площадь, г/м²",
+      "type": "number",
+      "aliases": [],
+      "unit": "г/м²",
+      "positive": true
+    },
+    "dimensions": {
+      "label": "Габариты",
+      "type": "text",
+      "aliases": []
+    }
+  }
 }

@@ -18,12 +18,13 @@ def expected_snapshot() -> str:
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
     registry = module.registry_snapshot()
-    # Only identity is needed by current forms; operational readiness stays on
-    # the server and must not be confused with permission to publish a product.
+    # Technical form metadata is not permission to publish a product.
     snapshot = {
         "schema_version": registry["schema_version"],
         "registry_version": registry["registry_version"],
         "tree": module.catalogue_tree(),
+        "characteristic_fields": registry["characteristic_fields"],
+        "technical_profiles": {leaf["id"]: leaf["technical_profile"] for group in registry["groups"] for leaf in group["leaves"]},
         "leaf_ids": {group["label"]: {leaf["label"]: leaf["id"] for leaf in group["leaves"]} for group in registry["groups"]},
     }
     return json.dumps(snapshot, ensure_ascii=False, indent=2) + "\n"
