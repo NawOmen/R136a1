@@ -40,6 +40,7 @@ export default function NewNeedPage() {
   const router = useRouter();
   const {
     loading,
+    user,
     error: meError,
     available,
     company,
@@ -49,9 +50,10 @@ export default function NewNeedPage() {
 
   const [addresses, setAddresses] = useState<DeliveryAddress[]>([]);
   const [category, setCategory] = useState(PRODUCT_CATEGORIES[0]);
+  const [subcategory, setSubcategory] = useState("");
   const [rows, setRows] = useState<CharacteristicRow[]>([
-    newRow("volume_ml", ""),
-    newRow("coating", ""),
+    newRow("unit", "шт"),
+    newRow(),
   ]);
   const [volumeUnits, setVolumeUnits] = useState("");
   const [budgetRub, setBudgetRub] = useState("");
@@ -70,6 +72,47 @@ export default function NewNeedPage() {
   const [recording, setRecording] = useState(false);
   const [transcribing, setTranscribing] = useState(false);
   const recorderRef = useRef<MediaRecorder | null>(null);
+
+  const [loadedDraftKey, setLoadedDraftKey] = useState("");
+  const [draftNotice, setDraftNotice] = useState("");
+  const [savedNeed, setSavedNeed] = useState<{ id: string; payload: string; uploaded: string[]; expectedFiles: string[] } | null>(null);
+  const creationKey = useRef("");
+  const draftKey = user && companyId ? `porukam:need-draft:${user.id}:${companyId}` : "";
+
+  useEffect(() => {
+    if (!draftKey) return;
+    setAgentRun(null); setAnswers({}); setFiles([]); setSavedNeed(null);
+    setRequestDescription(""); setRows([newRow("unit", "шт"), newRow()]); setCategory(PRODUCT_CATEGORIES[0]); setSubcategory("");
+    setVolumeUnits(""); setBudgetRub(""); setDeadlineDate(""); setDeliveryAddressId("");
+    setVisibility("open_anonymized"); setDraftNotice(""); creationKey.current = crypto.randomUUID();
+    try {
+      const raw = sessionStorage.getItem(draftKey);
+      if (raw) {
+        const value = JSON.parse(raw);
+        if (value.version === 1) {
+          setRequestDescription(typeof value.description === "string" ? value.description : "");
+          if (PRODUCT_CATEGORIES.includes(value.category)) {
+            setCategory(value.category);
+            if (PRODUCT_CATEGORY_TREE[value.category].includes(value.subcategory)) setSubcategory(value.subcategory);
+          }
+          if (Array.isArray(value.rows) && value.rows.length <= 25 && value.rows.every((r: CharacteristicRow) => typeof r.key === "string" && typeof r.value === "string")) setRows(value.rows);
+          setVolumeUnits(String(value.volume ?? "")); setBudgetRub(String(value.budget ?? ""));
+          setDeadlineDate(String(value.deadline ?? "")); setDeliveryAddressId(String(value.address ?? ""));
+          if (value.visibility === "open_anonymized" || value.visibility === "selected_producers" || value.visibility === "closed") setVisibility(value.visibility);
+          if (value.savedNeed?.id && Array.isArray(value.savedNeed.uploaded)) setSavedNeed({ ...value.savedNeed, expectedFiles: value.savedNeed.expectedFiles ?? [] });
+          if (typeof value.creationKey === "string") creationKey.current = value.creationKey;
+          setDraftNotice(value.fileCount ? "Текст и поля восстановлены. Файлы нужно выбрать повторно: браузер не сохраняет их содержимое." : "Текст и поля восстановлены из этой вкладки.");
+        }
+      }
+    } catch { setDraftNotice("Автосохранение браузера недоступно. Не закрывайте вкладку до сохранения потребности."); }
+    setLoadedDraftKey(draftKey);
+  }, [draftKey]);
+
+  useEffect(() => {
+    if (!draftKey || loadedDraftKey !== draftKey) return;
+    try { sessionStorage.setItem(draftKey, JSON.stringify({ version: 1, description: requestDescription, category, subcategory, rows, volume: volumeUnits, budget: budgetRub, deadline: deadlineDate, address: deliveryAddressId, visibility, fileCount: files.length, savedNeed, creationKey: creationKey.current })); }
+    catch { setDraftNotice("Не удалось сохранить поля в браузере. Не закрывайте вкладку до сохранения потребности."); }
+  }, [draftKey, loadedDraftKey, requestDescription, category, subcategory, rows, volumeUnits, budgetRub, deadlineDate, deliveryAddressId, visibility, files.length, savedNeed]);
 
   // Загрузка адресов выбранной компании
   useEffect(() => {
@@ -154,6 +197,7 @@ export default function NewNeedPage() {
   }
 
   function validate(): string | null {
+    if (!PRODUCT_CATEGORY_TREE[category]?.includes(subcategory)) return "Выберите подкатегорию товара для проверки требований.";
     if (rows.length < 1 || rows.length > 25) {
       return "Добавьте от 1 до 25 характеристик.";
     }
@@ -162,7 +206,7 @@ export default function NewNeedPage() {
     }
     const volume = Number(volumeUnits);
     if (!volumeUnits || !Number.isSafeInteger(volume) || volume <= 0) {
-      return "Укажите целое положительное количество (шт.).";
+      return "Укажите целое положительное количество единиц заказа.";
     }
     if (new Set(rows.map((row) => row.key.trim())).size !== rows.length) return "Названия характеристик не должны повторяться.";
     const budget = Number(budgetRub);
@@ -198,7 +242,7 @@ export default function NewNeedPage() {
       setAgentRun(run);
       setAnswers({});
     } catch (err) {
-      setError(err instanceof MarketplaceError ? err.message : "Не удалось разобрать материалы.");
+      setError(`${err instanceof MarketplaceError ? err.message : "Не удалось разобрать материалы."} Текст и введённые поля сохранены в этой вкладке. Заполните карточку ниже вручную или повторите анализ.`);
     } finally {
       setAnalyzing(false);
     }
@@ -255,6 +299,8 @@ export default function NewNeedPage() {
       item.toLocaleLowerCase("ru") === normalizedCategory || PRODUCT_CATEGORY_TREE[item].some((subcategory) => subcategory.toLocaleLowerCase("ru") === normalizedCategory),
     );
     setCategory(detectedCategory ?? "Другое");
+    const detectedSubcategory = detectedCategory && PRODUCT_CATEGORY_TREE[detectedCategory].find((item) => item.toLocaleLowerCase("ru") === normalizedCategory);
+    setSubcategory(detectedSubcategory || "");
     if (values.has("quantity_units")) setVolumeUnits(String(values.get("quantity_units")));
     if (values.has("budget_rub")) setBudgetRub(String(values.get("budget_rub")));
     if (values.has("lead_time_days")) {
@@ -298,23 +344,42 @@ export default function NewNeedPage() {
     setError(null);
     setSubmitting(true);
     try {
-      const need = await marketplace.createNeed(token, {
+      const payload = {
         company_id: company.id,
         category,
+        subcategory,
         characteristics,
         volume_units: Number(volumeUnits),
         budget_rub: Number(budgetRub),
         deadline_date: deadlineDate,
         delivery_address_id: deliveryAddressId,
         visibility,
-      });
-      // Сначала сохраняем черновик и файлы; только затем публикуем целиком.
-      for (const file of files) {
-        await marketplace.uploadNeedFile(token, need.id, file);
+      };
+      const fingerprint = JSON.stringify(payload);
+      if (savedNeed && savedNeed.payload !== fingerprint) {
+        setError("Черновик уже создан. Откройте его по ссылке ниже: повторная отправка изменённых полей не должна создать второй заказ.");
+        return;
       }
-      if (company.verification_status === "verified") {
+      const selectedFiles = files.map(file => `${file.name}:${file.size}:${file.lastModified}`);
+      if (savedNeed?.expectedFiles.some(signature => !savedNeed.uploaded.includes(signature) && !selectedFiles.includes(signature))) {
+        setError("Для продолжения выберите ещё не загруженные файлы повторно. Публикация без исходных вложений остановлена.");
+        return;
+      }
+      const need = savedNeed ? await marketplace.getNeed(token, savedNeed.id) : await marketplace.createNeed(token, { ...payload, request_key: creationKey.current });
+      let progress = savedNeed ?? { id: need.id, payload: fingerprint, uploaded: [], expectedFiles: selectedFiles };
+      setSavedNeed(progress);
+      // Retry resumes the same draft. Already uploaded files are not sent twice.
+      for (const file of files) {
+        const signature = `${file.name}:${file.size}:${file.lastModified}`;
+        if (progress.uploaded.includes(signature)) continue;
+        await marketplace.uploadNeedFile(token, need.id, file);
+        progress = { ...progress, uploaded: [...progress.uploaded, signature] };
+        setSavedNeed(progress);
+      }
+      if (company.verification_status === "verified" && need.status === "draft") {
         await marketplace.publishNeed(token, need.id);
       }
+      try { sessionStorage.removeItem(draftKey); } catch { /* Storage can be disabled. */ }
       router.push(`/needs/${need.id}`);
     } catch (err) {
       setError(err instanceof MarketplaceError ? err.message : "Не удалось создать потребность.");
@@ -368,7 +433,10 @@ export default function NewNeedPage() {
         Опишите, что нужно купить, — производители смогут предложить свои условия
       </p>
 
-      {error && <div className="alert alert-error">{error}</div>}
+      {error && <div className="alert alert-error" role="alert">{error}</div>}
+      <p className="hint">ИИ не обязателен: карточку можно заполнить вручную. Текст и поля автоматически сохраняются в этой вкладке отдельно для каждой компании.</p>
+      {draftNotice && <p className="hint" role="status">{draftNotice}</p>}
+      {savedNeed && <p className="alert alert-warning">Черновик уже создан. <Link href={`/needs/${savedNeed.id}`}>Открыть сохранённую потребность</Link>. Повторная отправка продолжит загрузку в этот черновик.</p>}
 
       <form className="card" onSubmit={handleSubmit}>
         {available.length > 1 ? (
@@ -412,7 +480,7 @@ export default function NewNeedPage() {
               rows={4}
               value={requestDescription}
               onChange={(event) => { setRequestDescription(event.target.value); setAgentRun(null); setAnswers({}); }}
-              placeholder="Например: нужны 5000 крафтовых стаканов 400 мл с логотипом, доставка в Москву..."
+              placeholder="Например: нужны 30 рабочих столов из дерева, доставка в Москву..."
             />
             <div className="voice-row"><button type="button" className={recording ? "btn btn-danger btn-sm" : "btn btn-secondary btn-sm"} disabled={transcribing} onClick={() => void toggleRecording()}>{transcribing ? "Распознаём…" : recording ? "Остановить запись" : "🎙 Продиктовать запрос"}</button><span className="hint">Речь распознаётся локально и подставляется в текст. В локальной сети микрофону может потребоваться HTTPS.</span></div>
           </div>
@@ -541,7 +609,7 @@ export default function NewNeedPage() {
                         <ul className="match-reasons">{match.reasons.map((reason) => <li key={reason}>{reason}</li>)}</ul>
                         {match.cautions?.map((note) => <p className="alert alert-error" key={note}>{note}</p>)}
                         {match.details && <details><summary>Возможности и ограничения</summary><CapabilityDescription details={match.details} /></details>}
-                        {!!match.catalog?.length && <div className="comparison-scroll"><table className="buyer-comparison"><caption>Данные карточек — без доставки и дополнительных работ</caption><thead><tr><th>Товар</th><th>₽/шт.</th><th>MOQ, шт.</th><th>Срок, дней</th><th>Стоимость товара, ₽</th></tr></thead><tbody>{match.catalog.map((item) => <tr key={item.product_id}>
+                        {!!match.catalog?.length && <div className="comparison-scroll"><table className="buyer-comparison"><caption>Данные карточек — без доставки и дополнительных работ</caption><thead><tr><th>Товар</th><th>₽ за единицу</th><th>Минимум единиц</th><th>Срок, дней</th><th>Стоимость товара, ₽</th></tr></thead><tbody>{match.catalog.map((item) => <tr key={item.product_id}>
                           <td><Link href={`/catalog/${item.product_id}`}>{item.name}</Link><p className="hint">{item.note}</p></td><td>{item.unit_price_rub}</td><td>{item.moq_units}</td><td>{item.lead_time_days}</td><td>{item.total_rub ?? "Нужно уточнение"}</td>
                         </tr>)}</tbody></table></div>}
                       </li>
@@ -580,13 +648,22 @@ export default function NewNeedPage() {
           <label htmlFor="category">
             Категория<span className="req">*</span>
           </label>
-          <select id="category" value={category} onChange={(event) => setCategory(event.target.value)}>
+          <select id="category" value={category} onChange={(event) => { setCategory(event.target.value); setSubcategory(""); }}>
             {PRODUCT_CATEGORIES.map((item) => (
               <option key={item} value={item}>
                 {item}
               </option>
             ))}
           </select>
+        </div>
+
+        <div className="field">
+          <label htmlFor="subcategory">Подкатегория<span className="req">*</span></label>
+          <select id="subcategory" required value={subcategory} onChange={(event) => setSubcategory(event.target.value)}>
+            <option value="">Выберите вид товара</option>
+            {PRODUCT_CATEGORY_TREE[category].map((item) => <option key={item} value={item}>{item}</option>)}
+          </select>
+          <p className="hint">Определяет требования к товару. Общая категория сохраняется для подбора мощностей.</p>
         </div>
 
         <div className="field">
@@ -597,7 +674,7 @@ export default function NewNeedPage() {
             <div key={index} className="char-row">
               <input
                 type="text"
-                placeholder="Ключ (например, volume_ml)"
+                placeholder="Характеристика (например, материал)"
                 aria-label={`Характеристика ${index + 1}: название`}
                 required
                 value={row.key}
@@ -605,7 +682,7 @@ export default function NewNeedPage() {
               />
               <input
                 type="text"
-                placeholder="Значение (например, 400)"
+                placeholder="Значение (например, дерево)"
                 aria-label={`Характеристика ${index + 1}: значение`}
                 required
                 value={row.value}
@@ -632,7 +709,7 @@ export default function NewNeedPage() {
 
         <div className="field">
           <label htmlFor="volume_units">
-            Объём, шт.<span className="req">*</span>
+            Количество единиц заказа<span className="req">*</span>
           </label>
           <input
             id="volume_units"

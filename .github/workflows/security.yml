@@ -18,7 +18,7 @@ jobs:
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-python@v7
-        with: {python-version: "3.14"}
+        with: {python-version: "3.12"}
       - run: pip install bandit==1.9.4
       - run: bandit -r services/gateway-auth/app services/marketplace/app services/llm-gateway/app services/optimizer/app -ll
   python-dependencies:
@@ -30,7 +30,7 @@ jobs:
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-python@v7
-        with: {python-version: "3.14"}
+        with: {python-version: "3.12"}
       - run: pip install pip-audit==2.10.1
       - run: pip-audit --disable-pip -r services/${{ matrix.service }}/requirements.lock
   javascript-dependencies:

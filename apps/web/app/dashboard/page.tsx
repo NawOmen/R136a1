@@ -146,6 +146,7 @@ export default function DashboardPage() {
         </div></div>
         {mode === "buy" && (
           <ul className="company-list">
+            <li><Link href="/buyer/analytics" className="company-item"><span className="company-item__name">Закупки и статистика</span><span className="company-meta">Цены, приёмка, возвраты и отмены</span></Link></li>
             <li>
               <Link href="/catalog" className="company-item">
                 <span className="company-item__name">Каталог товаров</span>
@@ -193,7 +194,7 @@ export default function DashboardPage() {
                 <span className="company-meta">Каталог и публикация товаров</span>
               </Link>
             </li>
-            <li><Link href="/seller/analytics" className="company-item"><span className="company-item__name">Продажи и статистика</span><span className="company-meta">Сделки, оборот и загрузка мощности</span></Link></li>
+            <li><Link href="/seller/analytics" className="company-item"><span className="company-item__name">Продажи и статистика</span><span className="company-meta">Заказы, приёмка, возвраты и прибыль</span></Link></li>
             <li>
               <Link href="/seller/capacity" className="company-item">
                 <span className="company-item__name">Мощности</span>

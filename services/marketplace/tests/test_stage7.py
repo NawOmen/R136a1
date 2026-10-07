@@ -2,7 +2,7 @@ from sqlalchemy import select, text
 from sqlalchemy.exc import IntegrityError
 
 from app.models import Document, HumanApprovalRecord, SupportTicket, TrustAuditEvent
-from app.trust import GENESIS_HASH, verify_event
+from app.trust import GENESIS_HASH, append_audit_event, verify_event
 from conftest import make_company, make_token, make_user
 
 
@@ -66,6 +66,26 @@ async def test_non_admin_cannot_process_support(client, db_session):
         headers={"Authorization": f"Bearer {make_token(user)}"},
     )
     assert response.status_code == 403
+
+
+async def test_company_audit_hides_cross_company_payload(client, db_session):
+    owner = await make_user(db_session)
+    company = await make_company(db_session, owner)
+    outsider = await make_user(db_session)
+    await append_audit_event(db_session, event_type="coalition_obligations_checked",
+        entity_type="coalition", entity_id=__import__("uuid").uuid4(),
+        actor_user_id=owner, actor_company_id=company,
+        source_refs=[{"type": "other_need", "id": "private-reference"}],
+        explanation="Условия проверены.", payload={"other_member": "private-reference"})
+    await db_session.commit()
+    path = f"/api/v1/audit/events?company_id={company}"
+    allowed = await client.get(path, headers={"Authorization": f"Bearer {make_token(owner)}"})
+    assert allowed.status_code == 200
+    assert allowed.json()[0]["explanation"] == "Условия проверены."
+    assert allowed.json()[0]["payload"] == {}
+    assert allowed.json()[0]["source_refs"] == []
+    denied = await client.get(path, headers={"Authorization": f"Bearer {make_token(outsider)}"})
+    assert denied.status_code in {403, 404}
 
 
 async def test_uploaded_document_never_becomes_verified_from_its_own_claims(db_session):

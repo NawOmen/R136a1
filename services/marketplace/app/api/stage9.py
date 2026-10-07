@@ -1,4 +1,6 @@
 import uuid
+import hashlib
+import json
 from datetime import datetime, timezone
 
 from fastapi import APIRouter, Depends, File, HTTPException, Response, UploadFile, status
@@ -6,11 +8,13 @@ from sqlalchemy import delete, func, select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.exc import IntegrityError
 
+from ..admission import publicly_available_products
 from ..database import get_db
+from ..commerce import product_specification_hash
 from ..deps import CurrentUser, get_current_user, notify, require_company_admin, require_company_buyer, require_company_seller, require_membership
 from ..experience import classify_cargo, validate_characteristics
 from ..models import (
-    CoalitionMember, Deal, DealCheckpoint, DealReview, DeliveryArrangement, MarketWatch,
+    CoalitionMember, Deal, DealCheckpoint, DealExecutionEvent, DealReview, DeliveryArrangement, MarketWatch,
     Need, Product, ProductImage, ProductPriceObservation, ProductionProfile, CapabilityPassport,
 )
 from ..schemas import (
@@ -20,6 +24,7 @@ from ..schemas import (
     NeedOut, NeedRepeatIn, PriceIndexPoint, PublicProducerOut, PublicProductDetailOut,
 )
 from ..storage import delete_object, download_object, upload_object
+from ..resources import consume
 from ..trust import append_audit_event, record_human_approval
 
 router = APIRouter(tags=["stage9"])
@@ -48,7 +53,7 @@ async def _ensure_checkpoints(deal_id: uuid.UUID, db: AsyncSession) -> list[Deal
 @router.get("/products/{product_id}/detail", response_model=PublicProductDetailOut)
 async def public_product_detail(product_id: uuid.UUID, db: AsyncSession = Depends(get_db)):
     product = await db.get(Product, product_id)
-    if product is None or not product.is_published:
+    if product is None or not await publicly_available_products(db, [product]):
         raise HTTPException(status.HTTP_404_NOT_FOUND, detail="Товар не найден")
     company = (await db.execute(text(
         "SELECT c.display_name, c.legal_form, c.verification_status FROM auth.companies c "
@@ -143,11 +148,29 @@ async def repeat_need(need_id: uuid.UUID, data: NeedRepeatIn, user: CurrentUser 
     today = datetime.now(timezone.utc).date()
     if data.deadline_date < today or (data.valid_until and data.valid_until < today):
         raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, detail="Новые сроки не могут быть в прошлом")
+    if data.valid_until and data.valid_until > data.deadline_date:
+        raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, detail="Срок актуальности не может быть позже срока поставки")
+    request_hash = hashlib.sha256(json.dumps({"source_need_id": str(need_id), "deadline_date": data.deadline_date.isoformat(),
+        "valid_until": (data.valid_until or data.deadline_date).isoformat()}, sort_keys=True).encode()).hexdigest()
+    if data.request_key:
+        await db.execute(text("SELECT pg_advisory_xact_lock(hashtextextended(:key, 0))"),
+            {"key": f"need-request:{original.company_id}:{data.request_key}"})
+        existing = await db.scalar(select(Need).where(Need.company_id == original.company_id, Need.request_key == data.request_key))
+        if existing:
+            if existing.request_hash != request_hash:
+                raise HTTPException(status.HTTP_409_CONFLICT, detail="Ключ повторного заказа уже использован для других условий")
+            return NeedOut.model_validate({**{column.name: getattr(existing, column.name) for column in Need.__table__.columns}, "files": []})
+    if original.delivery_address_id is not None:
+        address_owner = await db.scalar(text("SELECT company_id FROM marketplace.delivery_addresses WHERE id = :id"),
+            {"id": original.delivery_address_id})
+        if address_owner != original.company_id:
+            raise HTTPException(status.HTTP_409_CONFLICT, detail="Адрес прежнего заказа больше недоступен. Выберите новый адрес")
     copy = Need(
-        company_id=original.company_id, created_by_user_id=user.id, category=original.category,
+        company_id=original.company_id, created_by_user_id=user.id, category=original.category, subcategory=original.subcategory,
         characteristics=original.characteristics, volume_units=original.volume_units, budget_rub=original.budget_rub,
         deadline_date=data.deadline_date, delivery_address_id=original.delivery_address_id,
         visibility=original.visibility, status="draft", valid_until=data.valid_until or data.deadline_date,
+        request_key=data.request_key, request_hash=request_hash,
     )
     db.add(copy); await db.commit(); await db.refresh(copy)
     return NeedOut.model_validate({**{column.name: getattr(copy, column.name) for column in Need.__table__.columns}, "files": []})
@@ -173,7 +196,7 @@ async def deal_timeline(deal_id: uuid.UUID, company_id: uuid.UUID, user: Current
 async def update_checkpoint(deal_id: uuid.UUID, kind: str, data: CheckpointUpdateIn, user: CurrentUser = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
     if kind not in CHECKPOINTS:
         raise HTTPException(status.HTTP_404_NOT_FOUND, detail="Этап сделки не найден")
-    deal = await db.get(Deal, deal_id)
+    deal = await db.scalar(select(Deal).where(Deal.id == deal_id).with_for_update())
     if deal is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, detail="Сделка не найдена")
     await _deal_party(deal, data.company_id, user, db)
@@ -181,12 +204,24 @@ async def update_checkpoint(deal_id: uuid.UUID, kind: str, data: CheckpointUpdat
     expected_company = deal.buyer_company_id if kind == "delivery" else deal.seller_company_id
     if data.company_id != expected_company:
         raise HTTPException(status.HTTP_403_FORBIDDEN, detail="Этот этап подтверждает другая сторона сделки")
+    if deal.status == "cancelled":
+        raise HTTPException(status.HTTP_409_CONFLICT, detail="Заказ отменён")
+    if kind == "shipment" and not data.completed:
+        raise HTTPException(409, "Отгрузку нельзя отменить переключателем. Оформите возврат или отмену остатка")
+    if not data.completed:
+        recorded = await db.scalar(select(DealExecutionEvent.id).where(DealExecutionEvent.deal_id == deal.id).limit(1))
+        if recorded:
+            raise HTTPException(status.HTTP_409_CONFLICT, detail="Исполнение уже зафиксировано. Используйте возврат или отмену остатка")
     checkpoints = await _ensure_checkpoints(deal.id, db)
     target = checkpoints[CHECKPOINTS.index(kind)]
     if data.completed and any(item.status != "completed" for item in checkpoints[:CHECKPOINTS.index(kind)]):
         raise HTTPException(status.HTTP_409_CONFLICT, detail="Сначала завершите предыдущий этап")
     if not data.completed and any(item.status == "completed" for item in checkpoints[CHECKPOINTS.index(kind) + 1:]):
         raise HTTPException(status.HTTP_409_CONFLICT, detail="Сначала отмените последующие этапы")
+    if target.status == ("completed" if data.completed else "pending") and target.note == data.note:
+        return checkpoints
+    if kind == "shipment" and data.completed:
+        await consume(db, company_id=deal.seller_company_id, anchor_type="deal", anchor_id=deal.id)
     target.status = "completed" if data.completed else "pending"
     target.note = data.note
     target.confirmed_by_user_id = user.id
@@ -198,6 +233,9 @@ async def update_checkpoint(deal_id: uuid.UUID, kind: str, data: CheckpointUpdat
     await append_audit_event(db, event_type="deal_checkpoint_updated", entity_type="deal", entity_id=deal.id,
         actor_user_id=user.id, actor_company_id=data.company_id, source_refs=[{"type": "deal", "id": str(deal.id)}],
         explanation="Контрольная точка сделки изменена после явного подтверждения.", payload={"kind": kind, "completed": data.completed})
+    if deal.status not in {"fulfilled", "partially_accepted", "cancelled", "returned"}:
+        completed = [item.kind for item in checkpoints if item.status == "completed"]
+        deal.status = {"delivery": "delivered", "shipment": "shipped", "production": "in_production"}.get(completed[-1], "created") if completed else "created"
     other_company_id = deal.seller_company_id if data.company_id == deal.buyer_company_id else deal.buyer_company_id
     other_users = (await db.execute(text(
         "SELECT user_id FROM auth.company_members WHERE company_id = :company_id"
@@ -272,11 +310,20 @@ async def producer_reviews(company_id: uuid.UUID, db: AsyncSession = Depends(get
 
 
 @router.get("/price-index/{category}", response_model=list[PriceIndexPoint])
-async def price_index(category: str, db: AsyncSession = Depends(get_db)):
+async def price_index(category: str, product_id: uuid.UUID | None = None, db: AsyncSession = Depends(get_db)):
+    # A category average across unrelated SKUs is not a meaningful market index.
+    if product_id is None:
+        return []
+    product = await db.get(Product, product_id)
+    if product is None or product.category != category or not await publicly_available_products(db, [product]):
+        raise HTTPException(404, "Товар не найден")
     day = func.date(ProductPriceObservation.observed_at)
-    rows = (await db.execute(select(day, func.avg(ProductPriceObservation.unit_price_rub), func.count(ProductPriceObservation.id))
-        .where(ProductPriceObservation.category == category).group_by(day).order_by(day))).all()
-    return [PriceIndexPoint(date=row[0], average_unit_price_rub=round(float(row[1]), 2), offers_count=int(row[2])) for row in rows]
+    latest = select(day.label("day"), ProductPriceObservation.unit_price_rub.label("price"),
+        func.row_number().over(partition_by=day, order_by=(ProductPriceObservation.observed_at.desc(), ProductPriceObservation.id.desc())).label("rank")
+    ).where(ProductPriceObservation.product_id == product.id,
+            ProductPriceObservation.specification_hash == product_specification_hash(product)).subquery()
+    rows = (await db.execute(select(latest.c.day, latest.c.price).where(latest.c.rank == 1).order_by(latest.c.day))).all()
+    return [PriceIndexPoint(date=row.day, average_unit_price_rub=round(float(row.price), 2), offers_count=1) for row in rows]
 
 
 @router.get("/market-watches", response_model=list[MarketWatchOut])

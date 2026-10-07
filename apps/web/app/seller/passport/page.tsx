@@ -200,7 +200,7 @@ export default function SellerPassportPage() {
               id="technologies"
               value={technologies}
               onChange={(event) => setTechnologies(event.target.value)}
-              placeholder={"высечка бумажных стаканов"}
+              placeholder={"Раскрой листового материала"}
             />
           </div>
           <div className="field">
@@ -228,7 +228,7 @@ export default function SellerPassportPage() {
           <div className="field">
             <label htmlFor="size_ranges">Диапазоны размеров</label>
             <textarea id="size_ranges" value={sizeRangesText} onChange={(event) => setSizeRangesText(event.target.value)} placeholder={"diameter_mm: 10: 120\nlength_mm: 5: 600"} aria-describedby="size_ranges_hint" />
-            <p className="hint" id="size_ranges_hint">Одна строка: название с единицей измерения: минимум: максимум. Для стаканов — cup_volume_ml.</p>
+            <p className="hint" id="size_ranges_hint">Одна строка: название с единицей измерения: минимум: максимум. Например, width_mm: 100: 1200.</p>
           </div>
           <div className="field">
             <label htmlFor="tolerances">
@@ -256,7 +256,7 @@ export default function SellerPassportPage() {
           <div className="char-row">
             <div className="field" style={{ flex: 1 }}>
               <label htmlFor="min_order">
-                Минимальный заказ, шт.<span className="req">*</span>
+                Минимальный заказ, ед.<span className="req">*</span>
               </label>
               <input
                 id="min_order"
@@ -270,7 +270,7 @@ export default function SellerPassportPage() {
             </div>
             <div className="field" style={{ flex: 1 }}>
               <label htmlFor="max_order">
-                Максимальный заказ, шт.<span className="req">*</span>
+                Максимальный заказ, ед.<span className="req">*</span>
               </label>
               <input
                 id="max_order"
@@ -302,7 +302,7 @@ export default function SellerPassportPage() {
               id="completed_order_types"
               value={completedOrderTypes}
               onChange={(event) => setCompletedOrderTypes(event.target.value)}
-              placeholder={"стаканы 300–450 мл"}
+              placeholder={"Короба из гофрокартона; металлический крепёж"}
             />
           </div>
           <div className="actions">

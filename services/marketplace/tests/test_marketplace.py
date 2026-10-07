@@ -1,6 +1,6 @@
-from sqlalchemy import select, text
+from sqlalchemy import func, select, text
 
-from conftest import grant_packaging_documents, make_company, make_token, make_user
+from conftest import grant_capacity, grant_packaging_documents, make_company, make_token, make_user
 
 
 def _auth(token: str) -> dict:
@@ -18,6 +18,8 @@ async def test_full_flow(client, db_session):
 
     # категорийный допуск: без подтверждённых документов публикация упаковки запрещена
     await grant_packaging_documents(db_session, seller_company, decision_user_id=seller_user)
+
+    await grant_capacity(db_session, seller_company, 120_000)
 
     # продавец создаёт и публикует товар
     r = await client.post(
@@ -67,7 +69,7 @@ async def test_full_flow(client, db_session):
     offer_id = r.json()["id"]
 
     # покупатель выбирает предложение
-    r = await client.post(f"/api/v1/offers/{offer_id}/select", headers=_auth(buyer_token))
+    r = await client.post(f"/api/v1/offers/{offer_id}/select", headers=_auth(buyer_token), json={"expected_revision": 1, "human_approved": True})
     assert r.status_code == 201
     assert r.json()["status"] == "created"
     assert r.json()["performed_by_user_id"] == str(buyer_user)
@@ -285,4 +287,11 @@ async def test_demo_seed_separates_buyer_address_and_seller_data(
     assert buyer_addresses[0].is_default is True
     assert seller_addresses == []
     assert await db_session.get(ProductionProfile, seller_company) is not None
-    assert len(products) == 2
+    from app.assortment import ASSORTMENT
+    assert len(products) == 2 + len(ASSORTMENT)
+    assert len({product.category for product in products}) >= 4
+    await marketplace_seed.seed()
+    count_after_retry = await db_session.scalar(
+        select(func.count()).select_from(Product).where(Product.company_id == seller_company)
+    )
+    assert count_after_retry == len(products)

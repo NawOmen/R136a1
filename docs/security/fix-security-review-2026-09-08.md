@@ -1,3 +1,5 @@
+> **Историческая проверка конкретной версии.** Последующие исправления и проверки — [единый отчёт](../reviews/verification-baseline.md), действующие инструкции — [hardening](hardening.md), остаток — [NEXT_STEPS.md](../../NEXT_STEPS.md#stage-13). Старые findings/версии зависимостей не являются новым результатом на текущем HEAD.
+
 # Проверка безопасности «ПоРукам»
 
 Дата: 08.09.2026. База: `main` — `4bb2eba4b24934d44b1df4e60dedc14d27af57a1`, с функциональными изменениями ветки `codex/producer-capabilities-and-buyer-analysis`.

@@ -55,5 +55,5 @@ async def test_cups_deal_without_documents_must_not_be_created(client, db_sessio
         'lead_time_days': 9, 'delivery_cost_rub': 10000,
     })
     assert offer.status_code == 201, offer.text
-    result = await client.post(f"/api/v1/offers/{offer.json()['id']}/select", headers=buyer_headers)
+    result = await client.post(f"/api/v1/offers/{offer.json()['id']}/select", headers=buyer_headers, json={"expected_revision": 1, "human_approved": True})
     assert result.status_code == 409, f"Expected 409, got {result.status_code}: status={result.json().get('status')}"

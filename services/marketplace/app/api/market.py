@@ -16,7 +16,7 @@ from ..deps import (
     require_company_seller,
     require_verified_company,
 )
-from ..matching import _need_parts, run_market_rematch
+from ..matching import ACTIVE_NEED_STATUSES, _need_parts, need_is_current, order_unit, run_market_rematch
 from ..models import (
     Coalition,
     CoalitionMember,
@@ -29,6 +29,7 @@ from ..models import (
     ParticipantOrder,
 )
 from ..optimizer_client import days_until, evaluate_coalition, optimize_allocations
+from ..resources import reserve, release
 from ..trust import append_audit_event
 from ..schemas import (
     CoalitionDecisionIn,
@@ -56,6 +57,7 @@ def _opportunity_out(item: MarketOpportunity) -> MarketOpportunityOut:
         id=item.id,
         company_id=item.company_id,
         category=item.category,
+        unit=item.unit,
         score=item.score,
         competition_level=item.competition_level,
         saturation_risk=item.saturation_risk,
@@ -82,6 +84,8 @@ async def _coalition_out(
             .order_by(GroupOffer.created_at.desc())
         )
     ).scalars().first()
+    profile = await db.get(CompatibilityProfile, coalition.compatibility_profile_id)
+    unit = str((profile.common_base or {}).get("unit") or "шт") if profile else "шт"
     visible_members = []
     is_producer = coalition.producer_company_id in viewer_companies
     for member in members:
@@ -106,6 +110,7 @@ async def _coalition_out(
         id=coalition.id,
         producer_company_id=coalition.producer_company_id,
         category=coalition.category,
+        unit=unit,
         combined_volume_units=coalition.combined_volume_units,
         target_moq_units=coalition.target_moq_units,
         status=coalition.status,
@@ -241,12 +246,18 @@ async def publish_group_offer(
     # Обязательство производителя по группе: документы проверяются по спецификации
     # каждой потребности, потому что участники заказывают разные изделия.
     member_needs = {member.need_id: await db.get(Need, member.need_id) for member in members}
+    if not member_needs or any(
+        need is None or need.status not in ACTIVE_NEED_STATUSES or not need_is_current(need)
+        for need in member_needs.values()
+    ):
+        raise HTTPException(409, "Потребность участника закрыта или её срок истёк. Обновите подбор группы")
     await require_admission_for_specifications(
         db,
         group_offer.company_id,
         [
             SpecificationCheck(
                 category=need.category,
+                subcategory=need.subcategory,
                 characteristics=need.characteristics,
                 moq_units=need.volume_units,
                 label=f"потребность {need.id}",
@@ -328,6 +339,7 @@ async def publish_group_offer(
     group_offer.status = "preliminary"
     group_offer.seller_approval_status = "approved"
     coalition.status = "awaiting_approvals"
+    coalition.version += 1
     coalition.explanation = result["reasons"]
     await run_market_rematch(db, "group_offer_published", group_offer.id)
     await db.commit()
@@ -397,6 +409,10 @@ async def decide_coalition(
     ).scalar_one_or_none()
     if coalition is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, detail="Коалиция не найдена")
+    if coalition.version != data.expected_revision:
+        raise HTTPException(status.HTTP_409_CONFLICT, detail="Условия группы изменились. Обновите страницу и проверьте их заново")
+    if coalition.status != "awaiting_approvals":
+        raise HTTPException(status.HTTP_409_CONFLICT, detail="Подтверждение для этой группы сейчас недоступно")
     group_offer = (
         await db.execute(
             select(GroupOffer)
@@ -406,6 +422,8 @@ async def decide_coalition(
     ).scalars().first()
     if group_offer is None or group_offer.status != "preliminary":
         raise HTTPException(status.HTTP_409_CONFLICT, detail="Нет предварительных условий для подтверждения")
+    if group_offer.fill_deadline is None or group_offer.fill_deadline < date.today():
+        raise HTTPException(status.HTTP_409_CONFLICT, detail="Срок подтверждения групповых условий истёк")
     member = (
         await db.execute(
             select(CoalitionMember).where(
@@ -419,10 +437,19 @@ async def decide_coalition(
     await require_company_buyer(data.company_id, user, db)
     await require_company_admin(data.company_id, user, db)
     await require_verified_company(data.company_id, user, db)
+    if member.approval_status != "pending":
+        raise HTTPException(status.HTTP_409_CONFLICT, detail="Решение этой компании уже принято")
     member.approval_status = data.decision
     members = (
         await db.execute(select(CoalitionMember).where(CoalitionMember.coalition_id == coalition.id))
     ).scalars().all()
+    if data.decision == "approved":
+        member_needs = {item.need_id: await db.get(Need, item.need_id) for item in members}
+        if not member_needs or any(
+            need is None or need.status not in ACTIVE_NEED_STATUSES or not need_is_current(need)
+            for need in member_needs.values()
+        ):
+            raise HTTPException(409, "Потребность участника закрыта или её срок истёк. Обновите подбор группы")
     if data.decision == "rejected":
         coalition.status = "recalculation_required"
         coalition.version += 1
@@ -443,13 +470,13 @@ async def decide_coalition(
             raise HTTPException(status.HTTP_409_CONFLICT, detail="Производитель ещё не подтвердил условия")
         # Обязательства создаются сейчас: допуск производителя проверяется заново,
         # потому что документ мог истечь или быть отозван после публикации условий.
-        member_needs = {item.need_id: await db.get(Need, item.need_id) for item in members}
         await require_admission_for_specifications(
             db,
             coalition.producer_company_id,
             [
                 SpecificationCheck(
                     category=need.category,
+                    subcategory=need.subcategory,
                     characteristics=need.characteristics,
                     moq_units=need.volume_units,
                     label=f"потребность {need.id}",
@@ -458,6 +485,10 @@ async def decide_coalition(
             ],
             context="Групповые обязательства не созданы",
         )
+        await reserve(db, company_id=group_offer.company_id, anchor_type="coalition", anchor_id=coalition.id,
+                      units=sum(item.units for item in members), start=group_offer.production_start,
+                      deadline=group_offer.production_end, category=coalition.category,
+                      unit=order_unit(next(iter(member_needs.values())).characteristics))
         await append_audit_event(
             db,
             event_type="coalition_obligations_checked",
@@ -529,7 +560,7 @@ async def optimize_need(
                 "capacity_units": offer.available_units,
                 "lead_time_days": offer.lead_time_days,
                 "delivery_cost_rub": offer.delivery_cost_rub,
-                "reliability": 0.8,
+                "reliability": None,
                 "price_tiers": offer.price_tiers,
                 "serves_region": True,
                 "country": country or "RU",

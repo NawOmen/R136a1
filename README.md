@@ -2,18 +2,11 @@
 
 Прототип B2B-маркетплейса, создающего коалиции покупателей и производителей и моделирующего устойчивость сделки.
 
-## Статус
+## С чего продолжать
 
-- Этап 0: создание репозитория и фиксация архитектуры — выполнено.
-- Этап 1: границы MVP, пользовательские сценарии и синтетические данные — выполнено.
-- Этап 2: каркас и инфраструктура (монорепозиторий, Docker Compose, Web App, Gateway Auth, Marketplace, PostgreSQL, миграции, CI, проверка Ollama) — выполнено.
-- Этап 3: базовый маркетплейс (каталог, потребности, предложения, сделки, мощности, документы, Capability Passport, уведомления, Playwright) — выполнено.
-- Этап 4: локальная LLM, восстановление требований, доказательства и агенты — реализовано.
-- Этап 5: коалиции покупателей, рыночные возможности и OR-Tools-оптимизатор — реализовано.
-- Этап 6: горячий/тёплый/холодный резерв, N-1/N-2 и безопасное восстановление — реализовано.
-- Этап 7: Human Approval Guard, проверяемый аудит, KPI, поддержка и проектные правовые материалы — реализовано.
-- Этап 8: полировка, конкурсный прототип, офлайн-режим демо и материалы подачи — выполнено.
-- Этап 9: персональный путь, сопровождение сделки, отзывы, индекс цен и база знаний — реализовано.
+Единственный актуальный план — [NEXT_STEPS.md](NEXT_STEPS.md): подробные этапы 00–19, текущая база, оставшиеся функции, все категории, пять критериев конкурса и порядок подачи. Следующий исполнитель начинает с S00.01, затем предметных профилей S01; статусы/доказательства обновляет в этом же файле.
+
+В коде есть основные пути покупателя и поставщика, агенты, коалиции, резерв, исполнение и аналитика; их наличие не означает завершения всех требований. На базе `a4ecbb3` стандартный Docker-стенд и 245 автоматических проверок прошли успешно. [Результаты, происхождение и ограничения](docs/reviews/verification-baseline.md). Оставшиеся задачи не помечаются выполненными по одному зелёному CI.
 
 ## Структура
 
@@ -26,14 +19,14 @@ services/optimizer/          FastAPI + OR-Tools — распределение �
 services/evidence-audit/     зарезервирован для следующих этапов
 packages/{contracts,ui}/     общие пакеты (pnpm workspace)
 infra/                       docker-compose.yml, миграции, скрипты проверки
-docs/                        mvp/, demo/, api/, architecture/
+docs/                        demo/, api/, architecture/, contest/, research/
 ```
 
 ## Требования
 
 - Docker Desktop / Docker Engine с Docker Compose;
 - Node.js 20+ и pnpm;
-- Python 3.14 (для локального запуска сервисов без Docker);
+- Python 3.12 (для локального запуска сервисов без Docker);
 - Ollama с моделью `qwen3.5:9b` (нужна с этапа 4; для этапа 2 не обязательна).
 
 ## Быстрый старт
@@ -42,6 +35,8 @@ docs/                        mvp/, demo/, api/, architecture/
 python3 scripts/init-local-env.py  # новый .env со случайными секретами, без перезаписи
 docker compose --env-file .env -f infra/docker-compose.yml up --build
 ```
+
+MinIO собирается из исходников фиксированного коммита с проверкой SHA-256, поэтому первый запуск требует загрузки Go-модулей и занимает больше времени. Готовый образ MinIO из удалённого registry не требуется. Происхождение сборки и соответствующие исходники: [infra/minio/README.md](infra/minio/README.md).
 
 Если стенд уже запускался раньше (на компьютере остался том PostgreSQL),
 `init-local-env.py` предупредит об этом, а сервисы упадут с
@@ -120,7 +115,7 @@ Docker volume `pgadmin_data` и не попадают в Git.
 
 ## Локальный запуск сервисов без Docker
 
-Нужен Python 3.14, запущенные PostgreSQL и MinIO. Для нового стенда создайте
+Нужен Python 3.12, запущенные PostgreSQL и MinIO. Для нового стенда создайте
 `.env` через `python3 scripts/init-local-env.py`; для существующего сначала выполните
 [ротацию секретов](docs/security/hardening.md). Следующие команды выполняются
 из корня проекта в bash/zsh. Загружайте только собственный доверенный `.env`:
@@ -134,7 +129,7 @@ export OLLAMA_BASE_URL=http://127.0.0.1:11434
 
 # Каждому сервису — собственное окружение, как в Docker и CI.
 for service_name in gateway-auth marketplace llm-gateway optimizer; do
-  python3.14 -m venv "services/$service_name/.venv"
+  python3.12 -m venv "services/$service_name/.venv"
   "services/$service_name/.venv/bin/python" -m pip install "pytest>=8,<9" "pytest-asyncio>=0.26,<1" "httpx>=0.27,<1"
   "services/$service_name/.venv/bin/python" -m pip install --require-hashes -r "services/$service_name/requirements.lock"
   "services/$service_name/.venv/bin/python" -m pip check
@@ -226,4 +221,4 @@ python scripts/print-access-url.py
 
 ## Документация
 
-Основной план — `plan_sborka_b2b.md`. Результаты этапа 1 — `docs/mvp/`, `docs/demo/`, `packages/test-fixtures/`. API-контракты — в `docs/api/`, архитектура устойчивости — `docs/architecture/stage-6-resilience.md`, контроль этапа 7 — `docs/architecture/stage-7-trust-control.md`, сопровождение сделки — `docs/architecture/stage9-experience.md`. Юридические файлы в `docs/legal/` являются проектными черновиками до проверки российским юристом.
+Очередь работы и статусы — [NEXT_STEPS.md](NEXT_STEPS.md). Предметная спецификация — `plan_sborka_b2b.md`; сценарии и входные данные — `docs/demo/`, `packages/test-fixtures/`. API-контракты — в `docs/api/`, архитектура устойчивости — `docs/architecture/stage-6-resilience.md`, контроль этапа 7 — `docs/architecture/stage-7-trust-control.md`, сопровождение сделки — `docs/architecture/stage9-experience.md`. Юридические файлы в `docs/legal/` являются проектными черновиками до проверки российским юристом.

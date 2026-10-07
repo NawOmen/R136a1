@@ -23,8 +23,8 @@ export default function SellerReservesPage() {
   async function decide(item: ReserveCommitment, decision: "approved" | "rejected") {
     const token = getToken(); if (!token || !companyId) return;
     const ask = (label: string, value: number | null) => window.prompt(label, value === null ? "" : String(value));
-    const capacity = decision === "approved" ? ask("Подтверждённая мощность, шт.:", item.proposed_capacity_units) : null;
-    const moq = decision === "approved" ? ask("MOQ, шт.:", item.proposed_moq_units) : null;
+    const capacity = decision === "approved" ? ask("Подтверждённая мощность, ед.:", item.proposed_capacity_units) : null;
+    const moq = decision === "approved" ? ask("MOQ, ед.:", item.proposed_moq_units) : null;
     const price = decision === "approved" ? ask("Цена за единицу, ₽:", item.proposed_unit_price_rub) : null;
     const delivery = decision === "approved" ? ask("Логистика, ₽:", item.proposed_delivery_cost_rub ?? 0) : null;
     const lead = decision === "approved" ? ask("Срок, дней:", item.proposed_lead_time_days) : null;

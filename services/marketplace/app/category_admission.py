@@ -16,10 +16,11 @@ import uuid
 from dataclasses import dataclass, field
 from datetime import date, datetime, timezone
 
+from .category_tree import CATALOG_TREE
 from .experience import validate_characteristics
 from .models import Document
 
-RULES_VERSION = "categories-2"
+RULES_VERSION = "categories-3"
 
 # Статусы документа и требования для продавца и покупателя.
 STATE_LABELS = {
@@ -305,8 +306,8 @@ PROFILES: tuple[CategoryProfile, ...] = (
         categories=("медицина и гигиена",),
         subcategories=("расходные материалы",),
         supported=False,
-        summary="Прототип не публикует медицинские изделия и лекарственные средства: для категории нужны "
-        "регистрационные документы, лицензии и условия хранения, которых в демонстрационном профиле нет.",
+        summary="Публикация недоступна для медицинские изделия и лекарственные средства: для категории нужны "
+        "регистрационные документы, лицензии и условия хранения, которых в профиле не подтверждены.",
         requirements=(),
         advisories=(
             "Если товар не является медицинским изделием, укажите другую подкатегорию и приложите документы.",
@@ -317,7 +318,7 @@ PROFILES: tuple[CategoryProfile, ...] = (
         title="Медицинские изделия и лекарственные средства",
         categories=("медикаменты", "лекарственные средства", "медицинские изделия"),
         supported=False,
-        summary="Категория распознана по названию товара. Прототип не публикует лекарства и медицинские "
+        summary="Категория распознана по названию товара. Публикация недоступна для лекарства и медицинские "
         "изделия: нужен отдельный профиль требований, лицензии и проверка условий хранения.",
         requirements=(),
     ),
@@ -387,6 +388,15 @@ def canonical_scope(category: str | None, subcategory: str | None) -> tuple[str,
     if parent:
         return parent, norm_category
     return norm_category, None
+
+
+def catalog_scope(category: str | None, subcategory: str | None) -> tuple[str, str | None]:
+    """Catalogue discovery scope; does not extend a document's verified legal scope."""
+    if not subcategory:
+        for parent, children in CATALOG_TREE.items():
+            if normalize(category) in {normalize(child) for child in children}:
+                return normalize(parent), normalize(category)
+    return canonical_scope(category, subcategory)
 
 
 def characteristic_value(characteristics: dict | None, attribute: str) -> str | None:
@@ -546,7 +556,11 @@ def evaluate_admission(
     now = datetime.now(timezone.utc)
     profile = match_profile(category, subcategory)
     if profile is None:
-        hint = classification_hint(category)
+        known_subcategory = normalize(subcategory) in {
+            normalize(child) for parent, children in CATALOG_TREE.items()
+            if normalize(parent) == normalize(category) for child in children
+        }
+        hint = None if known_subcategory else classification_hint(category)
         if hint is not None:
             return AdmissionReport(
                 category=category,
@@ -570,7 +584,7 @@ def evaluate_admission(
             state_label="Обязательные доказательства не заданы",
             supported=True,
             profile_title=None,
-            summary="Для этой категории обязательные доказательства в прототипе не заданы. "
+            summary="Для этой категории обязательные доказательства ещё не заданы. "
             "Допуск опирается на проверку компании; при необходимости правила уточняются.",
             requirements=[],
             advisories=[],

@@ -5,6 +5,8 @@ from .api import (
     addresses,
     agent_scorecard,
     capacity,
+    catalog_import,
+    commerce,
     documents,
     health,
     market,
@@ -35,6 +37,7 @@ app.include_router(health.router)
 app.include_router(addresses.router, prefix="/api/v1")
 app.include_router(production.router, prefix="/api/v1")
 app.include_router(products.router, prefix="/api/v1")
+app.include_router(catalog_import.router, prefix="/api/v1")
 app.include_router(capacity.router, prefix="/api/v1")
 app.include_router(documents.router, prefix="/api/v1")
 app.include_router(needs.router, prefix="/api/v1")
@@ -46,3 +49,5 @@ app.include_router(trust.router, prefix="/api/v1")
 app.include_router(stage8.router, prefix="/api/v1")
 app.include_router(stage9.router, prefix="/api/v1")
 app.include_router(agent_scorecard.router, prefix="/api/v1")
+
+app.include_router(commerce.router, prefix="/api/v1")

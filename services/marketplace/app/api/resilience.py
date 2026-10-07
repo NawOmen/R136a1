@@ -1,5 +1,5 @@
 import uuid
-from datetime import date, datetime, timezone
+from datetime import date, datetime, time, timezone
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import delete, select, text, update
@@ -16,7 +16,7 @@ from ..deps import (
     require_company_seller,
     require_verified_company,
 )
-from ..matching import _need_parts, _passport_matches
+from ..matching import _need_parts, _passport_matches, offer_unit_price, order_unit, ACTIVE_NEED_STATUSES
 from ..models import (
     CapabilityPassport,
     Need,
@@ -40,6 +40,7 @@ from ..schemas import (
     ResiliencePlanOut,
     ResilienceScenarioOut,
 )
+from ..resources import reserve, release, activate_hold, lock_company
 from ..trust import append_audit_event, record_human_approval
 
 router = APIRouter(tags=["stage-6-resilience"])
@@ -171,7 +172,7 @@ async def _resilience_payload(db: AsyncSession, plan: ResiliencePlan) -> dict:
                 "capacity_units": capacity,
                 "lead_time_days": lead,
                 "delivery_cost_rub": delivery,
-                "reliability": 0.8,
+                "reliability": None,
                 "price_tiers": item.price_tiers,
                 "serves_region": True,
                 "country": "RU",
@@ -192,6 +193,13 @@ def _same_failure_set(result: dict, company_ids: list[str]) -> bool:
     return set(result["failed_company_ids"]) == set(company_ids)
 
 
+async def _lock_plan_resources(db, plan):
+    commitments = list((await db.scalars(select(ReserveCommitment).where(ReserveCommitment.plan_id == plan.id))).all())
+    companies = {uuid.UUID(item["company_id"]) for item in plan.baseline_allocations} | {item.company_id for item in commitments}
+    for company_id in sorted(companies, key=str):
+        await lock_company(db, company_id)
+
+
 async def _activate_scenario(
     db: AsyncSession,
     plan: ResiliencePlan,
@@ -209,6 +217,17 @@ async def _activate_scenario(
         {**item, "role": "reserve"}
         for item in scenario.result["replacement_allocations"]
     ]
+    need = await db.get(Need, plan.need_id)
+    # Deterministic company order prevents lock inversion for N-2 replacements.
+    for replacement in sorted(replacements, key=lambda row: row["company_id"]):
+        company_id = uuid.UUID(replacement["company_id"])
+        commitment = await db.scalar(select(ReserveCommitment).where(ReserveCommitment.plan_id == plan.id, ReserveCommitment.company_id == company_id))
+        if commitment is None:
+            raise HTTPException(409, "Подтверждённый резерв не найден")
+        await require_company_admission(db, company_id, SpecificationCheck(category=need.category,
+            subcategory=need.subcategory,
+            characteristics=need.characteristics, moq_units=replacement["units"], label="спецификация восстановления"), context="Замена не активирована")
+        await activate_hold(db, company_id=company_id, anchor_id=commitment.id, units=replacement["units"])
     plan.current_allocations = [*surviving, *replacements]
     plan.current_total_cost_rub = scenario.result["new_total_cost_rub"]
     plan.current_lead_time_days = scenario.result["new_lead_time_days"]
@@ -332,6 +351,7 @@ async def _calculate_and_store(
                     uuid.UUID(str(allocation["company_id"])),
                     SpecificationCheck(
                         category=plan_need.category,
+                        subcategory=plan_need.subcategory,
                         characteristics=plan_need.characteristics,
                         moq_units=int(allocation.get("units") or plan_need.volume_units),
                         label="поставщик замены",
@@ -571,7 +591,7 @@ async def confirm_resilience_plan(
     user: CurrentUser = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    plan = await db.get(ResiliencePlan, plan_id)
+    plan = await db.scalar(select(ResiliencePlan).where(ResiliencePlan.id == plan_id).with_for_update())
     if plan is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, detail="План устойчивости не найден")
     await require_company_buyer(plan.buyer_company_id, user, db)
@@ -582,6 +602,36 @@ async def confirm_resilience_plan(
             status.HTTP_409_CONFLICT,
             detail="План должен быть рассчитан до подтверждения",
         )
+    if data.expected_revision is None:
+        raise HTTPException(428, "Подтвердите показанную версию плана")
+    if data.expected_revision != plan.version:
+        raise HTTPException(409, "План изменился. Обновите его перед подтверждением")
+    need = await db.scalar(select(Need).where(Need.id == plan.need_id).with_for_update())
+    if need.status not in ACTIVE_NEED_STATUSES or need.deadline_date < date.today():
+        raise HTTPException(409, "Потребность уже закрыта или срок поставки истёк")
+    if sum(item["units"] for item in plan.baseline_allocations) != need.volume_units:
+        raise HTTPException(409, "Объём плана не соответствует потребности. Нужен новый расчёт")
+    await _lock_plan_resources(db, plan)
+    for allocation in sorted(plan.baseline_allocations, key=lambda item: item["company_id"]):
+        company_id = uuid.UUID(allocation["company_id"])
+        offers = list((await db.scalars(select(Offer).where(Offer.need_id == need.id, Offer.company_id == company_id,
+            Offer.status == "sent").with_for_update())).all())
+        matching = [offer for offer in offers if offer.moq_units <= allocation["units"] <= offer.available_units
+            and offer_unit_price(offer, allocation["units"]) == allocation["unit_price_rub"]
+            and offer.delivery_cost_rub == allocation["delivery_cost_rub"]
+            and offer.lead_time_days == allocation["lead_time_days"]
+            and offer.lead_time_days <= (need.deadline_date - date.today()).days
+            and (offer.valid_until is None or offer.valid_until >= date.today())]
+        if len(matching) != 1:
+            raise HTTPException(409, "Исходное предложение изменилось или истекло. Пересчитайте план")
+        offer = matching[0]
+        await require_company_admission(db, company_id, SpecificationCheck(category=need.category,
+            subcategory=need.subcategory,
+            characteristics=need.characteristics, moq_units=allocation["units"]), context="Основной объём не подтверждён")
+        await reserve(db, company_id=company_id, anchor_type="resilience_primary", anchor_id=plan.id,
+            units=allocation["units"], deadline=need.deadline_date, resource_kind=offer.resource_kind, product_id=offer.product_id,
+            category=need.category, unit=order_unit(need.characteristics))
+    need.status = "matched"
     plan.status = "active"
     plan.confirmed_by_user_id = user.id
     plan.confirmed_at = datetime.now(timezone.utc)
@@ -694,7 +744,6 @@ async def decide_reserve_commitment(
         await db.execute(
             select(ReserveCommitment)
             .where(ReserveCommitment.id == commitment_id)
-            .with_for_update()
         )
     ).scalar_one_or_none()
     if commitment is None or commitment.company_id != data.company_id:
@@ -709,6 +758,8 @@ async def decide_reserve_commitment(
             .with_for_update()
         )
     ).scalar_one()
+    await db.refresh(commitment, with_for_update=True)
+    await _lock_plan_resources(db, plan)
     admission_payload: dict | None = None
     if data.decision == "approved":
         # Резерв — это обязательство: документы компании должны подтверждать
@@ -719,6 +770,7 @@ async def decide_reserve_commitment(
             data.company_id,
             SpecificationCheck(
                 category=plan_need.category,
+                subcategory=plan_need.subcategory,
                 characteristics=plan_need.characteristics,
                 moq_units=data.moq_units or plan_need.volume_units,
                 label="спецификация потребности",
@@ -728,7 +780,7 @@ async def decide_reserve_commitment(
         admission_payload = admission_audit_payload(
             admission,
             specification={
-                "category": plan_need.category,
+                "category": plan_need.category, "subcategory": plan_need.subcategory,
                 "characteristics": plan_need.characteristics,
                 "moq_units": data.moq_units,
             },
@@ -753,6 +805,13 @@ async def decide_reserve_commitment(
                 status.HTTP_422_UNPROCESSABLE_ENTITY,
                 detail="Нельзя подтвердить удержание мощности в прошлом",
             )
+        source_offer = await db.get(Offer, commitment.offer_id) if commitment.offer_id else None
+        await reserve(db, company_id=data.company_id, anchor_type="reserve", anchor_id=commitment.id,
+                      units=data.capacity_units, deadline=plan_need.deadline_date,
+                      resource_kind=source_offer.resource_kind if source_offer else "capacity",
+                      product_id=source_offer.product_id if source_offer else None,
+                      expires_at=datetime.combine(data.held_until, time.max, tzinfo=timezone.utc),
+                      category=plan_need.category, unit=order_unit(plan_need.characteristics))
         commitment.reserve_tier = "hot"
         commitment.confirmation_status = "approved"
         commitment.confirmed_capacity_units = data.capacity_units
@@ -766,6 +825,7 @@ async def decide_reserve_commitment(
         commitment.confirmed_at = datetime.now(timezone.utc)
         event_type = "reserve_confirmed"
     else:
+        await release(db, company_id=data.company_id, anchor_type="reserve", anchor_id=commitment.id)
         commitment.confirmation_status = "rejected"
         event_type = "reserve_rejected"
     db.add(
@@ -891,12 +951,16 @@ async def report_producer_failure(
             status.HTTP_409_CONFLICT,
             detail="Фактический отказ применяется только к подтверждённой конфигурации",
         )
+    if str(data.company_id) in plan.failed_company_ids:
+        return await _plan_out(db, plan)
+    await _lock_plan_resources(db, plan)
+    await release(db, company_id=data.company_id, anchor_type="resilience_primary", anchor_id=plan.id)
     failed = set(plan.failed_company_ids)
     failed.add(str(data.company_id))
     if len(failed) > 2:
         raise HTTPException(
             status.HTTP_409_CONFLICT,
-            detail="Прототип обрабатывает одновременный отказ не более двух производителей",
+            detail="Расчёт поддерживает одновременный отказ не более двух производителей",
         )
     plan.failed_company_ids = sorted(failed)
     plan.status = "awaiting_reserve_reconfirmation"
@@ -955,10 +1019,14 @@ async def approve_recovery(
     scenario = await db.get(ResilienceScenario, scenario_id)
     if scenario is None or scenario.status != "proposed":
         raise HTTPException(status.HTTP_404_NOT_FOUND, detail="Предложение восстановления не найдено")
-    plan = await db.get(ResiliencePlan, scenario.plan_id)
+    plan = await db.scalar(select(ResiliencePlan).where(ResiliencePlan.id == scenario.plan_id).with_for_update())
+    await db.refresh(scenario)
+    if scenario.status != "proposed" or set(scenario.failed_company_ids) != set(plan.failed_company_ids):
+        raise HTTPException(409, "Предложение восстановления устарело")
     await require_company_buyer(plan.buyer_company_id, user, db)
     await require_company_admin(plan.buyer_company_id, user, db)
     await require_verified_company(plan.buyer_company_id, user, db)
+    await _lock_plan_resources(db, plan)
     result = scenario.result
     if result["uncovered_units"] > 0 or result["unconfirmed_units"] > 0:
         raise HTTPException(
@@ -975,6 +1043,7 @@ async def approve_recovery(
             uuid.UUID(str(allocation["company_id"])),
             SpecificationCheck(
                 category=plan_need.category,
+                subcategory=plan_need.subcategory,
                 characteristics=plan_need.characteristics,
                 moq_units=int(allocation.get("units") or plan_need.volume_units),
                 label="поставщик замены",
@@ -987,12 +1056,14 @@ async def approve_recovery(
                 "admission": admission_audit_payload(
                     admission,
                     specification={
-                        "category": plan_need.category,
+                        "category": plan_need.category, "subcategory": plan_need.subcategory,
                         "characteristics": plan_need.characteristics,
                     },
                 ),
             }
         )
+    for allocation in sorted(result["replacement_allocations"], key=lambda row: row["company_id"]):
+        await lock_company(db, uuid.UUID(allocation["company_id"]))
     await record_human_approval(
         db,
         action="approve_recovery",

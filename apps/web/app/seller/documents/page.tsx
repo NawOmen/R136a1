@@ -277,7 +277,7 @@ export default function SellerDocumentsPage() {
             )}
             {admission.requirements.length === 0 ? (
               <p className="hint mode-hint">
-                Обязательные доказательства для этой категории в прототипе не заданы. Допуск опирается на
+                Правила проверки документов для этой категории ещё не настроены. Доступна
                 проверку компании.
               </p>
             ) : (

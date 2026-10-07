@@ -51,6 +51,7 @@ def _solve_variant(request: AllocationRequest, kind: str) -> OptimizationVariant
             reasons=["Нет российского производителя, соблюдающего регион и срок"],
         )
 
+    reliability_known = all(item.reliability is not None for item in eligible)
     model = cp_model.CpModel()
     allocations = []
     producer_tiers = []
@@ -77,7 +78,7 @@ def _solve_variant(request: AllocationRequest, kind: str) -> OptimizationVariant
             tier_variables.append((tier_units, price))
             tier_used.append(selected)
             unit_kopecks = round(price * 100)
-            reliability_penalty = round((1 - producer.reliability) * 1000)
+            reliability_penalty = round((1 - producer.reliability) * 1000) if reliability_known else 0
             total_cost_terms.append(unit_kopecks * tier_units)
             if kind == "cheapest":
                 objective_terms.append(unit_kopecks * tier_units)
@@ -141,17 +142,19 @@ def _solve_variant(request: AllocationRequest, kind: str) -> OptimizationVariant
             )
         )
     total_cost = round(sum(item.total_cost_rub for item in result), 2)
-    weighted_reliability = sum(item.units * item.reliability for item in result) / request.demand_units
+    weighted_reliability = (sum(item.units * item.reliability for item in result) / request.demand_units
+                            if all(item.reliability is not None for item in result) else None)
     return OptimizationVariant(
         kind=kind,
-        title=VARIANT_TITLES[kind],
+        title=VARIANT_TITLES[kind] if reliability_known or kind == "cheapest" else "По цене: надёжность не подтверждена",
         feasible=True,
         allocations=result,
         total_units=sum(item.units for item in result),
         total_cost_rub=total_cost,
         max_lead_time_days=max(item.lead_time_days for item in result),
-        reliability_score=round(weighted_reliability, 4),
-        reasons=["Все обязательные ограничения соблюдены детерминированным решателем"],
+        reliability_score=round(weighted_reliability, 4) if weighted_reliability is not None else None,
+        reasons=["Все обязательные ограничения соблюдены детерминированным решателем"]
+        + ([] if reliability_known else ["Для сравнения надёжности недостаточно подтверждённых данных. Варианты рассчитаны по цене без рейтингового преимущества"]),
     )
 
 
@@ -231,7 +234,11 @@ def evaluate_coalition(request: CoalitionRequest) -> CoalitionResponse:
 
     feasible = compatible and unit_price is not None and not reasons
     if feasible:
-        reasons.append("MOQ, мощность, совместимость, сроки и выгода каждого участника подтверждены")
+        reasons.append("MOQ, мощность, совместимость и сроки подтверждены")
+        if all(member.individual_baseline_cost_rub is not None for member in request.members):
+            reasons.append("Выгода каждого участника подтверждена относительно указанной индивидуальной альтернативы")
+        else:
+            reasons.append("Выгода не подтверждена для участников без индивидуальной альтернативы; сравните одинаковые условия до принятия решения")
     return CoalitionResponse(
         compatible=compatible,
         feasible=feasible,
