@@ -17,10 +17,11 @@ from dataclasses import dataclass, field
 from datetime import date, datetime, timezone
 
 from .category_tree import CATALOG_TREE
+from .category_registry import resolve_category
 from .experience import validate_characteristics
 from .models import Document
 
-RULES_VERSION = "categories-3"
+RULES_VERSION = "categories-4"
 
 # Статусы документа и требования для продавца и покупателя.
 STATE_LABELS = {
@@ -554,6 +555,24 @@ def evaluate_admission(
     """Оценить допуск товара по документам компании."""
     today = today or datetime.now(timezone.utc).date()
     now = datetime.now(timezone.utc)
+    if (
+        subcategory
+        and normalize(category) in {normalize(parent) for parent in CATALOG_TREE}
+        and resolve_category(category, subcategory) is None
+    ):
+        return AdmissionReport(
+            category=category,
+            subcategory=subcategory,
+            state=NEEDS_CLASSIFICATION_STATE,
+            state_label="Нужна классификация товара",
+            supported=True,
+            profile_title=None,
+            summary="Выберите существующую подкатегорию: неизвестный вид товара не наследует допуск раздела.",
+            requirements=[],
+            advisories=[],
+            blocking_open=1,
+            checked_at=now,
+        )
     profile = match_profile(category, subcategory)
     if profile is None:
         known_subcategory = normalize(subcategory) in {

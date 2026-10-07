@@ -112,9 +112,13 @@ def test_catalog_classification_does_not_bypass_regulated_or_unknown_subtypes():
 
 def test_web_and_backend_category_tree_contract():
     import json
-    import re
     from pathlib import Path
     from app.category_tree import CATALOG_TREE
-    source = (Path(__file__).resolve().parents[3] / "apps/web/app/lib/marketplace.ts").read_text()
-    body = source.split("export const PRODUCT_CATEGORY_TREE: Record<string, string[]> = ", 1)[1].split(";", 1)[0]
-    assert json.loads(re.sub(r",\s*}", "}", body)) == CATALOG_TREE
+    from app.category_registry import REGISTRY_VERSION, registry_snapshot
+    source = Path(__file__).resolve().parents[3] / "apps/web/app/lib/category-registry.generated.json"
+    snapshot = json.loads(source.read_text())
+    assert snapshot["tree"] == CATALOG_TREE
+    assert snapshot["registry_version"] == REGISTRY_VERSION
+    for group in registry_snapshot()["groups"]:
+        for leaf in group["leaves"]:
+            assert snapshot["leaf_ids"][group["label"]][leaf["label"]] == leaf["id"]

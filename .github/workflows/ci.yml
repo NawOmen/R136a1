@@ -98,6 +98,8 @@ jobs:
         run: pnpm exec playwright test --config api-client.config.ts
       - name: Check Russian UI
         run: python3 scripts/check-russian-ui.py
+      - name: Check generated category registry
+        run: python3 scripts/sync_category_registry.py --check
       - name: Build
         run: pnpm build:web
       - name: Build web Docker image

@@ -4,6 +4,7 @@
 
 import { ApiError, handleUnauthorized } from "./api";
 import { serviceUrl } from "./serviceUrl";
+import categoryRegistry from "./category-registry.generated.json";
 
 // Тот же класс ошибок, что у gateway-auth — страницы ловят единый тип.
 export { ApiError };
@@ -669,20 +670,10 @@ export const NEED_VISIBILITY_LABELS: Record<NeedVisibility, string> = {
   closed: "Закрытая",
 };
 
-export const PRODUCT_CATEGORY_TREE: Record<string, string[]> = {
-  "Упаковка и тара": ["Бумажные стаканы", "Пищевая упаковка", "Пакеты", "Коробки", "Бутылки и канистры", "Плёнка"],
-  "Сырьё и материалы": ["Бумага и картон", "Полимеры", "Металлы", "Текстиль", "Химическое сырьё"],
-  "Оборудование": ["Производственное", "Торговое", "Складское", "Пищевое", "Запасные части"],
-  "Строительство": ["Отделочные материалы", "Крепёж", "Инженерные системы", "Инструмент"],
-  "Продукты питания": ["Напитки", "Бакалея", "Замороженная продукция", "Ингредиенты"],
-  "Товары для бизнеса": ["Канцелярия", "Хозяйственные товары", "Спецодежда", "Мебель"],
-  "Электроника": ["Компоненты", "Компьютерная техника", "Связь", "Автоматизация"],
-  "Транспорт и логистика": ["Тара для перевозки", "Комплектующие", "Складские услуги"],
-  "Полиграфия и реклама": ["Этикетки", "Печать", "Вывески", "Сувенирная продукция"],
-  "Услуги производства": ["Контрактное производство", "Фасовка", "Обработка", "Сборка"],
-  "Медицина и гигиена": ["Расходные материалы", "Средства защиты", "Гигиеническая продукция"],
-  "Другое": ["Другая продукция"],
-};
+// Generated from the canonical backend registry; v1 still sends Russian labels.
+export const PRODUCT_CATEGORY_REGISTRY_VERSION = categoryRegistry.registry_version;
+export const PRODUCT_CATEGORY_IDS: Record<string, Record<string, string>> = categoryRegistry.leaf_ids;
+export const PRODUCT_CATEGORY_TREE: Record<string, string[]> = categoryRegistry.tree;
 export const PRODUCT_CATEGORIES = Object.keys(PRODUCT_CATEGORY_TREE);
 
 export const DOCUMENT_TYPES: { value: string; label: string }[] = [

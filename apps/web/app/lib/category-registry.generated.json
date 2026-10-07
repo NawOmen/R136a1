@@ -1,0 +1,150 @@
+{
+  "schema_version": 1,
+  "registry_version": "catalog-1",
+  "tree": {
+    "Упаковка и тара": [
+      "Бумажные стаканы",
+      "Пищевая упаковка",
+      "Пакеты",
+      "Коробки",
+      "Бутылки и канистры",
+      "Плёнка"
+    ],
+    "Сырьё и материалы": [
+      "Бумага и картон",
+      "Полимеры",
+      "Металлы",
+      "Текстиль",
+      "Химическое сырьё"
+    ],
+    "Оборудование": [
+      "Производственное",
+      "Торговое",
+      "Складское",
+      "Пищевое",
+      "Запасные части"
+    ],
+    "Строительство": [
+      "Отделочные материалы",
+      "Крепёж",
+      "Инженерные системы",
+      "Инструмент"
+    ],
+    "Продукты питания": [
+      "Напитки",
+      "Бакалея",
+      "Замороженная продукция",
+      "Ингредиенты"
+    ],
+    "Товары для бизнеса": [
+      "Канцелярия",
+      "Хозяйственные товары",
+      "Спецодежда",
+      "Мебель"
+    ],
+    "Электроника": [
+      "Компоненты",
+      "Компьютерная техника",
+      "Связь",
+      "Автоматизация"
+    ],
+    "Транспорт и логистика": [
+      "Тара для перевозки",
+      "Комплектующие",
+      "Складские услуги"
+    ],
+    "Полиграфия и реклама": [
+      "Этикетки",
+      "Печать",
+      "Вывески",
+      "Сувенирная продукция"
+    ],
+    "Услуги производства": [
+      "Контрактное производство",
+      "Фасовка",
+      "Обработка",
+      "Сборка"
+    ],
+    "Медицина и гигиена": [
+      "Расходные материалы",
+      "Средства защиты",
+      "Гигиеническая продукция"
+    ],
+    "Другое": [
+      "Другая продукция"
+    ]
+  },
+  "leaf_ids": {
+    "Упаковка и тара": {
+      "Бумажные стаканы": "packaging.paper-cups",
+      "Пищевая упаковка": "packaging.food-packaging",
+      "Пакеты": "packaging.bags",
+      "Коробки": "packaging.boxes",
+      "Бутылки и канистры": "packaging.bottles-canisters",
+      "Плёнка": "packaging.film"
+    },
+    "Сырьё и материалы": {
+      "Бумага и картон": "materials.paper-cardboard",
+      "Полимеры": "materials.polymers",
+      "Металлы": "materials.metals",
+      "Текстиль": "materials.textile",
+      "Химическое сырьё": "materials.chemical-feedstock"
+    },
+    "Оборудование": {
+      "Производственное": "equipment.manufacturing",
+      "Торговое": "equipment.retail",
+      "Складское": "equipment.warehouse",
+      "Пищевое": "equipment.food",
+      "Запасные части": "equipment.spare-parts"
+    },
+    "Строительство": {
+      "Отделочные материалы": "construction.finishing",
+      "Крепёж": "construction.fasteners",
+      "Инженерные системы": "construction.engineering",
+      "Инструмент": "construction.tools"
+    },
+    "Продукты питания": {
+      "Напитки": "food.drinks",
+      "Бакалея": "food.groceries",
+      "Замороженная продукция": "food.frozen",
+      "Ингредиенты": "food.ingredients"
+    },
+    "Товары для бизнеса": {
+      "Канцелярия": "business-supplies.stationery",
+      "Хозяйственные товары": "business-supplies.household",
+      "Спецодежда": "business-supplies.workwear",
+      "Мебель": "business-supplies.furniture"
+    },
+    "Электроника": {
+      "Компоненты": "electronics.components",
+      "Компьютерная техника": "electronics.computers",
+      "Связь": "electronics.communication",
+      "Автоматизация": "electronics.automation"
+    },
+    "Транспорт и логистика": {
+      "Тара для перевозки": "transport.containers",
+      "Комплектующие": "transport.components",
+      "Складские услуги": "transport.warehousing"
+    },
+    "Полиграфия и реклама": {
+      "Этикетки": "printing.labels",
+      "Печать": "printing.printing",
+      "Вывески": "printing.signs",
+      "Сувенирная продукция": "printing.merchandise"
+    },
+    "Услуги производства": {
+      "Контрактное производство": "manufacturing-services.contract-manufacturing",
+      "Фасовка": "manufacturing-services.packing",
+      "Обработка": "manufacturing-services.processing",
+      "Сборка": "manufacturing-services.assembly"
+    },
+    "Медицина и гигиена": {
+      "Расходные материалы": "medical-hygiene.consumables",
+      "Средства защиты": "medical-hygiene.protection",
+      "Гигиеническая продукция": "medical-hygiene.hygiene"
+    },
+    "Другое": {
+      "Другая продукция": "other.other-products"
+    }
+  }
+}
