@@ -140,6 +140,7 @@ async def analyze_buyer_request(
     total_size = 0
     run = AgentRun(
         user_id=user.id,
+        company_id=company_id,
         agent_type="buyer_agent",
         state="processing_sources",
         requested_route=route,
@@ -229,7 +230,7 @@ async def analyze_buyer_request(
         run.result = result.model_dump(mode="json")
         run.duration_ms = round((perf_counter() - started_at) * 1000)
         run.output_chars = len(json.dumps(run.result, ensure_ascii=False))
-        if used_route.startswith("local"):
+        if used_route in {"local", "local_qwen"}:
             run.estimated_cost_rub = round(
                 run.duration_ms / 60_000 * settings.local_inference_cost_rub_per_minute, 4
             )
@@ -408,13 +409,29 @@ async def explain_seller_match(
         if eligible
         else ["В Capability Passport не найдено явного совпадения категории"]
     )
+    run = AgentRun(user_id=user.id, company_id=data.company_id, agent_type="seller_agent",
+                   state="running", requested_route="local", input_summary="Объяснение совместимости")
+    db.add(run)
+    await db.commit()
+    started_at = perf_counter()
+    failure = None
     try:
         explanation, used_route = await SellerAgent(_provider(request)).explain(
             dict(passport), data.category, data.requirements
         )
-    except ModelUnavailable:
+    except ModelUnavailable as exc:
+        failure = str(exc)
         explanation = "Совпадение рассчитано правилами. Локальное объяснение временно недоступно."
         used_route = "rules_only"
+    run.duration_ms = round((perf_counter() - started_at) * 1000)
+    run.used_route = used_route
+    run.state = "completed_with_fallback" if failure else "completed"
+    run.error = failure
+    run.result = {"eligible": eligible, "reasons": reasons}
+    if used_route in {"local", "local_qwen"}:
+        run.estimated_cost_rub = round(run.duration_ms / 60_000 * settings.local_inference_cost_rub_per_minute, 4)
+        run.cost_basis = "Оценка локального выполнения, не подтверждённый биллинг"
+    await db.commit()
     return SellerExplainOut(
         eligible=eligible,
         reasons=reasons,

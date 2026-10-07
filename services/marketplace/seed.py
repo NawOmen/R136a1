@@ -26,8 +26,8 @@ DETAILS = {
     "trial_batch": "Непечатные образцы по запросу; цена и срок согласуются отдельно",
 }
 
-BUYER_COMPANY_NAME = "ООО «Демо-Кофе»"
-SELLER_COMPANY_NAME = "ООО «СтаканОпт Демо»"
+BUYER_COMPANY_NAME = "ООО «Вектор Снабжения»"
+SELLER_COMPANY_NAME = "ООО «Урал Комплект»"
 SELLER_USER_EMAIL = os.getenv("SEED_SELLER_EMAIL", "seller@demo.ru")
 
 
@@ -70,7 +70,7 @@ async def seed() -> None:
                 db.add(
                     DeliveryAddress(
                         company_id=buyer_company_id,
-                        address="г. Москва, ул. Демонстрационная, д. 1",
+                        address="г. Москва, ул. Складская, д. 1",
                         city="Москва",
                         region="г. Москва",
                         is_default=True,
@@ -81,7 +81,7 @@ async def seed() -> None:
             db.add(
                 ProductionProfile(
                     company_id=seller_company_id,
-                    production_site_address="Свердловская область, г. Екатеринбург, ул. Демонстрационная, д. 2",
+                    production_site_address="Свердловская область, г. Екатеринбург, ул. Складская, д. 2",
                     region="Свердловская область",
                     about="Производство брендированных бумажных стаканов для горячих напитков.",
                 )
@@ -146,6 +146,8 @@ async def seed() -> None:
 
         await _seed_category_documents(db, seller_company_id)
 
+        from seed_assortment import seed_assortment
+        await seed_assortment(db)
         await db.commit()
 
 

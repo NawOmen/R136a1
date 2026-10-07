@@ -1,7 +1,8 @@
 import uuid
+from decimal import Decimal
 from datetime import date, datetime
 
-from sqlalchemy import Boolean, CheckConstraint, Date, DateTime, Float, ForeignKey, Integer, String, Text, UniqueConstraint, func, text
+from sqlalchemy import Boolean, CheckConstraint, Date, DateTime, Float, ForeignKey, Integer, Numeric, String, Text, UniqueConstraint, func, text
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -93,11 +94,13 @@ class ProductImage(Base):
 
 class CapacityEntry(Base):
     __tablename__ = "capacity_entries"
-    __table_args__ = (UniqueConstraint("company_id", "date", name="uq_capacity_company_date"), {"schema": SCHEMA})
+    __table_args__ = (UniqueConstraint("company_id", "date", "category", "unit", name="uq_capacity_company_date_scope"), {"schema": SCHEMA})
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=_uuid)
     company_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), nullable=False)
     date: Mapped[date] = mapped_column(Date, nullable=False)
+    category: Mapped[str] = mapped_column(String(120), nullable=False, default="", server_default="")
+    unit: Mapped[str] = mapped_column(String(32), nullable=False, default="шт", server_default="шт")
     available_units: Mapped[int] = mapped_column(Integer, nullable=False)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now())
 
@@ -154,7 +157,11 @@ class CapabilityPassport(Base):
 
 class Need(Base):
     __tablename__ = "needs"
-    __table_args__ = {"schema": SCHEMA}
+    __table_args__ = (UniqueConstraint("company_id", "request_key", name="uq_need_request"), {"schema": SCHEMA})
+
+    request_key: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), nullable=True)
+    request_hash: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    revision: Mapped[int] = mapped_column(Integer, default=1, server_default="1")
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=_uuid)
     company_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), nullable=False)
@@ -187,6 +194,7 @@ class NeedFile(Base):
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=_uuid)
     need_id: Mapped[uuid.UUID] = mapped_column(ForeignKey(f"{SCHEMA}.needs.id", ondelete="CASCADE"), nullable=False)
     file_name: Mapped[str] = mapped_column(String(255), nullable=False)
+    content_hash: Mapped[str | None] = mapped_column(String(64), nullable=True)
     file_key: Mapped[str] = mapped_column(String(500), nullable=False)
     content_type: Mapped[str] = mapped_column(String(120), nullable=False)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now())
@@ -195,6 +203,10 @@ class NeedFile(Base):
 class Offer(Base):
     __tablename__ = "offers"
     __table_args__ = {"schema": SCHEMA}
+
+    resource_kind: Mapped[str] = mapped_column(String(16), default="capacity", server_default="capacity")
+    product_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey(f"{SCHEMA}.products.id", ondelete="RESTRICT"), nullable=True)
+    revision: Mapped[int] = mapped_column(Integer, default=1, server_default="1")
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=_uuid)
     need_id: Mapped[uuid.UUID] = mapped_column(ForeignKey(f"{SCHEMA}.needs.id", ondelete="CASCADE"), nullable=False)
@@ -258,9 +270,46 @@ class Deal(Base):
     seller_company_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), nullable=False)
     performed_by_user_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), nullable=True)
     units: Mapped[int] = mapped_column(Integer, nullable=False)
+    unit_price_rub: Mapped[Decimal | None] = mapped_column(Numeric(18, 2), nullable=True)
+    delivery_price_rub: Mapped[Decimal | None] = mapped_column(Numeric(18, 2), nullable=True)
     total_price_rub: Mapped[float] = mapped_column(Float, nullable=False)
     status: Mapped[str] = mapped_column(String(32), nullable=False, default="created")
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now())
+
+
+class DealExecutionEvent(Base):
+    __tablename__ = "deal_execution_events"
+    __table_args__ = (
+        UniqueConstraint("deal_id", "actor_company_id", "idempotency_key", name="uq_execution_request"),
+        CheckConstraint("units > 0", name="ck_execution_positive_units"),
+        {"schema": SCHEMA},
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=_uuid)
+    deal_id: Mapped[uuid.UUID] = mapped_column(ForeignKey(f"{SCHEMA}.deals.id", ondelete="CASCADE"), index=True)
+    actor_company_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True))
+    actor_user_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True))
+    idempotency_key: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True))
+    kind: Mapped[str] = mapped_column(String(24))
+    units: Mapped[int] = mapped_column(Integer)
+    note: Mapped[str] = mapped_column(String(1000))
+    status: Mapped[str] = mapped_column(String(16))
+    decided_by_user_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), nullable=True)
+    decided_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+class DealCostSnapshot(Base):
+    __tablename__ = "deal_cost_snapshots"
+    __table_args__ = {"schema": SCHEMA}
+
+    deal_id: Mapped[uuid.UUID] = mapped_column(ForeignKey(f"{SCHEMA}.deals.id", ondelete="CASCADE"), primary_key=True)
+    unit_cost_rub: Mapped[Decimal | None] = mapped_column(Numeric(18, 2), nullable=True)
+    attributable_expenses_rub: Mapped[Decimal | None] = mapped_column(Numeric(18, 2), nullable=True)
+    revision: Mapped[int] = mapped_column(Integer, default=1)
+    note: Mapped[str] = mapped_column(String(1000))
+    updated_by_user_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True))
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
 
 
 class DealMessage(Base):
@@ -334,6 +383,7 @@ class DealReview(Base):
 
 
 class ProductPriceObservation(Base):
+    specification_hash: Mapped[str | None] = mapped_column(String(64), nullable=True)
     __tablename__ = "product_price_observations"
     __table_args__ = {"schema": SCHEMA}
 
@@ -388,13 +438,14 @@ class MatchEvent(Base):
 class MarketOpportunity(Base):
     __tablename__ = "market_opportunities"
     __table_args__ = (
-        UniqueConstraint("company_id", "category", name="uq_opportunity_company_category"),
+        UniqueConstraint("company_id", "category", "unit", name="uq_opportunity_company_category_unit"),
         {"schema": SCHEMA},
     )
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=_uuid)
     company_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), nullable=False, index=True)
     category: Mapped[str] = mapped_column(String(120), nullable=False)
+    unit: Mapped[str] = mapped_column(String(32), nullable=False, default="шт", server_default="шт")
     score: Mapped[int] = mapped_column(Integer, nullable=False)
     competition_level: Mapped[str] = mapped_column(String(32), nullable=False)
     saturation_risk: Mapped[str] = mapped_column(String(32), nullable=False)
@@ -698,3 +749,35 @@ class SupportTicket(Base):
     assigned_admin_user_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now(), onupdate=func.now())
+
+
+class ResourceReservation(Base):
+    __tablename__ = "resource_reservations"
+    __table_args__ = (
+        CheckConstraint("units > 0", name="ck_reservation_positive"),
+        CheckConstraint("(product_id IS NOT NULL) <> (capacity_entry_id IS NOT NULL)", name="ck_one_resource"),
+        UniqueConstraint("anchor_type", "anchor_id", "product_id", name="uq_stock_anchor"),
+        UniqueConstraint("anchor_type", "anchor_id", "capacity_entry_id", name="uq_capacity_anchor"),
+        {"schema": SCHEMA},
+    )
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=_uuid)
+    company_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), index=True)
+    product_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey(f"{SCHEMA}.products.id", ondelete="RESTRICT"), nullable=True)
+    capacity_entry_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey(f"{SCHEMA}.capacity_entries.id", ondelete="RESTRICT"), nullable=True)
+    anchor_type: Mapped[str] = mapped_column(String(24))
+    anchor_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), index=True)
+    units: Mapped[int] = mapped_column(Integer)
+    status: Mapped[str] = mapped_column(String(16), default="committed")
+    expires_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+class CatalogImport(Base):
+    __tablename__ = "catalog_imports"
+    __table_args__ = (UniqueConstraint("company_id", "request_key", name="uq_catalog_import_request"), {"schema": SCHEMA})
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=_uuid)
+    company_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True))
+    request_key: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True))
+    content_hash: Mapped[str] = mapped_column(String(64))
+    product_ids: Mapped[list] = mapped_column(JSONB)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())

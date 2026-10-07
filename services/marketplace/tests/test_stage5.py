@@ -1,15 +1,22 @@
+from conftest import grant_capacity
 from datetime import date, timedelta
+import uuid
 
 from sqlalchemy import select
 
 from app.models import (
+    CapabilityPassport,
+    CapacityEntry,
     Coalition,
     CoalitionMember,
     CompatibilityProfile,
     GroupOffer,
     Need,
     ParticipantOrder,
+    MarketOpportunity,
 )
+from app.matching import run_market_rematch
+from app.resources import reserve
 from conftest import grant_packaging_documents, make_company, make_token, make_user
 
 
@@ -147,6 +154,7 @@ async def test_5000_and_45000_create_explainable_coalition_and_private_orders(
 
     monkeypatch.setattr("app.api.market.evaluate_coalition", fake_evaluate)
     production_start = date.today() + timedelta(days=10)
+    await grant_capacity(db_session, seller_company, 60_000, production_start)
     published = await client.post(
         f"/api/v1/group-offers/{draft.json()['id']}/publish",
         json={
@@ -180,6 +188,7 @@ async def test_5000_and_45000_create_explainable_coalition_and_private_orders(
     assert published.status_code == 200
     coalition_id = published.json()["id"]
     assert published.json()["status"] == "awaiting_approvals"
+    revision = published.json()["version"]
 
     # Достаточное групповое предложение снимает дефицитную рекомендацию.
     refreshed = await client.get(
@@ -190,7 +199,7 @@ async def test_5000_and_45000_create_explainable_coalition_and_private_orders(
 
     first = await client.post(
         f"/api/v1/coalitions/{coalition_id}/decision",
-        json={"company_id": str(buyer_one), "decision": "approved"},
+        json={"company_id": str(buyer_one), "decision": "approved", "expected_revision": revision},
         headers=auth(token_one),
     )
     assert first.status_code == 200
@@ -202,7 +211,7 @@ async def test_5000_and_45000_create_explainable_coalition_and_private_orders(
 
     second = await client.post(
         f"/api/v1/coalitions/{coalition_id}/decision",
-        json={"company_id": str(buyer_two), "decision": "approved"},
+        json={"company_id": str(buyer_two), "decision": "approved", "expected_revision": revision},
         headers=auth(token_two),
     )
     assert second.status_code == 200
@@ -210,6 +219,13 @@ async def test_5000_and_45000_create_explainable_coalition_and_private_orders(
     orders = (await db_session.execute(select(ParticipantOrder))).scalars().all()
     assert len(orders) == 2
     assert {item.buyer_company_id for item in orders} == {buyer_one, buyer_two}
+    buyer_report = await client.get(f"/api/v1/companies/{buyer_one}/commercial-analytics?role=buyer", headers=auth(token_one))
+    assert buyer_report.status_code == 200
+    assert buyer_report.json()["group_orders_count"] == 1
+    assert buyer_report.json()["orders_count"] == 0
+    assert buyer_report.json()["group_orders"][0]["units"] == 5_000
+    assert buyer_report.json()["group_orders"][0]["unit"] == "шт"
+    assert buyer_report.json()["group_orders"][0]["payments_rub"] is None
 
     own_view = await client.get("/api/v1/coalitions/mine", headers=auth(token_one))
     foreign_member = next(
@@ -299,7 +315,7 @@ async def test_rejection_returns_every_need_to_matching_without_orders(client, d
 
     rejected = await client.post(
         f"/api/v1/coalitions/{coalition.id}/decision",
-        json={"company_id": str(first_company), "decision": "rejected"},
+        json={"company_id": str(first_company), "decision": "rejected", "expected_revision": coalition.version},
         headers=auth(make_token(first_user)),
     )
     assert rejected.status_code == 200
@@ -309,3 +325,39 @@ async def test_rejection_returns_every_need_to_matching_without_orders(client, d
     await db_session.refresh(first_need)
     await db_session.refresh(second_need)
     assert first_need.status == second_need.status == "waiting_for_match"
+
+
+def test_unknown_specifications_are_not_silently_individual_operations():
+    from types import SimpleNamespace
+    from app.matching import _need_parts
+    need = SimpleNamespace(characteristics={"thread": "M8", "strength_class": "8.8", "color": "чёрный", "logo": "А"})
+    common, hard, flexible, individual = _need_parts(need)
+    assert common == {"thread": "M8", "strength_class": "8.8", "color": "чёрный", "unit": "шт"}
+    assert individual == {"logo": "А"}
+
+
+async def test_market_opportunities_do_not_add_rolls_to_pieces(db_session):
+    seller = await make_user(db_session)
+    company = await make_company(db_session, seller, can_buy=False, can_sell=True)
+    db_session.add(CapabilityPassport(company_id=company, technologies=["сырьё и материалы"],
+        materials=[], equipment=[], certifications=[], size_ranges={}, delivery_regions=["Москва"],
+        completed_order_types=[], min_order_units=1, max_order_units=1000))
+    for unit, units in (("шт", 15), ("рулон", 8)):
+        buyer = await make_user(db_session)
+        buyer_company = await make_company(db_session, buyer, can_buy=True, can_sell=False)
+        db_session.add(Need(company_id=buyer_company, created_by_user_id=buyer,
+            category="Сырьё и материалы", characteristics={"unit": unit}, volume_units=units,
+            deadline_date=date.today() + timedelta(days=20), visibility="open_anonymized", status="open_for_offers"))
+    await db_session.flush()
+    await run_market_rematch(db_session, "test_unit_separation", None)
+    opportunities = (await db_session.scalars(select(MarketOpportunity).where(MarketOpportunity.company_id == company))).all()
+    assert {(item.unit, item.unmet_volume_units) for item in opportunities} == {("шт", 15), ("рулон", 8)}
+    before = {item.unit: item.score for item in opportunities}
+    day = date.today() + timedelta(days=1)
+    db_session.add(CapacityEntry(company_id=company, date=day, category="Сырьё и материалы", unit="шт", available_units=15))
+    await db_session.flush()
+    await reserve(db_session, company_id=company, anchor_type="deal", anchor_id=uuid.uuid4(),
+                  units=15, deadline=day, category="Сырьё и материалы", unit="шт")
+    await run_market_rematch(db_session, "test_occupied_capacity", None)
+    assert next(item.score for item in opportunities if item.unit == "шт") < before["шт"]
+    assert next(item.score for item in opportunities if item.unit == "рулон") == before["рулон"]

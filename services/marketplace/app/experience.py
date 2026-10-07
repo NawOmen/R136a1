@@ -35,7 +35,7 @@ def validate_characteristics(
             if not any(key in normalized for key in ("coating", "покрытие", "inner_coating")):
                 warnings.append("Уточните внутреннее покрытие для проверки контакта с пищевой продукцией")
     if moq_units > 1_000_000:
-        warnings.append("MOQ больше 1 000 000 шт.: проверьте единицу измерения")
+        warnings.append("MOQ больше 1 000 000 единиц заказа: проверьте единицу измерения")
     return errors, warnings
 
 

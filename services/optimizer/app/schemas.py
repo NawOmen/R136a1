@@ -17,7 +17,7 @@ class ProducerOption(BaseModel):
     capacity_units: int = Field(gt=0)
     lead_time_days: int = Field(gt=0)
     delivery_cost_rub: float = Field(default=0, ge=0)
-    reliability: float = Field(default=0.8, ge=0, le=1)
+    reliability: float | None = Field(default=None, ge=0, le=1)
     price_tiers: list[VolumePriceTier] = Field(default_factory=list, max_length=25)
     serves_region: bool = True
     country: str = "RU"
@@ -44,7 +44,7 @@ class Allocation(BaseModel):
     delivery_cost_rub: float
     total_cost_rub: float
     lead_time_days: int
-    reliability: float
+    reliability: float | None
 
 
 class OptimizationVariant(BaseModel):
@@ -55,7 +55,7 @@ class OptimizationVariant(BaseModel):
     total_units: int = 0
     total_cost_rub: float = 0
     max_lead_time_days: int = 0
-    reliability_score: float = 0
+    reliability_score: float | None = None
     reasons: list[str] = Field(default_factory=list)
 
 

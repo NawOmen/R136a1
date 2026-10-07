@@ -63,21 +63,25 @@ async def _notify_affected_deals(
         )
     ).mappings().all()
     affected = 0
+    targets: set[uuid.UUID] = set()
     for row in rows:
         need_scope = canonical_scope(row["category"], None)
         if need_scope[0] != document_scope[0]:
             continue
-        if document_scope[1] and need_scope[1] != document_scope[1]:
+        # An older need may record only the parent category. Its exact
+        # subcategory is unknown, so notify conservatively rather than miss it.
+        if document_scope[1] and need_scope[1] and need_scope[1] != document_scope[1]:
             continue
         affected += 1
-        scope_label = scope_category or "категория не указана"
-        for target in {row["buyer_company_id"], company_id}:
-            await _notify_company(
-                db,
-                target,
-                f"Допуск по документу «{document_name}» для «{scope_label}» изменился. "
-                "Действующие договорённости не отменяются автоматически: проверьте сделку и примите решение.",
-            )
+        targets.update({row["buyer_company_id"], company_id})
+    scope_label = scope_category or "категория не указана"
+    for target in targets:
+        await _notify_company(
+            db,
+            target,
+            f"Допуск по документу «{document_name}» для «{scope_label}» изменился. "
+            "Действующие договорённости не отменяются автоматически: проверьте сделку и примите решение.",
+        )
     return affected
 
 
@@ -191,10 +195,11 @@ async def verify_document(
         if profile is not None and not profile.supported:
             raise HTTPException(
                 status.HTTP_409_CONFLICT,
-                detail="Категория не поддерживается прототипом: подтверждение допуска невозможно",
+                detail="Для категории не настроена проверка: подтверждение допуска невозможно",
             )
 
     previous_status = document.verification_status
+    previous_scope = (document.scope_category, document.scope_subcategory)
     document.verification_status = data.decision
     document.scope_category = (data.scope_category or document.scope_category or None)
     document.scope_subcategory = (data.scope_subcategory or document.scope_subcategory or None)
@@ -256,8 +261,14 @@ async def verify_document(
             f"для «{scope}». Загрузите документ заново или уточните область действия.",
         )
         await _notify_affected_deals(
-            db, document.company_id, document.name, document.scope_category, document.scope_subcategory
+            db, document.company_id, document.name,
+            *(previous_scope if previous_status == "verified" else (document.scope_category, document.scope_subcategory))
         )
+    elif previous_status == "verified" and previous_scope != (document.scope_category, document.scope_subcategory):
+        # A narrower verified scope can stop covering existing products/deals.
+        await _notify_company(db, document.company_id,
+            f"Область действия документа «{document.name}» изменилась. Проверьте опубликованные товары и действующие сделки.")
+        await _notify_affected_deals(db, document.company_id, document.name, *previous_scope)
     await db.commit()
     await db.refresh(document)
     return document
@@ -331,7 +342,7 @@ async def category_requirements(
             subcategory=subcategory,
             profile_title=None,
             supported=True,
-            summary="Для этой категории обязательные доказательства в прототипе не заданы.",
+            summary="Для этой категории обязательные доказательства ещё не заданы.",
             checklist=[],
             advisories=[],
             note=BUYER_CHECKLIST_NOTE,

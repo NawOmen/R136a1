@@ -33,3 +33,21 @@ test("security audit and alerts use the versioned API over HTTP and HTTPS", asyn
     else process.env.NEXT_PUBLIC_API_URL = originalUrl;
   }
 });
+
+
+test("explicit local service port survives localhost and LAN routing", async () => {
+  const { serviceUrl } = await import("../../apps/web/app/lib/serviceUrl");
+  const original = Object.getOwnPropertyDescriptor(globalThis, "window");
+  try {
+    for (const host of ["127.0.0.1", "192.168.1.10"]) {
+      Object.defineProperty(globalThis, "window", { configurable: true, value: { location: { protocol: "http:", hostname: host, origin: `http://${host}:13000` } } });
+      expect(serviceUrl("http://127.0.0.1:18001", 8001)).toBe(`http://${host}:18001`);
+    }
+    Object.defineProperty(globalThis, "window", { configurable: true, value: { location: { protocol: "https:", hostname: "market.example", origin: "https://market.example" } } });
+    expect(serviceUrl("http://localhost:8001", 8001)).toBe("/gateway");
+    expect(serviceUrl("https://api.example/gateway", 8001)).toBe("https://api.example/gateway");
+  } finally {
+    if (original) Object.defineProperty(globalThis, "window", original);
+    else Reflect.deleteProperty(globalThis, "window");
+  }
+});

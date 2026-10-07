@@ -173,7 +173,7 @@ export default function MarketOpportunitiesPage() {
               <p>
                 {item.unmet_volume_units === null
                   ? "Объём скрыт: для безопасной агрегации недостаточно независимых покупателей"
-                  : `Незакрытый спрос: ${formatUnits(item.unmet_volume_units)}`}
+                  : `Незакрытый спрос: ${formatUnits(item.unmet_volume_units, item.unit)}`}
               </p>
               <p className="company-meta">
                 Покупателей: {item.buyers_count} · Конкуренция: {item.competition_level} · Риск насыщения: {item.saturation_risk}
@@ -196,7 +196,7 @@ export default function MarketOpportunitiesPage() {
           </p>
           <div className="form-grid">
             <div className="field"><label>Цена за единицу, ₽</label><input type="number" step="0.01" min="0.01" required value={unitPrice} onChange={(e) => setUnitPrice(e.target.value)} /></div>
-            <div className="field"><label>Подтверждённая мощность, шт.</label><input type="number" min="1" required value={capacity} onChange={(e) => setCapacity(e.target.value)} /></div>
+            <div className="field"><label>Подтверждённая мощность, {draftCoalition.unit}</label><input type="number" min="1" required value={capacity} onChange={(e) => setCapacity(e.target.value)} /></div>
             <div className="field"><label>Окончание набора</label><input type="date" required value={fillDeadline} onChange={(e) => setFillDeadline(e.target.value)} /></div>
             <div className="field"><label>Начало производства</label><input type="date" required value={productionStart} onChange={(e) => setProductionStart(e.target.value)} /></div>
             <div className="field"><label>Окончание производства</label><input type="date" required value={productionEnd} onChange={(e) => setProductionEnd(e.target.value)} /></div>
@@ -204,7 +204,7 @@ export default function MarketOpportunitiesPage() {
           <h3>Отдельные условия покупателей</h3>
           {draftCoalition.members.map((member, index) => (
             <div className="participant-terms" key={member.need_id}>
-              <strong>Участник {index + 1} · {formatUnits(member.units)}</strong>
+              <strong>Участник {index + 1} · {formatUnits(member.units, draftCoalition.unit)}</strong>
               <div className="form-grid">
                 <div className="field"><label>Индивидуальные операции, ₽</label><input type="number" min="0" required value={memberTerms[member.need_id]?.individual ?? ""} onChange={(e) => updateMember(member.need_id, "individual", e.target.value)} /></div>
                 <div className="field"><label>Логистика, ₽</label><input type="number" min="0" required value={memberTerms[member.need_id]?.delivery ?? ""} onChange={(e) => updateMember(member.need_id, "delivery", e.target.value)} /></div>
@@ -213,7 +213,7 @@ export default function MarketOpportunitiesPage() {
               </div>
             </div>
           ))}
-          <p className="hint">Итого партии: {formatUnits(draftCoalition.combined_volume_units)}. Цена, логистика и выгода будут проверены отдельно для каждого участника обычным кодом.</p>
+          <p className="hint">Итого партии: {formatUnits(draftCoalition.combined_volume_units, draftCoalition.unit)}. Цена, логистика и выгода будут проверены отдельно для каждого участника обычным кодом.</p>
           <div className="actions">
             <button type="submit" className="btn btn-success" disabled={working}>Проверить и направить участникам</button>
             <button type="button" className="btn btn-secondary" onClick={() => setDraft(null)}>Закрыть черновик</button>

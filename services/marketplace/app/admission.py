@@ -11,11 +11,11 @@ import uuid
 from dataclasses import dataclass, field
 
 from fastapi import HTTPException, status
-from sqlalchemy import select
+from sqlalchemy import select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from .category_admission import evaluate_admission
-from .models import Document
+from .models import Document, Product
 from .schemas import CategoryAdmissionOut, RequirementStatusOut
 
 BUYER_CHECKLIST_NOTE = (
@@ -150,3 +150,22 @@ async def require_admission_for_specifications(
             await require_company_admission(db, company_id, check, context=f"{context}{label}")
         )
     return reports
+
+
+async def publicly_available_products(db: AsyncSession, products: list[Product]) -> list[Product]:
+    """Re-evaluate time-dependent admission without mutating a seller's publication choice."""
+    if not products:
+        return []
+    company_ids = list({product.company_id for product in products})
+    verified = set((await db.execute(text(
+        "SELECT id FROM auth.companies WHERE id = ANY(:ids) AND verification_status = 'verified' "
+        "AND EXISTS (SELECT 1 FROM auth.company_members m WHERE m.company_id = auth.companies.id AND m.can_sell = true)"
+    ), {"ids": company_ids})).scalars())
+    documents = (await db.scalars(select(Document).where(Document.company_id.in_(company_ids)))).all()
+    by_company: dict = {}
+    for document in documents:
+        by_company.setdefault(document.company_id, []).append(document)
+    return [product for product in products if product.is_published and product.company_id in verified
+            and not evaluate_admission(category=product.category, subcategory=product.subcategory,
+                characteristics=product.characteristics, moq_units=product.moq_units,
+                documents=by_company.get(product.company_id, [])).blocking_open]

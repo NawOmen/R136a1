@@ -1,3 +1,4 @@
+from conftest import grant_capacity
 """Черновик КП, остатки склада и оценка работы агентов.
 
 Проверяем, что рутинные операции поставщика выполняются по подтверждённым
@@ -301,6 +302,7 @@ async def test_agent_scorecard_counts_draft_conversion(client, db_session):
         db_session, company, decision_user_id=user, confirms={"material": ["крафт-картон"], "coating": ["PE"]}
     )
 
+    await grant_capacity(db_session, company, 5_000)
     draft = await client.post(
         f"/api/v1/needs/{need_id}/offer-draft",
         json={"company_id": str(company)},
@@ -321,7 +323,7 @@ async def test_agent_scorecard_counts_draft_conversion(client, db_session):
         headers=_auth(token),
     )
     assert offer.status_code == 201, offer.text
-    deal = await client.post(f"/api/v1/offers/{offer.json()['id']}/select", headers=_auth(buyer_token))
+    deal = await client.post(f"/api/v1/offers/{offer.json()['id']}/select", headers=_auth(buyer_token), json={"expected_revision": 1, "human_approved": True})
     assert deal.status_code == 201, deal.text
 
     scorecard = await client.get(
@@ -350,3 +352,37 @@ async def test_agent_scorecard_counts_draft_conversion(client, db_session):
     assert platform.status_code == 200, platform.text
     assert platform.json()["scope"] == "platform"
     assert platform.json()["offer_drafts_total"] >= 1
+
+
+async def test_draft_rejects_incompatible_or_unknown_characteristics():
+    """An incompatible SKU must never provide the proposed price or stock."""
+    from types import SimpleNamespace
+    from app.offer_draft import _matches_need
+
+    product = SimpleNamespace(category="Крепёж", subcategory="Болты", characteristics={
+        "material": "Сталь", "size": "М8×40", "strength_class": "8.8", "unit": "шт",
+    })
+    need = SimpleNamespace(category="Болты", characteristics={"материал": " сталь ", "size": "М8×40"})
+    assert _matches_need(product, need)[0]
+    for attrs in ({"size": "М10×40"}, {"strength_class": "10.9"}, {"coating": "цинк"},
+                  {"unit": "кг"}, {"size": ""}):
+        need.characteristics = attrs
+        assert not _matches_need(product, need)[0], attrs
+    need.category = "Креп"
+    need.characteristics = {}
+    assert not _matches_need(product, need)[0]
+
+
+async def test_draft_characteristic_aliases_do_not_hide_conflicts():
+    from types import SimpleNamespace
+    from app.offer_draft import _matches_need
+
+    product = SimpleNamespace(category="Упаковка и тара", subcategory=None,
+                              characteristics={"volume_ml": 400, "coating": "PE"})
+    need = SimpleNamespace(category="Упаковка и тара", characteristics={"объём": "400.0", "покрытие": "pe"})
+    assert _matches_need(product, need)[0]
+    product.characteristics["покрытие"] = "PLA"
+    assert not _matches_need(product, need)[0]
+    product.characteristics = {"volume_ml": True}
+    need.characteristics = {"volume_ml": 1}
+    assert not _matches_need(product, need)[0]

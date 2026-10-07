@@ -5,6 +5,7 @@
 // создаётся сделка, потребность переходит в статус matched.
 
 import Link from "next/link";
+import NeedDraftEditor from "../../components/NeedDraftEditor";
 import { useParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import { getToken } from "../../lib/api";
@@ -15,6 +16,7 @@ import {
   formatCharacteristics,
   formatRub,
   formatUnits,
+  itemUnit,
   marketplace,
   Need,
   NEED_STATUS_LABELS,
@@ -82,7 +84,7 @@ export default function NeedDetailPage() {
     setSelectingId(offer.id);
     setError(null);
     try {
-      const created = await marketplace.selectOffer(token, offer.id);
+      const created = await marketplace.selectOffer(token, offer.id, offer.revision);
       setDeal(created);
       const [needData, offersData] = await Promise.all([
         marketplace.getNeed(token, need.id),
@@ -213,6 +215,7 @@ export default function NeedDetailPage() {
       {isBuyer && need.status === "draft" && (
         <section className="card">
           <h2>Черновик потребности</h2>
+          {buyerCompany?.membership?.is_admin && <NeedDraftEditor key={`${need.id}:${need.revision}`} need={need} onSaved={setNeed} />}
           {buyerCompany?.verification_status === "verified" ? (
             <div className="actions">
               <button
@@ -239,7 +242,7 @@ export default function NeedDetailPage() {
             <span className="badge badge-created">{DEAL_STATUS_LABELS[deal.status]}</span>
           </div>
           <p className="hint mode-hint">
-            Объём: {formatUnits(deal.units)} · Сумма: {formatRub(deal.total_price_rub)}
+            Объём: {formatUnits(deal.units, itemUnit(need?.characteristics))} · Сумма: {formatRub(deal.total_price_rub)}
           </p>
         </section>
       )}
@@ -253,7 +256,7 @@ export default function NeedDetailPage() {
           </div>
           <div>
             <dt>Объём</dt>
-            <dd>{formatUnits(need.volume_units)}</dd>
+            <dd>{formatUnits(need.volume_units, itemUnit(need.characteristics))}</dd>
           </div>
           <div>
             <dt>Бюджет</dt>
@@ -328,8 +331,8 @@ export default function NeedDetailPage() {
                       Предложение #{offer.id.slice(0, 8)}
                     </div>
                     <div className="company-meta">
-                      Цена: {formatRub(offer.price_rub)} · Объём: {formatUnits(offer.available_units)} ·
-                      MOQ: {formatUnits(offer.moq_units)} · Логистика: {formatRub(offer.delivery_cost_rub)} ·
+                      Цена: {formatRub(offer.price_rub)} · Объём: {formatUnits(offer.available_units, itemUnit(need.characteristics))} ·
+                      MOQ: {formatUnits(offer.moq_units, itemUnit(need.characteristics))} · Логистика: {formatRub(offer.delivery_cost_rub)} ·
                       Срок: {offer.lead_time_days} дн. · Действует до: {offer.valid_until ?? "не ограничено"}
                     </div>
                   </div>
@@ -377,13 +380,13 @@ export default function NeedDetailPage() {
                 {variant.result.feasible ? (
                   <>
                     <p>
-                      {formatUnits(variant.result.total_units)} · {formatRub(variant.result.total_cost_rub)} ·
+                      {formatUnits(variant.result.total_units, itemUnit(need.characteristics))} · {formatRub(variant.result.total_cost_rub)} ·
                       до {variant.result.max_lead_time_days} дн.
                     </p>
                     <ul className="evidence-list">
                       {variant.result.allocations.map((allocation) => (
                         <li key={allocation.company_id}>
-                          Производитель #{allocation.company_id.slice(0, 8)}: {formatUnits(allocation.units)} ·
+                          Производитель #{allocation.company_id.slice(0, 8)}: {formatUnits(allocation.units, itemUnit(need.characteristics))} ·
                           {formatRub(allocation.total_cost_rub)}
                         </li>
                       ))}

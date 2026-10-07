@@ -3,10 +3,12 @@ from datetime import datetime, timezone
 from urllib.parse import quote
 
 from fastapi import APIRouter, Depends, File, HTTPException, Response, UploadFile, status
+from pydantic import ValidationError
 from sqlalchemy import delete, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..database import get_db
+from ..commerce import product_specification_hash
 from ..deps import (
     CurrentUser,
     get_current_user,
@@ -16,6 +18,7 @@ from ..deps import (
 )
 from ..experience import notify_market_watchers
 from ..models import Product, ProductImage, ProductPriceObservation
+from ..resources import lock_company, reservations, occupies
 from ..matching import run_market_rematch
 from ..schemas import (
     AdmissionChecklistOut,
@@ -27,7 +30,7 @@ from ..schemas import (
 )
 from ..storage import delete_object, download_object, upload_object
 from ..trust import append_audit_event
-from ..admission import BUYER_CHECKLIST_NOTE, admission_audit_payload, company_admission
+from ..admission import BUYER_CHECKLIST_NOTE, admission_audit_payload, company_admission, publicly_available_products
 
 router = APIRouter(tags=["products"])
 MAX_IMAGE_SIZE = 8 * 1024 * 1024
@@ -47,7 +50,7 @@ async def list_catalog(db: AsyncSession = Depends(get_db)):
     result = await db.execute(
         select(Product).where(Product.is_published.is_(True)).order_by(Product.created_at.desc())
     )
-    return [await _product_out(product, db) for product in result.scalars().all()]
+    return [await _product_out(product, db) for product in await publicly_available_products(db, list(result.scalars()))]
 
 
 @router.get("/companies/{company_id}/products", response_model=list[ProductOut])
@@ -94,18 +97,27 @@ async def update_product(
         raise HTTPException(status.HTTP_404_NOT_FOUND, detail="Товар не найден")
     await require_company_seller(product.company_id, user, db)
     await require_company_admin(product.company_id, user, db)
+    await lock_company(db, product.company_id)
+    await db.refresh(product)
     patch = data.model_dump(exclude_unset=True)
+    if "stock_units" in patch:
+        held = sum(row.units for row in await reservations(db, product.company_id) if row.product_id == product.id and occupies(row, stock=True))
+        if held and (patch["stock_units"] is None or patch["stock_units"] < held):
+            raise HTTPException(409, f"На складе зарезервировано {held} единиц. Сначала согласуйте отмену обязательств")
     old_price = product.price_rub
     old_category = product.category
     current = {
         "name": product.name, "category": product.category, "subcategory": product.subcategory,
         "characteristics": product.characteristics, "price_rub": product.price_rub,
         "price_tiers": product.price_tiers, "moq_units": product.moq_units,
-        "lead_time_days": product.lead_time_days,
+        "lead_time_days": product.lead_time_days, "stock_units": product.stock_units,
     }
     # Повторно проверяем объединённое состояние: частичный PATCH не должен
     # рассинхронизировать МОЗ, базовую цену и ценовые ступени.
-    validated = ProductIn.model_validate({**current, **patch})
+    try:
+        validated = ProductIn.model_validate({**current, **patch})
+    except ValidationError as exc:
+        raise HTTPException(422, "; ".join(error["msg"] for error in exc.errors())) from exc
     # Допуск зависит не только от категории: материал, покрытие и назначение
     # определяют применимость документов, поэтому изменение характеристик тоже
     # требует повторной проверки опубликованного товара.
@@ -131,14 +143,13 @@ async def update_product(
                     "Сначала снимите товар с публикации."
                 ),
             )
-    previous_stock = product.stock_units
     for field, value in validated.model_dump().items():
         setattr(product, field, value)
-    if product.stock_units != previous_stock:
+    if "stock_units" in patch:
         # Остаток влияет на доступный объём предложения, поэтому фиксируем время.
         product.stock_updated_at = datetime.now(timezone.utc)
     if product.is_published and (product.price_rub != old_price or product.category != old_category):
-        db.add(ProductPriceObservation(product_id=product.id, category=product.category, unit_price_rub=product.price_rub))
+        db.add(ProductPriceObservation(product_id=product.id, category=product.category, unit_price_rub=product.price_rub, specification_hash=product_specification_hash(product)))
     await run_market_rematch(db, "product_terms_changed", product.id)
     if product.is_published:
         await notify_market_watchers(db, product.category, "supply", exclude_user_id=user.id)
@@ -182,7 +193,7 @@ async def publish_product(
     was_published = product.is_published
     product.is_published = data.published
     if data.published and not was_published and admission is not None:
-        db.add(ProductPriceObservation(product_id=product.id, category=product.category, unit_price_rub=product.price_rub))
+        db.add(ProductPriceObservation(product_id=product.id, category=product.category, unit_price_rub=product.price_rub, specification_hash=product_specification_hash(product)))
         await append_audit_event(
             db,
             event_type="product_published_with_admission",

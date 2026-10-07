@@ -277,3 +277,17 @@ def test_stage7_expired_hot_reserve_is_not_treated_as_confirmed():
     n1 = next(item for item in result.scenarios if item.scenario_type == "n1")
     assert n1.unconfirmed_units > 0
     assert n1.auto_eligible is False
+
+
+def test_unknown_reliability_is_not_fabricated_or_ranked():
+    cheap = producer(10, 1, 100, reliability=None, delivery=0)
+    expensive = producer(20, 1, 100, reliability=0.95, delivery=0)
+    result = optimize_allocations(AllocationRequest.model_validate({
+        "demand_units": 10, "deadline_days": 10, "producers": [cheap, expensive],
+    }))
+    for variant in result.variants:
+        assert variant.feasible
+        assert variant.total_cost_rub == 100
+        assert variant.reliability_score is None
+        assert variant.allocations[0].reliability is None
+        assert any("недостаточно" in reason for reason in variant.reasons)

@@ -41,34 +41,33 @@ def _percent(part: int, total: int) -> float:
     return round(part / total * 100, 1) if total else 0.0
 
 
-async def _llm_metrics(db: AsyncSession, since: datetime) -> dict:
-    """Метрики вызовов агентов из журнала LLM Gateway, если он доступен."""
+async def _llm_metrics(db: AsyncSession, since: datetime, company_id: uuid.UUID | None = None) -> dict:
+    """Never attribute unscoped legacy runs using a user's current memberships."""
     available = await db.scalar(text("SELECT to_regclass('agents.agent_runs') IS NOT NULL"))
     if not available:
         return {"available": False}
-    row = (
-        await db.execute(
-            text(
-                "SELECT count(*) AS total, "
-                "count(*) FILTER (WHERE error IS NOT NULL OR state = 'failed') AS failed, "
-                "count(*) FILTER (WHERE used_route = 'local') AS local_route, "
-                "count(*) FILTER (WHERE used_route IS NOT NULL AND used_route <> 'local') AS external_route, "
-                "coalesce(avg(duration_ms), 0) AS avg_duration, "
-                "coalesce(sum(estimated_cost_rub), 0) AS cost "
-                "FROM agents.agent_runs WHERE created_at >= :since"
-            ),
-            {"since": since},
-        )
-    ).mappings().one()
-    return {
-        "available": True,
-        "total": int(row["total"] or 0),
-        "failed": int(row["failed"] or 0),
-        "local_route": int(row["local_route"] or 0),
-        "external_route": int(row["external_route"] or 0),
-        "avg_duration": float(row["avg_duration"] or 0),
-        "cost": float(row["cost"] or 0),
-    }
+    scoped = await db.scalar(text(
+        "SELECT EXISTS (SELECT 1 FROM information_schema.columns "
+        "WHERE table_schema='agents' AND table_name='agent_runs' AND column_name='company_id')"
+    ))
+    if not scoped:
+        return {"available": False}
+    row = (await db.execute(text(
+        "SELECT count(*) AS total, "
+        "count(*) FILTER (WHERE error IS NOT NULL OR state = 'failed') AS failed, "
+        "count(*) FILTER (WHERE used_route IN ('local', 'local_qwen')) AS local_route, "
+        "count(*) FILTER (WHERE used_route IN ('external', 'external_deepseek')) AS external_route, "
+        "count(*) FILTER (WHERE used_route = 'local_qwen+external_deepseek') AS mixed_route, "
+        "count(*) FILTER (WHERE used_route = 'rules_only') AS rules_route, "
+        "count(*) FILTER (WHERE used_route IS NULL OR used_route NOT IN "
+        "('local', 'local_qwen', 'external', 'external_deepseek', 'local_qwen+external_deepseek', 'rules_only')) AS unknown_route, "
+        "count(estimated_cost_rub) AS costed, "
+        "coalesce(avg(duration_ms), 0) AS avg_duration, "
+        "coalesce(sum(estimated_cost_rub), 0) AS cost "
+        "FROM agents.agent_runs WHERE created_at >= :since "
+        "AND (CAST(:company_id AS uuid) IS NULL OR company_id = CAST(:company_id AS uuid))"
+    ), {"since": since, "company_id": company_id})).mappings().one()
+    return {"available": True, **dict(row)}
 
 
 async def scorecard(db: AsyncSession, *, scope: str, company_id: uuid.UUID | None, window_days: int) -> AgentScorecardOut:
@@ -78,7 +77,7 @@ async def scorecard(db: AsyncSession, *, scope: str, company_id: uuid.UUID | Non
     draft_query = select(OfferDraft).where(OfferDraft.created_at >= since)
     offer_query = select(Offer).where(Offer.created_at >= since)
     deal_query = select(Deal).where(Deal.created_at >= since)
-    opportunity_query = select(MarketOpportunity)
+    opportunity_query = select(MarketOpportunity).where(MarketOpportunity.created_at >= since)
     approval_query = select(HumanApprovalRecord).where(HumanApprovalRecord.created_at >= since)
     audit_query = select(TrustAuditEvent).where(TrustAuditEvent.created_at >= since)
     group_offer_query = select(GroupOffer).where(GroupOffer.created_at >= since)
@@ -117,14 +116,22 @@ async def scorecard(db: AsyncSession, *, scope: str, company_id: uuid.UUID | Non
     ]
     admission_blocked = [item for item in blocked if "admission" in item.event_type or "допуск" in (item.explanation or "").lower()]
 
-    converted_recommendations = {item.coalition_id for item in group_offers if item.coalition_id}
+    opportunity_ids = {item.id for item in opportunities}
+    converted_recommendations = {
+        item.opportunity_id for item in group_offers
+        if item.opportunity_id in opportunity_ids and item.status != "draft"
+    }
     recommendations_total = len(opportunities)
     if recommendations_total == 0 and not group_offers:
         notes.append("Рекомендации производителю пока не формировались: конверсия не рассчитана.")
 
-    llm = await _llm_metrics(db, since)
+    llm = await _llm_metrics(db, since, company_id)
     if not llm["available"]:
         notes.append("Журнал вызовов LLM Gateway недоступен: метрики модели не рассчитаны.")
+    if llm["available"] and llm["total"] > llm["costed"]:
+        notes.append("Стоимость части запусков неизвестна: сумма включает только известные оценки, не полный биллинг.")
+    if scope == "company":
+        notes.append("Запуски без сохранённой компании не включены в персональную статистику.")
     if not drafts:
         notes.append("Черновики предложений за период не формировались.")
     if used_drafts and max(changed_counts) > 0:
@@ -152,6 +159,10 @@ async def scorecard(db: AsyncSession, *, scope: str, company_id: uuid.UUID | Non
         agent_runs_failed=llm.get("failed", 0),
         agent_runs_local_route=llm.get("local_route", 0),
         agent_runs_external_route=llm.get("external_route", 0),
+        agent_runs_mixed_route=llm.get("mixed_route", 0),
+        agent_runs_rules_route=llm.get("rules_route", 0),
+        agent_runs_unknown_route=llm.get("unknown_route", 0),
+        agent_costed_runs=llm.get("costed", 0),
         agent_average_duration_ms=round(llm.get("avg_duration", 0.0), 1),
         agent_estimated_cost_rub=round(llm.get("cost", 0.0), 2),
         llm_metrics_available=bool(llm["available"]),

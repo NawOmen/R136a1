@@ -1,3 +1,4 @@
+from conftest import grant_capacity
 """Проверки допуска на всех путях принятия обязательств.
 
 Отдельно фиксируем то, что раньше было дефектом: применимость документа
@@ -290,6 +291,11 @@ async def test_reserve_commitment_requires_documents(client, db_session, monkeyp
             status="sent",
         )
     )
+    await grant_capacity(db_session, primary, 5_000)
+    await grant_packaging_documents(db_session, primary, decision_user_id=primary_user, confirms=CONFIRMS)
+    db_session.add(Offer(need_id=need.id, company_id=primary, created_by_user_id=primary_user,
+        price_rub=10, available_units=5_000, lead_time_days=10, delivery_cost_rub=2_000,
+        moq_units=1_000, price_tiers=[], status="sent"))
     variant = OptimizationVariantRecord(
         need_id=need.id,
         kind="reliable",
@@ -323,7 +329,7 @@ async def test_reserve_commitment_requires_documents(client, db_session, monkeyp
 
     confirmed = await client.post(
         f"/api/v1/resilience-plans/{plan_id}/confirm",
-        json={"approved": True},
+        json={"approved": True, "expected_revision": plan_response.json()["version"]},
         headers=_auth(buyer_token),
     )
     assert confirmed.status_code == 200, confirmed.text
@@ -351,6 +357,7 @@ async def test_reserve_commitment_requires_documents(client, db_session, monkeyp
     assert "не предоставлено" in blocked.json()["detail"]
 
     await grant_packaging_documents(db_session, reserve, decision_user_id=reserve_user)
+    await grant_capacity(db_session, reserve, 5_000)
     allowed = await client.post(
         f"/api/v1/reserve-commitments/{invitation['id']}/decision",
         json=decision,
@@ -482,7 +489,8 @@ async def test_evidence_change_notifies_active_deal(client, db_session):
         headers=_auth(seller_token),
     )
     assert offer.status_code == 201, offer.text
-    deal = await client.post(f"/api/v1/offers/{offer.json()['id']}/select", headers=_auth(buyer_token))
+    await grant_capacity(db_session, seller_company, 1_000)
+    deal = await client.post(f"/api/v1/offers/{offer.json()['id']}/select", headers=_auth(buyer_token), json={"expected_revision": 1, "human_approved": True})
     assert deal.status_code == 201, deal.text
 
     document_id = (
@@ -513,3 +521,20 @@ async def test_evidence_change_notifies_active_deal(client, db_session):
     receivers = {row["user_id"] for row in messages}
     assert seller_user in receivers
     assert buyer_user in receivers
+
+
+async def test_catalog_rechecks_expired_and_revoked_documents(client, db_session):
+    user, company, token, product_id = await _seller_with_product(client, db_session)
+    await grant_packaging_documents(db_session, company, decision_user_id=user, confirms=CONFIRMS)
+    response = await client.post(f"/api/v1/products/{product_id}/publish", json={"published": True}, headers=_auth(token))
+    assert response.status_code == 200, response.text
+    assert product_id in [item["id"] for item in (await client.get("/api/v1/products")).json()]
+    await db_session.execute(text("UPDATE marketplace.documents SET valid_until = CURRENT_DATE - 1 WHERE company_id = :cid"), {"cid": company})
+    await db_session.commit()
+    assert product_id not in [item["id"] for item in (await client.get("/api/v1/products")).json()]
+    # Seller can still see and repair the listing; expiry does not erase it.
+    own = await client.get(f"/api/v1/companies/{company}/products", headers=_auth(token))
+    assert own.json()[0]["is_published"] is True
+    await db_session.execute(text("UPDATE marketplace.documents SET valid_until = CURRENT_DATE + 30, verification_status = 'rejected' WHERE company_id = :cid"), {"cid": company})
+    await db_session.commit()
+    assert product_id not in [item["id"] for item in (await client.get("/api/v1/products")).json()]
