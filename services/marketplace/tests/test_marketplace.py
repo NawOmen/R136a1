@@ -24,7 +24,7 @@ async def test_full_flow(client, db_session):
     # продавец создаёт и публикует товар
     r = await client.post(
         f"/api/v1/companies/{seller_company}/products",
-        json={"name": "Стакан 400 мл PE", "category": "бумажные стаканы", "characteristics": {"volume_ml": 400}, "price_rub": 11.2, "moq_units": 20000, "lead_time_days": 9},
+        json={"name": "Стакан 400 мл PE", "category": "бумажные стаканы", "characteristics": {"volume_ml": 400, "material": "крафт-картон"}, "price_rub": 11.2, "moq_units": 20000, "lead_time_days": 9},
         headers=_auth(seller_token),
     )
     assert r.status_code == 201

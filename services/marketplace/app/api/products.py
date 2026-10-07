@@ -126,9 +126,6 @@ async def update_product(
         != (old_category, product.subcategory, product.characteristics)
     )
     if product.is_published and admission_inputs_changed:
-        errors, _ = validate_characteristics(validated.category, validated.subcategory, validated.characteristics, validated.moq_units)
-        if errors:
-            raise HTTPException(422, "; ".join(errors))
         admission = await company_admission(
             db,
             product.company_id,
@@ -146,6 +143,9 @@ async def update_product(
                     "Сначала снимите товар с публикации."
                 ),
             )
+        errors, _ = validate_characteristics(validated.category, validated.subcategory, validated.characteristics, validated.moq_units)
+        if errors:
+            raise HTTPException(422, "; ".join(errors))
     for field, value in validated.model_dump().items():
         setattr(product, field, value)
     if "stock_units" in patch:

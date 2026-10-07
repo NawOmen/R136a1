@@ -102,7 +102,7 @@ class PublicationGuardTests(unittest.IsolatedAsyncioTestCase):
         from app.api import products
         product=SimpleNamespace(id=uuid.uuid4(),company_id=uuid.uuid4(),name='Стакан',category='Упаковка и тара',subcategory='Бумажные стаканы',characteristics={'material':'картон','volume_ml':400},moq_units=1,price_rub=10,price_tiers=[],lead_time_days=1,stock_units=None,is_published=True)
         db=SimpleNamespace(get=AsyncMock(return_value=product),refresh=AsyncMock(),commit=AsyncMock())
-        with patch.object(products,'require_company_seller',AsyncMock()), patch.object(products,'require_company_admin',AsyncMock()), patch.object(products,'lock_company',AsyncMock()):
+        with patch.object(products,'require_company_seller',AsyncMock()), patch.object(products,'require_company_admin',AsyncMock()), patch.object(products,'lock_company',AsyncMock()), patch.object(products,'company_admission',AsyncMock(return_value=SimpleNamespace(blocking_open=0))):
             with self.assertRaises(HTTPException) as caught:
                 await products.update_product(product.id,ProductPatch(characteristics={}),SimpleNamespace(id=uuid.uuid4()),db)
         self.assertEqual(caught.exception.status_code,422)

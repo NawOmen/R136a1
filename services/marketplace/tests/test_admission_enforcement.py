@@ -440,7 +440,7 @@ async def test_evidence_change_notifies_active_deal(client, db_session):
             "name": "Стакан 400 мл PE",
             "category": "Упаковка и тара",
             "subcategory": "Бумажные стаканы",
-            "characteristics": {"volume_ml": 400, "coating": "PE"},
+            "characteristics": {"volume_ml": 400, "coating": "PE", "material": "крафт-картон"},
             "price_rub": 11.2,
             "moq_units": 1_000,
             "lead_time_days": 9,
