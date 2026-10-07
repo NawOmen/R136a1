@@ -6,7 +6,7 @@ from urllib.parse import quote
 
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile, status
 from fastapi.responses import Response
-from sqlalchemy import select, text
+from sqlalchemy import or_, select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..database import get_db
@@ -20,7 +20,7 @@ from ..deps import (
     require_verified_company,
 )
 from ..models import DeliveryAddress, Need, NeedFile, Product
-from ..matching import ACTIVE_NEED_STATUSES, run_market_rematch
+from ..matching import ACTIVE_NEED_STATUSES, need_is_current, run_market_rematch
 from ..experience import notify_market_watchers
 from ..schemas import NeedFeedOut, NeedFileOut, NeedIn, NeedOut, NeedEditIn
 from ..storage import download_object, upload_object
@@ -74,7 +74,9 @@ async def list_needs(
     db: AsyncSession = Depends(get_db),
 ):
     query = select(Need).where(
-        Need.status.in_(ACTIVE_NEED_STATUSES), Need.visibility == "open_anonymized"
+        Need.status.in_(ACTIVE_NEED_STATUSES), Need.visibility == "open_anonymized",
+        Need.deadline_date >= date.today(),
+        or_(Need.valid_until.is_(None), Need.valid_until >= date.today()),
     )
     if seller_company_id is not None:
         await require_company_seller(seller_company_id, user, db)
@@ -201,12 +203,12 @@ async def publish_need(
     await require_company_buyer(need.company_id, user, db)
     await require_company_admin(need.company_id, user, db)
     await require_verified_company(need.company_id, user, db)
+    if not need_is_current(need):
+        raise HTTPException(409, "Срок потребности истёк. Создайте новый черновик с актуальными условиями")
     if need.status in ACTIVE_NEED_STATUSES:
         return _need_out(need)
     if need.status != "draft":
         raise HTTPException(status.HTTP_409_CONFLICT, detail="Опубликовать можно только черновик")
-    if need.deadline_date < date.today() or (need.valid_until and need.valid_until < date.today()):
-        raise HTTPException(409, "Срок потребности истёк. Создайте новый черновик с актуальными условиями")
     need.status = "open_for_offers"
     need.confirmed_at = datetime.now(timezone.utc)
     need.no_match_reason = None
@@ -230,6 +232,7 @@ async def get_need(
     is_owner = bool(membership and membership["can_buy"])
     if not is_owner and not (
         need.status in ACTIVE_NEED_STATUSES and need.visibility == "open_anonymized"
+        and need_is_current(need)
     ):
         raise HTTPException(status.HTTP_404_NOT_FOUND, detail="Потребность не найдена")
     if not is_owner:

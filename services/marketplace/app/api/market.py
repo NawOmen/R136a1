@@ -16,7 +16,7 @@ from ..deps import (
     require_company_seller,
     require_verified_company,
 )
-from ..matching import _need_parts, order_unit, run_market_rematch
+from ..matching import ACTIVE_NEED_STATUSES, _need_parts, need_is_current, order_unit, run_market_rematch
 from ..models import (
     Coalition,
     CoalitionMember,
@@ -246,6 +246,11 @@ async def publish_group_offer(
     # Обязательство производителя по группе: документы проверяются по спецификации
     # каждой потребности, потому что участники заказывают разные изделия.
     member_needs = {member.need_id: await db.get(Need, member.need_id) for member in members}
+    if not member_needs or any(
+        need is None or need.status not in ACTIVE_NEED_STATUSES or not need_is_current(need)
+        for need in member_needs.values()
+    ):
+        raise HTTPException(409, "Потребность участника закрыта или её срок истёк. Обновите подбор группы")
     await require_admission_for_specifications(
         db,
         group_offer.company_id,
@@ -437,6 +442,13 @@ async def decide_coalition(
     members = (
         await db.execute(select(CoalitionMember).where(CoalitionMember.coalition_id == coalition.id))
     ).scalars().all()
+    if data.decision == "approved":
+        member_needs = {item.need_id: await db.get(Need, item.need_id) for item in members}
+        if not member_needs or any(
+            need is None or need.status not in ACTIVE_NEED_STATUSES or not need_is_current(need)
+            for need in member_needs.values()
+        ):
+            raise HTTPException(409, "Потребность участника закрыта или её срок истёк. Обновите подбор группы")
     if data.decision == "rejected":
         coalition.status = "recalculation_required"
         coalition.version += 1
@@ -457,7 +469,6 @@ async def decide_coalition(
             raise HTTPException(status.HTTP_409_CONFLICT, detail="Производитель ещё не подтвердил условия")
         # Обязательства создаются сейчас: допуск производителя проверяется заново,
         # потому что документ мог истечь или быть отозван после публикации условий.
-        member_needs = {item.need_id: await db.get(Need, item.need_id) for item in members}
         await require_admission_for_specifications(
             db,
             coalition.producer_company_id,

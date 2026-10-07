@@ -20,7 +20,7 @@ from ..deps import (
     require_verified_company,
 )
 from ..models import CapacityEntry, CapabilityPassport, Deal, Need, Offer, OfferDraft, Product
-from ..matching import ACTIVE_NEED_STATUSES, offer_unit_price, order_unit, run_market_rematch
+from ..matching import ACTIVE_NEED_STATUSES, need_is_current, offer_unit_price, order_unit, run_market_rematch
 from ..offer_draft import _matches_need, available_capacity_units, build_offer_draft, changed_fields
 from ..schemas import DealOut, OfferDraftIn, OfferDraftOut, OfferIn, OfferOut, OfferPatch, OfferSelectIn
 from ..resources import reserve, reservations, free_stock, occupies
@@ -84,7 +84,7 @@ async def prepare_offer_draft(
             detail="Нельзя готовить предложение на потребность своей компании",
         )
 
-    if need.status not in ACTIVE_NEED_STATUSES or need.visibility != "open_anonymized":
+    if need.status not in ACTIVE_NEED_STATUSES or not need_is_current(need) or need.visibility != "open_anonymized":
         raise HTTPException(404, "Потребность недоступна")
     products = list(
         (await db.execute(select(Product).where(Product.company_id == data.company_id))).scalars().all()
@@ -152,8 +152,8 @@ async def create_offer(
     need = await db.get(Need, need_id)
     if need is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, detail="Потребность не найдена")
-    if need.status not in ACTIVE_NEED_STATUSES:
-        raise HTTPException(status.HTTP_409_CONFLICT, detail="Потребность не открыта для предложений")
+    if need.status not in ACTIVE_NEED_STATUSES or not need_is_current(need):
+        raise HTTPException(status.HTTP_409_CONFLICT, detail="Потребность закрыта или срок её актуальности истёк")
     if need.visibility != "open_anonymized":
         raise HTTPException(status.HTTP_403_FORBIDDEN, detail="Потребность недоступна этой компании")
     if need.company_id == data.company_id:
@@ -341,8 +341,8 @@ async def select_offer(
     existing_deal = await db.scalar(select(Deal).where(Deal.offer_id == offer.id))
     if existing_deal is not None:
         return existing_deal
-    if need.status not in ACTIVE_NEED_STATUSES:
-        raise HTTPException(status.HTTP_409_CONFLICT, detail="Потребность уже не открыта для предложений")
+    if need.status not in ACTIVE_NEED_STATUSES or not need_is_current(need):
+        raise HTTPException(status.HTTP_409_CONFLICT, detail="Потребность закрыта или срок её актуальности истёк")
     if offer.status != "sent":
         raise HTTPException(status.HTTP_409_CONFLICT, detail="Предложение уже обработано")
     seller_company = await get_company(db, offer.company_id)

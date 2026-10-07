@@ -42,6 +42,12 @@ ACTIVE_NEED_STATUSES = {
 }
 
 
+def need_is_current(need: Need, today: date | None = None) -> bool:
+    """Срок поставки и актуальности включают указанный день."""
+    today = today or date.today()
+    return need.deadline_date >= today and (need.valid_until is None or need.valid_until >= today)
+
+
 def order_unit(characteristics: dict | None) -> str:
     value = str((characteristics or {}).get("unit") or (characteristics or {}).get("единица измерения") or "шт").strip().lower().rstrip(".") or "шт"
     return "шт" if value in {"шт", "штука", "штуки", "штук"} else value
@@ -121,7 +127,7 @@ async def _active_needs(db: AsyncSession) -> list[Need]:
     result = []
     seen = set()
     for need in needs:
-        if need.deadline_date < today or (need.valid_until is not None and need.valid_until < today):
+        if not need_is_current(need, today):
             need.status = "expired"
             need.no_match_reason = "Срок актуальности карточки истёк"
             continue
