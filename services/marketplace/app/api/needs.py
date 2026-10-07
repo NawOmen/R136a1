@@ -10,6 +10,7 @@ from sqlalchemy import or_, select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..category_admission import catalog_scope
+from ..category_characteristics import validate_profile_values
 from ..database import get_db
 from ..deps import (
     CurrentUser,
@@ -220,6 +221,9 @@ async def publish_need(
         return _need_out(need)
     if need.status != "draft":
         raise HTTPException(status.HTTP_409_CONFLICT, detail="Опубликовать можно только черновик")
+    errors = validate_profile_values(need.category, need.subcategory, need.characteristics)
+    if errors:
+        raise HTTPException(422, "; ".join(errors))
     need.status = "open_for_offers"
     need.confirmed_at = datetime.now(timezone.utc)
     need.no_match_reason = None

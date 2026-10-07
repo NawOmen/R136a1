@@ -5,6 +5,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from .deps import notify
 from .models import MarketWatch
+from .category_characteristics import validate_profile_values, characteristic_profile
 
 
 def classify_cargo(weight_kg: float, volume_m3: float) -> tuple[str, str]:
@@ -21,16 +22,17 @@ def classify_cargo(weight_kg: float, volume_m3: float) -> tuple[str, str]:
 def validate_characteristics(
     category: str, subcategory: str | None, characteristics: dict, moq_units: int
 ) -> tuple[list[str], list[str]]:
-    errors: list[str] = []
+    errors = validate_profile_values(category, subcategory, characteristics, require_product_fields=True)
     warnings: list[str] = []
     if len(characteristics) > 25:
         errors.append("Можно указать не более 25 характеристик")
     normalized = {str(key).strip().lower(): value for key, value in characteristics.items()}
+    has_profile = characteristic_profile(category, subcategory) is not None
     if category == "Упаковка и тара":
-        if not any(key in normalized for key in ("material", "материал", "body_material")):
+        if not has_profile and not any(key in normalized for key in ("material", "материал", "body_material")):
             errors.append("Для упаковки укажите материал")
         if subcategory == "Бумажные стаканы":
-            if not any(key in normalized for key in ("volume_ml", "объём", "объем")):
+            if not has_profile and not any(key in normalized for key in ("volume_ml", "объём", "объем")):
                 errors.append("Для бумажных стаканов укажите объём")
             if not any(key in normalized for key in ("coating", "покрытие", "inner_coating")):
                 warnings.append("Уточните внутреннее покрытие для проверки контакта с пищевой продукцией")

@@ -24,6 +24,8 @@ import {
   PRODUCT_CATEGORY_TREE,
 } from "../../lib/marketplace";
 import { useCompanySelector } from "../../lib/useMe";
+import CharacteristicSuggestions from "../../components/CharacteristicSuggestions";
+import { characteristicField } from "../../lib/categoryProfiles";
 import { CapabilityDescription } from "../../components/CapabilityDescription";
 import { ValidatedFields } from "../../components/ValidatedFields";
 
@@ -670,6 +672,8 @@ export default function NewNeedPage() {
           <label>
             Характеристики<span className="req">*</span>
           </label>
+          <CharacteristicSuggestions category={category} subcategory={subcategory} keys={rows.map((row) => row.key)}
+            onAdd={(key) => setRows((current) => current.length < 25 ? [...current, newRow(key)] : current)} />
           {rows.map((row, index) => (
             <div key={index} className="char-row">
               <input
@@ -682,7 +686,8 @@ export default function NewNeedPage() {
               />
               <input
                 type="text"
-                placeholder="Значение (например, дерево)"
+                placeholder={characteristicField(category, subcategory, row.key)?.label ?? "Значение (например, дерево)"}
+                inputMode={characteristicField(category, subcategory, row.key)?.type !== "text" && characteristicField(category, subcategory, row.key) ? "decimal" : "text"}
                 aria-label={`Характеристика ${index + 1}: значение`}
                 required
                 value={row.value}
