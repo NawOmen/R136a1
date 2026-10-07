@@ -22,3 +22,14 @@ test("labels and numeric input metadata resolve aliases without changing user va
   expect(characteristicField("Товары для бизнеса", "Мебель", "dimensions_mm")?.type).toBe("text");
   expect(characteristicField("Товары для бизнеса", "Мебель", "параметр пользователя")).toBeUndefined();
 });
+
+test("generic dimensions do not imply millimetres or hide an explicit dimension field", async () => {
+  const { formatCharacteristics } = await import("../../apps/web/app/lib/marketplace");
+  expect(formatCharacteristics({ dimensions: "120×60×75 см" })).toBe("Габариты: 120×60×75 см");
+  expect(formatCharacteristics({ dimensions_mm: "1200×600×750" })).toBe("Габариты, мм: 1200×600×750");
+  expect(characteristicField("Товары для бизнеса", "Мебель", "dimensions")).toBeUndefined();
+  expect(characteristicSuggestions("Товары для бизнеса", "Мебель", ["dimensions"])
+    .some((field) => field.key === "dimensions_mm")).toBe(true);
+  expect(characteristicSuggestions("Товары для бизнеса", "Мебель", ["dimensions_mm"])
+    .some((field) => field.key === "dimensions_mm")).toBe(false);
+});

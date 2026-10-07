@@ -20,12 +20,21 @@ class TechnicalProfileTests(unittest.TestCase):
         for group in data['groups']:
             for leaf in group['leaves']:
                 profile = characteristic_profile(group['label'],leaf['label'])
-                self.assertEqual(profile['version'],1)
+                self.assertGreaterEqual(profile['version'],1)
                 self.assertIn('unit',profile['fields'])
                 self.assertGreater(len(profile['fields']),1)
         self.assertNotIn('volume_ml', characteristic_profile('Товары для бизнеса','Мебель')['fields'])
         self.assertIn('thread', characteristic_profile('Строительство','Крепёж')['fields'])
         self.assertIn('output', characteristic_profile('Услуги производства','Сборка')['fields'])
+
+    def test_generic_dimensions_keep_explicit_text_without_implied_unit(self):
+        chars={'dimensions':'120×60×75 см','dimensions_mm':'1200×600×750'}
+        product=ProductIn(name='Стол',category='Товары для бизнеса',subcategory='Мебель',characteristics=chars,price_rub=1000,moq_units=1,lead_time_days=1)
+        self.assertEqual(product.characteristics,chars)
+        data=registry_snapshot()
+        self.assertNotIn('dimensions',data['characteristic_fields']['dimensions_mm']['aliases'])
+        self.assertNotIn('unit',data['characteristic_fields']['dimensions'])
+        self.assertEqual(characteristic_profile('Товары для бизнеса','Мебель')['version'],2)
 
     def test_seed_values_and_compound_dimensions_remain_valid(self):
         for row in ASSORTMENT:

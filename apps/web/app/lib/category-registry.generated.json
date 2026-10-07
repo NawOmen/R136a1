@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "registry_version": "catalog-2",
+  "registry_version": "catalog-3",
   "tree": {
     "Упаковка и тара": [
       "Бумажные стаканы",
@@ -276,9 +276,7 @@
     "dimensions_mm": {
       "label": "Габариты, мм",
       "type": "text",
-      "aliases": [
-        "dimensions"
-      ]
+      "aliases": []
     },
     "dimensions_cm": {
       "label": "Габариты, см",
@@ -298,6 +296,11 @@
       "aliases": [],
       "unit": "г/м²",
       "positive": true
+    },
+    "dimensions": {
+      "label": "Габариты",
+      "type": "text",
+      "aliases": []
     }
   },
   "technical_profiles": {
@@ -317,7 +320,7 @@
       ]
     },
     "packaging.food-packaging": {
-      "version": 1,
+      "version": 2,
       "state": "initial",
       "fields": [
         "unit",
@@ -330,7 +333,7 @@
       ]
     },
     "packaging.bags": {
-      "version": 1,
+      "version": 2,
       "state": "initial",
       "fields": [
         "unit",
@@ -343,7 +346,7 @@
       ]
     },
     "packaging.boxes": {
-      "version": 1,
+      "version": 2,
       "state": "initial",
       "fields": [
         "unit",
@@ -403,7 +406,7 @@
       "required_for_product": []
     },
     "materials.metals": {
-      "version": 1,
+      "version": 2,
       "state": "initial",
       "fields": [
         "unit",
@@ -449,7 +452,7 @@
       "required_for_product": []
     },
     "equipment.retail": {
-      "version": 1,
+      "version": 2,
       "state": "initial",
       "fields": [
         "unit",
@@ -460,7 +463,7 @@
       "required_for_product": []
     },
     "equipment.warehouse": {
-      "version": 1,
+      "version": 2,
       "state": "initial",
       "fields": [
         "unit",
@@ -493,7 +496,7 @@
       "required_for_product": []
     },
     "construction.finishing": {
-      "version": 1,
+      "version": 2,
       "state": "initial",
       "fields": [
         "unit",
@@ -517,7 +520,7 @@
       "required_for_product": []
     },
     "construction.engineering": {
-      "version": 1,
+      "version": 2,
       "state": "initial",
       "fields": [
         "unit",
@@ -603,7 +606,7 @@
       "required_for_product": []
     },
     "business-supplies.household": {
-      "version": 1,
+      "version": 2,
       "state": "initial",
       "fields": [
         "unit",
@@ -626,7 +629,7 @@
       "required_for_product": []
     },
     "business-supplies.furniture": {
-      "version": 1,
+      "version": 2,
       "state": "initial",
       "fields": [
         "unit",
@@ -648,7 +651,7 @@
       "required_for_product": []
     },
     "electronics.computers": {
-      "version": 1,
+      "version": 2,
       "state": "initial",
       "fields": [
         "unit",
@@ -682,7 +685,7 @@
       "required_for_product": []
     },
     "transport.containers": {
-      "version": 1,
+      "version": 2,
       "state": "initial",
       "fields": [
         "unit",
@@ -715,7 +718,7 @@
       "required_for_product": []
     },
     "printing.labels": {
-      "version": 1,
+      "version": 2,
       "state": "initial",
       "fields": [
         "unit",
@@ -738,7 +741,7 @@
       "required_for_product": []
     },
     "printing.signs": {
-      "version": 1,
+      "version": 2,
       "state": "initial",
       "fields": [
         "unit",
@@ -749,7 +752,7 @@
       "required_for_product": []
     },
     "printing.merchandise": {
-      "version": 1,
+      "version": 2,
       "state": "initial",
       "fields": [
         "unit",
@@ -782,7 +785,7 @@
       "required_for_product": []
     },
     "manufacturing-services.processing": {
-      "version": 1,
+      "version": 2,
       "state": "initial",
       "fields": [
         "unit",
@@ -838,7 +841,7 @@
       "required_for_product": []
     },
     "other.other-products": {
-      "version": 1,
+      "version": 2,
       "state": "initial",
       "fields": [
         "unit",
