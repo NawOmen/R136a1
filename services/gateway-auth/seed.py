@@ -8,6 +8,7 @@ import os
 import uuid
 
 from sqlalchemy import select
+from pydantic import EmailStr, TypeAdapter
 
 from app.database import SessionLocal
 from app.models import Company, CompanyMember, User
@@ -25,6 +26,7 @@ async def seed() -> None:
         raise ValueError("Пароли начальных аккаунтов должны содержать минимум 16 символов")
     async with SessionLocal() as db:
         async def account(email, password, first, last, *, admin=False):
+            email = TypeAdapter(EmailStr).validate_python(email)
             user = await db.scalar(select(User).where(User.email == email))
             if user is None:
                 user = User(id=uuid.uuid5(NAMESPACE, f"user:{email}"), email=email,
@@ -37,7 +39,7 @@ async def seed() -> None:
         await account(os.getenv("SEED_ADMIN_EMAIL", "admin@demo.ru"), admin_password, "Администратор", "Платформы", admin=True)
         buyer = await account(os.getenv("SEED_DEMO_EMAIL", "demo@demo.ru"), buyer_password, "Алексей", "Смирнов")
         seller = await account(os.getenv("SEED_SELLER_EMAIL", "seller@demo.ru"), seller_password, "Сергей", "Иванов")
-        second = await account(os.getenv("SEED_SELLER2_EMAIL", "supplier@porukam.test"), second_password, "Мария", "Петрова")
+        second = await account(os.getenv("SEED_SELLER2_EMAIL", "supplier@demo.ru"), second_password, "Мария", "Петрова")
 
         async def company(key, title, user, *, buy=False, sell=False, legacy=None):
             identity = uuid.uuid5(NAMESPACE, f"company:{key}")

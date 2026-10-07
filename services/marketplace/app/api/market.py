@@ -257,6 +257,7 @@ async def publish_group_offer(
         [
             SpecificationCheck(
                 category=need.category,
+                subcategory=need.subcategory,
                 characteristics=need.characteristics,
                 moq_units=need.volume_units,
                 label=f"потребность {need.id}",
@@ -475,6 +476,7 @@ async def decide_coalition(
             [
                 SpecificationCheck(
                     category=need.category,
+                    subcategory=need.subcategory,
                     characteristics=need.characteristics,
                     moq_units=need.volume_units,
                     label=f"потребность {need.id}",

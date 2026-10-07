@@ -23,7 +23,7 @@ async function login(page: Page, role: "BUYER" | "SELLER" | "ADMIN") {
 // Две независимые сессии и настоящий backend: предложение не является продажей;
 // приёмка после отгрузки меняет количество, а себестоимость доступна только продавцу.
 for (const classified of [false, true]) {
-test(`${classified ? "Точная классификация через API" : "Общая категория из формы"}: заказ → отгрузка → приёмка → прибыль`, async ({ page, browser }) => {
+test(`${classified ? "Точная классификация через API" : "Категория и подкатегория из формы"}: заказ → отгрузка → приёмка → прибыль`, async ({ page, browser }) => {
   test.setTimeout(180_000);
   const sellerContext = await browser.newContext({ baseURL: process.env.BASE_URL || "http://localhost:3000" });
   const seller = await sellerContext.newPage();
@@ -52,7 +52,8 @@ test(`${classified ? "Точная классификация через API" : 
       needUrl = new URL(`/needs/${need.id}`, page.url()).toString();
     } else {
     await page.goto("/needs/new");
-    await page.getByLabel("Категория", { exact: false }).selectOption("Строительство");
+    await page.locator("#category").selectOption("Строительство");
+    await page.getByLabel("Подкатегория", { exact: false }).selectOption("Крепёж");
     await page.getByLabel("Характеристика 2: название", { exact: true }).fill("thread");
     await page.getByLabel("Характеристика 2: значение", { exact: true }).fill("М8");
     await page.getByLabel("Количество единиц заказа", { exact: false }).fill("200");
@@ -104,10 +105,11 @@ test(`${classified ? "Точная классификация через API" : 
     await page.getByRole("button", { name: "Выбрать предложение", exact: true }).click();
     const selectionResponse = await selected;
     expect(selectionResponse.status(), await selectionResponse.text()).toBe(201);
+    const dealId = (await selectionResponse.json()).id;
     await expect(page.getByRole("heading", { name: "Сделка заключена", exact: true })).toBeVisible();
 
     await seller.goto("/deals");
-    await expect(seller.locator(".deal-button")).toHaveCount(1);
+    await seller.locator(`[data-deal-id="${dealId}"]`).click();
     await expect(seller.getByText("Операций пока нет. Заказ ещё не считается продажей.", { exact: true })).toBeVisible();
     for (const stage of ["Производство", "Отгрузка"]) {
       const step = seller.locator(".timeline-step").filter({ has: seller.getByText(stage, { exact: true }) });
@@ -115,7 +117,7 @@ test(`${classified ? "Точная классификация через API" : 
       await expect(step).toHaveClass(/done/);
     }
     await page.goto("/deals");
-    await expect(page.locator(".deal-button")).toHaveCount(1);
+    await page.locator(`[data-deal-id="${dealId}"]`).click();
     await page.getByLabel("Количество (доступно 200)", { exact: true }).fill("200");
     await page.getByLabel("Основание или номер акта", { exact: true }).fill("Синтетический акт E2E, принято 200 единиц");
     await expect(page.getByRole("button", { name: "Записать приёмку", exact: true })).toBeDisabled();
@@ -126,6 +128,7 @@ test(`${classified ? "Точная классификация через API" : 
     await expect(page.getByLabel("Себестоимость единицы, ₽", { exact: true })).toHaveCount(0);
 
     await seller.reload();
+    await seller.locator(`[data-deal-id="${dealId}"]`).click();
     await seller.getByText("Себестоимость и прибыль — только для вашей компании", { exact: true }).click();
     await seller.getByLabel("Себестоимость единицы, ₽", { exact: true }).fill("8");
     await seller.getByLabel("Прочие затраты заказа, ₽", { exact: true }).fill("100");

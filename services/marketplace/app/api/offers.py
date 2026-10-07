@@ -389,6 +389,7 @@ async def select_offer(
         offer.company_id,
         SpecificationCheck(
             category=need.category,
+            subcategory=need.subcategory,
             characteristics=need.characteristics,
             moq_units=offer.moq_units,
             label="спецификация потребности",
@@ -432,7 +433,7 @@ async def select_offer(
         "admission": admission_audit_payload(
             admission,
             specification={
-                "category": need.category,
+                "category": need.category, "subcategory": need.subcategory,
                 "characteristics": need.characteristics,
                 "moq_units": offer.moq_units,
             },

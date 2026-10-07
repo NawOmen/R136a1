@@ -481,6 +481,7 @@ class NeedOut(BaseModel):
     company_id: uuid.UUID
     created_by_user_id: uuid.UUID | None
     category: str
+    subcategory: str | None = None
     characteristics: dict[str, Any]
     volume_units: int
     budget_rub: float | None
@@ -501,6 +502,7 @@ class NeedFeedOut(BaseModel):
 
     id: uuid.UUID
     category: str
+    subcategory: str | None = None
     characteristics: dict[str, Any]
     volume_units: int
     deadline_date: date
@@ -514,6 +516,7 @@ class NeedIn(BaseModel):
     request_key: uuid.UUID | None = None
     company_id: uuid.UUID
     category: str = Field(min_length=2, max_length=120)
+    subcategory: str | None = Field(default=None, min_length=2, max_length=120)
     characteristics: dict[str, Any] = Field(default_factory=dict)
     volume_units: int = Field(gt=0)
     budget_rub: float | None = Field(default=None, gt=0)

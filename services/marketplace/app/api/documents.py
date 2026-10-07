@@ -54,7 +54,7 @@ async def _notify_affected_deals(
     rows = (
         await db.execute(
             text(
-                "SELECT DISTINCT d.id, d.buyer_company_id, n.category "
+                "SELECT DISTINCT d.id, d.buyer_company_id, n.category, n.subcategory "
                 "FROM marketplace.deals d "
                 "JOIN marketplace.needs n ON n.id = d.need_id "
                 "WHERE d.seller_company_id = :cid"
@@ -65,7 +65,7 @@ async def _notify_affected_deals(
     affected = 0
     targets: set[uuid.UUID] = set()
     for row in rows:
-        need_scope = canonical_scope(row["category"], None)
+        need_scope = canonical_scope(row["category"], row["subcategory"])
         if need_scope[0] != document_scope[0]:
             continue
         # An older need may record only the parent category. Its exact

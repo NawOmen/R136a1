@@ -195,6 +195,7 @@ export default function NeedDetailPage() {
     <div>
       <div className="company-row">
         <h1 className="page-title">{need.category}</h1>
+        {need.subcategory && <p className="hint">Подкатегория: {need.subcategory}</p>}
         <div className="actions">
           <span className={`badge badge-${need.status}`}>{NEED_STATUS_LABELS[need.status]}</span>
           <span className={`badge badge-${need.visibility}`}>{NEED_VISIBILITY_LABELS[need.visibility]}</span>

@@ -225,6 +225,7 @@ async def _activate_scenario(
         if commitment is None:
             raise HTTPException(409, "Подтверждённый резерв не найден")
         await require_company_admission(db, company_id, SpecificationCheck(category=need.category,
+            subcategory=need.subcategory,
             characteristics=need.characteristics, moq_units=replacement["units"], label="спецификация восстановления"), context="Замена не активирована")
         await activate_hold(db, company_id=company_id, anchor_id=commitment.id, units=replacement["units"])
     plan.current_allocations = [*surviving, *replacements]
@@ -350,6 +351,7 @@ async def _calculate_and_store(
                     uuid.UUID(str(allocation["company_id"])),
                     SpecificationCheck(
                         category=plan_need.category,
+                        subcategory=plan_need.subcategory,
                         characteristics=plan_need.characteristics,
                         moq_units=int(allocation.get("units") or plan_need.volume_units),
                         label="поставщик замены",
@@ -624,6 +626,7 @@ async def confirm_resilience_plan(
             raise HTTPException(409, "Исходное предложение изменилось или истекло. Пересчитайте план")
         offer = matching[0]
         await require_company_admission(db, company_id, SpecificationCheck(category=need.category,
+            subcategory=need.subcategory,
             characteristics=need.characteristics, moq_units=allocation["units"]), context="Основной объём не подтверждён")
         await reserve(db, company_id=company_id, anchor_type="resilience_primary", anchor_id=plan.id,
             units=allocation["units"], deadline=need.deadline_date, resource_kind=offer.resource_kind, product_id=offer.product_id,
@@ -767,6 +770,7 @@ async def decide_reserve_commitment(
             data.company_id,
             SpecificationCheck(
                 category=plan_need.category,
+                subcategory=plan_need.subcategory,
                 characteristics=plan_need.characteristics,
                 moq_units=data.moq_units or plan_need.volume_units,
                 label="спецификация потребности",
@@ -776,7 +780,7 @@ async def decide_reserve_commitment(
         admission_payload = admission_audit_payload(
             admission,
             specification={
-                "category": plan_need.category,
+                "category": plan_need.category, "subcategory": plan_need.subcategory,
                 "characteristics": plan_need.characteristics,
                 "moq_units": data.moq_units,
             },
@@ -1039,6 +1043,7 @@ async def approve_recovery(
             uuid.UUID(str(allocation["company_id"])),
             SpecificationCheck(
                 category=plan_need.category,
+                subcategory=plan_need.subcategory,
                 characteristics=plan_need.characteristics,
                 moq_units=int(allocation.get("units") or plan_need.volume_units),
                 label="поставщик замены",
@@ -1051,7 +1056,7 @@ async def approve_recovery(
                 "admission": admission_audit_payload(
                     admission,
                     specification={
-                        "category": plan_need.category,
+                        "category": plan_need.category, "subcategory": plan_need.subcategory,
                         "characteristics": plan_need.characteristics,
                     },
                 ),

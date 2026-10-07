@@ -42,7 +42,7 @@
 | `pydantic` | 2.13.5 | MIT |
 | `pydantic-core` | 2.46.5 | MIT |
 | `pydantic-settings` | 2.15.0 | MIT |
-| `pyjwt` | 2.14.0 | MIT |
+| `pyjwt` | 2.15.1 | MIT |
 | `python-dotenv` | 1.2.3 | BSD-3-Clause |
 | `pyyaml` | 6.0.3 | MIT |
 | `sqlalchemy` | 2.0.52 | MIT |
@@ -89,7 +89,7 @@
 | `pydantic` | 2.13.5 | MIT |
 | `pydantic-core` | 2.46.5 | MIT |
 | `pydantic-settings` | 2.15.0 | MIT |
-| `pyjwt` | 2.14.0 | MIT |
+| `pyjwt` | 2.15.1 | MIT |
 | `pymupdf` | 1.28.2 | Dual Licensed - GNU AFFERO GPL 3.0 or Artifex Commercial License |
 | `python-dotenv` | 1.2.3 | BSD-3-Clause |
 | `python-multipart` | 0.0.32 | Apache-2.0 |
@@ -134,7 +134,7 @@
 | `pydantic` | 2.13.5 | MIT |
 | `pydantic-core` | 2.46.5 | MIT |
 | `pydantic-settings` | 2.15.0 | MIT |
-| `pyjwt` | 2.14.0 | MIT |
+| `pyjwt` | 2.15.1 | MIT |
 | `python-dotenv` | 1.2.3 | BSD-3-Clause |
 | `python-multipart` | 0.0.32 | Apache-2.0 |
 | `pyyaml` | 6.0.3 | MIT |
@@ -142,7 +142,7 @@
 | `starlette` | 1.6.0 | BSD-3-Clause |
 | `typing-extensions` | 4.16.0 | PSF-2.0 |
 | `typing-inspection` | 0.4.4 | MIT |
-| `urllib3` | 2.7.0 | MIT |
+| `urllib3` | 2.8.0 | MIT |
 | `uvicorn` | 0.52.4 | BSD-3-Clause |
 | `uvloop` | 0.22.1 | MIT License |
 | `watchfiles` | 1.2.0 | MIT |
@@ -186,10 +186,10 @@
 | Компонент | Назначение | Лицензия или условия |
 |---|---|---|
 | PostgreSQL 16.4 (образ `postgres:16.4-alpine`) | база данных сервисов | PostgreSQL License (BSD-подобная) |
-| MinIO (`minio/minio`) | хранение документов и изображений | AGPL-3.0: требует проверки условий при распространении сервиса |
+| MinIO (сборка `infra/minio/Dockerfile`, коммит `16f8cf1c52f0a77eeb8f7565aaf7f7df12454583`) | хранение документов и изображений | AGPL-3.0; LICENSE и соответствующие исходники включены в образ; см. `infra/minio/README.md` |
 | nginx (`nginx:stable-alpine`) | HTTPS-прокси, единый origin | BSD-2-Clause |
 | pgAdmin 4 | локальное администрирование базы, только для разработки | PostgreSQL License |
-| Python 3.14 (образ `python:3.14-slim`) | среда выполнения сервисов | PSF License |
+| Python 3.12 (образ `python:3.12-slim`) | среда выполнения сервисов | PSF License |
 | Node.js 26 (образ `node:26-alpine`) | среда выполнения интерфейса | MIT |
 | Ollama и выбранная локальная модель | инференс агентов | условия зависят от модели: требуют проверки перед публикацией |
 | OR-Tools | расчёты объединения спроса и устойчивости | Apache-2.0 |

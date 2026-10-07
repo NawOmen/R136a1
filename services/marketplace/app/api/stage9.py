@@ -166,7 +166,7 @@ async def repeat_need(need_id: uuid.UUID, data: NeedRepeatIn, user: CurrentUser 
         if address_owner != original.company_id:
             raise HTTPException(status.HTTP_409_CONFLICT, detail="Адрес прежнего заказа больше недоступен. Выберите новый адрес")
     copy = Need(
-        company_id=original.company_id, created_by_user_id=user.id, category=original.category,
+        company_id=original.company_id, created_by_user_id=user.id, category=original.category, subcategory=original.subcategory,
         characteristics=original.characteristics, volume_units=original.volume_units, budget_rub=original.budget_rub,
         deadline_date=data.deadline_date, delivery_address_id=original.delivery_address_id,
         visibility=original.visibility, status="draft", valid_until=data.valid_until or data.deadline_date,

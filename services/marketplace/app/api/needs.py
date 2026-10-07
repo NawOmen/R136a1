@@ -9,6 +9,7 @@ from fastapi.responses import Response
 from sqlalchemy import or_, select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from ..category_admission import catalog_scope
 from ..database import get_db
 from ..deps import (
     CurrentUser,
@@ -53,6 +54,7 @@ def _need_out(need: Need, files: list[NeedFile] | None = None) -> NeedOut:
         company_id=need.company_id,
         created_by_user_id=need.created_by_user_id,
         category=need.category,
+        subcategory=need.subcategory,
         characteristics=need.characteristics,
         volume_units=need.volume_units,
         budget_rub=need.budget_rub,
@@ -78,18 +80,23 @@ async def list_needs(
         Need.deadline_date >= date.today(),
         or_(Need.valid_until.is_(None), Need.valid_until >= date.today()),
     )
+    seller_scopes = None
     if seller_company_id is not None:
         await require_company_seller(seller_company_id, user, db)
-        categories = (
-            await db.execute(select(Product.category).where(Product.company_id == seller_company_id))
-        ).scalars().all()
-        # Если товары уже заведены, используем их категории как базовый фильтр.
-        # Без товаров показываем открытую ленту: производитель по правилам MVP
-        # вправе ответить на запрос на основании Capability Passport.
-        if categories:
-            query = query.where(Need.category.in_(set(categories)))
+        products = (await db.execute(
+            select(Product.category, Product.subcategory).where(Product.company_id == seller_company_id)
+        )).all()
+        # Без товаров производитель может ответить по паспорту возможностей.
+        if products:
+            seller_scopes = {catalog_scope(category, subcategory) for category, subcategory in products}
     result = await db.execute(query.order_by(Need.created_at.desc()))
-    return result.scalars().all()
+    needs = list(result.scalars().all())
+    if seller_scopes is None:
+        return needs
+    def relevant(need):
+        parent, child = catalog_scope(need.category, need.subcategory)
+        return any(parent == p and (child is None or child == c) for p, c in seller_scopes)
+    return [need for need in needs if relevant(need)]
 
 
 @router.get("/needs/mine", response_model=list[NeedOut])
@@ -114,7 +121,11 @@ async def create_need(
 ):
     await require_company_buyer(data.company_id, user, db)
     await require_company_admin(data.company_id, user, db)
-    request_hash = hashlib.sha256(json.dumps(data.model_dump(mode="json", exclude={"request_key"}), sort_keys=True, ensure_ascii=False).encode()).hexdigest()
+    hash_payload = data.model_dump(mode="json", exclude={"request_key"})
+    # Optional classification must not change idempotency hashes of old v1 clients.
+    if data.subcategory is None:
+        hash_payload.pop("subcategory", None)
+    request_hash = hashlib.sha256(json.dumps(hash_payload, sort_keys=True, ensure_ascii=False).encode()).hexdigest()
     if data.request_key:
         await db.execute(text("SELECT pg_advisory_xact_lock(hashtextextended(:key, 0))"), {"key": f"need-request:{data.company_id}:{data.request_key}"})
         existing = await db.scalar(select(Need).where(Need.company_id == data.company_id, Need.request_key == data.request_key))

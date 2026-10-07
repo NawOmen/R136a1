@@ -229,6 +229,7 @@ export interface Need {
   company_id: string;
   created_by_user_id: string | null;
   category: string;
+  subcategory?: string | null;
   characteristics: Record<string, unknown>;
   volume_units: number;
   budget_rub: number | null;
@@ -245,6 +246,7 @@ export interface Need {
 export interface NeedFeedItem {
   id: string;
   category: string;
+  subcategory?: string | null;
   characteristics: Record<string, unknown>;
   volume_units: number;
   deadline_date: string;
@@ -514,6 +516,7 @@ export interface CreateNeedInput {
   request_key?: string;
   company_id: string;
   category: string;
+  subcategory?: string | null;
   characteristics: Record<string, unknown>;
   volume_units: number;
   budget_rub: number;

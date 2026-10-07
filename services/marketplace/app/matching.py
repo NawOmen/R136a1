@@ -133,7 +133,7 @@ async def _active_needs(db: AsyncSession) -> list[Need]:
             continue
         signature = (
             need.company_id,
-            need.category.strip().lower(),
+            need.category.strip().lower(), (need.subcategory or "").strip().lower(),
             _canonical_json(need.characteristics or {}),
             need.volume_units, need.deadline_date, need.valid_until, need.delivery_address_id,
             need.budget_rub, need.visibility,
@@ -180,13 +180,13 @@ async def _has_direct_match(db: AsyncSession, need: Need) -> tuple[bool, str]:
 
 
 async def _build_coalitions(db: AsyncSession, needs: list[Need]) -> None:
-    groups: dict[tuple[str, str, str], list[Need]] = defaultdict(list)
+    groups: dict[tuple[str, str, str, str], list[Need]] = defaultdict(list)
     for need in needs:
         common, hard, _, _ = _need_parts(need)
-        groups[(need.category.strip().lower(), _canonical_json(common), _canonical_json(hard))].append(need)
+        groups[(need.category.strip().lower(), (need.subcategory or "").strip().lower(), _canonical_json(common), _canonical_json(hard))].append(need)
 
     passports = (await db.execute(select(CapabilityPassport))).scalars().all()
-    for (_, common_json, hard_json), members in groups.items():
+    for (_, subtype, common_json, hard_json), members in groups.items():
         distinct_companies = {item.company_id for item in members}
         if len(members) < 2 or len(distinct_companies) < 2:
             continue
@@ -210,6 +210,8 @@ async def _build_coalitions(db: AsyncSession, needs: list[Need]) -> None:
             "common": json.loads(common_json),
             "hard": json.loads(hard_json),
         }
+        if subtype:
+            identity["subcategory"] = subtype
         digest = hashlib.sha256(_canonical_json(identity).encode()).hexdigest()
         profile = (
             await db.execute(select(CompatibilityProfile).where(CompatibilityProfile.input_hash == digest))

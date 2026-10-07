@@ -50,6 +50,7 @@ export default function NewNeedPage() {
 
   const [addresses, setAddresses] = useState<DeliveryAddress[]>([]);
   const [category, setCategory] = useState(PRODUCT_CATEGORIES[0]);
+  const [subcategory, setSubcategory] = useState("");
   const [rows, setRows] = useState<CharacteristicRow[]>([
     newRow("unit", "шт"),
     newRow(),
@@ -81,7 +82,7 @@ export default function NewNeedPage() {
   useEffect(() => {
     if (!draftKey) return;
     setAgentRun(null); setAnswers({}); setFiles([]); setSavedNeed(null);
-    setRequestDescription(""); setRows([newRow("unit", "шт"), newRow()]); setCategory(PRODUCT_CATEGORIES[0]);
+    setRequestDescription(""); setRows([newRow("unit", "шт"), newRow()]); setCategory(PRODUCT_CATEGORIES[0]); setSubcategory("");
     setVolumeUnits(""); setBudgetRub(""); setDeadlineDate(""); setDeliveryAddressId("");
     setVisibility("open_anonymized"); setDraftNotice(""); creationKey.current = crypto.randomUUID();
     try {
@@ -90,7 +91,10 @@ export default function NewNeedPage() {
         const value = JSON.parse(raw);
         if (value.version === 1) {
           setRequestDescription(typeof value.description === "string" ? value.description : "");
-          if (PRODUCT_CATEGORIES.includes(value.category)) setCategory(value.category);
+          if (PRODUCT_CATEGORIES.includes(value.category)) {
+            setCategory(value.category);
+            if (PRODUCT_CATEGORY_TREE[value.category].includes(value.subcategory)) setSubcategory(value.subcategory);
+          }
           if (Array.isArray(value.rows) && value.rows.length <= 25 && value.rows.every((r: CharacteristicRow) => typeof r.key === "string" && typeof r.value === "string")) setRows(value.rows);
           setVolumeUnits(String(value.volume ?? "")); setBudgetRub(String(value.budget ?? ""));
           setDeadlineDate(String(value.deadline ?? "")); setDeliveryAddressId(String(value.address ?? ""));
@@ -106,9 +110,9 @@ export default function NewNeedPage() {
 
   useEffect(() => {
     if (!draftKey || loadedDraftKey !== draftKey) return;
-    try { sessionStorage.setItem(draftKey, JSON.stringify({ version: 1, description: requestDescription, category, rows, volume: volumeUnits, budget: budgetRub, deadline: deadlineDate, address: deliveryAddressId, visibility, fileCount: files.length, savedNeed, creationKey: creationKey.current })); }
+    try { sessionStorage.setItem(draftKey, JSON.stringify({ version: 1, description: requestDescription, category, subcategory, rows, volume: volumeUnits, budget: budgetRub, deadline: deadlineDate, address: deliveryAddressId, visibility, fileCount: files.length, savedNeed, creationKey: creationKey.current })); }
     catch { setDraftNotice("Не удалось сохранить поля в браузере. Не закрывайте вкладку до сохранения потребности."); }
-  }, [draftKey, loadedDraftKey, requestDescription, category, rows, volumeUnits, budgetRub, deadlineDate, deliveryAddressId, visibility, files.length, savedNeed]);
+  }, [draftKey, loadedDraftKey, requestDescription, category, subcategory, rows, volumeUnits, budgetRub, deadlineDate, deliveryAddressId, visibility, files.length, savedNeed]);
 
   // Загрузка адресов выбранной компании
   useEffect(() => {
@@ -193,6 +197,7 @@ export default function NewNeedPage() {
   }
 
   function validate(): string | null {
+    if (!PRODUCT_CATEGORY_TREE[category]?.includes(subcategory)) return "Выберите подкатегорию товара для проверки требований.";
     if (rows.length < 1 || rows.length > 25) {
       return "Добавьте от 1 до 25 характеристик.";
     }
@@ -294,6 +299,8 @@ export default function NewNeedPage() {
       item.toLocaleLowerCase("ru") === normalizedCategory || PRODUCT_CATEGORY_TREE[item].some((subcategory) => subcategory.toLocaleLowerCase("ru") === normalizedCategory),
     );
     setCategory(detectedCategory ?? "Другое");
+    const detectedSubcategory = detectedCategory && PRODUCT_CATEGORY_TREE[detectedCategory].find((item) => item.toLocaleLowerCase("ru") === normalizedCategory);
+    setSubcategory(detectedSubcategory || "");
     if (values.has("quantity_units")) setVolumeUnits(String(values.get("quantity_units")));
     if (values.has("budget_rub")) setBudgetRub(String(values.get("budget_rub")));
     if (values.has("lead_time_days")) {
@@ -340,6 +347,7 @@ export default function NewNeedPage() {
       const payload = {
         company_id: company.id,
         category,
+        subcategory,
         characteristics,
         volume_units: Number(volumeUnits),
         budget_rub: Number(budgetRub),
@@ -640,13 +648,22 @@ export default function NewNeedPage() {
           <label htmlFor="category">
             Категория<span className="req">*</span>
           </label>
-          <select id="category" value={category} onChange={(event) => setCategory(event.target.value)}>
+          <select id="category" value={category} onChange={(event) => { setCategory(event.target.value); setSubcategory(""); }}>
             {PRODUCT_CATEGORIES.map((item) => (
               <option key={item} value={item}>
                 {item}
               </option>
             ))}
           </select>
+        </div>
+
+        <div className="field">
+          <label htmlFor="subcategory">Подкатегория<span className="req">*</span></label>
+          <select id="subcategory" required value={subcategory} onChange={(event) => setSubcategory(event.target.value)}>
+            <option value="">Выберите вид товара</option>
+            {PRODUCT_CATEGORY_TREE[category].map((item) => <option key={item} value={item}>{item}</option>)}
+          </select>
+          <p className="hint">Определяет требования к товару. Общая категория сохраняется для подбора мощностей.</p>
         </div>
 
         <div className="field">

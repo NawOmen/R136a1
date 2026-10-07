@@ -43,6 +43,8 @@ python3 scripts/init-local-env.py  # новый .env со случайными �
 docker compose --env-file .env -f infra/docker-compose.yml up --build
 ```
 
+MinIO собирается из исходников фиксированного коммита с проверкой SHA-256, поэтому первый запуск требует загрузки Go-модулей и занимает больше времени. Готовый образ MinIO из удалённого registry не требуется. Происхождение сборки и соответствующие исходники: [infra/minio/README.md](infra/minio/README.md).
+
 Если стенд уже запускался раньше (на компьютере остался том PostgreSQL),
 `init-local-env.py` предупредит об этом, а сервисы упадут с
 `password authentication failed for user "sborka"`: PostgreSQL применяет

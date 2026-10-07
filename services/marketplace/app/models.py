@@ -167,6 +167,7 @@ class Need(Base):
     company_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), nullable=False)
     created_by_user_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), nullable=True)
     category: Mapped[str] = mapped_column(String(120), nullable=False, index=True)
+    subcategory: Mapped[str | None] = mapped_column(String(120), nullable=True)
     characteristics: Mapped[dict] = mapped_column(JSONB, nullable=False, default=dict)
     volume_units: Mapped[int] = mapped_column(Integer, nullable=False)
     budget_rub: Mapped[float | None] = mapped_column(Float, nullable=True)

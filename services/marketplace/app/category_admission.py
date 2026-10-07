@@ -16,10 +16,11 @@ import uuid
 from dataclasses import dataclass, field
 from datetime import date, datetime, timezone
 
+from .category_tree import CATALOG_TREE
 from .experience import validate_characteristics
 from .models import Document
 
-RULES_VERSION = "categories-2"
+RULES_VERSION = "categories-3"
 
 # Статусы документа и требования для продавца и покупателя.
 STATE_LABELS = {
@@ -389,6 +390,15 @@ def canonical_scope(category: str | None, subcategory: str | None) -> tuple[str,
     return norm_category, None
 
 
+def catalog_scope(category: str | None, subcategory: str | None) -> tuple[str, str | None]:
+    """Catalogue discovery scope; does not extend a document's verified legal scope."""
+    if not subcategory:
+        for parent, children in CATALOG_TREE.items():
+            if normalize(category) in {normalize(child) for child in children}:
+                return normalize(parent), normalize(category)
+    return canonical_scope(category, subcategory)
+
+
 def characteristic_value(characteristics: dict | None, attribute: str) -> str | None:
     normalized = {normalize(str(key)): value for key, value in (characteristics or {}).items()}
     for alias in CHARACTERISTIC_ALIASES.get(attribute, (attribute,)):
@@ -546,7 +556,11 @@ def evaluate_admission(
     now = datetime.now(timezone.utc)
     profile = match_profile(category, subcategory)
     if profile is None:
-        hint = classification_hint(category)
+        known_subcategory = normalize(subcategory) in {
+            normalize(child) for parent, children in CATALOG_TREE.items()
+            if normalize(parent) == normalize(category) for child in children
+        }
+        hint = None if known_subcategory else classification_hint(category)
         if hint is not None:
             return AdmissionReport(
                 category=category,

@@ -36,7 +36,7 @@ export default function DealsPage() {
   return <div><h1>Сделки и сообщения</h1><p className="subtitle">Переписка, организация получения и контрольные точки</p>
     {error && <div className="alert alert-error">{error} <button type="button" className="btn btn-secondary btn-sm" disabled={loading} onClick={() => setRetry(n => n + 1)}>Повторить загрузку</button></div>}
     <div className="deal-layout"><aside className="card"><h2>Мои сделки</h2>
-      {loading ? <p className="hint" role="status">Загружаем сделки…</p> : deals.length === 0 ? !error && <p className="hint">Сделок пока нет.</p> : deals.map(deal => <button type="button" className="deal-button" key={deal.id} onClick={() => { setSelected(deal); setActingCompanyId(""); }}>{formatUnits(deal.units)} · {formatRub(deal.total_price_rub)}</button>)}
+      {loading ? <p className="hint" role="status">Загружаем сделки…</p> : deals.length === 0 ? !error && <p className="hint">Сделок пока нет.</p> : deals.map(deal => <button type="button" className="deal-button" data-deal-id={deal.id} key={deal.id} onClick={() => { setSelected(deal); setActingCompanyId(""); }}>{formatUnits(deal.units)} · {formatRub(deal.total_price_rub)}</button>)}
     </aside><div>{selected && companyId ? <DealWorkspace key={`${selected.id}:${companyId}`} selected={selected} companyId={companyId} partyCompanies={partyCompanies} onCompanyChange={setActingCompanyId} /> : !loading && !error && <section className="card"><h2>Переписка</h2><p className="hint">Выберите сделку.</p></section>}</div></div>
   </div>;
 }

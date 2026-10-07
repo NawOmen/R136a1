@@ -108,6 +108,8 @@ def _matches_need(product: Product, need: Need) -> tuple[bool, str]:
     category = normalize(need.category)
     if not category or category not in {normalize(product.category), normalize(product.subcategory)}:
         return False, "категория товара не совпадает с потребностью"
+    if getattr(need, "subcategory", None) and normalize(need.subcategory) != normalize(product.subcategory):
+        return False, "подкатегория товара не совпадает с потребностью"
     actual = _characteristics(product.characteristics)
     for key, requested_values in _characteristics(need.characteristics).items():
         supplied_values = actual.get(key, [])
