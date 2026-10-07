@@ -17,7 +17,7 @@ async def test_full_flow(client, db_session):
     buyer_token = make_token(buyer_user)
 
     # категорийный допуск: без подтверждённых документов публикация упаковки запрещена
-    await grant_packaging_documents(db_session, seller_company, decision_user_id=seller_user)
+    await grant_packaging_documents(db_session, seller_company, decision_user_id=seller_user, confirms={"material": ["крафт-картон"]})
 
     await grant_capacity(db_session, seller_company, 120_000)
 
