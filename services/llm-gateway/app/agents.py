@@ -9,6 +9,7 @@ from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from .models import ToolCall
+from .role_passports import ToolActor, check_tool_call
 from .buyer_comparison import DETAIL_KEYS, buyer_summary, catalog_reference, confirmed_values, positive_integer
 from .providers import ModelUnavailable, RoutedProvider
 from .schemas import (
@@ -173,11 +174,17 @@ async def log_tool(
     status: str,
     input_summary: str,
     output_summary: str,
+    *,
+    actor: ToolActor = "system",
 ) -> None:
+    """Журнал вызова с серверной проверкой allowlist: неизвестный инструмент
+    или чужой исполнитель отклоняются независимо от текста модели."""
+    executor = check_tool_call(tool_name, actor)
     db.add(
         ToolCall(
             run_id=run_id,
             tool_name=tool_name,
+            executor=executor,
             status=status,
             input_summary=input_summary[:1000],
             output_summary=output_summary[:1000],
@@ -429,7 +436,7 @@ class BuyerInvestigationAgent:
     def __init__(self, provider: RoutedProvider | None = None) -> None:
         self.provider = provider or RoutedProvider()
 
-    async def run(
+    async def run_with_extraction(
         self,
         db: AsyncSession,
         run_id: uuid.UUID,
@@ -437,7 +444,7 @@ class BuyerInvestigationAgent:
         warnings: list[str],
         requested_route: str,
         buyer_company_id: uuid.UUID | None = None,
-    ) -> tuple[BuyerAgentResult, str, str | None]:
+    ) -> tuple[BuyerAgentResult, str, str | None, RawExtraction]:
         material_warnings = list(warnings)
         review_notes: list[str] = []
         prompt = build_extraction_prompt(sources)
@@ -456,6 +463,7 @@ class BuyerInvestigationAgent:
             "success",
             f"источников: {len(sources)}; только локальная обработка оригиналов",
             f"фактов: {len(extraction.facts)}; маршрут: local_qwen",
+            actor="model",
         )
         if requested_route == "complex_auto" and len(sources) >= 3:
             safe_facts = [
@@ -491,6 +499,7 @@ class BuyerInvestigationAgent:
                     "success",
                     f"обезличенных фактов: {len(safe_facts)}",
                     f"маршрут: {review_route}; замечаний: {len(review.notes)}",
+                    actor="model",
                 )
             except ModelUnavailable as exc:
                 fallback = str(exc)
@@ -501,6 +510,7 @@ class BuyerInvestigationAgent:
                     "failed",
                     f"обезличенных фактов: {len(safe_facts)}",
                     "Углублённая проверка пропущена; локальное извлечение сохранено",
+                    actor="model",
                 )
         properties, conflicts, questions = merge_facts(
             extraction, sources, material_warnings
@@ -515,6 +525,7 @@ class BuyerInvestigationAgent:
             "success",
             f"категория: {extraction.category}",
             f"найдено производителей: {len(matches)}",
+            actor="model",
         )
         summary = buyer_summary(matches, bool(conflicts or questions))
         return (
@@ -531,7 +542,22 @@ class BuyerInvestigationAgent:
             ),
             route,
             fallback,
+            extraction,
         )
+
+    async def run(
+        self,
+        db: AsyncSession,
+        run_id: uuid.UUID,
+        sources: list[SourceDescriptor],
+        warnings: list[str],
+        requested_route: str,
+        buyer_company_id: uuid.UUID | None = None,
+    ) -> tuple[BuyerAgentResult, str, str | None]:
+        result, route, fallback, _ = await self.run_with_extraction(
+            db, run_id, sources, warnings, requested_route, buyer_company_id
+        )
+        return result, route, fallback
 
 
 class MarketplaceAgent:

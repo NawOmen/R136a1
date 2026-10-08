@@ -89,7 +89,7 @@ async def clean_db(session_factory):
     async with session_factory() as session:
         await session.execute(
             text(
-                "TRUNCATE agents.tool_calls, agents.agent_runs, "
+                "TRUNCATE agents.tool_calls, agents.agent_runs, agents.agent_tasks, agents.agent_task_cache, "
                 "auth.company_members, auth.companies, auth.users, "
                 "marketplace.capability_passports, marketplace.products CASCADE"
             )
