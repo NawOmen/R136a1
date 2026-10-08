@@ -139,7 +139,7 @@ class MigrationDatabaseTests(unittest.IsolatedAsyncioTestCase):
                         row=(await connection.execute(text(f'SELECT characteristics, category_profile FROM {schema}.{table} WHERE id=1'))).one()
                         self.assertEqual(row.characteristics,{'dimensions':'120×60×75 см'})
                         self.assertIsNone(row.category_profile)
-                    await connection.execute(text(f"UPDATE {schema}.needs SET category_profile='{{\"profile_version\":1}}'::jsonb WHERE id=1"))
+                    await connection.execute(text(f"UPDATE {schema}.needs SET category_profile=CAST(:profile AS JSONB) WHERE id=1"), {"profile": json.dumps({"profile_version": 1})})
                     with self.assertRaises(RuntimeError): await connection.run_sync(run,'downgrade')
                     for table in ('products','needs'):
                         await connection.execute(text(f'SELECT category_profile FROM {schema}.{table}'))
