@@ -28,6 +28,8 @@ from ..schemas import DealOut, OfferDraftIn, OfferDraftOut, OfferIn, OfferOut, O
 from ..resources import reserve, reservations, free_stock, occupies
 from ..trust import append_audit_event, record_human_approval
 
+from ..requirements import require_current_evidence
+
 router = APIRouter(tags=["offers"])
 
 
@@ -37,7 +39,7 @@ async def list_offers(
     user: CurrentUser = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    need = await db.get(Need, need_id)
+    need = await db.scalar(select(Need).where(Need.id == need_id).with_for_update())
     if need is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, detail="Потребность не найдена")
 
@@ -75,7 +77,7 @@ async def prepare_offer_draft(
     db: AsyncSession = Depends(get_db),
 ):
     """Черновик КП из подтверждённых данных. Обязательство создаёт только человек."""
-    need = await db.get(Need, need_id)
+    need = await db.scalar(select(Need).where(Need.id == need_id).with_for_update())
     if need is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, detail="Потребность не найдена")
     await require_company_seller(data.company_id, user, db)
@@ -86,6 +88,7 @@ async def prepare_offer_draft(
             detail="Нельзя готовить предложение на потребность своей компании",
         )
 
+    await require_current_evidence(db, need)
     if need.status not in ACTIVE_NEED_STATUSES or not need_is_current(need) or need.visibility != "open_anonymized":
         raise HTTPException(404, "Потребность недоступна")
     products = list(
@@ -156,9 +159,10 @@ async def create_offer(
     user: CurrentUser = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    need = await db.get(Need, need_id)
+    need = await db.scalar(select(Need).where(Need.id == need_id).with_for_update())
     if need is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, detail="Потребность не найдена")
+    await require_current_evidence(db, need)
     if need.status not in ACTIVE_NEED_STATUSES or not need_is_current(need):
         raise HTTPException(status.HTTP_409_CONFLICT, detail="Потребность закрыта или срок её актуальности истёк")
     if need.visibility != "open_anonymized":
@@ -366,6 +370,7 @@ async def select_offer(
     existing_deal = await db.scalar(select(Deal).where(Deal.offer_id == offer.id))
     if existing_deal is not None:
         return existing_deal
+    await require_current_evidence(db, need)
     if need.status not in ACTIVE_NEED_STATUSES or not need_is_current(need):
         raise HTTPException(status.HTTP_409_CONFLICT, detail="Потребность закрыта или срок её актуальности истёк")
     if offer.status != "sent":

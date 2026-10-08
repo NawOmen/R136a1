@@ -2,7 +2,7 @@ import uuid
 from decimal import Decimal
 from datetime import date, datetime
 
-from sqlalchemy import Boolean, CheckConstraint, Date, DateTime, Float, ForeignKey, Integer, String, Text, UniqueConstraint, func, text
+from sqlalchemy import Boolean, CheckConstraint, Date, DateTime, Float, ForeignKey, Integer, String, Text, UniqueConstraint, Index, func, text
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -167,6 +167,7 @@ class Need(Base):
     request_key: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), nullable=True)
     request_hash: Mapped[str | None] = mapped_column(String(64), nullable=True)
     revision: Mapped[int] = mapped_column(Integer, default=1, server_default="1")
+    requirements_evidence: Mapped[dict | None] = mapped_column(ExactJSONB(none_as_null=True), nullable=True)
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=_uuid)
     company_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), nullable=False)
@@ -192,6 +193,18 @@ class Need(Base):
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, server_default=func.now(), onupdate=func.now()
     )
+
+
+class NeedRevision(Base):
+    __tablename__ = "need_revisions"
+    __table_args__ = (UniqueConstraint("need_id", "revision", name="uq_need_revision"), {"schema": SCHEMA})
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=_uuid)
+    need_id: Mapped[uuid.UUID] = mapped_column(ForeignKey(f"{SCHEMA}.needs.id", ondelete="CASCADE"), nullable=False)
+    revision: Mapped[int] = mapped_column(Integer, nullable=False)
+    snapshot: Mapped[dict] = mapped_column(ExactJSONB, nullable=False)
+    impact: Mapped[dict] = mapped_column(ExactJSONB, nullable=False)
+    actor_user_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
 
 class NeedFile(Base):
@@ -602,7 +615,7 @@ class ResiliencePlan(Base):
     commercial_snapshot: Mapped[dict | None] = mapped_column(ExactJSONB(none_as_null=True),nullable=True)
     __tablename__ = "resilience_plans"
     __table_args__ = (
-        UniqueConstraint("need_id", name="uq_resilience_plan_need"),
+        Index("uq_resilience_plan_current_need", "need_id", unique=True, postgresql_where=text("status != 'stale'")),
         {"schema": SCHEMA},
     )
 

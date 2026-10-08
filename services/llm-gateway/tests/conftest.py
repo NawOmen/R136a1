@@ -51,7 +51,7 @@ async def engine():
         await connection.execute(
             text(
                 "CREATE TABLE IF NOT EXISTS auth.company_members ("
-                "id UUID PRIMARY KEY, company_id UUID NOT NULL, user_id UUID NOT NULL, "
+                "id UUID PRIMARY KEY, company_id UUID NOT NULL REFERENCES auth.companies(id), user_id UUID NOT NULL REFERENCES auth.users(id), "
                 "can_buy BOOLEAN NOT NULL DEFAULT false, can_sell BOOLEAN NOT NULL DEFAULT false, "
                 "is_admin BOOLEAN NOT NULL DEFAULT false, created_at TIMESTAMPTZ DEFAULT now())"
             )

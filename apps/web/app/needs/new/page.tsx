@@ -4,6 +4,9 @@
 // категория, характеристики (пары «ключ/значение»), объём, бюджет, срок,
 // адрес доставки (+ добавление адреса через prompt), видимость, файлы.
 
+import RequirementSource from "../../components/RequirementSource";
+import { draftFiles } from "../../lib/draftFiles";
+
 import PhysicalQuantityReview from "../../components/PhysicalQuantityReview";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -81,10 +84,21 @@ export default function NewNeedPage() {
   const [draftNotice, setDraftNotice] = useState("");
   const [savedNeed, setSavedNeed] = useState<{ id: string; payload: string; uploaded: string[]; expectedFiles: string[] } | null>(null);
   const creationKey = useRef("");
+  const activeScope = useRef("");
+  const analysisGeneration = useRef(0);
+  const [loadedFilesKey, setLoadedFilesKey] = useState("");
   const draftKey = user && companyId ? `porukam:need-draft:${user.id}:${companyId}` : "";
+
+  activeScope.current = draftKey;
 
   useEffect(() => {
     if (!draftKey) return;
+    let cancelled = false;
+    const generation = ++analysisGeneration.current;
+    setLoadedFilesKey("");
+    setAnalyzing(false); setSubmitting(false); setTranscribing(false); setRecording(false);
+    void draftFiles(draftKey).then(saved => { if (!cancelled) { setFiles(saved); setLoadedFilesKey(draftKey); } })
+      .catch(() => { if (!cancelled) { setLoadedFilesKey(draftKey); setDraftNotice("Не удалось восстановить файлы в браузере. Выберите их повторно."); } });
     setAgentRun(null); setAnswers({}); setFiles([]); setSavedNeed(null);
     setRequestDescription(""); setRows([newRow("unit", "шт"), newRow()]); setCategory(PRODUCT_CATEGORIES[0]); setSubcategory("");
     setVolumeUnits(""); setBudgetRub(""); setDeadlineDate(""); setDeliveryAddressId("");
@@ -105,18 +119,31 @@ export default function NewNeedPage() {
           if (value.visibility === "open_anonymized" || value.visibility === "selected_producers" || value.visibility === "closed") setVisibility(value.visibility);
           if (value.savedNeed?.id && Array.isArray(value.savedNeed.uploaded)) setSavedNeed({ ...value.savedNeed, expectedFiles: value.savedNeed.expectedFiles ?? [] });
           if (typeof value.creationKey === "string") creationKey.current = value.creationKey;
-          setDraftNotice(value.fileCount ? "Текст и поля восстановлены. Файлы нужно выбрать повторно: браузер не сохраняет их содержимое." : "Текст и поля восстановлены из этой вкладки.");
+          if (value.answers && typeof value.answers === "object") setAnswers(value.answers);
+          if (value.agentRunId) { const token = getToken(); if (token) void agents.getRun(token, value.agentRunId).then(run => { if (!cancelled && analysisGeneration.current === generation) setAgentRun(run); }).catch(() => { if (!cancelled) setDraftNotice("Анализ не удалось восстановить. Ввод сохранён, повторите анализ или заполните карточку вручную."); }); }
+          setDraftNotice(value.fileCount ? "Текст и поля восстановлены. Файлы восстанавливаются из локального хранилища браузера." : "Текст и поля восстановлены из этой вкладки.");
         }
       }
     } catch { setDraftNotice("Автосохранение браузера недоступно. Не закрывайте вкладку до сохранения потребности."); }
     setLoadedDraftKey(draftKey);
+    return () => { cancelled = true; };
   }, [draftKey]);
 
   useEffect(() => {
     if (!draftKey || loadedDraftKey !== draftKey) return;
-    try { sessionStorage.setItem(draftKey, JSON.stringify({ version: 1, description: requestDescription, category, subcategory, rows, volume: volumeUnits, budget: budgetRub, deadline: deadlineDate, address: deliveryAddressId, visibility, fileCount: files.length, savedNeed, creationKey: creationKey.current })); }
+    try { sessionStorage.setItem(draftKey, JSON.stringify({ version: 1, description: requestDescription, category, subcategory, rows, volume: volumeUnits, budget: budgetRub, deadline: deadlineDate, address: deliveryAddressId, visibility, fileCount: files.length, savedNeed, creationKey: creationKey.current, agentRunId: agentRun?.id, answers })); }
     catch { setDraftNotice("Не удалось сохранить поля в браузере. Не закрывайте вкладку до сохранения потребности."); }
-  }, [draftKey, loadedDraftKey, requestDescription, category, subcategory, rows, volumeUnits, budgetRub, deadlineDate, deliveryAddressId, visibility, files.length, savedNeed]);
+  }, [draftKey, loadedDraftKey, requestDescription, category, subcategory, rows, volumeUnits, budgetRub, deadlineDate, deliveryAddressId, visibility, files.length, savedNeed, agentRun, answers]);
+
+  useEffect(() => {
+    if (!draftKey || loadedFilesKey !== draftKey) return;
+    void draftFiles(draftKey, files).catch(() => { if (activeScope.current === draftKey) setDraftNotice("Файлы не сохранены: недостаточно места в браузере. Не закрывайте вкладку или выберите файлы повторно."); });
+  }, [draftKey, loadedFilesKey, files]);
+
+  useEffect(() => () => {
+    activeScope.current = "";
+    if (recorderRef.current) { recorderRef.current.onstop = null; recorderRef.current.stream.getTracks().forEach(track => track.stop()); }
+  }, []);
 
   // Загрузка адресов выбранной компании
   useEffect(() => {
@@ -152,20 +179,25 @@ export default function NewNeedPage() {
       setError("Запись с микрофона недоступна. Приложите готовый аудиофайл ниже."); return;
     }
     try {
+      const scope = draftKey;
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      if (activeScope.current !== scope) { stream.getTracks().forEach(track => track.stop()); return; }
       const chunks: BlobPart[] = [];
       const recorder = new MediaRecorder(stream);
       recorder.ondataavailable = (event) => { if (event.data.size) chunks.push(event.data); };
       recorder.onstop = () => {
         stream.getTracks().forEach((track) => track.stop()); setRecording(false); setTranscribing(true);
         const file = new File([new Blob(chunks, { type: recorder.mimeType || "audio/webm" })], "голосовой-запрос.webm", { type: recorder.mimeType || "audio/webm" });
-        void agents.transcribe(token, file).then((text) => setRequestDescription((current) => [current.trim(), text].filter(Boolean).join(" "))).catch((err: Error) => setError(err.message)).finally(() => setTranscribing(false));
+        if (activeScope.current !== scope) return;
+        setFiles(current => [...current, file]);
+        void agents.transcribe(token, file).then((text) => { if (activeScope.current === scope) { setRequestDescription((current) => [current.trim(), text].filter(Boolean).join(" ")); setAgentRun(null); } }).catch((err: Error) => { if (activeScope.current === scope) setError(`${err.message}. Аудиофайл сохранён в материалах; можно повторить анализ.`); }).finally(() => { if (activeScope.current === scope) setTranscribing(false); });
       };
       recorderRef.current = recorder; recorder.start(); setRecording(true); setError(null);
     } catch { setError("Не удалось получить доступ к микрофону. Разрешите доступ или загрузите аудиофайл."); }
   }
 
   async function handleAddAddress() {
+    const scope = draftKey;
     const token = getToken();
     if (!token || !company) return;
     const address = window.prompt("Введите адрес доставки (улица, дом):");
@@ -190,17 +222,19 @@ export default function NewNeedPage() {
         is_default: addresses.length === 0,
       });
       const updated = await marketplace.getAddresses(token, company.id);
+      if (activeScope.current !== scope) return;
       setAddresses(updated);
       const added = updated.find((item) => item.address === address.trim());
       setDeliveryAddressId(added?.id ?? updated[0]?.id ?? "");
     } catch (err) {
       setError(err instanceof MarketplaceError ? err.message : "Не удалось добавить адрес.");
     } finally {
-      setBusyAddress(false);
+      if (activeScope.current === scope) setBusyAddress(false);
     }
   }
 
   function validate(): string | null {
+    if (agentRun && agentRun.state !== "confirmed_by_user") return "Разрешите конфликты и подтвердите требования анализа или явно выберите ручное заполнение.";
     if (!PRODUCT_CATEGORY_TREE[category]?.includes(subcategory)) return "Выберите подкатегорию товара для проверки требований.";
     if (rows.length < 1 || rows.length > 25) {
       return "Добавьте от 1 до 25 характеристик.";
@@ -233,9 +267,12 @@ export default function NewNeedPage() {
       setError("Опишите потребность хотя бы одним предложением.");
       return;
     }
+    const scope = draftKey;
     setAnalyzing(true);
     setError(null);
     try {
+      analysisGeneration.current += 1;
+      setAgentRun(null);
       const run = await agents.analyze(
         token,
         requestDescription.trim(),
@@ -243,16 +280,19 @@ export default function NewNeedPage() {
         analysisRoute,
         company?.id,
       );
+      if (activeScope.current !== scope) return;
       setAgentRun(run);
       setAnswers({});
     } catch (err) {
+      if (activeScope.current !== scope) return;
       setError(`${err instanceof MarketplaceError ? err.message : "Не удалось разобрать материалы."} Текст и введённые поля сохранены в этой вкладке. Заполните карточку ниже вручную или повторите анализ.`);
     } finally {
-      setAnalyzing(false);
+      if (activeScope.current === scope) setAnalyzing(false);
     }
   }
 
   async function handleClarify() {
+    const scope = draftKey;
     const token = getToken();
     if (!token || !agentRun) return;
     const missing = agentRun.result.questions.some((question) => !answers[question.key]?.trim());
@@ -269,25 +309,31 @@ export default function NewNeedPage() {
     setAnalyzing(true);
     setError(null);
     try {
-      setAgentRun(await agents.clarify(token, agentRun.id, parsed));
+      const clarified = await agents.clarify(token, agentRun.id, parsed, agentRun.revision);
+      if (activeScope.current !== scope) return;
+      setAgentRun(clarified);
       setAnswers({});
     } catch (err) {
+      if (activeScope.current !== scope) return;
       setError(err instanceof MarketplaceError ? err.message : "Не удалось сохранить уточнения.");
     } finally {
-      setAnalyzing(false);
+      if (activeScope.current === scope) setAnalyzing(false);
     }
   }
 
   async function applyAgentResult() {
+    const scope = draftKey;
     const token = getToken();
     if (!token || !agentRun?.result.can_confirm) return;
     setAnalyzing(true);
     setError(null);
     let confirmedRun: AgentRun;
     try {
-      confirmedRun = await agents.confirm(token, agentRun.id);
+      confirmedRun = await agents.confirm(token, agentRun.id, agentRun.revision);
+      if (activeScope.current !== scope) return;
       setAgentRun(confirmedRun);
     } catch (err) {
+      if (activeScope.current !== scope) return;
       setError(err instanceof MarketplaceError ? err.message : "Не удалось подтвердить требования.");
       setAnalyzing(false);
       return;
@@ -331,6 +377,7 @@ export default function NewNeedPage() {
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    const scope = draftKey;
     const token = getToken();
     if (!token || !company) return;
 
@@ -349,6 +396,8 @@ export default function NewNeedPage() {
     setSubmitting(true);
     try {
       const payload = {
+        agent_run_id: agentRun?.state === "confirmed_by_user" ? agentRun.id : undefined,
+        agent_run_revision: agentRun?.state === "confirmed_by_user" ? agentRun.revision : undefined,
         quantity_conversion_approved: quantityApproved,
         company_id: company.id,
         category,
@@ -371,6 +420,7 @@ export default function NewNeedPage() {
         return;
       }
       const need = savedNeed ? await marketplace.getNeed(token, savedNeed.id) : await marketplace.createNeed(token, { ...payload, request_key: creationKey.current });
+      if (activeScope.current !== scope) return;
       let progress = savedNeed ?? { id: need.id, payload: fingerprint, uploaded: [], expectedFiles: selectedFiles };
       setSavedNeed(progress);
       // Retry resumes the same draft. Already uploaded files are not sent twice.
@@ -378,18 +428,22 @@ export default function NewNeedPage() {
         const signature = `${file.name}:${file.size}:${file.lastModified}`;
         if (progress.uploaded.includes(signature)) continue;
         await marketplace.uploadNeedFile(token, need.id, file);
+        if (activeScope.current !== scope) return;
         progress = { ...progress, uploaded: [...progress.uploaded, signature] };
         setSavedNeed(progress);
       }
       if (company.verification_status === "verified" && need.status === "draft") {
         await marketplace.publishNeed(token, need.id);
       }
+      await draftFiles(draftKey, null).catch(() => {});
       try { sessionStorage.removeItem(draftKey); } catch { /* Storage can be disabled. */ }
+      if (activeScope.current !== scope) return;
       router.push(`/needs/${need.id}`);
     } catch (err) {
+      if (activeScope.current !== scope) return;
       setError(err instanceof MarketplaceError ? err.message : "Не удалось создать потребность.");
     } finally {
-      setSubmitting(false);
+      if (activeScope.current === scope) setSubmitting(false);
     }
   }
 
@@ -449,7 +503,7 @@ export default function NewNeedPage() {
             <label htmlFor="company_id">
               Компания<span className="req">*</span>
             </label>
-            <select id="company_id" value={companyId} disabled={analyzing || submitting} onChange={(event) => { setCompanyId(event.target.value); setAgentRun(null); setAnswers({}); }}>
+            <select id="company_id" value={companyId} disabled={analyzing || submitting || recording || transcribing} onChange={(event) => { setCompanyId(event.target.value); setAgentRun(null); setAnswers({}); }}>
               {available.map((item) => (
                 <option key={item.id} value={item.id}>
                   {item.display_name}
@@ -484,10 +538,10 @@ export default function NewNeedPage() {
               disabled={analyzing}
               rows={4}
               value={requestDescription}
-              onChange={(event) => { setRequestDescription(event.target.value); setAgentRun(null); setAnswers({}); }}
+              onChange={(event) => { analysisGeneration.current += 1; setRequestDescription(event.target.value); setAgentRun(null); setAnswers({}); }}
               placeholder="Например: нужны 30 рабочих столов из дерева, доставка в Москву..."
             />
-            <div className="voice-row"><button type="button" className={recording ? "btn btn-danger btn-sm" : "btn btn-secondary btn-sm"} disabled={transcribing} onClick={() => void toggleRecording()}>{transcribing ? "Распознаём…" : recording ? "Остановить запись" : "🎙 Продиктовать запрос"}</button><span className="hint">Речь распознаётся локально и подставляется в текст. В локальной сети микрофону может потребоваться HTTPS.</span></div>
+            <div className="voice-row"><button type="button" className={recording ? "btn btn-danger btn-sm" : "btn btn-secondary btn-sm"} disabled={transcribing || analyzing || submitting || loadedFilesKey !== draftKey} onClick={() => void toggleRecording()}>{transcribing ? "Распознаём…" : recording ? "Остановить запись" : "🎙 Продиктовать запрос"}</button><span className="hint">Речь распознаётся локально и подставляется в текст. В локальной сети микрофону может потребоваться HTTPS.</span></div>
           </div>
           <div className="field">
             <label htmlFor="need_files">
@@ -495,15 +549,15 @@ export default function NewNeedPage() {
             </label>
             <input
               id="need_files"
-              disabled={analyzing}
+              disabled={analyzing || submitting || loadedFilesKey !== draftKey}
               type="file"
               multiple
               accept="image/*,application/pdf,audio/*,text/plain,text/markdown"
-              onChange={(event) => { setFiles(Array.from(event.target.files ?? [])); setAgentRun(null); setAnswers({}); }}
+              onChange={(event) => { analysisGeneration.current += 1; setFiles(Array.from(event.target.files ?? [])); setAgentRun(null); setAnswers({}); }}
             />
             {files.length > 0 && (
               <p className="hint mode-hint">
-                Выбрано файлов: {files.length} · {files.map((file) => file.name).join(", ")}
+                Восстановленные или выбранные файлы: {files.length} · {files.map((file) => file.name).join(", ")}
               </p>
             )}
           </div>
@@ -523,7 +577,7 @@ export default function NewNeedPage() {
           <button
             type="button"
             className="btn btn-primary"
-            disabled={analyzing}
+            disabled={analyzing || submitting || loadedFilesKey !== draftKey}
             onClick={() => void handleAnalyze()}
           >
             {analyzing ? "Разбираю материалы..." : "Разобрать материалы"}
@@ -531,6 +585,8 @@ export default function NewNeedPage() {
 
           {agentRun && (
             <div className="agent-result">
+              <button type="button" className="btn btn-secondary btn-sm" onClick={() => { analysisGeneration.current += 1; setAgentRun(null); setAnswers({}); }}>Продолжить заполнение вручную</button>
+              <p className="hint">Версия требований: {agentRun.revision}. Предположения и источники нужно проверить перед переносом в карточку.</p>
               <h3>Краткий результат подбора</h3>
               <p>{agentRun.result.summary}</p>
               <h3>Восстановленные требования</h3>
@@ -551,10 +607,12 @@ export default function NewNeedPage() {
                       <details>
                         <summary>Откуда взята характеристика?</summary>
                         {property.sources.map((source, index) => (
-                          <p key={`${source.source_id}-${index}`} className="hint">
-                            {source.source_name} · уверенность {Math.round(source.confidence * 100)}%
-                            {source.excerpt ? ` · ${source.excerpt}` : ""}
-                          </p>
+                          <RequirementSource key={`${agentRun.id}:${source.source_id}:${index}:${source.active}`} runId={agentRun.id} source={source}
+                            onInvalidate={() => {
+                              const token = getToken(); if (!token || !window.confirm("Удалить источник и отменить связанные подтверждения?")) return;
+                              const scope = draftKey;
+                              void agents.invalidateSource(token, agentRun.id, source.source_id, agentRun.revision).then(run => { if (activeScope.current === scope) setAgentRun(run); }).catch(reason => { if (activeScope.current === scope) setError(reason instanceof Error ? reason.message : "Не удалось удалить источник"); });
+                            }} />
                         ))}
                       </details>
                     )}

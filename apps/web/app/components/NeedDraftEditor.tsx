@@ -4,7 +4,7 @@ import CharacteristicSuggestions from "./CharacteristicSuggestions";
 import PhysicalQuantityReview from "./PhysicalQuantityReview";
 import { FormEvent, useEffect, useState } from "react";
 import { getToken } from "../lib/api";
-import { DeliveryAddress, marketplace, Need, PRODUCT_CATEGORY_TREE } from "../lib/marketplace";
+import { DeliveryAddress, marketplace, Need, NeedEditImpact, PRODUCT_CATEGORY_TREE } from "../lib/marketplace";
 
 export default function NeedDraftEditor({ need, onSaved }: { need: Need; onSaved: (need: Need) => void }) {
   const [quantityApproved, setQuantityApproved] = useState(false);
@@ -21,6 +21,9 @@ export default function NeedDraftEditor({ need, onSaved }: { need: Need; onSaved
   const [rows, setRows] = useState(Object.entries(need.characteristics).map(([key, value]) => ({ key, value: typeof value === "object" ? JSON.stringify(value) : String(value), original: value })));
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
+  const [impact, setImpact] = useState<NeedEditImpact | null>(null);
+  const [impactApproved, setImpactApproved] = useState(false);
+  useEffect(() => { setImpact(null); setImpactApproved(false); }, [category, subcategory, rows, quantity, budget, deadline, validUntil, address, visibility]);
   useEffect(() => {
     const token = getToken(); if (!token) return;
     let cancelled = false;
@@ -39,19 +42,27 @@ export default function NeedDraftEditor({ need, onSaved }: { need: Need; onSaved
     }
     setSaving(true); setError("");
     try {
-      onSaved(await marketplace.editNeed(token, need.id, {
+      const input = {
         quantity_conversion_approved: quantityApproved,
         company_id: need.company_id, expected_revision: need.revision, category, subcategory, characteristics,
         volume_units: Number(quantity), budget_rub: budget ? String(budget) : null,
         deadline_date: deadline, valid_until: validUntil, delivery_address_id: address || null, visibility,
-      }));
+      };
+      if (need.status !== "draft" && !impact) {
+        const preview = await marketplace.previewNeedEdit(token, need.id, input);
+        setImpact(preview);
+        if (!preview.editable) setError("По этой версии уже созданы обязательства. Измените условия через согласование сделки.");
+        return;
+      }
+      if (impact?.requires_confirmation && !impactApproved) { setError("Подтвердите последствия изменения."); return; }
+      onSaved(await marketplace.editNeed(token, need.id, { ...input, impact_hash: impact?.impact_hash }));
       setEditing(false);
     } catch (reason) { setError(reason instanceof Error ? reason.message : "Не удалось сохранить черновик."); }
     finally { setSaving(false); }
   }
-  if (!editing) return <button type="button" className="btn btn-secondary" onClick={() => setEditing(true)}>Изменить черновик</button>;
+  if (!editing) return <button type="button" className="btn btn-secondary" onClick={() => setEditing(true)}>{need.status === "draft" ? "Изменить черновик" : "Изменить спецификацию"}</button>;
   return <form onSubmit={save} className="form-grid">
-    <p className="hint">Изменения сохраняются в этой потребности. Вложения сохранятся. Версия: {need.revision}.</p>
+    <p className="hint">Изменения сохраняются новой версией этой потребности. Вложения сохранятся. Версия: {need.revision}.</p>
     {error && <div role="alert" className="alert alert-error">{error}</div>}
     <fieldset disabled={saving}>
       <div className="field"><label htmlFor="edit-category">Категория</label><select id="edit-category" value={category} onChange={e => { setCategory(e.target.value); setSubcategory(""); }}>{Array.from(new Set([need.category, ...Object.keys(PRODUCT_CATEGORY_TREE)])).map(item => <option key={item}>{item}</option>)}</select></div>
@@ -70,7 +81,13 @@ export default function NeedDraftEditor({ need, onSaved }: { need: Need; onSaved
       <div className="field"><label htmlFor="edit-address">Адрес доставки</label><select id="edit-address" value={address} onChange={e => setAddress(e.target.value)}><option value="">Не указан</option>{addresses.map(item => <option key={item.id} value={item.id}>{item.address}</option>)}</select></div>
       <div className="field"><label htmlFor="edit-visibility">Видимость</label><select id="edit-visibility" value={visibility} onChange={e => setVisibility(e.target.value as Need["visibility"])}><option value="open_anonymized">Открытая (анонимизированная)</option><option value="closed">Закрытая</option>{visibility === "selected_producers" && <option value="selected_producers">Для выбранных производителей</option>}</select></div>
       <PhysicalQuantityReview kind="need" values={{ characteristics: Object.fromEntries(rows.filter(row => row.key.trim()).map(row => [row.key.trim(), row.value])), volume_units: quantity }} approved={quantityApproved} onApproval={setQuantityApproved} />
-      <div className="actions"><button className="btn btn-primary">{saving ? "Сохраняем…" : "Сохранить изменения"}</button><button type="button" className="btn btn-secondary" onClick={() => setEditing(false)}>Отмена</button></div>
+      {impact && <section aria-label="Последствия изменения">
+        <h3>Что изменится</h3>
+        {Object.entries(impact.changes).map(([key, diff]) => <p key={key}>{({ category: "Категория", subcategory: "Подкатегория", characteristics: "Характеристики", volume_units: "Количество", budget_rub: "Бюджет", deadline_date: "Срок поставки", valid_until: "Актуальность", delivery_address_id: "Адрес доставки", evidence: "Подтверждение требований" } as Record<string, string>)[key] ?? key}: {JSON.stringify(diff.before)} → {JSON.stringify(diff.after)}</p>)}
+        <p>Потребуют пересчёта: КП — {impact.affected.offers.length}; черновики КП — {impact.affected.offer_drafts.length}; группы — {impact.affected.coalitions.length}; ресурсные планы — {impact.affected.resource_plans.length}; варианты подбора — {impact.affected.optimization_variants.length}. Участники получат уведомления, прежние условия сохранятся в истории.</p>
+        {impact.requires_confirmation && <label><input type="checkbox" checked={impactApproved} onChange={event => setImpactApproved(event.target.checked)} />Подтверждаю новые требования и отмену прежних предварительных согласий</label>}
+      </section>}
+      <div className="actions"><button className="btn btn-primary" disabled={impact?.editable === false || (impact?.requires_confirmation && !impactApproved)}>{saving ? "Сохраняем…" : need.status !== "draft" && !impact ? "Предпросмотр изменений" : "Сохранить изменения"}</button><button type="button" className="btn btn-secondary" onClick={() => setEditing(false)}>Отмена</button></div>
     </fieldset>
   </form>;
 }

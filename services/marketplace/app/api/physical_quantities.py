@@ -10,9 +10,10 @@ from ..physical_quantities import normalize_physical
 from ..category_units import order_unit
 from ..resources import lock_company
 from ..trust import record_human_approval
+from ..requirements import lock_specification_edit
 from ..models import Product,Need
 from .products import create_product,update_product
-from .needs import create_need,edit_need
+from .needs import create_need,edit_need,preview_need_edit
 
 router=APIRouter(tags=['physical-quantities'])
 
@@ -20,7 +21,10 @@ router=APIRouter(tags=['physical-quantities'])
 def normalized(kind,raw,model):
     try:
         values,_=normalize_physical(kind,raw)
-        return model.model_validate(values)
+        data = model.model_validate(values)
+        if kind == 'need':
+            data._physical_quantity_input = {"value": str(raw.get("volume_units", "")), "unit": order_unit(raw.get("characteristics", {}))}
+        return data
     except (ValueError,ValidationError,TypeError,KeyError) as exc:
         raise HTTPException(422,str(exc)) from None
 
@@ -88,5 +92,14 @@ async def edit_physical_need(need_id:uuid.UUID,raw:dict,user:CurrentUser=Depends
     data=normalized('need',raw,NeedEditIn)
     need=await db.get(Need,need_id)
     if need is None:raise HTTPException(404,'Потребность не найдена')
+    # Conversion writes the audit chain: take the edit boundary before that
+    # lock as well as before the Need row lock in the shared handler.
+    await lock_specification_edit(db)
     await approve_conversion('need',raw,need.company_id,user,db)
     return await edit_need(need_id,data,user,db)
+
+
+@router.post('/needs/{need_id}/edit-preview')
+async def preview_physical_need(need_id:uuid.UUID,raw:dict,user:CurrentUser=Depends(get_current_user),db:AsyncSession=Depends(get_db)):
+    data=normalized('need',raw,NeedEditIn)
+    return await preview_need_edit(need_id,data,user,db)

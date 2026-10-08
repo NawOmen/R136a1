@@ -43,6 +43,8 @@ from ..schemas import (
     OptimizationVariantOut,
 )
 
+from ..requirements import require_current_evidence
+
 router = APIRouter(tags=["stage-5-market"])
 
 
@@ -220,6 +222,14 @@ async def publish_group_offer(
     await require_company_seller(group_offer.company_id, user, db)
     await require_company_admin(group_offer.company_id, user, db)
     await require_verified_company(group_offer.company_id, user, db)
+    # Match the consent path: needs, coalition, then resource locks. Refresh
+    # identity-map objects after waiting, before checking statuses or volumes.
+    member_needs = await _lock_coalition_needs(db, group_offer.coalition_id)
+    coalition = await db.scalar(select(Coalition).where(Coalition.id == group_offer.coalition_id)
+                                .with_for_update().execution_options(populate_existing=True))
+    await db.refresh(group_offer, with_for_update=True)
+    if coalition is None or coalition.status not in {"candidate", "recalculation_required"}:
+        raise HTTPException(409, "Состав или спецификация группы изменились. Подготовьте новое предложение")
     if group_offer.status != "draft":
         raise HTTPException(status.HTTP_409_CONFLICT, detail="Опубликовать можно только черновик")
     if (
@@ -239,21 +249,25 @@ async def publish_group_offer(
             status.HTTP_422_UNPROCESSABLE_ENTITY,
             detail="Срок набора должен завершаться до корректного производственного окна",
         )
-    coalition = await db.get(Coalition, group_offer.coalition_id)
     profile = await db.get(CompatibilityProfile, coalition.compatibility_profile_id)
     members = (
         await db.execute(
             select(CoalitionMember).where(CoalitionMember.coalition_id == coalition.id)
+            .order_by(CoalitionMember.id).with_for_update().execution_options(populate_existing=True)
         )
     ).scalars().all()
     # Обязательство производителя по группе: документы проверяются по спецификации
     # каждой потребности, потому что участники заказывают разные изделия.
-    member_needs = {member.need_id: await db.get(Need, member.need_id) for member in members}
     if not member_needs or any(
         need is None or need.status not in ACTIVE_NEED_STATUSES or not need_is_current(need)
         for need in member_needs.values()
     ):
         raise HTTPException(409, "Потребность участника закрыта или её срок истёк. Обновите подбор группы")
+    if any(member.need_id not in member_needs or member.units != member_needs[member.need_id].volume_units
+           for member in members):
+        raise HTTPException(409, "Количество участника изменилось. Обновите подбор группы")
+    for need in member_needs.values():
+        await require_current_evidence(db, need)
     await require_admission_for_specifications(
         db,
         group_offer.company_id,
@@ -297,6 +311,7 @@ async def publish_group_offer(
             delivery=term.delivery_cost_rub,terms={**(term.commercial_terms.model_dump() if term.commercial_terms else {}),'expenses':[(expense.model_dump()) for expense in (term.commercial_terms.expenses if term.commercial_terms else [])]+[{'code':'individual_operations','title':'Индивидуальные операции','amount_rub':term.individual_operations_cost_rub,'source':'Условия участника','version':str(coalition.version+1)}]},buyer=need.company_id,seller=group_offer.company_id,
             source={'type':'group_offer','id':str(group_offer.id),'revision':coalition.version+1},shared=shared[member.need_id],goods_override=goods_parts[member.need_id])
         require_complete(value)
+        value['need_revision'] = need.revision
         baseline = await db.get(Offer,term.baseline_offer_id) if term.baseline_offer_id else None
         if baseline and (baseline.company_id!=group_offer.company_id or baseline.need_id!=need.id or baseline.status not in {'sent','selected'}):
             raise HTTPException(422,'Индивидуальное КП не относится к потребности участника')
@@ -433,6 +448,13 @@ async def list_my_coalitions(
     return [await _coalition_out(db, item, company_ids) for item in coalitions]
 
 
+async def _lock_coalition_needs(db, coalition_id):
+    ids = select(CoalitionMember.need_id).where(CoalitionMember.coalition_id == coalition_id)
+    needs = (await db.scalars(select(Need).where(Need.id.in_(ids)).order_by(Need.id).with_for_update()
+                              .execution_options(populate_existing=True))).all()
+    return {need.id: need for need in needs}
+
+
 @router.post("/coalitions/{coalition_id}/decision", response_model=CoalitionOut)
 async def decide_coalition(
     coalition_id: uuid.UUID,
@@ -440,8 +462,10 @@ async def decide_coalition(
     user: CurrentUser = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
+    await _lock_coalition_needs(db, coalition_id)
     coalition = (
-        await db.execute(select(Coalition).where(Coalition.id == coalition_id).with_for_update())
+        await db.execute(select(Coalition).where(Coalition.id == coalition_id).with_for_update()
+                         .execution_options(populate_existing=True))
     ).scalar_one_or_none()
     if coalition is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, detail="Коалиция не найдена")
@@ -454,6 +478,7 @@ async def decide_coalition(
             select(GroupOffer)
             .where(GroupOffer.coalition_id == coalition.id)
             .order_by(GroupOffer.created_at.desc())
+            .execution_options(populate_existing=True)
         )
     ).scalars().first()
     if group_offer is None or group_offer.status != "preliminary":
@@ -466,6 +491,7 @@ async def decide_coalition(
                 CoalitionMember.coalition_id == coalition.id,
                 CoalitionMember.buyer_company_id == data.company_id,
             )
+            .execution_options(populate_existing=True)
         )
     ).scalar_one_or_none()
     if member is None:
@@ -486,7 +512,8 @@ async def decide_coalition(
                 raise HTTPException(409,'КП для сравнения устарело. Выберите актуальное КП или продолжите без базы экономии')
     member.approval_status = data.decision
     members = (
-        await db.execute(select(CoalitionMember).where(CoalitionMember.coalition_id == coalition.id))
+        await db.execute(select(CoalitionMember).where(CoalitionMember.coalition_id == coalition.id)
+                         .order_by(CoalitionMember.id).with_for_update().execution_options(populate_existing=True))
     ).scalars().all()
     if data.decision == "approved":
         member_needs = {item.need_id: await db.get(Need, item.need_id) for item in members}
@@ -495,6 +522,10 @@ async def decide_coalition(
             for need in member_needs.values()
         ):
             raise HTTPException(409, "Потребность участника закрыта или её срок истёк. Обновите подбор группы")
+        if any(item.units != member_needs[item.need_id].volume_units or
+               (item.commercial_estimate or {}).get('need_revision', 1) != member_needs[item.need_id].revision
+               for item in members):
+            raise HTTPException(409, "Спецификация участника изменилась. Требуются новые условия группы")
     if data.decision == "rejected":
         coalition.status = "recalculation_required"
         coalition.version += 1
@@ -513,6 +544,8 @@ async def decide_coalition(
     elif all(item.approval_status == "approved" for item in members):
         if group_offer.seller_approval_status != "approved":
             raise HTTPException(status.HTTP_409_CONFLICT, detail="Производитель ещё не подтвердил условия")
+        for current_need in member_needs.values():
+            await require_current_evidence(db, current_need)
         # Обязательства создаются сейчас: допуск производителя проверяется заново,
         # потому что документ мог истечь или быть отозван после публикации условий.
         admissions = await require_admission_for_specifications(
@@ -600,10 +633,11 @@ async def optimize_need(
     user: CurrentUser = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    need = await db.get(Need, need_id)
+    need = await db.scalar(select(Need).where(Need.id == need_id).with_for_update())
     if need is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, detail="Потребность не найдена")
     await require_company_buyer(need.company_id, user, db)
+    await require_current_evidence(db, need)
     offers = (
         await db.execute(
             select(Offer).where(
@@ -668,7 +702,8 @@ async def optimize_need(
         for variant in result["variants"]:
             existing = (await db.execute(select(OptimizationVariantRecord).where(
                 OptimizationVariantRecord.need_id==need.id, OptimizationVariantRecord.kind==variant['kind'],
-                OptimizationVariantRecord.input_hash==result['input_hash']))).scalar_one_or_none()
+                OptimizationVariantRecord.input_hash==result['input_hash'],
+                OptimizationVariantRecord.result['stale'].as_boolean().is_not(True)))).scalar_one_or_none()
             if existing is None:
                 existing = OptimizationVariantRecord(need_id=need.id,kind=variant['kind'],result=variant,input_hash=result['input_hash'])
                 db.add(existing)
@@ -687,6 +722,7 @@ class BaselineSelectionIn(BaseModel):
 @router.post('/coalitions/{coalition_id}/baseline',response_model=CoalitionOut)
 async def choose_individual_baseline(coalition_id:uuid.UUID,data:BaselineSelectionIn,
                                      user:CurrentUser=Depends(get_current_user),db:AsyncSession=Depends(get_db)):
+    await _lock_coalition_needs(db, coalition_id)
     coalition = await db.scalar(select(Coalition).where(Coalition.id==coalition_id).with_for_update())
     if coalition is None:raise HTTPException(404,'Коалиция не найдена')
     await require_company_buyer(data.company_id,user,db)

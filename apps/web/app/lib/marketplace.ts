@@ -28,7 +28,7 @@ export type NeedStatus =
   | "matched"
   | "cancelled"
   | "expired";
-export type OfferStatus = "sent" | "selected" | "rejected";
+export type OfferStatus = "sent" | "selected" | "rejected" | "stale";
 export type DealStatus = "created" | "in_production" | "shipped" | "delivered" | "partially_accepted" | "fulfilled" | "cancelled" | "returned";
 
 export interface DeliveryAddress {
@@ -243,6 +243,15 @@ export interface CapabilityPassport {
   completed_order_types: string[];
 }
 
+export interface NeedEditImpact {
+  expected_revision: number;
+  changes: Record<string, { before: unknown; after: unknown }>;
+  affected: Record<string, string[]>;
+  editable: boolean;
+  requires_confirmation: boolean;
+  impact_hash: string;
+}
+
 export interface NeedFile {
   id: string;
   file_name: string;
@@ -251,6 +260,8 @@ export interface NeedFile {
 
 export interface Need {
   revision: number;
+  requirement_decisions?: { field: string; confirmed_value: unknown }[];
+  requirements_evidence?: { stale?: boolean; run?: { id: string; revision: number } | null; fields: Record<string, { value: unknown; original_value?: unknown; original_unit?: string | null; normalized_unit?: string | null; status: string; origin: string; confirmed_by_user_id: string; confirmed_at: string; sources: import("./agents").EvidenceItem[] }> } | null;
   id: string;
   company_id: string;
   created_by_user_id: string | null;
@@ -551,6 +562,8 @@ export interface CreateProductInput {
 export type UpdateProductInput = Partial<CreateProductInput>;
 
 export interface CreateNeedInput {
+  agent_run_id?: string;
+  agent_run_revision?: number;
   quantity_conversion_approved?: boolean;
   request_key?: string;
   company_id: string;
@@ -693,6 +706,7 @@ export const NEED_STATUS_LABELS: Record<NeedStatus, string> = {
 };
 
 export const OFFER_STATUS_LABELS: Record<OfferStatus, string> = {
+  stale: "Требуется новое КП: спецификация изменилась",
   sent: "Отправлено",
   selected: "Выбрано",
   rejected: "Отклонено",
@@ -1305,8 +1319,16 @@ export const marketplace = {
     return marketplaceFetch("/api/v2/needs", { method: "POST", token, body: JSON.stringify(input) });
   },
 
-  editNeed(token: string, needId: string, input: Omit<CreateNeedInput, "budget_rub" | "delivery_address_id"> & { budget_rub: Money | null; delivery_address_id: string | null; expected_revision: number }): Promise<Need> {
+  editNeed(token: string, needId: string, input: Omit<CreateNeedInput, "budget_rub" | "delivery_address_id"> & { budget_rub: Money | null; delivery_address_id: string | null; expected_revision: number; impact_hash?: string }): Promise<Need> {
     return marketplaceFetch(`/api/v2/needs/${needId}`, { method: "PUT", token, body: JSON.stringify(input) });
+  },
+
+  previewNeedEdit(token: string, needId: string, input: Omit<CreateNeedInput, "budget_rub" | "delivery_address_id"> & { budget_rub: Money | null; delivery_address_id: string | null; expected_revision: number }): Promise<NeedEditImpact> {
+    return marketplaceFetch(`/api/v2/needs/${needId}/edit-preview`, { method: "POST", token, body: JSON.stringify(input) });
+  },
+
+  needRevisions(token: string, needId: string): Promise<{ revision: number; snapshot: Record<string, unknown>; impact: NeedEditImpact; created_at: string }[]> {
+    return marketplaceFetch(`/api/v1/needs/${needId}/revisions`, { token });
   },
 
   publishNeed(token: string, needId: string): Promise<Need> {

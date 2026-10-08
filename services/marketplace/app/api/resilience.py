@@ -46,6 +46,8 @@ from ..schemas import (
 from ..resources import reserve, release, activate_hold, lock_company
 from ..trust import append_audit_event, record_human_approval
 
+from ..requirements import require_current_evidence
+
 router = APIRouter(tags=["stage-6-resilience"])
 
 
@@ -211,6 +213,12 @@ def _same_failure_set(result: dict, company_ids: list[str]) -> bool:
     return set(result["failed_company_ids"]) == set(company_ids)
 
 
+async def _lock_plan_need(db, plan_id):
+    need_id = await db.scalar(select(ResiliencePlan.need_id).where(ResiliencePlan.id == plan_id))
+    if need_id is not None:
+        await db.scalar(select(Need).where(Need.id == need_id).with_for_update())
+
+
 async def _lock_plan_resources(db, plan):
     commitments = list((await db.scalars(select(ReserveCommitment).where(ReserveCommitment.plan_id == plan.id))).all())
     companies = {uuid.UUID(item["company_id"]) for item in plan.baseline_allocations} | {item.company_id for item in commitments}
@@ -235,7 +243,9 @@ async def _activate_scenario(
         {**item, "role": "reserve"}
         for item in scenario.result["replacement_allocations"]
     ]
-    need = await db.get(Need, plan.need_id)
+    need = await db.scalar(select(Need).where(Need.id == plan.need_id).with_for_update())
+    if need is not None:
+        await require_current_evidence(db, need)
     # Deterministic company order prevents lock inversion for N-2 replacements.
     for replacement in sorted(replacements, key=lambda row: row["company_id"]):
         company_id = uuid.UUID(replacement["company_id"])
@@ -302,6 +312,8 @@ async def _activate_scenario(
 async def _calculate_and_store(
     db: AsyncSession, plan: ResiliencePlan, actor_user_id: uuid.UUID | None = None
 ) -> dict:
+    if plan.status == "stale":
+        raise HTTPException(409, "Спецификация изменилась. Создайте новый ресурсный план")
     payload = await _resilience_payload(db, plan)
     result = await calculate_resilience(payload)
     await db.execute(
@@ -433,14 +445,15 @@ async def create_resilience_plan(
     user: CurrentUser = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    need = await db.get(Need, need_id)
+    need = await db.scalar(select(Need).where(Need.id == need_id).with_for_update())
     if need is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, detail="Потребность не найдена")
     await require_company_buyer(need.company_id, user, db)
     await require_company_admin(need.company_id, user, db)
     await require_verified_company(need.company_id, user, db)
+    await require_current_evidence(db, need)
     existing = (
-        await db.execute(select(ResiliencePlan).where(ResiliencePlan.need_id == need.id))
+        await db.execute(select(ResiliencePlan).where(ResiliencePlan.need_id == need.id, ResiliencePlan.status != "stale"))
     ).scalar_one_or_none()
     if existing is not None:
         raise HTTPException(
@@ -451,6 +464,7 @@ async def create_resilience_plan(
     if (
         variant is None
         or variant.need_id != need.id
+        or variant.result.get("stale")
         or not variant.result.get("feasible")
     ):
         raise HTTPException(
@@ -625,6 +639,7 @@ async def confirm_resilience_plan(
     user: CurrentUser = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
+    await _lock_plan_need(db, plan_id)
     plan = await db.scalar(select(ResiliencePlan).where(ResiliencePlan.id == plan_id).with_for_update())
     if plan is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, detail="План устойчивости не найден")
@@ -641,6 +656,7 @@ async def confirm_resilience_plan(
     if data.expected_revision != plan.version:
         raise HTTPException(409, "План изменился. Обновите его перед подтверждением")
     need = await db.scalar(select(Need).where(Need.id == plan.need_id).with_for_update())
+    await require_current_evidence(db, need)
     if (need.status not in ACTIVE_NEED_STATUSES and not (need.status == "matched" and plan.commercial_snapshot)) or need.deadline_date < date.today():
         raise HTTPException(409, "Потребность уже закрыта или срок поставки истёк")
     if sum(item["units"] for item in plan.baseline_allocations) != need.volume_units:
@@ -818,6 +834,7 @@ async def decide_reserve_commitment(
     await require_company_seller(data.company_id, user, db)
     await require_company_admin(data.company_id, user, db)
     await require_verified_company(data.company_id, user, db)
+    await _lock_plan_need(db, commitment.plan_id)
     plan = (
         await db.execute(
             select(ResiliencePlan)
@@ -825,6 +842,9 @@ async def decide_reserve_commitment(
             .with_for_update()
         )
     ).scalar_one()
+    if plan.status == "stale":
+        raise HTTPException(409, "Спецификация изменилась. Приглашение в резерв устарело")
+    await require_current_evidence(db, await db.get(Need, plan.need_id))
     await db.refresh(commitment, with_for_update=True)
     await _lock_plan_resources(db, plan)
     if data.decision == "approved" and commitment.confirmation_status == "approved":
@@ -979,12 +999,15 @@ async def simulate_failure(
     user: CurrentUser = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    plan = await db.get(ResiliencePlan, plan_id)
+    await _lock_plan_need(db, plan_id)
+    plan = await db.scalar(select(ResiliencePlan).where(ResiliencePlan.id == plan_id).with_for_update())
     if plan is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, detail="План устойчивости не найден")
     await require_company_buyer(plan.buyer_company_id, user, db)
     await require_company_admin(plan.buyer_company_id, user, db)
     await require_verified_company(plan.buyer_company_id, user, db)
+    if plan.status == "stale":
+        raise HTTPException(409, "Спецификация изменилась. Нужен новый ресурсный план")
     primary_ids = {item["company_id"] for item in plan.baseline_allocations}
     requested = [str(item) for item in data.failed_company_ids]
     if len(set(requested)) != len(requested) or not set(requested) <= primary_ids:
@@ -1030,6 +1053,7 @@ async def report_producer_failure(
     user: CurrentUser = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
+    await _lock_plan_need(db, plan_id)
     plan = (
         await db.execute(
             select(ResiliencePlan).where(ResiliencePlan.id == plan_id).with_for_update()
@@ -1040,6 +1064,8 @@ async def report_producer_failure(
     await require_company_seller(data.company_id, user, db)
     await require_company_admin(data.company_id, user, db)
     await require_verified_company(data.company_id, user, db)
+    if plan.status == "stale":
+        raise HTTPException(409, "Спецификация изменилась. Нужен новый ресурсный план")
     primary_ids = {item["company_id"] for item in plan.baseline_allocations}
     if str(data.company_id) not in primary_ids:
         raise HTTPException(
@@ -1119,6 +1145,7 @@ async def approve_recovery(
     scenario = await db.get(ResilienceScenario, scenario_id)
     if scenario is None or scenario.status != "proposed":
         raise HTTPException(status.HTTP_404_NOT_FOUND, detail="Предложение восстановления не найдено")
+    await _lock_plan_need(db, scenario.plan_id)
     plan = await db.scalar(select(ResiliencePlan).where(ResiliencePlan.id == scenario.plan_id).with_for_update())
     await db.refresh(scenario)
     if scenario.status != "proposed" or set(scenario.failed_company_ids) != set(plan.failed_company_ids):
