@@ -4,7 +4,10 @@
 // публикация/снятие с публикации (POST /products/{id}/publish).
 
 import Link from "next/link";
+import PhysicalQuantityReview from "../../components/PhysicalQuantityReview";
+import ProfileRevisionPanel from "../../components/ProfileRevisionPanel";
 import CatalogImport from "../../components/CatalogImport";
+import PackagingConversionPanel from "../../components/PackagingConversionPanel";
 import CharacteristicSuggestions from "../../components/CharacteristicSuggestions";
 import { characteristicField } from "../../lib/categoryProfiles";
 import { FormEvent, useEffect, useState } from "react";
@@ -63,6 +66,7 @@ export default function SellerProductsPage() {
   const [image, setImage] = useState<File | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [creating, setCreating] = useState(false);
+  const [quantityApproved, setQuantityApproved] = useState(false);
   const [publishingId, setPublishingId] = useState<string | null>(null);
 
   useEffect(() => {
@@ -113,10 +117,8 @@ export default function SellerProductsPage() {
     setCreating(true);
     setError(null);
     try {
-      const validation = await marketplace.validateCharacteristics({ category, subcategory, characteristics, moq_units: Number(moq) });
-      if (!validation.valid) { setError(validation.errors.join(". ")); return; }
-      if (validation.warnings.length && !window.confirm(`${validation.warnings.join(". ")}\n\nСохранить после ручной проверки?`)) return;
       const input = {
+        quantity_conversion_approved: quantityApproved,
         name: name.trim(),
         category,
         subcategory,
@@ -127,6 +129,9 @@ export default function SellerProductsPage() {
         lead_time_days: Number(leadTime),
         stock_units: stock.trim() === "" ? null : Number(stock),
       };
+      const preview = await marketplace.previewPhysicalQuantity("product", input);
+      const validation = await marketplace.validateCharacteristics({ category, subcategory, characteristics: preview.normalized.characteristics as Record<string, unknown>, moq_units: preview.conversion.quantities.moq_units ?? 0 });
+      if (!validation.valid) { setError(validation.errors.join(". ")); return; }
       const saved = editingId
         ? await marketplace.updateProduct(token, editingId, input)
         : await marketplace.createProduct(token, company.id, input);
@@ -326,7 +331,7 @@ export default function SellerProductsPage() {
               id="product_price"
               type="number"
               min="0"
-              step="0.01"
+              step="any"
               value={price}
               onChange={(event) => setPrice(event.target.value)}
               placeholder="Например, 11.2"
@@ -337,9 +342,9 @@ export default function SellerProductsPage() {
             <label>Цены по объёму <span className="opt">необязательно, до 10 ступеней</span></label>
             {tiers.map((tier, index) => (
               <div className="char-row" key={index}>
-                <input type="number" min="1" value={tier.min_units} aria-label="Объём ступени"
+                <input type="number" min="0.000001" step="any" value={tier.min_units} aria-label="Объём ступени"
                   onChange={(event) => setTiers((current) => current.map((item, i) => i === index ? {...item, min_units: Number(event.target.value)} : item))} />
-                <input type="number" min="0.01" step="0.01" value={tier.unit_price_rub} aria-label="Цена ступени"
+                <input type="number" min="0.000000000001" step="any" value={tier.unit_price_rub} aria-label="Цена ступени"
                   onChange={(event) => setTiers((current) => current.map((item, i) => i === index ? {...item, unit_price_rub: Number(event.target.value)} : item))} />
                 <span className="company-meta">{formatRub(tier.min_units * tier.unit_price_rub)} за партию</span>
                 <button type="button" className="btn btn-secondary btn-sm" onClick={() => setTiers((current) => current.filter((_, i) => i !== index))}>Удалить</button>
@@ -361,7 +366,8 @@ export default function SellerProductsPage() {
             <input
               id="product_moq"
               type="number"
-              min="1"
+              step="any"
+              min="0.000001"
               value={moq}
               onChange={(event) => setMoq(event.target.value)}
               placeholder="Например, 20000"
@@ -376,6 +382,7 @@ export default function SellerProductsPage() {
               id="product_lead"
               type="number"
               min="1"
+              step="1"
               value={leadTime}
               onChange={(event) => setLeadTime(event.target.value)}
               placeholder="Например, 9"
@@ -389,12 +396,14 @@ export default function SellerProductsPage() {
             <input
               id="product_stock"
               type="number"
+              step="any"
               min="0"
               value={stock}
               onChange={(event) => setStock(event.target.value)}
               placeholder="Например, 4000"
             />
           </div>
+          <PhysicalQuantityReview kind="product" values={{ characteristics: Object.fromEntries(rows.filter(row => row.key.trim()).map(row => [row.key.trim(), row.value])), moq_units: moq, stock_units: stock || null, price_rub: price, price_tiers: tiers }} approved={quantityApproved} onApproval={setQuantityApproved} />
           <div className="actions">
             <button type="submit" className="btn btn-primary" disabled={creating}>
               {creating ? "Сохраняем..." : editingId ? "Сохранить изменения" : "Создать товар"}
@@ -418,12 +427,14 @@ export default function SellerProductsPage() {
                   <div>
                     <div className="company-item__name">{product.name}</div>
                     <div className="company-meta">
-                      {product.category} / {product.subcategory ?? "Без подкатегории"} · {formatRub(product.price_rub)} / {itemUnit(product.characteristics)} · МОЗ{" "}
+                      {product.category} / {product.subcategory ?? "Без подкатегории"} · {formatRub(product.price_rub, 12)} / {itemUnit(product.characteristics)} · МОЗ{" "}
                       {formatUnits(product.moq_units, itemUnit(product.characteristics))} · {product.lead_time_days} дн.
                     </div>
                     <div className="company-meta">{formatCharacteristics(product.characteristics, product.category_profile)}</div>
+                    {company?.membership?.is_admin && <ProfileRevisionPanel key={`${product.id}:${JSON.stringify(product.category_profile)}`} kind="products" id={product.id} draft={!product.is_published} onAdopted={async () => { const token = getToken(); if (token && companyId) setProducts(await marketplace.getCompanyProducts(token, companyId)); }} />}
+                    {company?.membership?.is_admin && ["упак","упаковка","рулон","бухта","комплект","мешок"].includes(itemUnit(product.characteristics)) && <PackagingConversionPanel key={`${product.id}:pack:${JSON.stringify(product.category_profile)}:${JSON.stringify(product.quantity_conversion)}`} product={product} onSaved={async()=>{const token=getToken();if(token && companyId)setProducts(await marketplace.getCompanyProducts(token,companyId));}} />}
                     {product.price_tiers.map((tier) => <div className="company-meta" key={tier.min_units}>
-                      От {formatUnits(tier.min_units, itemUnit(product.characteristics))}: {formatRub(tier.unit_price_rub)} / {itemUnit(product.characteristics)} · {formatRub(tier.min_units * tier.unit_price_rub)} за партию
+                      От {formatUnits(tier.min_units, itemUnit(product.characteristics))}: {formatRub(tier.unit_price_rub, 12)} / {itemUnit(product.characteristics)} · {formatRub(tier.min_units * tier.unit_price_rub)} за партию
                     </div>)}
                   </div>
                   <span className={`badge ${product.is_published ? "badge-verified" : "badge-draft"}`}>

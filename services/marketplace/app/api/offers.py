@@ -96,9 +96,14 @@ async def prepare_offer_draft(
         .all()
     )
     held = await reservations(db, data.company_id)
-    free_capacity = sum(max(0, row.available_units - sum(r.units for r in held if r.capacity_entry_id == row.id and occupies(r))) for row in capacity
-                        if date.today() <= row.date <= need.deadline_date and row.unit == order_unit(need.characteristics)
-                        and row.category in {"", need.category})
+    from ..resource_scopes import conversion_for, occupied_units
+    free_capacity = 0
+    for row in capacity:
+        if not date.today() <= row.date <= need.deadline_date:continue
+        conversion=conversion_for(row,need.category,need.subcategory,order_unit(need.characteristics))
+        if conversion is None:continue
+        free=max(0,row.available_units-sum(occupied_units(r) for r in held if r.capacity_entry_id==row.id and occupies(r)))
+        free_capacity += free // conversion['resource_units_per_order_unit']
     stocks = {product.id: await free_stock(db, product, held) for product in products}
     result = await build_offer_draft(
         need=need,
@@ -391,9 +396,12 @@ async def select_offer(
         SpecificationCheck(
             category=need.category,
             subcategory=need.subcategory,
-            characteristics=need.characteristics,
+            characteristics=product.characteristics if offer.product_id else need.characteristics,
             moq_units=offer.moq_units,
             label="спецификация потребности",
+            product_id=offer.product_id,
+            volume_units=need.volume_units,
+            category_profile=need.category_profile,
         ),
         context="Сделка не создана",
     )
@@ -422,7 +430,7 @@ async def select_offer(
     await reserve(db, company_id=offer.company_id, anchor_type="deal", anchor_id=deal.id,
                   units=need.volume_units, deadline=need.deadline_date,
                   resource_kind=offer.resource_kind, product_id=offer.product_id,
-                  category=need.category, unit=order_unit(need.characteristics))
+                  category=need.category, subcategory=need.subcategory, unit=order_unit(need.characteristics))
     approval_payload = {
         "offer_id": str(offer.id),
         "offer_revision": offer.revision,

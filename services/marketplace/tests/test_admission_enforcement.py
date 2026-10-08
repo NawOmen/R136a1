@@ -1,4 +1,4 @@
-from conftest import grant_capacity
+from conftest import grant_capacity,grant_category_capability
 """Проверки допуска на всех путях принятия обязательств.
 
 Отдельно фиксируем то, что раньше было дефектом: применимость документа
@@ -265,11 +265,12 @@ async def test_reserve_commitment_requires_documents(client, db_session, monkeyp
     reserve = await make_company(db_session, reserve_user, can_buy=False, can_sell=True)
     reserve_token = make_token(reserve_user)
 
+    for supplier in (primary,reserve):await grant_category_capability(db_session,supplier,"packaging.paper-cups",{"volume_ml":400,"material":"крафт-картон"})
     need = Need(
         company_id=buyer,
         created_by_user_id=buyer_user,
         category="бумажные стаканы",
-        characteristics={"volume_ml": 400},
+        characteristics={"volume_ml": 400,"material":"крафт-картон"},
         volume_units=5_000,
         deadline_date=date.today() + timedelta(days=30),
         status="open_for_offers",
@@ -375,7 +376,7 @@ async def test_reserve_commitment_requires_documents(client, db_session, monkeyp
     assert blocked.status_code == 409
     assert "не предоставлено" in blocked.json()["detail"]
 
-    await grant_packaging_documents(db_session, reserve, decision_user_id=reserve_user)
+    await grant_packaging_documents(db_session, reserve, decision_user_id=reserve_user,confirms=CONFIRMS)
     await grant_capacity(db_session, reserve, 5_000)
     allowed = await client.post(
         f"/api/v1/reserve-commitments/{invitation['id']}/decision",
@@ -499,6 +500,7 @@ async def test_evidence_change_notifies_active_deal(client, db_session):
         f"/api/v1/needs/{need.json()['id']}/offers",
         json={
             "company_id": str(seller_company),
+            "product_id":product.json()["id"],
             "price_rub": 10,
             "available_units": 1_000,
             "moq_units": 1_000,

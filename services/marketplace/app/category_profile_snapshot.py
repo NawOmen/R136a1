@@ -11,7 +11,7 @@ def capture_category_profile(category: str | None, subcategory: str | None) -> d
     registry = registry_snapshot()
     profile = leaf['technical_profile']
     return {
-        'snapshot_version': 1,
+        'snapshot_version': 2,
         'registry_version': registry['registry_version'],
         'category_id': leaf['id'],
         'leaf_revision': leaf['revision'],
@@ -19,6 +19,7 @@ def capture_category_profile(category: str | None, subcategory: str | None) -> d
         'state': profile['state'],
         'fields': {key: deepcopy(registry['characteristic_fields'][key]) for key in profile['fields']},
         'required_for_product': list(profile['required_for_product']),
+        'passport': deepcopy(profile.get('passport', {})),
     }
 
 

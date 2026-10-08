@@ -23,6 +23,7 @@ def expected_snapshot() -> str:
         "schema_version": registry["schema_version"],
         "registry_version": registry["registry_version"],
         "tree": module.catalogue_tree(),
+        "quantity_units": registry["quantity_units"],
         "characteristic_fields": registry["characteristic_fields"],
         "technical_profiles": {leaf["id"]: leaf["technical_profile"] for group in registry["groups"] for leaf in group["leaves"]},
         "leaf_ids": {group["label"]: {leaf["label"]: leaf["id"] for leaf in group["leaves"]} for group in registry["groups"]},

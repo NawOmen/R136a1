@@ -128,3 +128,9 @@ async def notify(db: AsyncSession, user_id: uuid.UUID, message: str, type_: str 
     from .models import Notification
 
     db.add(Notification(user_id=user_id, message=message, type=type_))
+
+
+async def require_category_editor(user: CurrentUser, db: AsyncSession) -> None:
+    result = await db.execute(text("SELECT is_marketplace_admin OR is_category_editor FROM auth.users WHERE id = :uid"), {"uid":user.id})
+    if not result.scalar_one_or_none():
+        raise HTTPException(403, "Требуются полномочия редактора категорий")

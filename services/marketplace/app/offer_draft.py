@@ -104,32 +104,9 @@ def _characteristics(values: dict | None) -> dict[str, list]:
 
 
 def _matches_need(product: Product, need: Need) -> tuple[bool, str]:
-    """Every requested attribute must be known and equal; extra SKU attributes are fine."""
-    category = normalize(need.category)
-    if not category or category not in {normalize(product.category), normalize(product.subcategory)}:
-        return False, "категория товара не совпадает с потребностью"
-    if getattr(need, "subcategory", None) and normalize(need.subcategory) != normalize(product.subcategory):
-        return False, "подкатегория товара не совпадает с потребностью"
-    actual = _characteristics(product.characteristics)
-    for key, requested_values in _characteristics(need.characteristics).items():
-        supplied_values = actual.get(key, [])
-        if not supplied_values or any(value is None or value == "" for value in supplied_values):
-            return False, f"не подтверждена характеристика «{key}»"
-        for requested in requested_values:
-            if requested is None or requested == "":
-                return False, f"не заполнена характеристика потребности «{key}»"
-            # String numbers may originate from form inputs. Boolean values must not
-            # compare equal to numeric 1/0, and units embedded in text remain explicit.
-            for supplied in supplied_values:
-                same = supplied == requested and isinstance(supplied, bool) == isinstance(requested, bool)
-                if not same and not isinstance(supplied, (dict, list, bool)) and not isinstance(requested, (dict, list, bool)):
-                    try:
-                        same = Decimal(str(supplied)).is_finite() and Decimal(str(supplied)) == Decimal(str(requested))
-                    except InvalidOperation:
-                        same = False
-                if not same:
-                    return False, f"характеристика «{key}» отличается от потребности"
-    return True, ""
+    from .category_compatibility import compare_specifications
+    result = compare_specifications(product, need)
+    return result.matches, result.reason
 
 
 def _tier_price(product: Product, volume: int, unit: str) -> tuple[float, str]:
@@ -145,7 +122,7 @@ def _tier_price(product: Product, volume: int, unit: str) -> tuple[float, str]:
         if unit_price > 0 and volume >= min_units:
             price = unit_price
             source = f"товар каталога: ступень от {min_units} {unit}"
-    return round(price, 2), source
+    return price, source
 
 
 async def build_offer_draft(
@@ -253,7 +230,8 @@ async def build_offer_draft(
         )
         missing.append("Нет товара каталога с подходящей категорией и характеристиками: укажите цену вручную")
 
-        moq = int(passport.min_order_units) if passport and passport.min_order_units else None
+        from .matching import passport_scope_limits
+        moq = passport_scope_limits(passport,need.category,need.characteristics,need.subcategory)[0] if passport else None
         moq_source = "паспорт возможностей: минимальный заказ"
         lead_time = None
         lead_source = "не задано"
@@ -339,13 +317,14 @@ async def build_offer_draft(
 def available_capacity_units(entries: list[CapacityEntry], need: Need, today: date | None = None) -> int:
     """Свободная мощность к сроку потребности из календаря мощностей."""
     today = today or date.today()
-    return sum(
-        int(entry.available_units)
-        for entry in entries
-        if today <= entry.date <= need.deadline_date
-        and entry.category in {"", need.category}
-        and entry.unit == order_unit(need.characteristics)
-    )
+    from .resource_scopes import conversion_for
+    total = 0
+    for entry in entries:
+        if not today <= entry.date <= need.deadline_date: continue
+        conversion = conversion_for(entry,need.category,need.subcategory,order_unit(need.characteristics))
+        if conversion is not None: total += int(entry.available_units) // conversion['resource_units_per_order_unit']
+    return total
+
 
 
 def changed_fields(draft_payload: dict, offer_values: dict) -> list[str]:

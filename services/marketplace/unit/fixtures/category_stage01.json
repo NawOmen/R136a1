@@ -1,0 +1,1857 @@
+[
+  {
+    "category_id": "packaging.paper-cups",
+    "category": "Упаковка и тара",
+    "subcategory": "Бумажные стаканы",
+    "subject": "Бумажные стаканы по синтетической спецификации СИН-1",
+    "positive": {
+      "material": "бумага",
+      "volume_ml": 400,
+      "purpose": "контакт с пищевыми продуктами",
+      "unit": "шт"
+    },
+    "negative": {
+      "material": "другое подтверждаемое значение",
+      "volume_ml": 400,
+      "purpose": "контакт с пищевыми продуктами",
+      "unit": "шт"
+    },
+    "missing_field": "material",
+    "admission_without_documents": "blocked",
+    "route": {
+      "seller": "/seller/passport",
+      "sku": "/seller/products",
+      "need": "/needs/new",
+      "match": "/catalog",
+      "offer": "/seller/requests",
+      "approval": "/needs/{id}",
+      "resource": "/seller/capacity",
+      "execution": "/deals",
+      "report": "/buyer/analytics",
+      "repeat": "/needs/{id}"
+    },
+    "remaining_acceptance_tasks": [
+      "S02.03",
+      "S03.01",
+      "S04.01",
+      "S05.01",
+      "S15.01"
+    ]
+  },
+  {
+    "category_id": "packaging.food-packaging",
+    "category": "Упаковка и тара",
+    "subcategory": "Пищевая упаковка",
+    "subject": "Пищевая упаковка по синтетической спецификации СИН-2",
+    "positive": {
+      "material": "полипропилен",
+      "dimensions_mm": "400×300×300",
+      "purpose": "контакт с пищевыми продуктами",
+      "unit": "шт"
+    },
+    "negative": {
+      "material": "другое подтверждаемое значение",
+      "dimensions_mm": "400×300×300",
+      "purpose": "контакт с пищевыми продуктами",
+      "unit": "шт"
+    },
+    "missing_field": "material",
+    "admission_without_documents": "blocked",
+    "route": {
+      "seller": "/seller/passport",
+      "sku": "/seller/products",
+      "need": "/needs/new",
+      "match": "/catalog",
+      "offer": "/seller/requests",
+      "approval": "/needs/{id}",
+      "resource": "/seller/capacity",
+      "execution": "/deals",
+      "report": "/buyer/analytics",
+      "repeat": "/needs/{id}"
+    },
+    "remaining_acceptance_tasks": [
+      "S02.03",
+      "S03.01",
+      "S04.01",
+      "S05.01",
+      "S15.01"
+    ]
+  },
+  {
+    "category_id": "packaging.bags",
+    "category": "Упаковка и тара",
+    "subcategory": "Пакеты",
+    "subject": "Пакеты по синтетической спецификации СИН-3",
+    "positive": {
+      "material": "крафт-бумага",
+      "dimensions_mm": "400×300×300",
+      "thickness_mm": 0.15,
+      "unit": "шт"
+    },
+    "negative": {
+      "material": "другое подтверждаемое значение",
+      "dimensions_mm": "400×300×300",
+      "thickness_mm": 0.15,
+      "unit": "шт"
+    },
+    "missing_field": "material",
+    "admission_without_documents": "blocked",
+    "route": {
+      "seller": "/seller/passport",
+      "sku": "/seller/products",
+      "need": "/needs/new",
+      "match": "/catalog",
+      "offer": "/seller/requests",
+      "approval": "/needs/{id}",
+      "resource": "/seller/capacity",
+      "execution": "/deals",
+      "report": "/buyer/analytics",
+      "repeat": "/needs/{id}"
+    },
+    "remaining_acceptance_tasks": [
+      "S02.03",
+      "S03.01",
+      "S04.01",
+      "S05.01",
+      "S15.01"
+    ]
+  },
+  {
+    "category_id": "packaging.boxes",
+    "category": "Упаковка и тара",
+    "subcategory": "Коробки",
+    "subject": "Коробки по синтетической спецификации СИН-4",
+    "positive": {
+      "material": "гофрокартон Т-23",
+      "dimensions_mm": "400×300×300",
+      "unit": "шт"
+    },
+    "negative": {
+      "material": "другое подтверждаемое значение",
+      "dimensions_mm": "400×300×300",
+      "unit": "шт"
+    },
+    "missing_field": "material",
+    "admission_without_documents": "blocked",
+    "route": {
+      "seller": "/seller/passport",
+      "sku": "/seller/products",
+      "need": "/needs/new",
+      "match": "/catalog",
+      "offer": "/seller/requests",
+      "approval": "/needs/{id}",
+      "resource": "/seller/capacity",
+      "execution": "/deals",
+      "report": "/buyer/analytics",
+      "repeat": "/needs/{id}"
+    },
+    "remaining_acceptance_tasks": [
+      "S02.03",
+      "S03.01",
+      "S04.01",
+      "S05.01",
+      "S15.01"
+    ]
+  },
+  {
+    "category_id": "packaging.bottles-canisters",
+    "category": "Упаковка и тара",
+    "subcategory": "Бутылки и канистры",
+    "subject": "Бутылки и канистры по синтетической спецификации СИН-5",
+    "positive": {
+      "material": "полиэтилен",
+      "volume_ml": 1000,
+      "purpose": "непищевые жидкости",
+      "unit": "шт"
+    },
+    "negative": {
+      "material": "другое подтверждаемое значение",
+      "volume_ml": 1000,
+      "purpose": "непищевые жидкости",
+      "unit": "шт"
+    },
+    "missing_field": "material",
+    "admission_without_documents": "blocked",
+    "route": {
+      "seller": "/seller/passport",
+      "sku": "/seller/products",
+      "need": "/needs/new",
+      "match": "/catalog",
+      "offer": "/seller/requests",
+      "approval": "/needs/{id}",
+      "resource": "/seller/capacity",
+      "execution": "/deals",
+      "report": "/buyer/analytics",
+      "repeat": "/needs/{id}"
+    },
+    "remaining_acceptance_tasks": [
+      "S02.03",
+      "S03.01",
+      "S04.01",
+      "S05.01",
+      "S15.01"
+    ]
+  },
+  {
+    "category_id": "packaging.film",
+    "category": "Упаковка и тара",
+    "subcategory": "Плёнка",
+    "subject": "Плёнка по синтетической спецификации СИН-6",
+    "positive": {
+      "material": "полиэтилен",
+      "width_mm": 500,
+      "thickness_mm": 0.02,
+      "unit": "м"
+    },
+    "negative": {
+      "material": "другое подтверждаемое значение",
+      "width_mm": 500,
+      "thickness_mm": 0.02,
+      "unit": "м"
+    },
+    "missing_field": "material",
+    "admission_without_documents": "blocked",
+    "route": {
+      "seller": "/seller/passport",
+      "sku": "/seller/products",
+      "need": "/needs/new",
+      "match": "/catalog",
+      "offer": "/seller/requests",
+      "approval": "/needs/{id}",
+      "resource": "/seller/capacity",
+      "execution": "/deals",
+      "report": "/buyer/analytics",
+      "repeat": "/needs/{id}"
+    },
+    "remaining_acceptance_tasks": [
+      "S02.03",
+      "S03.01",
+      "S04.01",
+      "S05.01",
+      "S15.01"
+    ]
+  },
+  {
+    "category_id": "materials.paper-cardboard",
+    "category": "Сырьё и материалы",
+    "subcategory": "Бумага и картон",
+    "subject": "Бумага и картон по синтетической спецификации СИН-7",
+    "positive": {
+      "material": "картон",
+      "format": "лист 1000×700 мм",
+      "grammage_g_m2": 250,
+      "unit": "шт"
+    },
+    "negative": {
+      "material": "другое подтверждаемое значение",
+      "format": "лист 1000×700 мм",
+      "grammage_g_m2": 250,
+      "unit": "шт"
+    },
+    "missing_field": "material",
+    "admission_without_documents": "blocked",
+    "route": {
+      "seller": "/seller/passport",
+      "sku": "/seller/products",
+      "need": "/needs/new",
+      "match": "/catalog",
+      "offer": "/seller/requests",
+      "approval": "/needs/{id}",
+      "resource": "/seller/capacity",
+      "execution": "/deals",
+      "report": "/buyer/analytics",
+      "repeat": "/needs/{id}"
+    },
+    "remaining_acceptance_tasks": [
+      "S02.03",
+      "S03.01",
+      "S04.01",
+      "S05.01",
+      "S15.01"
+    ]
+  },
+  {
+    "category_id": "materials.polymers",
+    "category": "Сырьё и материалы",
+    "subcategory": "Полимеры",
+    "subject": "Полимеры по синтетической спецификации СИН-8",
+    "positive": {
+      "material": "полипропилен",
+      "grade": "синтетическая марка ПП-01",
+      "unit": "кг"
+    },
+    "negative": {
+      "material": "другое подтверждаемое значение",
+      "grade": "синтетическая марка ПП-01",
+      "unit": "кг"
+    },
+    "missing_field": "material",
+    "admission_without_documents": "blocked",
+    "route": {
+      "seller": "/seller/passport",
+      "sku": "/seller/products",
+      "need": "/needs/new",
+      "match": "/catalog",
+      "offer": "/seller/requests",
+      "approval": "/needs/{id}",
+      "resource": "/seller/capacity",
+      "execution": "/deals",
+      "report": "/buyer/analytics",
+      "repeat": "/needs/{id}"
+    },
+    "remaining_acceptance_tasks": [
+      "S02.03",
+      "S03.01",
+      "S04.01",
+      "S05.01",
+      "S15.01"
+    ]
+  },
+  {
+    "category_id": "materials.metals",
+    "category": "Сырьё и материалы",
+    "subcategory": "Металлы",
+    "subject": "Металлы по синтетической спецификации СИН-9",
+    "positive": {
+      "material": "сталь",
+      "grade": "синтетическая марка СТ-01",
+      "dimensions_mm": "400×300×300",
+      "standard": "синтетическая спецификация СП-01",
+      "unit": "шт"
+    },
+    "negative": {
+      "material": "другое подтверждаемое значение",
+      "grade": "синтетическая марка СТ-01",
+      "dimensions_mm": "400×300×300",
+      "standard": "синтетическая спецификация СП-01",
+      "unit": "шт"
+    },
+    "missing_field": "material",
+    "admission_without_documents": "blocked",
+    "route": {
+      "seller": "/seller/passport",
+      "sku": "/seller/products",
+      "need": "/needs/new",
+      "match": "/catalog",
+      "offer": "/seller/requests",
+      "approval": "/needs/{id}",
+      "resource": "/seller/capacity",
+      "execution": "/deals",
+      "report": "/buyer/analytics",
+      "repeat": "/needs/{id}"
+    },
+    "remaining_acceptance_tasks": [
+      "S02.03",
+      "S03.01",
+      "S04.01",
+      "S05.01",
+      "S15.01"
+    ]
+  },
+  {
+    "category_id": "materials.textile",
+    "category": "Сырьё и материалы",
+    "subcategory": "Текстиль",
+    "subject": "Текстиль по синтетической спецификации СИН-10",
+    "positive": {
+      "composition": "65% полиэстер, 35% хлопок",
+      "width_cm": 150,
+      "unit": "шт"
+    },
+    "negative": {
+      "composition": "другое подтверждаемое значение",
+      "width_cm": 150,
+      "unit": "шт"
+    },
+    "missing_field": "composition",
+    "admission_without_documents": "blocked",
+    "route": {
+      "seller": "/seller/passport",
+      "sku": "/seller/products",
+      "need": "/needs/new",
+      "match": "/catalog",
+      "offer": "/seller/requests",
+      "approval": "/needs/{id}",
+      "resource": "/seller/capacity",
+      "execution": "/deals",
+      "report": "/buyer/analytics",
+      "repeat": "/needs/{id}"
+    },
+    "remaining_acceptance_tasks": [
+      "S02.03",
+      "S03.01",
+      "S04.01",
+      "S05.01",
+      "S15.01"
+    ]
+  },
+  {
+    "category_id": "materials.chemical-feedstock",
+    "category": "Сырьё и материалы",
+    "subcategory": "Химическое сырьё",
+    "subject": "Химическое сырьё по синтетической спецификации СИН-11",
+    "positive": {
+      "composition": "синтетическая рецептура Х-01",
+      "grade": "сорт 1",
+      "purpose": "промышленная переработка",
+      "storage_conditions": "сухое помещение, герметичная упаковка",
+      "unit": "кг"
+    },
+    "negative": {
+      "composition": "другое подтверждаемое значение",
+      "grade": "сорт 1",
+      "purpose": "промышленная переработка",
+      "storage_conditions": "сухое помещение, герметичная упаковка",
+      "unit": "кг"
+    },
+    "missing_field": "composition",
+    "admission_without_documents": "blocked",
+    "route": {
+      "seller": "/seller/passport",
+      "sku": "/seller/products",
+      "need": "/needs/new",
+      "match": "/catalog",
+      "offer": "/seller/requests",
+      "approval": "/needs/{id}",
+      "resource": "/seller/capacity",
+      "execution": "/deals",
+      "report": "/buyer/analytics",
+      "repeat": "/needs/{id}"
+    },
+    "remaining_acceptance_tasks": [
+      "S02.03",
+      "S03.01",
+      "S04.01",
+      "S05.01",
+      "S15.01"
+    ]
+  },
+  {
+    "category_id": "equipment.manufacturing",
+    "category": "Оборудование",
+    "subcategory": "Производственное",
+    "subject": "Производственное по синтетической спецификации СИН-12",
+    "positive": {
+      "model": "СИН-М01",
+      "process": "резка по чертежу",
+      "power_kw": 2,
+      "unit": "шт"
+    },
+    "negative": {
+      "model": "другое подтверждаемое значение",
+      "process": "резка по чертежу",
+      "power_kw": 2,
+      "unit": "шт"
+    },
+    "missing_field": "model",
+    "admission_without_documents": "blocked",
+    "route": {
+      "seller": "/seller/passport",
+      "sku": "/seller/products",
+      "need": "/needs/new",
+      "match": "/catalog",
+      "offer": "/seller/requests",
+      "approval": "/needs/{id}",
+      "resource": "/seller/capacity",
+      "execution": "/deals",
+      "report": "/buyer/analytics",
+      "repeat": "/needs/{id}"
+    },
+    "remaining_acceptance_tasks": [
+      "S02.03",
+      "S03.01",
+      "S04.01",
+      "S05.01",
+      "S15.01"
+    ]
+  },
+  {
+    "category_id": "equipment.retail",
+    "category": "Оборудование",
+    "subcategory": "Торговое",
+    "subject": "Торговое по синтетической спецификации СИН-13",
+    "positive": {
+      "model": "СИН-М01",
+      "dimensions_mm": "400×300×300",
+      "purpose": "поставка для российского предприятия",
+      "unit": "шт"
+    },
+    "negative": {
+      "model": "другое подтверждаемое значение",
+      "dimensions_mm": "400×300×300",
+      "purpose": "поставка для российского предприятия",
+      "unit": "шт"
+    },
+    "missing_field": "model",
+    "admission_without_documents": "blocked",
+    "route": {
+      "seller": "/seller/passport",
+      "sku": "/seller/products",
+      "need": "/needs/new",
+      "match": "/catalog",
+      "offer": "/seller/requests",
+      "approval": "/needs/{id}",
+      "resource": "/seller/capacity",
+      "execution": "/deals",
+      "report": "/buyer/analytics",
+      "repeat": "/needs/{id}"
+    },
+    "remaining_acceptance_tasks": [
+      "S02.03",
+      "S03.01",
+      "S04.01",
+      "S05.01",
+      "S15.01"
+    ]
+  },
+  {
+    "category_id": "equipment.warehouse",
+    "category": "Оборудование",
+    "subcategory": "Складское",
+    "subject": "Складское по синтетической спецификации СИН-14",
+    "positive": {
+      "model": "СИН-М01",
+      "dimensions_mm": "400×300×300",
+      "weight_kg": 100,
+      "unit": "шт"
+    },
+    "negative": {
+      "model": "другое подтверждаемое значение",
+      "dimensions_mm": "400×300×300",
+      "weight_kg": 100,
+      "unit": "шт"
+    },
+    "missing_field": "model",
+    "admission_without_documents": "blocked",
+    "route": {
+      "seller": "/seller/passport",
+      "sku": "/seller/products",
+      "need": "/needs/new",
+      "match": "/catalog",
+      "offer": "/seller/requests",
+      "approval": "/needs/{id}",
+      "resource": "/seller/capacity",
+      "execution": "/deals",
+      "report": "/buyer/analytics",
+      "repeat": "/needs/{id}"
+    },
+    "remaining_acceptance_tasks": [
+      "S02.03",
+      "S03.01",
+      "S04.01",
+      "S05.01",
+      "S15.01"
+    ]
+  },
+  {
+    "category_id": "equipment.food",
+    "category": "Оборудование",
+    "subcategory": "Пищевое",
+    "subject": "Пищевое по синтетической спецификации СИН-15",
+    "positive": {
+      "model": "СИН-М01",
+      "process": "резка по чертежу",
+      "power_kw": 2,
+      "unit": "шт"
+    },
+    "negative": {
+      "model": "другое подтверждаемое значение",
+      "process": "резка по чертежу",
+      "power_kw": 2,
+      "unit": "шт"
+    },
+    "missing_field": "model",
+    "admission_without_documents": "blocked",
+    "route": {
+      "seller": "/seller/passport",
+      "sku": "/seller/products",
+      "need": "/needs/new",
+      "match": "/catalog",
+      "offer": "/seller/requests",
+      "approval": "/needs/{id}",
+      "resource": "/seller/capacity",
+      "execution": "/deals",
+      "report": "/buyer/analytics",
+      "repeat": "/needs/{id}"
+    },
+    "remaining_acceptance_tasks": [
+      "S02.03",
+      "S03.01",
+      "S04.01",
+      "S05.01",
+      "S15.01"
+    ]
+  },
+  {
+    "category_id": "equipment.spare-parts",
+    "category": "Оборудование",
+    "subcategory": "Запасные части",
+    "subject": "Запасные части по синтетической спецификации СИН-16",
+    "positive": {
+      "model": "СИН-М01",
+      "compatibility": "СИН-М01",
+      "material": "сталь",
+      "unit": "шт"
+    },
+    "negative": {
+      "model": "другое подтверждаемое значение",
+      "compatibility": "СИН-М01",
+      "material": "сталь",
+      "unit": "шт"
+    },
+    "missing_field": "model",
+    "admission_without_documents": "blocked",
+    "route": {
+      "seller": "/seller/passport",
+      "sku": "/seller/products",
+      "need": "/needs/new",
+      "match": "/catalog",
+      "offer": "/seller/requests",
+      "approval": "/needs/{id}",
+      "resource": "/seller/capacity",
+      "execution": "/deals",
+      "report": "/buyer/analytics",
+      "repeat": "/needs/{id}"
+    },
+    "remaining_acceptance_tasks": [
+      "S02.03",
+      "S03.01",
+      "S04.01",
+      "S05.01",
+      "S15.01"
+    ]
+  },
+  {
+    "category_id": "construction.finishing",
+    "category": "Строительство",
+    "subcategory": "Отделочные материалы",
+    "subject": "Отделочные материалы по синтетической спецификации СИН-17",
+    "positive": {
+      "material": "керамика",
+      "purpose": "напольное покрытие",
+      "product_kind": "плитка",
+      "dimensions_mm": "300×300",
+      "finish": "матовая",
+      "unit": "шт"
+    },
+    "negative": {
+      "material": "другое подтверждаемое значение",
+      "purpose": "напольное покрытие",
+      "product_kind": "плитка",
+      "dimensions_mm": "300×300",
+      "finish": "матовая",
+      "unit": "шт"
+    },
+    "missing_field": "material",
+    "admission_without_documents": "blocked",
+    "route": {
+      "seller": "/seller/passport",
+      "sku": "/seller/products",
+      "need": "/needs/new",
+      "match": "/catalog",
+      "offer": "/seller/requests",
+      "approval": "/needs/{id}",
+      "resource": "/seller/capacity",
+      "execution": "/deals",
+      "report": "/buyer/analytics",
+      "repeat": "/needs/{id}"
+    },
+    "remaining_acceptance_tasks": [
+      "S02.03",
+      "S03.01",
+      "S04.01",
+      "S05.01",
+      "S15.01"
+    ]
+  },
+  {
+    "category_id": "construction.fasteners",
+    "category": "Строительство",
+    "subcategory": "Крепёж",
+    "subject": "Крепёж по синтетической спецификации СИН-18",
+    "positive": {
+      "material": "сталь",
+      "standard": "синтетическая спецификация СП-01",
+      "product_kind": "болт",
+      "diameter_mm": 8,
+      "length_mm": 40,
+      "thread": "М8",
+      "unit": "шт"
+    },
+    "negative": {
+      "material": "другое подтверждаемое значение",
+      "standard": "синтетическая спецификация СП-01",
+      "product_kind": "болт",
+      "diameter_mm": 8,
+      "length_mm": 40,
+      "thread": "М8",
+      "unit": "шт"
+    },
+    "missing_field": "material",
+    "admission_without_documents": "blocked",
+    "route": {
+      "seller": "/seller/passport",
+      "sku": "/seller/products",
+      "need": "/needs/new",
+      "match": "/catalog",
+      "offer": "/seller/requests",
+      "approval": "/needs/{id}",
+      "resource": "/seller/capacity",
+      "execution": "/deals",
+      "report": "/buyer/analytics",
+      "repeat": "/needs/{id}"
+    },
+    "remaining_acceptance_tasks": [
+      "S02.03",
+      "S03.01",
+      "S04.01",
+      "S05.01",
+      "S15.01"
+    ]
+  },
+  {
+    "category_id": "construction.engineering",
+    "category": "Строительство",
+    "subcategory": "Инженерные системы",
+    "subject": "Инженерные системы по синтетической спецификации СИН-19",
+    "positive": {
+      "model": "СИН-М01",
+      "dimensions_mm": "400×300×300",
+      "purpose": "поставка для российского предприятия",
+      "unit": "шт"
+    },
+    "negative": {
+      "model": "другое подтверждаемое значение",
+      "dimensions_mm": "400×300×300",
+      "purpose": "поставка для российского предприятия",
+      "unit": "шт"
+    },
+    "missing_field": "model",
+    "admission_without_documents": "blocked",
+    "route": {
+      "seller": "/seller/passport",
+      "sku": "/seller/products",
+      "need": "/needs/new",
+      "match": "/catalog",
+      "offer": "/seller/requests",
+      "approval": "/needs/{id}",
+      "resource": "/seller/capacity",
+      "execution": "/deals",
+      "report": "/buyer/analytics",
+      "repeat": "/needs/{id}"
+    },
+    "remaining_acceptance_tasks": [
+      "S02.03",
+      "S03.01",
+      "S04.01",
+      "S05.01",
+      "S15.01"
+    ]
+  },
+  {
+    "category_id": "construction.tools",
+    "category": "Строительство",
+    "subcategory": "Инструмент",
+    "subject": "Инструмент по синтетической спецификации СИН-20",
+    "positive": {
+      "model": "СИН-М01",
+      "material": "сталь",
+      "purpose": "поставка для российского предприятия",
+      "unit": "шт"
+    },
+    "negative": {
+      "model": "другое подтверждаемое значение",
+      "material": "сталь",
+      "purpose": "поставка для российского предприятия",
+      "unit": "шт"
+    },
+    "missing_field": "model",
+    "admission_without_documents": "blocked",
+    "route": {
+      "seller": "/seller/passport",
+      "sku": "/seller/products",
+      "need": "/needs/new",
+      "match": "/catalog",
+      "offer": "/seller/requests",
+      "approval": "/needs/{id}",
+      "resource": "/seller/capacity",
+      "execution": "/deals",
+      "report": "/buyer/analytics",
+      "repeat": "/needs/{id}"
+    },
+    "remaining_acceptance_tasks": [
+      "S02.03",
+      "S03.01",
+      "S04.01",
+      "S05.01",
+      "S15.01"
+    ]
+  },
+  {
+    "category_id": "food.drinks",
+    "category": "Продукты питания",
+    "subcategory": "Напитки",
+    "subject": "Напитки по синтетической спецификации СИН-21",
+    "positive": {
+      "composition": "вода питьевая",
+      "volume_ml": 400,
+      "storage_conditions": "от +2 до +25 °C",
+      "shelf_life_days": 180,
+      "unit": "шт"
+    },
+    "negative": {
+      "composition": "другое подтверждаемое значение",
+      "volume_ml": 400,
+      "storage_conditions": "от +2 до +25 °C",
+      "shelf_life_days": 180,
+      "unit": "шт"
+    },
+    "missing_field": "composition",
+    "admission_without_documents": "blocked",
+    "route": {
+      "seller": "/seller/passport",
+      "sku": "/seller/products",
+      "need": "/needs/new",
+      "match": "/catalog",
+      "offer": "/seller/requests",
+      "approval": "/needs/{id}",
+      "resource": "/seller/capacity",
+      "execution": "/deals",
+      "report": "/buyer/analytics",
+      "repeat": "/needs/{id}"
+    },
+    "remaining_acceptance_tasks": [
+      "S02.03",
+      "S03.01",
+      "S04.01",
+      "S05.01",
+      "S15.01"
+    ]
+  },
+  {
+    "category_id": "food.groceries",
+    "category": "Продукты питания",
+    "subcategory": "Бакалея",
+    "subject": "Бакалея по синтетической спецификации СИН-22",
+    "positive": {
+      "composition": "крупа рисовая",
+      "grade": "сорт 1",
+      "storage_conditions": "сухое помещение",
+      "shelf_life_days": 30,
+      "unit": "шт"
+    },
+    "negative": {
+      "composition": "другое подтверждаемое значение",
+      "grade": "сорт 1",
+      "storage_conditions": "сухое помещение",
+      "shelf_life_days": 30,
+      "unit": "шт"
+    },
+    "missing_field": "composition",
+    "admission_without_documents": "blocked",
+    "route": {
+      "seller": "/seller/passport",
+      "sku": "/seller/products",
+      "need": "/needs/new",
+      "match": "/catalog",
+      "offer": "/seller/requests",
+      "approval": "/needs/{id}",
+      "resource": "/seller/capacity",
+      "execution": "/deals",
+      "report": "/buyer/analytics",
+      "repeat": "/needs/{id}"
+    },
+    "remaining_acceptance_tasks": [
+      "S02.03",
+      "S03.01",
+      "S04.01",
+      "S05.01",
+      "S15.01"
+    ]
+  },
+  {
+    "category_id": "food.frozen",
+    "category": "Продукты питания",
+    "subcategory": "Замороженная продукция",
+    "subject": "Замороженная продукция по синтетической спецификации СИН-23",
+    "positive": {
+      "composition": "овощная смесь",
+      "storage_conditions": "хранить при -18 °C",
+      "temperature_min_c": -20,
+      "temperature_max_c": -18,
+      "shelf_life_days": 30,
+      "unit": "шт"
+    },
+    "negative": {
+      "composition": "другое подтверждаемое значение",
+      "storage_conditions": "хранить при -18 °C",
+      "temperature_min_c": -20,
+      "temperature_max_c": -18,
+      "shelf_life_days": 30,
+      "unit": "шт"
+    },
+    "missing_field": "composition",
+    "admission_without_documents": "blocked",
+    "route": {
+      "seller": "/seller/passport",
+      "sku": "/seller/products",
+      "need": "/needs/new",
+      "match": "/catalog",
+      "offer": "/seller/requests",
+      "approval": "/needs/{id}",
+      "resource": "/seller/capacity",
+      "execution": "/deals",
+      "report": "/buyer/analytics",
+      "repeat": "/needs/{id}"
+    },
+    "remaining_acceptance_tasks": [
+      "S02.03",
+      "S03.01",
+      "S04.01",
+      "S05.01",
+      "S15.01"
+    ]
+  },
+  {
+    "category_id": "food.ingredients",
+    "category": "Продукты питания",
+    "subcategory": "Ингредиенты",
+    "subject": "Ингредиенты по синтетической спецификации СИН-24",
+    "positive": {
+      "composition": "синтетическая рецептура И-01",
+      "grade": "сорт 1",
+      "purpose": "пищевое производство",
+      "storage_conditions": "сухое помещение, герметичная упаковка",
+      "shelf_life_days": 30,
+      "unit": "кг"
+    },
+    "negative": {
+      "composition": "другое подтверждаемое значение",
+      "grade": "сорт 1",
+      "purpose": "пищевое производство",
+      "storage_conditions": "сухое помещение, герметичная упаковка",
+      "shelf_life_days": 30,
+      "unit": "кг"
+    },
+    "missing_field": "composition",
+    "admission_without_documents": "blocked",
+    "route": {
+      "seller": "/seller/passport",
+      "sku": "/seller/products",
+      "need": "/needs/new",
+      "match": "/catalog",
+      "offer": "/seller/requests",
+      "approval": "/needs/{id}",
+      "resource": "/seller/capacity",
+      "execution": "/deals",
+      "report": "/buyer/analytics",
+      "repeat": "/needs/{id}"
+    },
+    "remaining_acceptance_tasks": [
+      "S02.03",
+      "S03.01",
+      "S04.01",
+      "S05.01",
+      "S15.01"
+    ]
+  },
+  {
+    "category_id": "business-supplies.stationery",
+    "category": "Товары для бизнеса",
+    "subcategory": "Канцелярия",
+    "subject": "Канцелярия по синтетической спецификации СИН-25",
+    "positive": {
+      "material": "бумага",
+      "format": "А4",
+      "unit": "шт"
+    },
+    "negative": {
+      "material": "другое подтверждаемое значение",
+      "format": "А4",
+      "unit": "шт"
+    },
+    "missing_field": "material",
+    "admission_without_documents": "blocked",
+    "route": {
+      "seller": "/seller/passport",
+      "sku": "/seller/products",
+      "need": "/needs/new",
+      "match": "/catalog",
+      "offer": "/seller/requests",
+      "approval": "/needs/{id}",
+      "resource": "/seller/capacity",
+      "execution": "/deals",
+      "report": "/buyer/analytics",
+      "repeat": "/needs/{id}"
+    },
+    "remaining_acceptance_tasks": [
+      "S02.03",
+      "S03.01",
+      "S04.01",
+      "S05.01",
+      "S15.01"
+    ]
+  },
+  {
+    "category_id": "business-supplies.household",
+    "category": "Товары для бизнеса",
+    "subcategory": "Хозяйственные товары",
+    "subject": "Хозяйственные товары по синтетической спецификации СИН-26",
+    "positive": {
+      "material": "полипропилен",
+      "purpose": "уборка помещения",
+      "dimensions_mm": "400×300×300",
+      "unit": "шт"
+    },
+    "negative": {
+      "material": "другое подтверждаемое значение",
+      "purpose": "уборка помещения",
+      "dimensions_mm": "400×300×300",
+      "unit": "шт"
+    },
+    "missing_field": "material",
+    "admission_without_documents": "blocked",
+    "route": {
+      "seller": "/seller/passport",
+      "sku": "/seller/products",
+      "need": "/needs/new",
+      "match": "/catalog",
+      "offer": "/seller/requests",
+      "approval": "/needs/{id}",
+      "resource": "/seller/capacity",
+      "execution": "/deals",
+      "report": "/buyer/analytics",
+      "repeat": "/needs/{id}"
+    },
+    "remaining_acceptance_tasks": [
+      "S02.03",
+      "S03.01",
+      "S04.01",
+      "S05.01",
+      "S15.01"
+    ]
+  },
+  {
+    "category_id": "business-supplies.workwear",
+    "category": "Товары для бизнеса",
+    "subcategory": "Спецодежда",
+    "subject": "Спецодежда по синтетической спецификации СИН-27",
+    "positive": {
+      "composition": "65% полиэстер, 35% хлопок",
+      "size": "52",
+      "purpose": "обычная рабочая одежда, без защитных свойств",
+      "unit": "шт"
+    },
+    "negative": {
+      "composition": "другое подтверждаемое значение",
+      "size": "52",
+      "purpose": "обычная рабочая одежда, без защитных свойств",
+      "unit": "шт"
+    },
+    "missing_field": "composition",
+    "admission_without_documents": "blocked",
+    "route": {
+      "seller": "/seller/passport",
+      "sku": "/seller/products",
+      "need": "/needs/new",
+      "match": "/catalog",
+      "offer": "/seller/requests",
+      "approval": "/needs/{id}",
+      "resource": "/seller/capacity",
+      "execution": "/deals",
+      "report": "/buyer/analytics",
+      "repeat": "/needs/{id}"
+    },
+    "remaining_acceptance_tasks": [
+      "S02.03",
+      "S03.01",
+      "S04.01",
+      "S05.01",
+      "S15.01"
+    ]
+  },
+  {
+    "category_id": "business-supplies.furniture",
+    "category": "Товары для бизнеса",
+    "subcategory": "Мебель",
+    "subject": "Мебель по синтетической спецификации СИН-28",
+    "positive": {
+      "material": "ЛДСП",
+      "dimensions_mm": "400×300×300",
+      "finish": "матовая",
+      "unit": "шт"
+    },
+    "negative": {
+      "material": "другое подтверждаемое значение",
+      "dimensions_mm": "400×300×300",
+      "finish": "матовая",
+      "unit": "шт"
+    },
+    "missing_field": "material",
+    "admission_without_documents": "blocked",
+    "route": {
+      "seller": "/seller/passport",
+      "sku": "/seller/products",
+      "need": "/needs/new",
+      "match": "/catalog",
+      "offer": "/seller/requests",
+      "approval": "/needs/{id}",
+      "resource": "/seller/capacity",
+      "execution": "/deals",
+      "report": "/buyer/analytics",
+      "repeat": "/needs/{id}"
+    },
+    "remaining_acceptance_tasks": [
+      "S02.03",
+      "S03.01",
+      "S04.01",
+      "S05.01",
+      "S15.01"
+    ]
+  },
+  {
+    "category_id": "electronics.components",
+    "category": "Электроника",
+    "subcategory": "Компоненты",
+    "subject": "Компоненты по синтетической спецификации СИН-29",
+    "positive": {
+      "model": "СИН-КБ-01",
+      "product_kind": "кабель",
+      "voltage_v": 660,
+      "unit": "шт"
+    },
+    "negative": {
+      "model": "другое подтверждаемое значение",
+      "product_kind": "кабель",
+      "voltage_v": 660,
+      "unit": "шт"
+    },
+    "missing_field": "model",
+    "admission_without_documents": "blocked",
+    "route": {
+      "seller": "/seller/passport",
+      "sku": "/seller/products",
+      "need": "/needs/new",
+      "match": "/catalog",
+      "offer": "/seller/requests",
+      "approval": "/needs/{id}",
+      "resource": "/seller/capacity",
+      "execution": "/deals",
+      "report": "/buyer/analytics",
+      "repeat": "/needs/{id}"
+    },
+    "remaining_acceptance_tasks": [
+      "S02.03",
+      "S03.01",
+      "S04.01",
+      "S05.01",
+      "S15.01"
+    ]
+  },
+  {
+    "category_id": "electronics.computers",
+    "category": "Электроника",
+    "subcategory": "Компьютерная техника",
+    "subject": "Компьютерная техника по синтетической спецификации СИН-30",
+    "positive": {
+      "model": "СИН-М01",
+      "interface": "USB-C",
+      "unit": "шт"
+    },
+    "negative": {
+      "model": "другое подтверждаемое значение",
+      "interface": "USB-C",
+      "unit": "шт"
+    },
+    "missing_field": "model",
+    "admission_without_documents": "blocked",
+    "route": {
+      "seller": "/seller/passport",
+      "sku": "/seller/products",
+      "need": "/needs/new",
+      "match": "/catalog",
+      "offer": "/seller/requests",
+      "approval": "/needs/{id}",
+      "resource": "/seller/capacity",
+      "execution": "/deals",
+      "report": "/buyer/analytics",
+      "repeat": "/needs/{id}"
+    },
+    "remaining_acceptance_tasks": [
+      "S02.03",
+      "S03.01",
+      "S04.01",
+      "S05.01",
+      "S15.01"
+    ]
+  },
+  {
+    "category_id": "electronics.communication",
+    "category": "Электроника",
+    "subcategory": "Связь",
+    "subject": "Связь по синтетической спецификации СИН-31",
+    "positive": {
+      "model": "СИН-М01",
+      "interface": "Ethernet",
+      "purpose": "передача данных",
+      "unit": "шт"
+    },
+    "negative": {
+      "model": "другое подтверждаемое значение",
+      "interface": "Ethernet",
+      "purpose": "передача данных",
+      "unit": "шт"
+    },
+    "missing_field": "model",
+    "admission_without_documents": "blocked",
+    "route": {
+      "seller": "/seller/passport",
+      "sku": "/seller/products",
+      "need": "/needs/new",
+      "match": "/catalog",
+      "offer": "/seller/requests",
+      "approval": "/needs/{id}",
+      "resource": "/seller/capacity",
+      "execution": "/deals",
+      "report": "/buyer/analytics",
+      "repeat": "/needs/{id}"
+    },
+    "remaining_acceptance_tasks": [
+      "S02.03",
+      "S03.01",
+      "S04.01",
+      "S05.01",
+      "S15.01"
+    ]
+  },
+  {
+    "category_id": "electronics.automation",
+    "category": "Электроника",
+    "subcategory": "Автоматизация",
+    "subject": "Автоматизация по синтетической спецификации СИН-32",
+    "positive": {
+      "model": "СИН-М01",
+      "voltage_v": 220,
+      "interface": "Ethernet",
+      "process": "управление производственной линией",
+      "unit": "шт"
+    },
+    "negative": {
+      "model": "другое подтверждаемое значение",
+      "voltage_v": 220,
+      "interface": "Ethernet",
+      "process": "управление производственной линией",
+      "unit": "шт"
+    },
+    "missing_field": "model",
+    "admission_without_documents": "blocked",
+    "route": {
+      "seller": "/seller/passport",
+      "sku": "/seller/products",
+      "need": "/needs/new",
+      "match": "/catalog",
+      "offer": "/seller/requests",
+      "approval": "/needs/{id}",
+      "resource": "/seller/capacity",
+      "execution": "/deals",
+      "report": "/buyer/analytics",
+      "repeat": "/needs/{id}"
+    },
+    "remaining_acceptance_tasks": [
+      "S02.03",
+      "S03.01",
+      "S04.01",
+      "S05.01",
+      "S15.01"
+    ]
+  },
+  {
+    "category_id": "transport.containers",
+    "category": "Транспорт и логистика",
+    "subcategory": "Тара для перевозки",
+    "subject": "Тара для перевозки по синтетической спецификации СИН-33",
+    "positive": {
+      "material": "сталь",
+      "dimensions_mm": "400×300×300",
+      "weight_kg": 100,
+      "unit": "шт"
+    },
+    "negative": {
+      "material": "другое подтверждаемое значение",
+      "dimensions_mm": "400×300×300",
+      "weight_kg": 100,
+      "unit": "шт"
+    },
+    "missing_field": "material",
+    "admission_without_documents": "blocked",
+    "route": {
+      "seller": "/seller/passport",
+      "sku": "/seller/products",
+      "need": "/needs/new",
+      "match": "/catalog",
+      "offer": "/seller/requests",
+      "approval": "/needs/{id}",
+      "resource": "/seller/capacity",
+      "execution": "/deals",
+      "report": "/buyer/analytics",
+      "repeat": "/needs/{id}"
+    },
+    "remaining_acceptance_tasks": [
+      "S02.03",
+      "S03.01",
+      "S04.01",
+      "S05.01",
+      "S15.01"
+    ]
+  },
+  {
+    "category_id": "transport.components",
+    "category": "Транспорт и логистика",
+    "subcategory": "Комплектующие",
+    "subject": "Комплектующие по синтетической спецификации СИН-34",
+    "positive": {
+      "model": "СИН-М01",
+      "compatibility": "СИН-М01",
+      "material": "сталь",
+      "unit": "шт"
+    },
+    "negative": {
+      "model": "другое подтверждаемое значение",
+      "compatibility": "СИН-М01",
+      "material": "сталь",
+      "unit": "шт"
+    },
+    "missing_field": "model",
+    "admission_without_documents": "blocked",
+    "route": {
+      "seller": "/seller/passport",
+      "sku": "/seller/products",
+      "need": "/needs/new",
+      "match": "/catalog",
+      "offer": "/seller/requests",
+      "approval": "/needs/{id}",
+      "resource": "/seller/capacity",
+      "execution": "/deals",
+      "report": "/buyer/analytics",
+      "repeat": "/needs/{id}"
+    },
+    "remaining_acceptance_tasks": [
+      "S02.03",
+      "S03.01",
+      "S04.01",
+      "S05.01",
+      "S15.01"
+    ]
+  },
+  {
+    "category_id": "transport.warehousing",
+    "category": "Транспорт и логистика",
+    "subcategory": "Складские услуги",
+    "subject": "Складские услуги по синтетической спецификации СИН-35",
+    "positive": {
+      "service_scope": "хранение упакованных грузов",
+      "storage_conditions": "сухое помещение, герметичная упаковка",
+      "output": "по спецификации СП-01",
+      "unit": "шт"
+    },
+    "negative": {
+      "service_scope": "другое подтверждаемое значение",
+      "storage_conditions": "сухое помещение, герметичная упаковка",
+      "output": "по спецификации СП-01",
+      "unit": "шт"
+    },
+    "missing_field": "service_scope",
+    "admission_without_documents": "blocked",
+    "route": {
+      "seller": "/seller/passport",
+      "sku": "/seller/products",
+      "need": "/needs/new",
+      "match": "/catalog",
+      "offer": "/seller/requests",
+      "approval": "/needs/{id}",
+      "resource": "/seller/capacity",
+      "execution": "/deals",
+      "report": "/buyer/analytics",
+      "repeat": "/needs/{id}"
+    },
+    "remaining_acceptance_tasks": [
+      "S02.03",
+      "S03.01",
+      "S04.01",
+      "S05.01",
+      "S15.01"
+    ]
+  },
+  {
+    "category_id": "printing.labels",
+    "category": "Полиграфия и реклама",
+    "subcategory": "Этикетки",
+    "subject": "Этикетки по синтетической спецификации СИН-36",
+    "positive": {
+      "material": "самоклеящаяся бумага",
+      "dimensions_mm": "400×300×300",
+      "finish": "матовая",
+      "unit": "шт"
+    },
+    "negative": {
+      "material": "другое подтверждаемое значение",
+      "dimensions_mm": "400×300×300",
+      "finish": "матовая",
+      "unit": "шт"
+    },
+    "missing_field": "material",
+    "admission_without_documents": "blocked",
+    "route": {
+      "seller": "/seller/passport",
+      "sku": "/seller/products",
+      "need": "/needs/new",
+      "match": "/catalog",
+      "offer": "/seller/requests",
+      "approval": "/needs/{id}",
+      "resource": "/seller/capacity",
+      "execution": "/deals",
+      "report": "/buyer/analytics",
+      "repeat": "/needs/{id}"
+    },
+    "remaining_acceptance_tasks": [
+      "S02.03",
+      "S03.01",
+      "S04.01",
+      "S05.01",
+      "S15.01"
+    ]
+  },
+  {
+    "category_id": "printing.printing",
+    "category": "Полиграфия и реклама",
+    "subcategory": "Печать",
+    "subject": "Печать по синтетической спецификации СИН-37",
+    "positive": {
+      "material": "бумага",
+      "format": "А4",
+      "process": "офсетная печать",
+      "color": "серый",
+      "unit": "шт"
+    },
+    "negative": {
+      "material": "другое подтверждаемое значение",
+      "format": "А4",
+      "process": "офсетная печать",
+      "color": "серый",
+      "unit": "шт"
+    },
+    "missing_field": "material",
+    "admission_without_documents": "blocked",
+    "route": {
+      "seller": "/seller/passport",
+      "sku": "/seller/products",
+      "need": "/needs/new",
+      "match": "/catalog",
+      "offer": "/seller/requests",
+      "approval": "/needs/{id}",
+      "resource": "/seller/capacity",
+      "execution": "/deals",
+      "report": "/buyer/analytics",
+      "repeat": "/needs/{id}"
+    },
+    "remaining_acceptance_tasks": [
+      "S02.03",
+      "S03.01",
+      "S04.01",
+      "S05.01",
+      "S15.01"
+    ]
+  },
+  {
+    "category_id": "printing.signs",
+    "category": "Полиграфия и реклама",
+    "subcategory": "Вывески",
+    "subject": "Вывески по синтетической спецификации СИН-38",
+    "positive": {
+      "material": "ПВХ",
+      "dimensions_mm": "400×300×300",
+      "process": "широкоформатная печать",
+      "unit": "шт"
+    },
+    "negative": {
+      "material": "другое подтверждаемое значение",
+      "dimensions_mm": "400×300×300",
+      "process": "широкоформатная печать",
+      "unit": "шт"
+    },
+    "missing_field": "material",
+    "admission_without_documents": "blocked",
+    "route": {
+      "seller": "/seller/passport",
+      "sku": "/seller/products",
+      "need": "/needs/new",
+      "match": "/catalog",
+      "offer": "/seller/requests",
+      "approval": "/needs/{id}",
+      "resource": "/seller/capacity",
+      "execution": "/deals",
+      "report": "/buyer/analytics",
+      "repeat": "/needs/{id}"
+    },
+    "remaining_acceptance_tasks": [
+      "S02.03",
+      "S03.01",
+      "S04.01",
+      "S05.01",
+      "S15.01"
+    ]
+  },
+  {
+    "category_id": "printing.merchandise",
+    "category": "Полиграфия и реклама",
+    "subcategory": "Сувенирная продукция",
+    "subject": "Сувенирная продукция по синтетической спецификации СИН-39",
+    "positive": {
+      "material": "хлопок",
+      "dimensions_mm": "400×300×300",
+      "process": "шелкография",
+      "unit": "шт"
+    },
+    "negative": {
+      "material": "другое подтверждаемое значение",
+      "dimensions_mm": "400×300×300",
+      "process": "шелкография",
+      "unit": "шт"
+    },
+    "missing_field": "material",
+    "admission_without_documents": "blocked",
+    "route": {
+      "seller": "/seller/passport",
+      "sku": "/seller/products",
+      "need": "/needs/new",
+      "match": "/catalog",
+      "offer": "/seller/requests",
+      "approval": "/needs/{id}",
+      "resource": "/seller/capacity",
+      "execution": "/deals",
+      "report": "/buyer/analytics",
+      "repeat": "/needs/{id}"
+    },
+    "remaining_acceptance_tasks": [
+      "S02.03",
+      "S03.01",
+      "S04.01",
+      "S05.01",
+      "S15.01"
+    ]
+  },
+  {
+    "category_id": "manufacturing-services.contract-manufacturing",
+    "category": "Услуги производства",
+    "subcategory": "Контрактное производство",
+    "subject": "Контрактное производство по синтетической спецификации СИН-40",
+    "positive": {
+      "process": "лазерная резка",
+      "material": "сталь",
+      "output": "детали по чертежу СИН-Д01",
+      "unit": "шт"
+    },
+    "negative": {
+      "process": "другое подтверждаемое значение",
+      "material": "сталь",
+      "output": "детали по чертежу СИН-Д01",
+      "unit": "шт"
+    },
+    "missing_field": "process",
+    "admission_without_documents": "blocked",
+    "route": {
+      "seller": "/seller/passport",
+      "sku": "/seller/products",
+      "need": "/needs/new",
+      "match": "/catalog",
+      "offer": "/seller/requests",
+      "approval": "/needs/{id}",
+      "resource": "/seller/capacity",
+      "execution": "/deals",
+      "report": "/buyer/analytics",
+      "repeat": "/needs/{id}"
+    },
+    "remaining_acceptance_tasks": [
+      "S02.03",
+      "S03.01",
+      "S04.01",
+      "S05.01",
+      "S15.01"
+    ]
+  },
+  {
+    "category_id": "manufacturing-services.packing",
+    "category": "Услуги производства",
+    "subcategory": "Фасовка",
+    "subject": "Фасовка по синтетической спецификации СИН-41",
+    "positive": {
+      "process": "фасовка",
+      "packaging": "герметичная тара",
+      "output": "запечатанная потребительская упаковка",
+      "unit": "шт"
+    },
+    "negative": {
+      "process": "другое подтверждаемое значение",
+      "packaging": "герметичная тара",
+      "output": "запечатанная потребительская упаковка",
+      "unit": "шт"
+    },
+    "missing_field": "process",
+    "admission_without_documents": "blocked",
+    "route": {
+      "seller": "/seller/passport",
+      "sku": "/seller/products",
+      "need": "/needs/new",
+      "match": "/catalog",
+      "offer": "/seller/requests",
+      "approval": "/needs/{id}",
+      "resource": "/seller/capacity",
+      "execution": "/deals",
+      "report": "/buyer/analytics",
+      "repeat": "/needs/{id}"
+    },
+    "remaining_acceptance_tasks": [
+      "S02.03",
+      "S03.01",
+      "S04.01",
+      "S05.01",
+      "S15.01"
+    ]
+  },
+  {
+    "category_id": "manufacturing-services.processing",
+    "category": "Услуги производства",
+    "subcategory": "Обработка",
+    "subject": "Обработка по синтетической спецификации СИН-42",
+    "positive": {
+      "process": "токарная обработка",
+      "material": "сталь",
+      "dimensions_mm": "400×300×300",
+      "standard": "синтетическая спецификация СП-01",
+      "unit": "шт"
+    },
+    "negative": {
+      "process": "другое подтверждаемое значение",
+      "material": "сталь",
+      "dimensions_mm": "400×300×300",
+      "standard": "синтетическая спецификация СП-01",
+      "unit": "шт"
+    },
+    "missing_field": "process",
+    "admission_without_documents": "blocked",
+    "route": {
+      "seller": "/seller/passport",
+      "sku": "/seller/products",
+      "need": "/needs/new",
+      "match": "/catalog",
+      "offer": "/seller/requests",
+      "approval": "/needs/{id}",
+      "resource": "/seller/capacity",
+      "execution": "/deals",
+      "report": "/buyer/analytics",
+      "repeat": "/needs/{id}"
+    },
+    "remaining_acceptance_tasks": [
+      "S02.03",
+      "S03.01",
+      "S04.01",
+      "S05.01",
+      "S15.01"
+    ]
+  },
+  {
+    "category_id": "manufacturing-services.assembly",
+    "category": "Услуги производства",
+    "subcategory": "Сборка",
+    "subject": "Сборка по синтетической спецификации СИН-43",
+    "positive": {
+      "process": "сборка по инструкции СИН-И01",
+      "compatibility": "СИН-М01",
+      "output": "собранный узел СИН-У01",
+      "unit": "шт"
+    },
+    "negative": {
+      "process": "другое подтверждаемое значение",
+      "compatibility": "СИН-М01",
+      "output": "собранный узел СИН-У01",
+      "unit": "шт"
+    },
+    "missing_field": "process",
+    "admission_without_documents": "blocked",
+    "route": {
+      "seller": "/seller/passport",
+      "sku": "/seller/products",
+      "need": "/needs/new",
+      "match": "/catalog",
+      "offer": "/seller/requests",
+      "approval": "/needs/{id}",
+      "resource": "/seller/capacity",
+      "execution": "/deals",
+      "report": "/buyer/analytics",
+      "repeat": "/needs/{id}"
+    },
+    "remaining_acceptance_tasks": [
+      "S02.03",
+      "S03.01",
+      "S04.01",
+      "S05.01",
+      "S15.01"
+    ]
+  },
+  {
+    "category_id": "medical-hygiene.consumables",
+    "category": "Медицина и гигиена",
+    "subcategory": "Расходные материалы",
+    "subject": "Расходные материалы по синтетической спецификации СИН-44",
+    "positive": {
+      "material": "нетканое полотно",
+      "size": "52",
+      "purpose": "медицинское назначение",
+      "unit": "шт"
+    },
+    "negative": {
+      "material": "другое подтверждаемое значение",
+      "size": "52",
+      "purpose": "медицинское назначение",
+      "unit": "шт"
+    },
+    "missing_field": "material",
+    "admission_without_documents": "unsupported",
+    "route": {
+      "seller": "/seller/passport",
+      "sku": "/seller/products",
+      "need": "/needs/new",
+      "match": "/catalog",
+      "offer": "/seller/requests",
+      "approval": "/needs/{id}",
+      "resource": "/seller/capacity",
+      "execution": "/deals",
+      "report": "/buyer/analytics",
+      "repeat": "/needs/{id}"
+    },
+    "remaining_acceptance_tasks": [
+      "S02.03",
+      "S03.01",
+      "S04.01",
+      "S05.01",
+      "S15.01"
+    ]
+  },
+  {
+    "category_id": "medical-hygiene.protection",
+    "category": "Медицина и гигиена",
+    "subcategory": "Средства защиты",
+    "subject": "Средства защиты по синтетической спецификации СИН-45",
+    "positive": {
+      "material": "нетканое полотно",
+      "size": "52",
+      "purpose": "обычная защитная одежда; свойства требуют проверки",
+      "unit": "шт"
+    },
+    "negative": {
+      "material": "другое подтверждаемое значение",
+      "size": "52",
+      "purpose": "обычная защитная одежда; свойства требуют проверки",
+      "unit": "шт"
+    },
+    "missing_field": "material",
+    "admission_without_documents": "blocked",
+    "route": {
+      "seller": "/seller/passport",
+      "sku": "/seller/products",
+      "need": "/needs/new",
+      "match": "/catalog",
+      "offer": "/seller/requests",
+      "approval": "/needs/{id}",
+      "resource": "/seller/capacity",
+      "execution": "/deals",
+      "report": "/buyer/analytics",
+      "repeat": "/needs/{id}"
+    },
+    "remaining_acceptance_tasks": [
+      "S02.03",
+      "S03.01",
+      "S04.01",
+      "S05.01",
+      "S15.01"
+    ]
+  },
+  {
+    "category_id": "medical-hygiene.hygiene",
+    "category": "Медицина и гигиена",
+    "subcategory": "Гигиеническая продукция",
+    "subject": "Гигиеническая продукция по синтетической спецификации СИН-46",
+    "positive": {
+      "composition": "синтетическая рецептура Г-01",
+      "purpose": "гигиеническая уборка",
+      "packaging": "герметичная тара",
+      "unit": "шт"
+    },
+    "negative": {
+      "composition": "другое подтверждаемое значение",
+      "purpose": "гигиеническая уборка",
+      "packaging": "герметичная тара",
+      "unit": "шт"
+    },
+    "missing_field": "composition",
+    "admission_without_documents": "blocked",
+    "route": {
+      "seller": "/seller/passport",
+      "sku": "/seller/products",
+      "need": "/needs/new",
+      "match": "/catalog",
+      "offer": "/seller/requests",
+      "approval": "/needs/{id}",
+      "resource": "/seller/capacity",
+      "execution": "/deals",
+      "report": "/buyer/analytics",
+      "repeat": "/needs/{id}"
+    },
+    "remaining_acceptance_tasks": [
+      "S02.03",
+      "S03.01",
+      "S04.01",
+      "S05.01",
+      "S15.01"
+    ]
+  },
+  {
+    "category_id": "other.other-products",
+    "category": "Другое",
+    "subcategory": "Другая продукция",
+    "subject": "Другая продукция по синтетической спецификации СИН-47",
+    "positive": {
+      "purpose": "организация рабочего места",
+      "material": "дерево",
+      "dimensions_mm": "400×300×300",
+      "unit": "шт"
+    },
+    "negative": {
+      "purpose": "другое подтверждаемое значение",
+      "material": "дерево",
+      "dimensions_mm": "400×300×300",
+      "unit": "шт"
+    },
+    "missing_field": "purpose",
+    "admission_without_documents": "blocked",
+    "route": {
+      "seller": "/seller/passport",
+      "sku": "/seller/products",
+      "need": "/needs/new",
+      "match": "/catalog",
+      "offer": "/seller/requests",
+      "approval": "/needs/{id}",
+      "resource": "/seller/capacity",
+      "execution": "/deals",
+      "report": "/buyer/analytics",
+      "repeat": "/needs/{id}"
+    },
+    "remaining_acceptance_tasks": [
+      "S02.03",
+      "S03.01",
+      "S04.01",
+      "S05.01",
+      "S15.01"
+    ]
+  }
+]

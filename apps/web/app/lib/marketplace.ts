@@ -54,9 +54,12 @@ export interface CategoryProfileSnapshot {
   state: string;
   fields: Record<string, { label: string; type: string; aliases: string[]; unit?: string; positive?: boolean; max_length?: number }>;
   required_for_product: string[];
+  passport?: Record<string, unknown>;
 }
 
+export interface PackagingDefinition {from_unit:string;to_unit:string;factor:number;specification_hash:string;review_hash:string}
 export interface Product {
+  quantity_conversion?: PackagingDefinition | null;
   id: string;
   company_id: string;
   name: string;
@@ -89,6 +92,8 @@ export interface MarketWatch { id: string; category: string; demand_changes: boo
 export interface BuyerSavings { company_id: string; confirmed_savings_rub: number; calculated_variants_rub: number; coalitions_count: number; explanation: string }
 
 export interface CapacityEntry {
+  category_conversions?: {category_id: string; order_unit: string; resource_units_per_order_unit: number; profile_version?: number}[];
+  conversions_approved?: boolean;
   reserved_units?: number;
   free_units?: number;
   /** Дата в формате YYYY-MM-DD. */
@@ -204,8 +209,13 @@ export const CONFIRMABLE_ATTRIBUTES: { value: string; label: string }[] = [
   { value: "purpose", label: "Назначение" },
 ];
 
+export interface CategoryCapability {
+  category_id: string; unit: string; characteristics: Record<string, unknown[]>;
+  min_units: number; max_units: number | null; profile_version?: number;
+}
 export interface CapabilityDetails {
   business_kind: "manufacturer" | "stock_supplier" | "both";
+  category_scopes?: CategoryCapability[];
   product_types: string;
   complexity: string;
   material_grades: string;
@@ -515,6 +525,7 @@ export interface UpdateProductionProfileInput {
 }
 
 export interface CreateProductInput {
+  quantity_conversion_approved?: boolean;
   stock_units?: number | null;
   name: string;
   category: string;
@@ -529,6 +540,7 @@ export interface CreateProductInput {
 export type UpdateProductInput = Partial<CreateProductInput>;
 
 export interface CreateNeedInput {
+  quantity_conversion_approved?: boolean;
   request_key?: string;
   company_id: string;
   category: string;
@@ -731,9 +743,9 @@ export function formatCharacteristics(characteristics: Record<string, unknown>, 
   return entries.map(([key, value]) => `${characteristicLabel(key, profile)}: ${String(value)}`).join(" · ");
 }
 
-export function formatRub(value: number | null | undefined): string {
+export function formatRub(value: number | null | undefined, maximumFractionDigits = 2): string {
   if (value === null || value === undefined) return "—";
-  return new Intl.NumberFormat("ru-RU", { maximumFractionDigits: 2 }).format(value) + " ₽";
+  return new Intl.NumberFormat("ru-RU", { maximumFractionDigits }).format(value) + " ₽";
 }
 
 export function itemUnit(characteristics?: Record<string, unknown>): string {
@@ -911,7 +923,50 @@ export interface CommercialReport {
   group_orders: { order_id: string; coalition_id: string; category: string; unit: string; created_at: string; status: string; units: number; contract_value_rub: number; payments_rub: null }[];
 }
 
+export interface EditableCategoryProfile {
+  version: number; state: string; fields: string[]; required_for_product: string[];
+  passport: Record<string, unknown>;
+}
+export interface EditorRegistry {
+  registry_hash: string;
+  registry: { registry_version: string; characteristic_fields: Record<string, { label: string; type: string; aliases: string[]; unit?: string; positive?: boolean }>;
+    groups: { label: string; leaves: { id: string; label: string; admission_state: string; technical_profile: EditableCategoryProfile }[] }[] };
+}
+export interface QuantityConversionPreview {
+  input_unit: string; stored_unit: string; factor: number;
+  quantities: Record<string, number | null>; price_rub: number | null; price_tiers?: {min_units:number;unit_price_rub:number}[];
+}
+export interface ProfileRevisionPreview {
+  state: "current" | "update_available" | "unknown" | "unclassified";
+  expected_specification_hash: string;
+  expected_snapshot_hash: string;
+  expected_current_hash: string;
+  previous: CategoryProfileSnapshot | null;
+  current: CategoryProfileSnapshot | null;
+  changes: { label: string; kind: "added" | "removed" | "changed"; before: unknown; after: unknown }[];
+}
+
 export const marketplace = {
+  reviewPackaging(token:string,id:string,input:{target_unit:string;factor:number;approved:boolean;expected_specification_hash?:string;expected_review_hash?:string}):Promise<PackagingDefinition> {return marketplaceFetch(`/api/v1/products/${id}/packaging-conversion`,{token,method:"POST",body:JSON.stringify(input)});},
+  getCategoryRegistry(): Promise<EditorRegistry["registry"]> { return marketplaceFetch("/api/v1/categories/profiles"); },
+  getEditorRegistry(token: string): Promise<EditorRegistry> { return marketplaceFetch("/api/v1/editor/categories", { token }); },
+  reviewCategoryRules(token: string, input: { category_id: string; expected_registry_hash: string; technical_profile: EditableCategoryProfile; reason: string; approved: boolean }, publish = false): Promise<EditorRegistry> {
+    return marketplaceFetch(`/api/v1/editor/categories/${publish ? "publish" : "preview"}`, { token, method: "POST", body: JSON.stringify(input) });
+  },
+  downloadEditorDocument(token: string, id: string): Promise<Blob> { return marketplaceFetchBlob(`/api/v1/editor/documents/${id}/download`, token); },
+  previewPhysicalQuantity(kind: "product" | "need", values: Record<string, unknown>): Promise<{ normalized: Record<string, unknown>; conversion: QuantityConversionPreview }> {
+    return marketplaceFetch("/api/v2/physical-quantities/preview", { method: "POST", body: JSON.stringify({ kind, values }) });
+  },
+  getProfileRevision(token: string, kind: "products" | "needs", id: string): Promise<ProfileRevisionPreview> {
+    return marketplaceFetch(`/api/v1/${kind}/${id}/category-profile`, { token });
+  },
+  adoptProfileRevision(token: string, kind: "products" | "needs", id: string, preview: ProfileRevisionPreview, revision?: number): Promise<ProfileRevisionPreview> {
+    return marketplaceFetch(`/api/v1/${kind}/${id}/category-profile/adopt`, { token, method: "POST", body: JSON.stringify({
+      approved: true, expected_snapshot_hash: preview.expected_snapshot_hash,
+      expected_specification_hash: preview.expected_specification_hash,
+      expected_current_hash: preview.expected_current_hash, expected_revision: revision,
+    }) });
+  },
   getExecution(token: string, dealId: string, companyId: string): Promise<DealExecution> {
     return marketplaceFetch(`/api/v1/deals/${dealId}/execution?company_id=${companyId}`, { token });
   },
@@ -1021,7 +1076,7 @@ export const marketplace = {
   },
 
   createProduct(token: string, companyId: string, input: CreateProductInput): Promise<Product> {
-    return marketplaceFetch(`/api/v1/companies/${companyId}/products`, {
+    return marketplaceFetch(`/api/v2/companies/${companyId}/products`, {
       method: "POST",
       token,
       body: JSON.stringify(input),
@@ -1029,7 +1084,7 @@ export const marketplace = {
   },
 
   updateProduct(token: string, productId: string, input: UpdateProductInput): Promise<Product> {
-    return marketplaceFetch(`/api/v1/products/${productId}`, {
+    return marketplaceFetch(`${input.characteristics ? "/api/v2" : "/api/v1"}/products/${productId}`, {
       method: "PATCH",
       token,
       body: JSON.stringify(input),
@@ -1172,6 +1227,7 @@ export const marketplace = {
     });
   },
 
+  getEditorDocuments(token: string, status: "unverified" | "verified" | "rejected"): Promise<PendingDocument[]> { return marketplaceFetch(`/api/v1/editor/documents?verification_status=${status}&limit=200`, {token}); },
   getPendingDocuments(token: string): Promise<PendingDocument[]> {
     return marketplaceFetch("/api/v1/admin/documents/pending", { token }).then((body) =>
       unwrapList<PendingDocument>(body, ["documents", "items"]),
@@ -1232,11 +1288,11 @@ export const marketplace = {
   },
 
   createNeed(token: string, input: CreateNeedInput): Promise<Need> {
-    return marketplaceFetch("/api/v1/needs", { method: "POST", token, body: JSON.stringify(input) });
+    return marketplaceFetch("/api/v2/needs", { method: "POST", token, body: JSON.stringify(input) });
   },
 
   editNeed(token: string, needId: string, input: Omit<CreateNeedInput, "budget_rub" | "delivery_address_id"> & { budget_rub: number | null; delivery_address_id: string | null; expected_revision: number }): Promise<Need> {
-    return marketplaceFetch(`/api/v1/needs/${needId}`, { method: "PUT", token, body: JSON.stringify(input) });
+    return marketplaceFetch(`/api/v2/needs/${needId}`, { method: "PUT", token, body: JSON.stringify(input) });
   },
 
   publishNeed(token: string, needId: string): Promise<Need> {

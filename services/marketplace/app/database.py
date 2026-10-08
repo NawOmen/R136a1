@@ -13,4 +13,6 @@ class Base(DeclarativeBase):
 
 async def get_db():
     async with SessionLocal() as session:
-        yield session
+        from .category_runtime import current_registry_context
+        async with current_registry_context(session):
+            yield session

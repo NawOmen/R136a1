@@ -16,7 +16,7 @@ from sqlalchemy import select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from .category_admission import evaluate_admission
-from .models import Document, Product
+from .models import Document, Product, CapabilityPassport
 from .schemas import CategoryAdmissionOut, RequirementStatusOut
 
 BUYER_CHECKLIST_NOTE = (
@@ -34,6 +34,9 @@ class SpecificationCheck:
     characteristics: dict = field(default_factory=dict)
     moq_units: int = 1
     label: str = ""
+    product_id: uuid.UUID | None = None
+    volume_units: int | None = None
+    category_profile: dict | None = None
 
 
 async def company_documents(db: AsyncSession, company_id: uuid.UUID) -> list[Document]:
@@ -120,6 +123,21 @@ async def require_company_admission(
     context: str,
 ) -> CategoryAdmissionOut:
     """Проверить допуск компании к обязательству и остановить его при пробелах."""
+    from .category_registry import resolve_category
+    if check.product_id is not None:
+        from .category_compatibility import compare_specifications
+        from types import SimpleNamespace
+        product=await db.get(Product,check.product_id)
+        if product is None or product.company_id!=company_id:
+            raise HTTPException(409,"Товар обязательства недоступен продавцу")
+        requested=SimpleNamespace(category=check.category,subcategory=check.subcategory,characteristics=check.characteristics,
+            category_profile=check.category_profile,volume_units=check.volume_units or check.moq_units)
+        compatibility=compare_specifications(product,requested)
+        if not compatibility.matches:raise HTTPException(409,"Товар обязательства не соответствует потребности: "+compatibility.reason)
+        check=SpecificationCheck(category=product.category,subcategory=product.subcategory,characteristics=product.characteristics,
+            moq_units=check.moq_units,label=check.label,product_id=product.id,volume_units=check.volume_units,category_profile=product.category_profile)
+    if resolve_category(check.category,check.subcategory) is None:
+        raise HTTPException(409,(context+": " if context else "")+"Выберите известную листовую категорию; исходная классификация не подтверждена")
     admission = await company_admission(
         db,
         company_id,
@@ -131,6 +149,27 @@ async def require_company_admission(
     if admission.blocking_open:
         prefix = f"{context}: " if context else ""
         raise HTTPException(status.HTTP_409_CONFLICT, detail=f"{prefix}{admission.blocking_message}")
+    from .category_characteristics import validate_profile_values
+    errors = validate_profile_values(check.category, check.subcategory, check.characteristics or {}, require_product_fields=True)
+    if errors:
+        raise HTTPException(409, (context + ": " if context else "") + "; ".join(errors))
+    if check.product_id is not None:
+        from .trust import append_audit_event
+        await append_audit_event(db,event_type="product_specification_checked",entity_type="product",entity_id=check.product_id,
+            actor_company_id=company_id,source_refs=[{"type":"product","id":str(check.product_id)}],
+            payload={"admission":admission_audit_payload(admission,specification={"category":check.category,"subcategory":check.subcategory,
+                "characteristics":check.characteristics,"category_profile":check.category_profile,"moq_units":check.moq_units,"volume_units":check.volume_units})},
+            explanation="Перед обязательством проверена полная спецификация фактического товара, а не только подмножество свойств потребности")
+    if check.product_id is None:
+        from .matching import _passport_matches
+        passport = await db.get(CapabilityPassport,company_id)
+        if passport is None or not _passport_matches(passport,check.category,check.characteristics,check.subcategory,check.volume_units):
+            raise HTTPException(409,(context+": " if context else "")+"Заполните и подтвердите область возможностей производителя для этой категории, единицы и спецификации")
+        from .trust import append_audit_event
+        await append_audit_event(db,event_type="capability_scope_checked",entity_type="company",entity_id=company_id,
+            actor_company_id=company_id,payload={"details":deepcopy(passport.details),"category":check.category,
+                "subcategory":check.subcategory,"characteristics":deepcopy(check.characteristics),"quantity":check.volume_units},
+            explanation="Перед обязательством проверены актуальная область возможностей и её версия; сохранён неизменяемый снимок заявления продавца")
     return admission
 
 
@@ -166,7 +205,11 @@ async def publicly_available_products(db: AsyncSession, products: list[Product])
     by_company: dict = {}
     for document in documents:
         by_company.setdefault(document.company_id, []).append(document)
-    return [product for product in products if product.is_published and product.company_id in verified
+    from .category_registry import resolve_category
+    from .category_characteristics import validate_profile_values
+    return [product for product in products if resolve_category(product.category,product.subcategory) is not None
+            and not validate_profile_values(product.category,product.subcategory,product.characteristics,require_product_fields=True)
+            and product.is_published and product.company_id in verified
             and not evaluate_admission(category=product.category, subcategory=product.subcategory,
                 characteristics=product.characteristics, moq_units=product.moq_units,
                 documents=by_company.get(product.company_id, [])).blocking_open]

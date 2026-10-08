@@ -46,3 +46,11 @@ test("saved technical labels remain tied to their captured profile", async () =>
     .toBe("Сохранённая длина, мм: 12 · Сохранённая длина, мм: 15 мм · custom: значение");
   expect(formatCharacteristics({ length_mm: 12 }, null)).toBe("Длина, мм: 12");
 });
+
+
+test("exact base-unit prices remain visible below one kopeck", async () => {
+  const { formatRub } = await import("../../apps/web/app/lib/marketplace");
+  expect(formatRub(0.000125, 12)).toBe("0,000125 ₽");
+  expect(formatRub(1.123456789012, 12)).toBe("1,123456789012 ₽");
+  expect(formatRub(125.256)).toBe("125,26 ₽");
+});

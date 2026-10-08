@@ -18,6 +18,7 @@ class UserOut(BaseModel):
     email: EmailStr
     phone: str | None
     account_status: str
+    is_category_editor: bool = False
     is_marketplace_admin: bool
 
 

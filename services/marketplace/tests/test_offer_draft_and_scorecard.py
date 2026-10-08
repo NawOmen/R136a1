@@ -35,7 +35,7 @@ async def _buyer_with_published_need(client, db_session, *, volume=20_000, chara
         json={
             "company_id": str(company),
             "category": "бумажные стаканы",
-            "characteristics": characteristics or {"volume_ml": 400, "coating": "PE"},
+            "characteristics": characteristics or {"volume_ml": 400, "coating": "PE", "material":"крафт-картон"},
             "volume_units": volume,
             "budget_rub": 500_000,
             "deadline_date": str(date.today() + timedelta(days=30)),
@@ -55,6 +55,7 @@ async def _passport(client, token, company, *, business_kind="manufacturer", min
         f"/api/v1/companies/{company}/capability-passport",
         json={
             "details": {
+                "category_scopes": [{"category_id":"packaging.paper-cups","unit":"шт","min_units":min_order,"max_units":60000,"characteristics":{"volume_ml":[400],"coating":["PE"],"material":["крафт-картон"]}}],
                 "business_kind": business_kind,
                 "product_types": "бумажные стаканы 150–600 мл",
                 "complexity": "флексопечать",
@@ -90,7 +91,7 @@ async def test_offer_draft_uses_catalog_and_capacity(client, db_session):
             "name": "Стакан 400 мл PE",
             "category": "Упаковка и тара",
             "subcategory": "Бумажные стаканы",
-            "characteristics": {"volume_ml": 400, "coating": "PE"},
+            "characteristics": {"volume_ml": 400, "coating": "PE", "material":"крафт-картон"},
             "price_rub": 12,
             "price_tiers": [{"min_units": 10_000, "unit_price_rub": 10.5}],
             "moq_units": 5_000,
@@ -103,8 +104,8 @@ async def test_offer_draft_uses_catalog_and_capacity(client, db_session):
         f"/api/v1/companies/{company}/capacity",
         json={
             "entries": [
-                {"date": str(date.today() + timedelta(days=5)), "available_units": 30_000},
-                {"date": str(date.today() + timedelta(days=40)), "available_units": 90_000},
+                {"date": str(date.today() + timedelta(days=5)), "category":"packaging.paper-cups", "available_units": 30_000},
+                {"date": str(date.today() + timedelta(days=40)), "category":"packaging.paper-cups", "available_units": 90_000},
             ]
         },
         headers=_auth(token),
@@ -149,7 +150,7 @@ async def test_offer_draft_uses_stock_for_stock_supplier(client, db_session):
             "name": "Стакан 400 мл со склада",
             "category": "Упаковка и тара",
             "subcategory": "Бумажные стаканы",
-            "characteristics": {"volume_ml": 400, "coating": "PE"},
+            "characteristics": {"volume_ml": 400, "coating": "PE", "material":"крафт-картон"},
             "price_rub": 11,
             "moq_units": 1_000,
             "lead_time_days": 2,
@@ -214,7 +215,7 @@ async def test_offer_from_draft_records_human_corrections(client, db_session):
             "name": "Стакан 400 мл PE",
             "category": "Упаковка и тара",
             "subcategory": "Бумажные стаканы",
-            "characteristics": {"volume_ml": 400, "coating": "PE"},
+            "characteristics": {"volume_ml": 400, "coating": "PE", "material":"крафт-картон"},
             "price_rub": 12,
             "moq_units": 1_000,
             "lead_time_days": 9,
@@ -287,7 +288,7 @@ async def test_agent_scorecard_counts_draft_conversion(client, db_session):
             "name": "Стакан 400 мл PE",
             "category": "Упаковка и тара",
             "subcategory": "Бумажные стаканы",
-            "characteristics": {"volume_ml": 400, "coating": "PE"},
+            "characteristics": {"volume_ml": 400, "coating": "PE", "material":"крафт-картон"},
             "price_rub": 12,
             "moq_units": 1_000,
             "lead_time_days": 9,
@@ -359,10 +360,10 @@ async def test_draft_rejects_incompatible_or_unknown_characteristics():
     from types import SimpleNamespace
     from app.offer_draft import _matches_need
 
-    product = SimpleNamespace(category="Крепёж", subcategory="Болты", characteristics={
+    product = SimpleNamespace(category="Строительство", subcategory="Крепёж", characteristics={
         "material": "Сталь", "size": "М8×40", "strength_class": "8.8", "unit": "шт",
     })
-    need = SimpleNamespace(category="Болты", characteristics={"материал": " сталь ", "size": "М8×40"})
+    need = SimpleNamespace(category="Метизы", volume_units=100, characteristics={"материал": " сталь ", "size": "М8×40"})
     assert _matches_need(product, need)[0]
     for attrs in ({"size": "М10×40"}, {"strength_class": "10.9"}, {"coating": "цинк"},
                   {"unit": "кг"}, {"size": ""}):
@@ -377,9 +378,9 @@ async def test_draft_characteristic_aliases_do_not_hide_conflicts():
     from types import SimpleNamespace
     from app.offer_draft import _matches_need
 
-    product = SimpleNamespace(category="Упаковка и тара", subcategory=None,
+    product = SimpleNamespace(category="Упаковка и тара", subcategory="Бумажные стаканы",
                               characteristics={"volume_ml": 400, "coating": "PE"})
-    need = SimpleNamespace(category="Упаковка и тара", characteristics={"объём": "400.0", "покрытие": "pe"})
+    need = SimpleNamespace(category="Бумажные стаканы", volume_units=100, characteristics={"объём": "400.0", "покрытие": "pe"})
     assert _matches_need(product, need)[0]
     product.characteristics["покрытие"] = "PLA"
     assert not _matches_need(product, need)[0]

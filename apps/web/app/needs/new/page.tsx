@@ -4,6 +4,7 @@
 // категория, характеристики (пары «ключ/значение»), объём, бюджет, срок,
 // адрес доставки (+ добавление адреса через prompt), видимость, файлы.
 
+import PhysicalQuantityReview from "../../components/PhysicalQuantityReview";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { FormEvent, useEffect, useRef, useState } from "react";
@@ -39,6 +40,7 @@ function newRow(key = "", value = ""): CharacteristicRow {
 }
 
 export default function NewNeedPage() {
+  const [quantityApproved, setQuantityApproved] = useState(false);
   const router = useRouter();
   const {
     loading,
@@ -207,8 +209,8 @@ export default function NewNeedPage() {
       return "Заполните ключ и значение каждой характеристики.";
     }
     const volume = Number(volumeUnits);
-    if (!volumeUnits || !Number.isSafeInteger(volume) || volume <= 0) {
-      return "Укажите целое положительное количество единиц заказа.";
+    if (!volumeUnits || !Number.isFinite(volume) || volume <= 0) {
+      return "Укажите положительный физический объём или целое количество единиц.";
     }
     if (new Set(rows.map((row) => row.key.trim())).size !== rows.length) return "Названия характеристик не должны повторяться.";
     const budget = Number(budgetRub);
@@ -347,6 +349,7 @@ export default function NewNeedPage() {
     setSubmitting(true);
     try {
       const payload = {
+        quantity_conversion_approved: quantityApproved,
         company_id: company.id,
         category,
         subcategory,
@@ -719,8 +722,8 @@ export default function NewNeedPage() {
           <input
             id="volume_units"
             type="number"
-            step="1"
-            min="1"
+            step="any"
+            min="0.000001"
             value={volumeUnits}
             onChange={(event) => setVolumeUnits(event.target.value)}
             placeholder="Например, 120000"
@@ -809,6 +812,7 @@ export default function NewNeedPage() {
         </div>
 
         <div className="actions">
+          <PhysicalQuantityReview kind="need" values={{ characteristics: Object.fromEntries(rows.filter(row => row.key.trim()).map(row => [row.key.trim(), row.value])), volume_units: volumeUnits }} approved={quantityApproved} onApproval={setQuantityApproved} />
           <button type="submit" className="btn btn-primary" disabled={submitting || !company}>
             {submitting
               ? "Сохраняем..."

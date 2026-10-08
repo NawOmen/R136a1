@@ -1,6 +1,8 @@
 import uuid
 from typing import Literal
 
+from pydantic import BaseModel, ConfigDict, Field
+
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from sqlalchemy import or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -133,3 +135,23 @@ async def security_events(alerts_only: bool = False, admin: User = Depends(requi
     return [{"event": row.event, "created_at": row.created_at, "actor_id": row.actor_id,
              "target_id": row.target_id, "before": row.before_value, "after": row.after_value,
              "correlation_id": row.correlation_id, "reason": row.reason} for row in rows]
+
+
+class EditorRoleIn(BaseModel):
+    model_config=ConfigDict(str_strip_whitespace=True)
+    enabled: bool
+    reason: str = Field(min_length=3,max_length=500)
+
+
+@router.put("/users/{user_id}/category-editor", response_model=UserOut)
+async def appoint_category_editor(user_id: uuid.UUID, data: EditorRoleIn, request: Request,
+    admin: User=Depends(require_admin),db: AsyncSession=Depends(get_db)):
+    user=await db.get(User,user_id)
+    if user is None:raise HTTPException(404,"Пользователь не найден")
+    previous=user.is_category_editor
+    user.is_category_editor=data.enabled
+    await audit(db,request,"admin.category_editor_role",actor=admin.id,target=user.id,
+                before=str(previous),after=str(user.is_category_editor),reason=data.reason)
+    await db.commit()
+    await db.refresh(user)
+    return user

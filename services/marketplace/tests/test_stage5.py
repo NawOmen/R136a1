@@ -29,6 +29,7 @@ async def passport(client, token, company_id, *, moq=50_000):
     response = await client.put(
         f"/api/v1/companies/{company_id}/capability-passport",
         json={
+            "details":{"category_scopes":[{"category_id":"packaging.paper-cups","unit":"шт","min_units":moq,"max_units":60000,"characteristics":{"material":["крафт-картон"],"coating":["PE"],"volume_ml":[400],"food_contact":[True]}}]},
             "technologies": ["производство бумажных стаканов"],
             "equipment": ["линия формовки"],
             "materials": ["крафт-картон", "PE"],
@@ -347,21 +348,21 @@ def test_unknown_specifications_are_not_silently_individual_operations():
     from app.matching import _need_parts
     need = SimpleNamespace(characteristics={"thread": "M8", "strength_class": "8.8", "color": "чёрный", "logo": "А"})
     common, hard, flexible, individual = _need_parts(need)
-    assert common == {"thread": "M8", "strength_class": "8.8", "color": "чёрный", "unit": "шт"}
-    assert individual == {"logo": "А"}
+    assert common == {"thread": "m8", "strength_class": "8.8", "color": "черный", "unit": "шт"}
+    assert individual == {"logo": "а"}
 
 
 async def test_market_opportunities_do_not_add_rolls_to_pieces(db_session):
     seller = await make_user(db_session)
     company = await make_company(db_session, seller, can_buy=False, can_sell=True)
-    db_session.add(CapabilityPassport(company_id=company, technologies=["сырьё и материалы"],
+    db_session.add(CapabilityPassport(company_id=company, details={"category_scopes":[{"category_id":"materials.textile","unit":unit,"profile_version":2,"min_units":1,"characteristics":{}} for unit in ("шт","рулон")]}, technologies=["сырьё и материалы"],
         materials=[], equipment=[], certifications=[], size_ranges={}, delivery_regions=["Москва"],
         completed_order_types=[], min_order_units=1, max_order_units=1000))
     for unit, units in (("шт", 15), ("рулон", 8)):
         buyer = await make_user(db_session)
         buyer_company = await make_company(db_session, buyer, can_buy=True, can_sell=False)
         db_session.add(Need(company_id=buyer_company, created_by_user_id=buyer,
-            category="Сырьё и материалы", characteristics={"unit": unit}, volume_units=units,
+            category="Сырьё и материалы", subcategory="Текстиль", characteristics={"unit": unit}, volume_units=units,
             deadline_date=date.today() + timedelta(days=20), visibility="open_anonymized", status="open_for_offers"))
     await db_session.flush()
     await run_market_rematch(db_session, "test_unit_separation", None)
@@ -369,10 +370,10 @@ async def test_market_opportunities_do_not_add_rolls_to_pieces(db_session):
     assert {(item.unit, item.unmet_volume_units) for item in opportunities} == {("шт", 15), ("рулон", 8)}
     before = {item.unit: item.score for item in opportunities}
     day = date.today() + timedelta(days=1)
-    db_session.add(CapacityEntry(company_id=company, date=day, category="Сырьё и материалы", unit="шт", available_units=15))
+    db_session.add(CapacityEntry(company_id=company, date=day, category="materials.textile", unit="шт", category_conversions=[{"category_id":"materials.textile","order_unit":"шт","resource_units_per_order_unit":1,"profile_version":2}], available_units=15))
     await db_session.flush()
     await reserve(db_session, company_id=company, anchor_type="deal", anchor_id=uuid.uuid4(),
-                  units=15, deadline=day, category="Сырьё и материалы", unit="шт")
+                  units=15, deadline=day, category="Сырьё и материалы", subcategory="Текстиль", unit="шт")
     await run_market_rematch(db_session, "test_occupied_capacity", None)
     assert next(item.score for item in opportunities if item.unit == "шт") < before["шт"]
     assert next(item.score for item in opportunities if item.unit == "рулон") == before["рулон"]

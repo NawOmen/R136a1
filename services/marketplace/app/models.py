@@ -65,6 +65,7 @@ class Product(Base):
     category: Mapped[str] = mapped_column(String(120), nullable=False, index=True)
     subcategory: Mapped[str | None] = mapped_column(String(120), nullable=True)
     characteristics: Mapped[dict] = mapped_column(JSONB, nullable=False, default=dict)
+    quantity_conversion: Mapped[dict | None] = mapped_column(JSONB(none_as_null=True), nullable=True)
     category_profile: Mapped[dict | None] = mapped_column(JSONB(none_as_null=True), nullable=True, default=profile_for_insert)
     price_rub: Mapped[float] = mapped_column(Float, nullable=False)
     price_tiers: Mapped[list] = mapped_column(JSONB, nullable=False, default=list, server_default="[]")
@@ -104,6 +105,7 @@ class CapacityEntry(Base):
     category: Mapped[str] = mapped_column(String(120), nullable=False, default="", server_default="")
     unit: Mapped[str] = mapped_column(String(32), nullable=False, default="шт", server_default="шт")
     available_units: Mapped[int] = mapped_column(Integer, nullable=False)
+    category_conversions: Mapped[list] = mapped_column(JSONB, nullable=False, default=list, server_default="[]")
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now())
 
 
@@ -771,6 +773,8 @@ class ResourceReservation(Base):
     anchor_type: Mapped[str] = mapped_column(String(24))
     anchor_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), index=True)
     units: Mapped[int] = mapped_column(Integer)
+    resource_units: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    resource_conversion: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
     status: Mapped[str] = mapped_column(String(16), default="committed")
     expires_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
@@ -785,3 +789,15 @@ class CatalogImport(Base):
     content_hash: Mapped[str] = mapped_column(String(64))
     product_ids: Mapped[list] = mapped_column(JSONB)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+class CategoryRegistryRevision(Base):
+    __tablename__ = "category_registry_revisions"
+    __table_args__ = {"schema": SCHEMA}
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=_uuid)
+    sequence: Mapped[int] = mapped_column(Integer, nullable=False, unique=True)
+    parent_hash: Mapped[str] = mapped_column(String(64), nullable=False, unique=True)
+    registry_hash: Mapped[str] = mapped_column(String(64), nullable=False, unique=True)
+    registry: Mapped[dict] = mapped_column(JSONB, nullable=False)
+    published_by_user_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now())

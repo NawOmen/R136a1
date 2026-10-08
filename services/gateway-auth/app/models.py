@@ -48,6 +48,7 @@ class User(Base):
     password_hash: Mapped[str] = mapped_column(String(255), nullable=False)
     phone: Mapped[str | None] = mapped_column(String(40), nullable=True)
     account_status: Mapped[str] = mapped_column(String(16), nullable=False, default="active", server_default="active")
+    is_category_editor: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False, server_default=text("false"))
     is_marketplace_admin: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False, server_default=text("false"))
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(

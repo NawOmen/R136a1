@@ -21,6 +21,7 @@ export interface User {
   phone: string | null;
   account_status: AccountStatus;
   is_marketplace_admin: boolean;
+  is_category_editor?: boolean;
 }
 
 export interface Membership {
@@ -237,6 +238,9 @@ async function request<T>(path: string, options: RequestOptions = {}): Promise<T
 // ---------- Эндпоинты ----------
 
 export const api = {
+  appointCategoryEditor(token: string, userId: string, enabled: boolean, reason: string): Promise<User> {
+    return request(`/api/v1/admin/users/${userId}/category-editor`, { token, method: "PUT", body: JSON.stringify({ enabled, reason }) });
+  },
   getSecurityEvents(token: string, alertsOnly = false): Promise<{event: string; created_at: string; correlation_id: string}[]> {
     return request("/api/v1/admin/security-events" + (alertsOnly ? "?alerts_only=true" : ""), {token});
   },
