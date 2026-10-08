@@ -5,7 +5,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import delete, or_, select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from ..admission import SpecificationCheck, require_admission_for_specifications
+from ..admission import SpecificationCheck, admission_audit_payload, require_admission_for_specifications
 from ..database import get_db
 from ..deps import (
     CurrentUser,
@@ -470,7 +470,7 @@ async def decide_coalition(
             raise HTTPException(status.HTTP_409_CONFLICT, detail="Производитель ещё не подтвердил условия")
         # Обязательства создаются сейчас: допуск производителя проверяется заново,
         # потому что документ мог истечь или быть отозван после публикации условий.
-        await require_admission_for_specifications(
+        admissions = await require_admission_for_specifications(
             db,
             coalition.producer_company_id,
             [
@@ -485,6 +485,23 @@ async def decide_coalition(
             ],
             context="Групповые обязательства не созданы",
         )
+        admissions_by_need = dict(zip(member_needs, admissions, strict=True))
+        participant_snapshots = []
+        for item in members:
+            need = member_needs[item.need_id]
+            participant_snapshots.append({
+                "need_id": str(need.id),
+                "need_revision": need.revision,
+                "buyer_company_id": str(item.buyer_company_id),
+                "seller_company_id": str(coalition.producer_company_id),
+                "units": item.units,
+                "total_price_rub": item.total_cost_rub,
+                "admission": admission_audit_payload(admissions_by_need[need.id], specification={
+                    "category": need.category, "subcategory": need.subcategory,
+                    "characteristics": need.characteristics, "category_profile": need.category_profile,
+                    "moq_units": need.volume_units,
+                }),
+            })
         await reserve(db, company_id=group_offer.company_id, anchor_type="coalition", anchor_id=coalition.id,
                       units=sum(item.units for item in members), start=group_offer.production_start,
                       deadline=group_offer.production_end, category=coalition.category,
@@ -502,6 +519,7 @@ async def decide_coalition(
                 "version": coalition.version,
                 "category": coalition.category,
                 "needs": [str(item.need_id) for item in members],
+                "participants": participant_snapshots,
             },
         )
         for item in members:

@@ -1,4 +1,5 @@
 import uuid
+from copy import deepcopy
 from datetime import date, datetime, time, timezone
 
 from fastapi import APIRouter, Depends, HTTPException, status
@@ -612,6 +613,7 @@ async def confirm_resilience_plan(
     if sum(item["units"] for item in plan.baseline_allocations) != need.volume_units:
         raise HTTPException(409, "Объём плана не соответствует потребности. Нужен новый расчёт")
     await _lock_plan_resources(db, plan)
+    baseline_snapshots = []
     for allocation in sorted(plan.baseline_allocations, key=lambda item: item["company_id"]):
         company_id = uuid.UUID(allocation["company_id"])
         offers = list((await db.scalars(select(Offer).where(Offer.need_id == need.id, Offer.company_id == company_id,
@@ -625,9 +627,20 @@ async def confirm_resilience_plan(
         if len(matching) != 1:
             raise HTTPException(409, "Исходное предложение изменилось или истекло. Пересчитайте план")
         offer = matching[0]
-        await require_company_admission(db, company_id, SpecificationCheck(category=need.category,
+        admission = await require_company_admission(db, company_id, SpecificationCheck(category=need.category,
             subcategory=need.subcategory,
             characteristics=need.characteristics, moq_units=allocation["units"]), context="Основной объём не подтверждён")
+        baseline_snapshots.append({
+            "allocation": deepcopy(allocation),
+            "offer_id": str(offer.id),
+            "need_id": str(need.id),
+            "need_revision": need.revision,
+            "admission": admission_audit_payload(admission, specification={
+                "category": need.category, "subcategory": need.subcategory,
+                "characteristics": need.characteristics, "category_profile": need.category_profile,
+                "moq_units": allocation["units"],
+            }),
+        })
         await reserve(db, company_id=company_id, anchor_type="resilience_primary", anchor_id=plan.id,
             units=allocation["units"], deadline=need.deadline_date, resource_kind=offer.resource_kind, product_id=offer.product_id,
             category=need.category, unit=order_unit(need.characteristics))
@@ -659,6 +672,8 @@ async def confirm_resilience_plan(
         decision="approved",
         payload={
             "baseline_variant_id": str(plan.baseline_variant_id),
+            "plan_version": plan.version,
+            "baseline_allocations": baseline_snapshots,
             "max_price_increase_pct": plan.max_price_increase_pct,
             "max_delay_days": plan.max_delay_days,
             "auto_replace_within_thresholds": plan.auto_replace_within_thresholds,

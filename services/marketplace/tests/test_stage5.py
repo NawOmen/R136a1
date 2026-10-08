@@ -13,6 +13,7 @@ from app.models import (
     GroupOffer,
     Need,
     ParticipantOrder,
+    TrustAuditEvent,
     MarketOpportunity,
 )
 from app.matching import run_market_rematch
@@ -219,6 +220,20 @@ async def test_5000_and_45000_create_explainable_coalition_and_private_orders(
     orders = (await db_session.execute(select(ParticipantOrder))).scalars().all()
     assert len(orders) == 2
     assert {item.buyer_company_id for item in orders} == {buyer_one, buyer_two}
+    event = (await db_session.execute(select(TrustAuditEvent).where(
+        TrustAuditEvent.entity_id == uuid.UUID(coalition_id),
+        TrustAuditEvent.event_type == "coalition_obligations_checked",
+    ))).scalar_one()
+    snapshots = {item["need_id"]: item for item in event.payload["participants"]}
+    assert set(snapshots) == {need_one["id"], need_two["id"]}
+    for original in (need_one, need_two):
+        snapshot = snapshots[original["id"]]
+        assert snapshot["need_revision"] == original["revision"]
+        assert snapshot["admission"]["blocking_open"] == 0
+        assert snapshot["admission"]["rules_version"]
+        assert snapshot["admission"]["requirements"]
+        assert snapshot["admission"]["specification"]["characteristics"] == original["characteristics"]
+        assert snapshot["admission"]["specification"]["category_profile"] == original["category_profile"]
     buyer_report = await client.get(f"/api/v1/companies/{buyer_one}/commercial-analytics?role=buyer", headers=auth(token_one))
     assert buyer_report.status_code == 200
     assert buyer_report.json()["group_orders_count"] == 1

@@ -333,6 +333,25 @@ async def test_reserve_commitment_requires_documents(client, db_session, monkeyp
         headers=_auth(buyer_token),
     )
     assert confirmed.status_code == 200, confirmed.text
+    approval_payload = (await db_session.execute(text("""
+        SELECT payload FROM marketplace.trust_audit_events
+        WHERE entity_id = CAST(:plan_id AS UUID)
+          AND event_type = 'human_approval_recorded'
+          AND payload->>'action' = 'confirm_resilience_plan'
+    """), {"plan_id": plan_id})).scalar_one()["decision_payload"]
+    assert approval_payload["plan_version"] == plan_response.json()["version"]
+    snapshots = approval_payload["baseline_allocations"]
+    assert len(snapshots) == 1
+    snapshot = snapshots[0]
+    assert snapshot["allocation"]["company_id"] == str(primary)
+    assert snapshot["allocation"]["units"] == 5_000
+    assert snapshot["need_id"] == str(need.id)
+    assert snapshot["need_revision"] == need.revision
+    assert snapshot["admission"]["blocking_open"] == 0
+    assert snapshot["admission"]["rules_version"]
+    assert snapshot["admission"]["requirements"]
+    assert snapshot["admission"]["specification"]["characteristics"] == need.characteristics
+    assert snapshot["admission"]["specification"]["category_profile"] == need.category_profile
 
     invitation = (
         await client.get(f"/api/v1/reserve-invitations/{reserve}", headers=_auth(reserve_token))
