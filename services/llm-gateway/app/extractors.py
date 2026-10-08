@@ -38,7 +38,10 @@ class LocalTranscriber:
                 tmp.write(data)
                 path = tmp.name
             segments, _ = self._model.transcribe(path, language="ru", vad_filter=True)
-            return " ".join(segment.text.strip() for segment in segments).strip()
+            return "\n".join(
+                f"[[{segment.start:.2f}-{segment.end:.2f} с]] {segment.text.strip()}"
+                for segment in segments
+            ).strip()
         finally:
             if path:
                 os.unlink(path)
@@ -59,13 +62,23 @@ async def pdf_to_text(data: bytes, provider: OllamaProvider) -> str:
     except Exception as exc:
         raise UnreadableMaterial("PDF повреждён или не читается") from exc
     try:
-        text = "\n".join(page.get_text("text") for page in document).strip()
-        if text:
-            return text
         if len(document) == 0:
             raise UnreadableMaterial("PDF не содержит страниц")
-        pixmap = document[0].get_pixmap(matrix=fitz.Matrix(1.5, 1.5), alpha=False)
-        return await image_to_text(pixmap.tobytes("png"), provider)
+        if len(document) > 30:
+            raise UnreadableMaterial("PDF содержит больше 30 страниц; разделите материал")
+        from .config import settings
+        pages, total = [], 0
+        for number, page in enumerate(document, 1):
+            value = page.get_text("text").strip()
+            if not value:
+                scale = min(1.5, 2048 / max(page.rect.width, page.rect.height, 1))
+                pixmap = page.get_pixmap(matrix=fitz.Matrix(scale, scale), alpha=False)
+                value = await image_to_text(pixmap.tobytes("png"), provider)
+            total += len(value)
+            if total > settings.max_combined_text_chars:
+                raise UnreadableMaterial("Распознанный PDF превышает предел текста; разделите материал")
+            pages.append(f"[[Страница {number}]]\n{value}")
+        return "\n".join(pages)
     finally:
         document.close()
 

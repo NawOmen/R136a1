@@ -3,7 +3,7 @@ from .money import Amount, Money
 from datetime import date, datetime
 from typing import Any, Literal
 
-from pydantic import BaseModel, ConfigDict, Field, JsonValue, field_validator, model_validator
+from pydantic import BaseModel, ConfigDict, Field, PrivateAttr, JsonValue, field_validator, model_validator
 
 from .commercial import CommercialTerms
 from .category_characteristics import validate_profile_values
@@ -517,6 +517,7 @@ class NeedFileOut(BaseModel):
 
 class NeedOut(BaseModel):
     revision: int = 1
+    requirements_evidence: dict[str, Any] | None = None
     model_config = ConfigDict(from_attributes=True)
 
     id: uuid.UUID
@@ -544,6 +545,8 @@ class NeedFeedOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
     id: uuid.UUID
+    revision: int = 1
+    requirement_decisions: list[dict[str, Any]] = Field(default_factory=list)
     category: str
     subcategory: str | None = None
     category_profile: dict[str, Any] | None = None
@@ -556,8 +559,11 @@ class NeedFeedOut(BaseModel):
 
 
 class NeedIn(BaseModel):
+    _physical_quantity_input: dict | None = PrivateAttr(default=None)
     model_config = ConfigDict(allow_inf_nan=False)
     request_key: uuid.UUID | None = None
+    agent_run_id: uuid.UUID | None = None
+    agent_run_revision: int | None = Field(default=None, gt=0)
     company_id: uuid.UUID
     category: str = Field(min_length=2, max_length=120)
     subcategory: str | None = Field(default=None, min_length=2, max_length=120)
@@ -587,6 +593,7 @@ class NeedIn(BaseModel):
 
 class NeedEditIn(NeedIn):
     expected_revision: int = Field(gt=0)
+    impact_hash: str | None = Field(default=None, min_length=64, max_length=64)
 
 
 # ---------- Предложения ----------

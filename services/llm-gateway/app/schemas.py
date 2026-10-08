@@ -13,6 +13,7 @@ class SourceDescriptor(BaseModel):
     kind: Literal["text", "document", "image", "audio"]
     name: str
     text: str = Field(exclude=True)
+    content_hash: str = ""
 
 
 class RawFact(BaseModel):
@@ -21,6 +22,7 @@ class RawFact(BaseModel):
     source_id: str = Field(min_length=1, max_length=120)
     confidence: float = Field(ge=0, le=1)
     evidence: str = Field(default="", max_length=500)
+    original_unit: str | None = Field(default=None, max_length=40)
 
 
 class RawExtraction(BaseModel):
@@ -35,6 +37,13 @@ class EvidenceItem(BaseModel):
     value: FactValue
     confidence: float = Field(ge=0, le=1)
     excerpt: str = ""
+    original_value: FactValue | None = None
+    original_unit: str | None = None
+    normalized_unit: str | None = None
+    locator: dict[str, Any] = Field(default_factory=dict)
+    content_hash: str = ""
+    extraction_version: str = "buyer-evidence-1"
+    active: bool = True
 
 
 class RequirementProperty(BaseModel):
@@ -44,6 +53,8 @@ class RequirementProperty(BaseModel):
     confidence: float = Field(ge=0, le=1)
     status: Literal["confirmed", "assumed", "needs_clarification"]
     sources: list[EvidenceItem] = Field(default_factory=list)
+    confirmed_by_user_id: uuid.UUID | None = None
+    confirmed_at: datetime | None = None
 
 
 class RequirementConflict(BaseModel):
@@ -51,6 +62,7 @@ class RequirementConflict(BaseModel):
     label: str
     values: list[FactValue]
     source_ids: list[str]
+    impact: str = "Влияет на соответствие предложения требованиям покупателя"
 
 
 class ClarificationQuestion(BaseModel):
@@ -90,10 +102,16 @@ class BuyerAgentResult(BaseModel):
     warnings: list[str] = Field(default_factory=list)
     summary: str
     can_confirm: bool
+    resolved_conflicts: list[dict[str, Any]] = Field(default_factory=list)
 
 
 class ClarificationIn(BaseModel):
     answers: dict[str, FactValue] = Field(min_length=1)
+    expected_revision: int | None = Field(default=None, gt=0)
+
+
+class RunRevisionIn(BaseModel):
+    expected_revision: int = Field(gt=0)
 
 
 class ToolCallOut(BaseModel):
@@ -111,6 +129,7 @@ class AgentRunOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
     id: uuid.UUID
+    revision: int = 1
     agent_type: str
     state: str
     requested_route: str

@@ -31,6 +31,10 @@ def report(version):
 
 
 def permission_patches(stack, module):
+    if module is market:
+        stack.enter_context(patch.object(module, '_lock_coalition_needs', AsyncMock()))
+    if module is resilience:
+        stack.enter_context(patch.object(module, '_lock_plan_need', AsyncMock()))
     for name in ('require_company_buyer', 'require_company_admin', 'require_verified_company', 'reserve'):
         stack.enter_context(patch.object(module, name, AsyncMock()))
 

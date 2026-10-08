@@ -236,6 +236,11 @@ def merge_facts(
                 value=fact.value,
                 confidence=fact.confidence,
                 excerpt=fact.evidence,
+                original_value=fact.evidence or fact.value,
+                original_unit=fact.original_unit if fact.original_unit and fact.original_unit in source_map[fact.source_id].text else None,
+                normalized_unit=(fact.original_unit.strip().lower() if fact.original_unit and fact.original_unit in source_map[fact.source_id].text else None),
+                content_hash=source_map[fact.source_id].content_hash,
+                locator=evidence_locator(source_map[fact.source_id], fact.evidence),
             )
             for fact in facts
         ]
@@ -268,7 +273,9 @@ def merge_facts(
             )
             continue
         best = max(facts, key=lambda item: item.confidence)
-        confirmed = best.confidence >= 0.8 or len({fact.source_id for fact in facts}) >= 2
+        confirmed = (best.confidence >= 0.8 or len({fact.source_id for fact in facts}) >= 2) and any(
+            item.locator.get("located") for item in evidence
+        )
         properties.append(
             RequirementProperty(
                 key=key,
@@ -307,6 +314,21 @@ def merge_facts(
             )
         )
     return properties, conflicts, questions[:3]
+
+
+def evidence_locator(source: SourceDescriptor, excerpt: str) -> dict:
+    """Offsets refer to the persisted extracted text, never invented image boxes."""
+    offset = source.text.find(excerpt) if excerpt else -1
+    locator = {"representation": "extracted_text", "located": offset >= 0}
+    if offset >= 0:
+        locator.update(start=offset, end=offset + len(excerpt))
+        pages = re.findall(r"\[\[Страница (\d+)\]\]", source.text[:offset])
+        if pages:
+            locator["page"] = int(pages[-1])
+        timestamps = re.findall(r"\[\[(\d+(?:\.\d+)?)-(\d+(?:\.\d+)?) с\]\]", source.text[:offset])
+        if timestamps:
+            locator["seconds"] = list(timestamps[-1])
+    return locator
 
 
 async def search_capabilities(

@@ -238,6 +238,7 @@ async def _build_coalitions(db: AsyncSession, needs: list[Need]) -> None:
         target_moq,_=passport_scope_limits(passport,members[0].category,{**json.loads(common_json),**json.loads(hard_json)},members[0].subcategory)
         identity = {
             "need_ids": [str(item.id) for item in members],
+            "need_revisions": {str(item.id): item.revision for item in members},
             "producer_company_id": str(passport.company_id),
             "common": json.loads(common_json),
             "hard": json.loads(hard_json),

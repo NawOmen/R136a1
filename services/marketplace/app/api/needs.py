@@ -27,6 +27,8 @@ from ..matching import ACTIVE_NEED_STATUSES, need_is_current, run_market_rematch
 from ..experience import notify_market_watchers
 from ..schemas import NeedFeedOut, NeedFileOut, NeedIn, NeedOut, NeedEditIn
 from ..storage import download_object, upload_object
+from ..requirements import evidence_snapshot, evidence_is_current, require_current_evidence, revision_impact, invalidate_dependents, store_revision
+from ..models import NeedRevision
 
 router = APIRouter(tags=["needs"])
 
@@ -53,6 +55,7 @@ def _need_out(need: Need, files: list[NeedFile] | None = None) -> NeedOut:
     return NeedOut(
         id=need.id,
         revision=need.revision,
+        requirements_evidence=need.requirements_evidence,
         company_id=need.company_id,
         created_by_user_id=need.created_by_user_id,
         category=need.category,
@@ -125,6 +128,9 @@ async def create_need(
     await require_company_buyer(data.company_id, user, db)
     await require_company_admin(data.company_id, user, db)
     hash_payload = data.model_dump(mode="json", exclude={"request_key"})
+    for key in ("agent_run_id", "agent_run_revision"):
+        if hash_payload.get(key) is None:
+            hash_payload.pop(key, None)
     # Optional classification must not change idempotency hashes of old v1 clients.
     if data.subcategory is None:
         hash_payload.pop("subcategory", None)
@@ -145,6 +151,9 @@ async def create_need(
                 detail="Адрес доставки не принадлежит выбранной компании",
             )
     values = data.model_dump()
+    values.pop("agent_run_id", None)
+    values.pop("agent_run_revision", None)
+    proof = await evidence_snapshot(db, data, user)
     valid_until = values.pop("valid_until") or data.deadline_date
     if data.deadline_date < date.today():
         raise HTTPException(
@@ -160,10 +169,13 @@ async def create_need(
         created_by_user_id=user.id,
         status="draft",
         request_hash=request_hash,
+        requirements_evidence=proof,
         valid_until=valid_until,
         **values,
     )
     db.add(need)
+    await db.flush()
+    store_revision(db, need, user, {"created": True})
     await db.commit()
     await db.refresh(need)
     return _need_out(need)
@@ -181,8 +193,13 @@ async def edit_need(need_id: uuid.UUID, data: NeedEditIn,
         raise HTTPException(422, "Нельзя изменить компанию потребности")
     if need.revision != data.expected_revision:
         raise HTTPException(409, "Потребность изменена в другой вкладке. Обновите страницу")
-    if need.status != "draft":
-        raise HTTPException(409, "Редактирование доступно только до публикации. Для новых условий создайте новую потребность")
+    if need.status not in ({"draft"} | ACTIVE_NEED_STATUSES):
+        raise HTTPException(409, "Закрытую потребность или созданное обязательство нельзя переписать")
+    impact, dependents = await revision_impact(db, need, data)
+    if impact["changes"] and not impact["editable"]:
+        raise HTTPException(409, "По этой версии уже есть обязательства. Используйте согласованный процесс изменения сделки")
+    if impact["requires_confirmation"] and data.impact_hash != impact["impact_hash"]:
+        raise HTTPException(409, "Просмотрите актуальные последствия изменения и подтвердите их")
     if data.delivery_address_id:
         address = await db.get(DeliveryAddress, data.delivery_address_id)
         if address is None or address.company_id != need.company_id:
@@ -190,22 +207,76 @@ async def edit_need(need_id: uuid.UUID, data: NeedEditIn,
     valid_until = data.valid_until or data.deadline_date
     if min(data.deadline_date, valid_until) < date.today():
         raise HTTPException(422, "Срок поставки и актуальности не может быть в прошлом")
-    values = data.model_dump(exclude={"expected_revision", "request_key", "company_id"})
+    values = data.model_dump(exclude={"expected_revision", "request_key", "company_id", "impact_hash", "agent_run_id", "agent_run_revision"})
     values["valid_until"] = valid_until
+    changed = bool(impact["changes"])
+    was_published = need.status != "draft"
+    if changed:
+        if not await db.scalar(select(NeedRevision.id).where(NeedRevision.need_id == need.id, NeedRevision.revision == need.revision)):
+            store_revision(db, need, user, {"legacy_snapshot": True})
+        proof = await evidence_snapshot(db, data, user)
+        previous = need.requirements_evidence or {}
+        if data.agent_run_id is None:
+            current = await evidence_is_current(db, need)
+            for key, old in previous.get("fields", {}).items():
+                if key not in proof["fields"]:
+                    continue
+                field = proof["fields"][key]
+                if current and str(old.get("value")) == str(field["value"]):
+                    proof["fields"][key] = old
+                else:
+                    field["previous_evidence"] = old
+                    field["origin"] = "manual_override"
+            if current:
+                proof["run"] = previous.get("run")
+            proof["resolved_conflicts"] = previous.get("resolved_conflicts", [])
+        need.requirements_evidence = proof
     need.category_profile = profile_after_specification_change(
         need, data.category, data.subcategory, data.characteristics,
     )
     for key, value in values.items():
         setattr(need, key, value)
-    need.revision += 1
+    if changed:
+        need.revision += 1
+        if was_published:
+            await invalidate_dependents(db, need, dependents, user, impact)
+            need.status = "open_for_offers"
+            need.confirmed_at = datetime.now(timezone.utc)
+            await run_market_rematch(db, "need_specification_changed", need.id)
+        store_revision(db, need, user, impact)
     from ..trust import append_audit_event
-    await append_audit_event(db, event_type="need_draft_updated", entity_type="need", entity_id=need.id,
+    await append_audit_event(db, event_type="need_draft_updated" if not was_published else "need_updated", entity_type="need", entity_id=need.id,
         actor_user_id=user.id, actor_company_id=need.company_id,
-        explanation="Покупатель изменил черновик потребности", payload={"revision": need.revision})
+        explanation="Покупатель сохранил изменения потребности", payload={"revision": need.revision})
     files = list((await db.scalars(select(NeedFile).where(NeedFile.need_id == need.id))).all())
     await db.commit()
     await db.refresh(need)
     return _need_out(need, files)
+
+
+@router.post("/needs/{need_id}/edit-preview")
+async def preview_need_edit(need_id: uuid.UUID, data: NeedEditIn,
+                            user: CurrentUser = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
+    need = await db.get(Need, need_id)
+    if need is None:
+        raise HTTPException(404, "Потребность не найдена")
+    await require_company_buyer(need.company_id, user, db)
+    await require_company_admin(need.company_id, user, db)
+    if data.company_id != need.company_id or data.expected_revision != need.revision:
+        raise HTTPException(409, "Компания или версия потребности изменилась")
+    impact, _ = await revision_impact(db, need, data)
+    return impact
+
+
+@router.get("/needs/{need_id}/revisions")
+async def need_revisions(need_id: uuid.UUID, user: CurrentUser = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
+    need = await db.get(Need, need_id)
+    if need is None:
+        raise HTTPException(404, "Потребность не найдена")
+    await require_company_buyer(need.company_id, user, db)
+    records = (await db.scalars(select(NeedRevision).where(NeedRevision.need_id == need_id).order_by(NeedRevision.revision.desc()))).all()
+    return [{"revision": row.revision, "snapshot": row.snapshot, "impact": row.impact,
+             "actor_user_id": row.actor_user_id, "created_at": row.created_at} for row in records]
 
 
 @router.post("/needs/{need_id}/publish", response_model=NeedOut)
@@ -220,6 +291,7 @@ async def publish_need(
     await require_company_buyer(need.company_id, user, db)
     await require_company_admin(need.company_id, user, db)
     await require_verified_company(need.company_id, user, db)
+    await require_current_evidence(db, need)
     if not need_is_current(need):
         raise HTTPException(409, "Срок потребности истёк. Создайте новый черновик с актуальными условиями")
     if need.status in ACTIVE_NEED_STATUSES:
@@ -256,13 +328,21 @@ async def get_need(
     ):
         raise HTTPException(status.HTTP_404_NOT_FOUND, detail="Потребность не найдена")
     if not is_owner:
-        return NeedFeedOut.model_validate(need)
+        decisions = []
+        evidence = need.requirements_evidence or {}
+        for key, field in evidence.get("fields", {}).items():
+            if key in need.characteristics and (field.get("previous_evidence") or any(item.get("key") == key for item in evidence.get("resolved_conflicts", []))):
+                decisions.append({"field": key, "confirmed_value": need.characteristics[key]})
+        return NeedFeedOut.model_validate(need).model_copy(update={"requirement_decisions": decisions})
     files = []
     if is_owner:
         files = (
             await db.execute(select(NeedFile).where(NeedFile.need_id == need.id))
         ).scalars().all()
-    return _need_out(need, files)
+    out = _need_out(need, files)
+    if need.requirements_evidence:
+        out = out.model_copy(update={"requirements_evidence": {**need.requirements_evidence, "stale": not await evidence_is_current(db, need)}})
+    return out
 
 
 @router.post("/needs/{need_id}/files", response_model=NeedOut, status_code=status.HTTP_201_CREATED)

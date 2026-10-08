@@ -8,6 +8,7 @@ import CommercialEstimate from "../../components/CommercialEstimate";
 import Link from "next/link";
 import ProfileRevisionPanel from "../../components/ProfileRevisionPanel";
 import NeedDraftEditor from "../../components/NeedDraftEditor";
+import NeedRequirements from "../../components/NeedRequirements";
 import { useParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import { getToken } from "../../lib/api";
@@ -215,6 +216,11 @@ export default function NeedDetailPage() {
         </div>
       )}
 
+      {!isBuyer && !!need.requirement_decisions?.length && <section className="card"><h2>Уточнения покупателя</h2><p>В текущей версии покупатель разрешил противоречия в этих требованиях:</p>{need.requirement_decisions.map(item => <p key={item.field}>{formatCharacteristics({ [item.field]: item.confirmed_value }, need.category_profile)}</p>)}</section>}
+      {isBuyer && <NeedRequirements key={`${need.id}:${need.revision}`} need={need} />}
+      {isBuyer && buyerCompany?.membership?.is_admin && ["open_for_offers", "waiting_for_match", "coalition_candidate", "awaiting_approvals"].includes(need.status) && (
+        <section className="card"><NeedDraftEditor key={`${need.id}:${need.revision}`} need={need} onSaved={async value => { setNeed(value); const token = getToken(); if (token) setOffers(await marketplace.getOffers(token, value.id)); }} /></section>
+      )}
       {isBuyer && need.status === "draft" && (
         <section className="card">
           <h2>Черновик потребности</h2>

@@ -13,6 +13,10 @@ export interface EvidenceItem {
   value: FactValue;
   confidence: number;
   excerpt: string;
+  active?: boolean;
+  content_hash?: string;
+  original_value?: FactValue;
+  locator?: { located?: boolean; start?: number; end?: number; page?: number; seconds?: string[]; representation?: string };
 }
 
 export interface RequirementProperty {
@@ -53,6 +57,7 @@ export interface BuyerAgentResult {
 
 export interface AgentRun {
   id: string;
+  revision: number;
   agent_type: string;
   state: string;
   requested_route: string;
@@ -95,6 +100,20 @@ async function readResponse(response: Response): Promise<AgentRun> {
 }
 
 export const agents = {
+  getRun(token: string, runId: string): Promise<AgentRun> {
+    return fetch(`${agentsBaseUrl()}/api/v2/agent-runs/${runId}`, { headers: { Authorization: `Bearer ${token}` } }).then(readResponse);
+  },
+  async source(token: string, runId: string, sourceId: string, original = false): Promise<string | Blob> {
+    const response = await fetch(`${agentsBaseUrl()}/api/v2/agent-runs/${runId}/sources/${encodeURIComponent(sourceId)}?original=${original}`, { headers: { Authorization: `Bearer ${token}` } });
+    if (!response.ok) throw new ApiError("Источник недоступен или удалён", response.status);
+    if (original) return response.blob();
+    return ((await response.json()) as { extracted_text: string }).extracted_text;
+  },
+  invalidateSource(token: string, runId: string, sourceId: string, revision: number): Promise<AgentRun> {
+    return fetch(`${agentsBaseUrl()}/api/v2/agent-runs/${runId}/sources/${encodeURIComponent(sourceId)}/invalidate`, {
+      method: "POST", headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" }, body: JSON.stringify({ expected_revision: revision }),
+    }).then(readResponse);
+  },
   async askPlatform(token: string, question: string): Promise<{ answer: string; links: string[] }> {
     const response = await fetch(`${agentsBaseUrl()}/api/v1/platform-assistant`, { method: "POST", headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" }, body: JSON.stringify({ question }) });
     if (!response.ok) { let message="Помощник временно недоступен"; try { const body=(await response.json()) as {detail?:string}; message=body.detail??message; } catch {} throw new ApiError(message,response.status); }
@@ -126,7 +145,7 @@ export const agents = {
     if (companyId) form.set("company_id", companyId);
     files.forEach((file) => form.append("files", file));
     return readResponse(
-      await fetch(`${agentsBaseUrl()}/api/v1/buyer-agent/runs`, {
+      await fetch(`${agentsBaseUrl()}/api/v2/buyer-agent/runs`, {
         method: "POST",
         headers: { Authorization: `Bearer ${token}` },
         body: form,
@@ -138,24 +157,26 @@ export const agents = {
     token: string,
     runId: string,
     answers: Record<string, FactValue>,
+    revision: number,
   ): Promise<AgentRun> {
     return readResponse(
-      await fetch(`${agentsBaseUrl()}/api/v1/agent-runs/${runId}/clarify`, {
+      await fetch(`${agentsBaseUrl()}/api/v2/agent-runs/${runId}/clarify`, {
         method: "POST",
         headers: {
           Authorization: `Bearer ${token}`,
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ answers }),
+        body: JSON.stringify({ answers, expected_revision: revision }),
       }),
     );
   },
 
-  async confirm(token: string, runId: string): Promise<AgentRun> {
+  async confirm(token: string, runId: string, revision: number): Promise<AgentRun> {
     return readResponse(
-      await fetch(`${agentsBaseUrl()}/api/v1/agent-runs/${runId}/confirm`, {
+      await fetch(`${agentsBaseUrl()}/api/v2/agent-runs/${runId}/confirm`, {
         method: "POST",
-        headers: { Authorization: `Bearer ${token}` },
+        headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+        body: JSON.stringify({ expected_revision: revision }),
       }),
     );
   },

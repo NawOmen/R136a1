@@ -43,6 +43,8 @@ from ..schemas import (
     OptimizationVariantOut,
 )
 
+from ..requirements import require_current_evidence
+
 router = APIRouter(tags=["stage-5-market"])
 
 
@@ -433,6 +435,11 @@ async def list_my_coalitions(
     return [await _coalition_out(db, item, company_ids) for item in coalitions]
 
 
+async def _lock_coalition_needs(db, coalition_id):
+    ids = select(CoalitionMember.need_id).where(CoalitionMember.coalition_id == coalition_id)
+    await db.execute(select(Need).where(Need.id.in_(ids)).order_by(Need.id).with_for_update())
+
+
 @router.post("/coalitions/{coalition_id}/decision", response_model=CoalitionOut)
 async def decide_coalition(
     coalition_id: uuid.UUID,
@@ -440,6 +447,7 @@ async def decide_coalition(
     user: CurrentUser = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
+    await _lock_coalition_needs(db, coalition_id)
     coalition = (
         await db.execute(select(Coalition).where(Coalition.id == coalition_id).with_for_update())
     ).scalar_one_or_none()
@@ -513,6 +521,8 @@ async def decide_coalition(
     elif all(item.approval_status == "approved" for item in members):
         if group_offer.seller_approval_status != "approved":
             raise HTTPException(status.HTTP_409_CONFLICT, detail="Производитель ещё не подтвердил условия")
+        for current_need in member_needs.values():
+            await require_current_evidence(db, current_need)
         # Обязательства создаются сейчас: допуск производителя проверяется заново,
         # потому что документ мог истечь или быть отозван после публикации условий.
         admissions = await require_admission_for_specifications(
@@ -600,10 +610,11 @@ async def optimize_need(
     user: CurrentUser = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    need = await db.get(Need, need_id)
+    need = await db.scalar(select(Need).where(Need.id == need_id).with_for_update())
     if need is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, detail="Потребность не найдена")
     await require_company_buyer(need.company_id, user, db)
+    await require_current_evidence(db, need)
     offers = (
         await db.execute(
             select(Offer).where(
@@ -668,7 +679,8 @@ async def optimize_need(
         for variant in result["variants"]:
             existing = (await db.execute(select(OptimizationVariantRecord).where(
                 OptimizationVariantRecord.need_id==need.id, OptimizationVariantRecord.kind==variant['kind'],
-                OptimizationVariantRecord.input_hash==result['input_hash']))).scalar_one_or_none()
+                OptimizationVariantRecord.input_hash==result['input_hash'],
+                OptimizationVariantRecord.result['stale'].as_boolean().is_not(True)))).scalar_one_or_none()
             if existing is None:
                 existing = OptimizationVariantRecord(need_id=need.id,kind=variant['kind'],result=variant,input_hash=result['input_hash'])
                 db.add(existing)
@@ -687,6 +699,7 @@ class BaselineSelectionIn(BaseModel):
 @router.post('/coalitions/{coalition_id}/baseline',response_model=CoalitionOut)
 async def choose_individual_baseline(coalition_id:uuid.UUID,data:BaselineSelectionIn,
                                      user:CurrentUser=Depends(get_current_user),db:AsyncSession=Depends(get_db)):
+    await _lock_coalition_needs(db, coalition_id)
     coalition = await db.scalar(select(Coalition).where(Coalition.id==coalition_id).with_for_update())
     if coalition is None:raise HTTPException(404,'Коалиция не найдена')
     await require_company_buyer(data.company_id,user,db)

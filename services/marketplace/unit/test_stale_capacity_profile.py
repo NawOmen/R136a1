@@ -52,13 +52,15 @@ class StaleCapacityProfileTests(IsolatedAsyncioTestCase):
                 elif route == 'reserve':
                     module = resilience
                     commitment = NS(id=uuid.uuid4(), company_id=seller, plan_id=uuid.uuid4(), offer_id=None, confirmation_status='pending')
-                    plan = NS(id=commitment.plan_id, need_id=need.id)
+                    plan = NS(id=commitment.plan_id, need_id=need.id, status='preparing_reserves')
                     db.execute.side_effect = [result(commitment), result(plan)]
                     db.get.return_value = need
                     stack.enter_context(patch.object(module, '_lock_plan_resources', AsyncMock()))
+                    stack.enter_context(patch.object(module, '_lock_plan_need', AsyncMock()))
                     action = lambda: resilience.decide_reserve_commitment(commitment.id, ReserveDecisionIn(company_id=seller, decision='approved'), user, db)
                 else:
                     module = market
+                    stack.enter_context(patch.object(module, '_lock_coalition_needs', AsyncMock()))
                     coalition = NS(id=uuid.uuid4(), version=1, status='awaiting_approvals', producer_company_id=seller,
                                    compatibility_profile_id=uuid.uuid4())
                     members = [NS(id=uuid.uuid4(), need_id=need.id, buyer_company_id=buyer, units=100, approval_status='pending',commercial_estimate={'complete':True})]

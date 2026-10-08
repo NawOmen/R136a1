@@ -102,5 +102,11 @@ jobs:
         run: python3 scripts/sync_category_registry.py --check
       - name: Build
         run: pnpm build:web
+      - name: Install browser for requirement acceptance checks
+        working-directory: tests/e2e
+        run: pnpm exec playwright install --with-deps chromium --only-shell
+      - name: Requirement draft browser acceptance
+        working-directory: tests/e2e
+        run: pnpm exec playwright test --config requirements-browser.config.ts
       - name: Build web Docker image
         run: docker build --file apps/web/Dockerfile --tag porukam-web:ci .
