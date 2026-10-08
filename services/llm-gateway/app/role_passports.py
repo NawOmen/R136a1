@@ -178,6 +178,15 @@ TOOL_REGISTRY: dict[str, dict] = {
 WRITE_TOOLS = {name for name, spec in TOOL_REGISTRY.items() if spec["kind"] == "write"}
 
 
+SCENARIO_PERMISSIONS: dict[str, str] = {
+    "buyer_investigation": "can_buy",
+    "seller_explain": "can_sell",
+    "marketplace_match": "can_buy",
+    "coalition_build": "can_buy",
+    "resilience_plan": "can_buy",
+}
+
+
 def check_tool_call(tool_name: str, actor: ToolActor) -> Executor:
     """Серверная проверка каждого вызова независимо от текста модели.
 

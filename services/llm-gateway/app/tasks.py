@@ -17,7 +17,7 @@ from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from .models import AgentRun, AgentTask, AgentTaskCache, ToolCall
+from .models import AgentRun, AgentSource, AgentTask, AgentTaskCache, ToolCall
 from .role_passports import SCHEMA_VERSION, TASK_CONTRACT_VERSION
 
 SCENARIO_TYPES = frozenset({
@@ -38,7 +38,7 @@ TRANSITIONS: dict[str, frozenset[str]] = {
     "queued": frozenset({"running", "cancelled"}),
     "running": frozenset({"needs_input", "awaiting_approval", "completed", "failed", "cancelled"}),
     "needs_input": frozenset({"running", "failed", "cancelled"}),
-    "awaiting_approval": frozenset({"completed", "running", "failed", "cancelled"}),
+    "awaiting_approval": frozenset({"completed", "running", "needs_input", "failed", "cancelled"}),
     "failed": frozenset({"running", "cancelled"}),
     "completed": frozenset(),
     "cancelled": frozenset(),
@@ -60,12 +60,19 @@ STEP_TEXT = {
 
 ARTIFACT_TYPES = frozenset({
     "agent_run_result",
-    "need_draft",
-    "offer",
     "coalition_calculation",
     "resilience_plan",
-    "human_approval",
 })
+
+SCENARIO_ARTIFACTS: dict[str, frozenset[str]] = {
+    "buyer_investigation": frozenset({"agent_run_result"}),
+    "seller_explain": frozenset({"agent_run_result"}),
+    "marketplace_match": frozenset({"agent_run_result"}),
+    "coalition_build": frozenset({"agent_run_result", "coalition_calculation"}),
+    "resilience_plan": frozenset({"agent_run_result", "resilience_plan"}),
+}
+
+RUN_READY_STATES = frozenset({"ready_for_review", "confirmed_by_user"})
 
 RUN_STATE_TO_TASK = {
     "processing_sources": "running",
@@ -189,6 +196,8 @@ async def create_task(
 def start_task(task: AgentTask, expected_revision: int | None = None) -> AgentTask:
     if expected_revision is not None and expected_revision != task.input_revision:
         raise HTTPException(409, "Входная версия устарела; продолжение с правами старого согласия запрещено")
+    if task.state != "queued":
+        raise HTTPException(409, "Повторный запуск — только через продолжение с контролем попыток и задержки")
     _touch(task, "running")
     return task
 
@@ -208,8 +217,37 @@ def submit_task_input(
     return task
 
 
-def approve_task(
-    task: AgentTask, *, approval: dict, result_artifact: dict, expected_revision: int
+async def verify_run_artifact(db: AsyncSession, task: AgentTask, artifact: dict) -> None:
+    """Проверка сохранённой сущности в транзакции: существование, компания,
+    допустимость для сценария, текущая ревизия, готовность и свежесть источников."""
+    if artifact["type"] not in SCENARIO_ARTIFACTS.get(task.scenario_type, frozenset()):
+        raise HTTPException(422, f"Артефакт {artifact['type']} недопустим для сценария {task.scenario_type}")
+    if artifact["type"] != "agent_run_result":
+        return
+    try:
+        run_id = uuid.UUID(str(artifact["id"]))
+    except ValueError:
+        raise HTTPException(422, "Артефакт обязан ссылаться на сохранённый процесс") from None
+    run = await db.get(AgentRun, run_id)
+    if run is None:
+        raise HTTPException(409, "Связанный процесс не найден; завершение без сохранённого результата запрещено")
+    if run.company_id != task.company_id:
+        raise HTTPException(403, "Процесс принадлежит другой компании")
+    if artifact.get("revision") != run.revision:
+        raise HTTPException(409, "Ревизия процесса изменилась; согласие на старых условиях недействительно")
+    if run.state not in RUN_READY_STATES:
+        raise HTTPException(409, f"Процесс в состоянии {run.state} не готов к согласию")
+    stale_sources = await db.scalar(
+        select(AgentSource.run_id).where(
+            AgentSource.run_id == run.id, AgentSource.active.is_(False)
+        ).limit(1)
+    )
+    if stale_sources is not None:
+        raise HTTPException(409, "Источники процесса изменились; требуется новое согласование")
+
+
+async def approve_task(
+    db: AsyncSession, task: AgentTask, *, approval: dict, result_artifact: dict, expected_revision: int
 ) -> tuple[AgentTask, bool]:
     """Завершить задачу согласием. Повтор с тем же артефактом возвращает задачу без нового эффекта."""
     validate_approval(approval)
@@ -222,8 +260,11 @@ def approve_task(
         raise HTTPException(409, "Входная версия устарела; согласие на старых условиях недействительно")
     if task.state != "awaiting_approval":
         raise HTTPException(409, f"Согласие не ожидается в состоянии {task.state}")
-    if task.updated_at is not None and (_utcnow() - task.updated_at) > timedelta(seconds=APPROVAL_TTL_SECONDS):
+    if task.approval_requested_at is None:
+        raise HTTPException(409, "Срок согласия не зафиксирован; запросите актуальные условия заново")
+    if (_utcnow() - task.approval_requested_at) > timedelta(seconds=APPROVAL_TTL_SECONDS):
         raise HTTPException(409, "Срок согласия истёк; запросите актуальные условия заново")
+    await verify_run_artifact(db, task, result_artifact)
     task.approval = approval
     task.result_artifact = result_artifact
     task.error = None
@@ -298,15 +339,13 @@ async def attach_run(db: AsyncSession, task: AgentTask, run: AgentRun) -> AgentT
         raise HTTPException(409, f"Состояние процесса {run.state} не продолжается задачей")
     task.linked_run_id = run.id
     if run.state == "confirmed_by_user":
-        consent = [
-            call for call in await db.execute(
-                select(ToolCall).where(
-                    ToolCall.run_id == run.id, ToolCall.tool_name == "human_approval",
-                    ToolCall.status == "success",
-                )
-            ).scalars().all()
-        ]
-        if not consent:
+        consent_rows = (await db.execute(
+            select(ToolCall).where(
+                ToolCall.run_id == run.id, ToolCall.tool_name == "human_approval",
+                ToolCall.status == "success",
+            )
+        )).scalars().all()
+        if not consent_rows:
             raise HTTPException(409, "Подтверждение человека в процессе отсутствует")
         task.approval = {"decision": "approved", "by_user_id": "run:human_approval",
                          "contract": f"task-contract-{TASK_CONTRACT_VERSION}"}
@@ -315,6 +354,7 @@ async def attach_run(db: AsyncSession, task: AgentTask, run: AgentRun) -> AgentT
         _touch(task, "completed")
         return task
     if mapped != task.state:
+        task.approval = None
         _touch(task, mapped)
     else:
         task.heartbeat_at = _utcnow()
@@ -334,14 +374,17 @@ async def attach_run(db: AsyncSession, task: AgentTask, run: AgentRun) -> AgentT
             "run_id": str(run.id),
             "run_revision": run.revision,
         }
+        task.approval_requested_at = _utcnow()
     elif mapped == "failed":
         task.error = run.error or "Процесс завершился ошибкой"
         task.result_artifact = None
     return task
 
 
-def extraction_cache_key(scenario_type: str) -> str:
-    return f"extraction:{scenario_type}"
+def extraction_cache_key(scenario_type: str, model_version: str, prompt_version: str, schema_version: str) -> str:
+    """Ключ кеша содержит версии модели, промпта и схемы: смена любой версии
+    делает старый результат несопоставимым и даёт промах, а не чужую трассу."""
+    return f"extraction:{scenario_type}:{model_version}:{prompt_version}:{schema_version}"
 
 
 async def cache_lookup(

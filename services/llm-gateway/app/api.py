@@ -17,9 +17,9 @@ from .buyer_comparison import buyer_summary
 from .config import settings
 from .database import get_db
 from .extractors import LocalTranscriber, UnreadableMaterial, material_to_text
-from .models import AgentRun, AgentSource, ToolCall
+from .models import AgentRun, AgentSource, AgentTask, ToolCall
 from .providers import ModelUnavailable, RoutedProvider
-from .role_passports import PROMPT_VERSION, ROLE_PASSPORTS, SELLER_PROMPT_VERSION
+from .role_passports import PROMPT_VERSION, ROLE_PASSPORTS, SCENARIO_PERMISSIONS, SELLER_PROMPT_VERSION
 from . import tasks as task_contract
 from .schemas import (
     AgentRunOut,
@@ -289,19 +289,21 @@ async def analyze_buyer_request(
     cache_binding = None
     if company_id is not None:
         source_versions = [(source.id, source.content_hash) for source in sources]
+        generation = {
+            "model_version": settings.ollama_model if route == "local"
+            else f"{settings.ollama_model}+{settings.deepseek_model}",
+            "prompt_version": PROMPT_VERSION,
+            "schema_version": task_contract.SCHEMA_VERSION,
+        }
         cache_binding = {
+            "cache_key": task_contract.extraction_cache_key("buyer_investigation", **generation),
             "input_hash": task_contract.canonical_hash(
                 {"request_text": request_text, "route": route, "sources": source_versions}
             ),
             "source_versions_hash": task_contract.canonical_hash(source_versions),
         }
     cached = (
-        await task_contract.cache_lookup(
-            db,
-            company_id=company_id,
-            cache_key=task_contract.extraction_cache_key("buyer_investigation"),
-            **cache_binding,
-        )
+        await task_contract.cache_lookup(db, company_id=company_id, **cache_binding)
         if cache_binding is not None
         else None
     )
@@ -368,12 +370,15 @@ async def analyze_buyer_request(
         run.model_version = _model_version(used_route)
         run.state = "needs_clarification" if result.questions else "ready_for_review"
         await db.commit()
+        if cached is not None:
+            run.model_version = cached.get("model_version") or _model_version(used_route)
+            run.prompt_version = cached.get("prompt_version") or PROMPT_VERSION
+            await db.commit()
         if cached is None and cache_binding is not None:
             review_notes = result.warnings[len(warnings):]
             await task_contract.cache_store(
                 db,
                 company_id=company_id,
-                cache_key=task_contract.extraction_cache_key("buyer_investigation"),
                 **cache_binding,
                 run_id=run.id,
                 source_ids=[source.id for source in sources],
@@ -381,6 +386,8 @@ async def analyze_buyer_request(
                     "extraction": extraction.model_dump(mode="json"),
                     "used_route": used_route,
                     "review_notes": review_notes,
+                    "model_version": run.model_version,
+                    "prompt_version": run.prompt_version,
                 },
             )
         await db.refresh(run)
@@ -595,6 +602,16 @@ async def invalidate_source(run_id: uuid.UUID, source_id: str, data: RunRevision
     await log_tool(db, run.id, "invalidate_source", "success", source_id, "Источник удалён, версия требований изменена",
                    actor="human")
     await task_contract.cache_purge_run(db, run.id)
+    linked_tasks = (await db.execute(
+        select(AgentTask).where(AgentTask.linked_run_id == run.id)
+    )).scalars().all()
+    for linked_task in linked_tasks:
+        if linked_task.state in ("completed", "cancelled"):
+            continue
+        try:
+            await task_contract.attach_run(db, linked_task, run)
+        except HTTPException:
+            task_contract.fail_task(linked_task, "Связанный результат изменился; продолжение требует нового процесса")
     await db.commit()
     return await _run_out(db, run)
 
@@ -697,13 +714,17 @@ async def get_agent_role(role_id: str) -> RolePassportOut:
     return RolePassportOut(id=role_id, **passport)
 
 
-async def _require_member(db: AsyncSession, company_id: uuid.UUID, user) -> None:
-    member = await db.scalar(
-        text("SELECT 1 FROM auth.company_members WHERE company_id=:cid AND user_id=:uid"),
+async def _require_task_role(db: AsyncSession, company_id: uuid.UUID, user, scenario_type: str) -> None:
+    """Актуальное право роли по сценарию: отозванное право блокирует и согласие."""
+    permission = SCENARIO_PERMISSIONS.get(scenario_type)
+    if permission is None:
+        raise HTTPException(422, f"Неизвестный тип сценария: {scenario_type}")
+    allowed = await db.scalar(
+        text(f"SELECT {permission} FROM auth.company_members WHERE company_id=:cid AND user_id=:uid"),
         {"cid": company_id, "uid": user.id},
     )
-    if member is None:
-        raise HTTPException(status.HTTP_403_FORBIDDEN, detail="Нет доступа к компании")
+    if not allowed:
+        raise HTTPException(status.HTTP_403_FORBIDDEN, detail="Нет актуального права роли этой компании")
 
 
 async def _task_out(db: AsyncSession, task) -> TaskOut:
@@ -717,7 +738,7 @@ async def create_agent_task(
     user: CurrentUser = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    await _require_member(db, data.company_id, user)
+    await _require_task_role(db, data.company_id, user, data.scenario_type)
     task, created = await task_contract.create_task(
         db,
         company_id=data.company_id,
@@ -729,18 +750,8 @@ async def create_agent_task(
         parent_task_id=data.parent_task_id,
         prompt_version=PROMPT_VERSION,
     )
-    reused_cache = None
-    if created and task.scenario_type == "buyer_investigation":
-        versions_hash = task_contract.canonical_hash(task.source_refs)
-        reused_cache = await task_contract.cache_lookup(
-            db,
-            company_id=task.company_id,
-            cache_key=task_contract.extraction_cache_key(task.scenario_type),
-            input_hash=task_contract.canonical_hash(data.input),
-            source_versions_hash=versions_hash,
-        )
     out = await _task_out(db, task)
-    return TaskCreateOut(**out.model_dump(), created=created, reused_cache=reused_cache)
+    return TaskCreateOut(**out.model_dump(), created=created)
 
 
 @router.get("/api/v2/agent-tasks/{task_id}", response_model=TaskOut)
@@ -750,8 +761,9 @@ async def get_agent_task(
     user: CurrentUser = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    await _require_member(db, company_id, user)
     task = await task_contract.owned_task(db, task_id, company_id)
+    task = await task_contract.owned_task(db, task_id, company_id)
+    await _require_task_role(db, company_id, user, task.scenario_type)
     return await _task_out(db, task)
 
 
@@ -763,8 +775,9 @@ async def start_agent_task(
     user: CurrentUser = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    await _require_member(db, company_id, user)
     task = await task_contract.owned_task(db, task_id, company_id, lock=True)
+    task = await task_contract.owned_task(db, task_id, company_id, lock=True)
+    await _require_task_role(db, company_id, user, task.scenario_type)
     task_contract.start_task(task, data.expected_revision if data else None)
     await db.commit()
     return await _task_out(db, task)
@@ -778,8 +791,9 @@ async def submit_agent_task_input(
     user: CurrentUser = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    await _require_member(db, company_id, user)
     task = await task_contract.owned_task(db, task_id, company_id, lock=True)
+    task = await task_contract.owned_task(db, task_id, company_id, lock=True)
+    await _require_task_role(db, company_id, user, task.scenario_type)
     task_contract.submit_task_input(task, data.input, data.source_refs, data.expected_revision)
     await db.commit()
     return await _task_out(db, task)
@@ -793,11 +807,12 @@ async def approve_agent_task(
     user: CurrentUser = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    await _require_member(db, company_id, user)
     task = await task_contract.owned_task(db, task_id, company_id, lock=True)
+    task = await task_contract.owned_task(db, task_id, company_id, lock=True)
+    await _require_task_role(db, company_id, user, task.scenario_type)
     approval = {**data.approval, "by_user_id": str(user.id)}
-    task_contract.approve_task(
-        task, approval=approval, result_artifact=data.result_artifact,
+    await task_contract.approve_task(
+        db, task, approval=approval, result_artifact=data.result_artifact,
         expected_revision=data.expected_revision,
     )
     await db.commit()
@@ -812,8 +827,9 @@ async def resume_agent_task(
     user: CurrentUser = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    await _require_member(db, company_id, user)
     task = await task_contract.owned_task(db, task_id, company_id, lock=True)
+    task = await task_contract.owned_task(db, task_id, company_id, lock=True)
+    await _require_task_role(db, company_id, user, task.scenario_type)
     task_contract.resume_task(task, data.expected_revision)
     await db.commit()
     return await _task_out(db, task)
@@ -827,8 +843,9 @@ async def fail_agent_task(
     user: CurrentUser = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    await _require_member(db, company_id, user)
     task = await task_contract.owned_task(db, task_id, company_id, lock=True)
+    task = await task_contract.owned_task(db, task_id, company_id, lock=True)
+    await _require_task_role(db, company_id, user, task.scenario_type)
     if data.expected_revision != task.input_revision:
         raise HTTPException(409, "Входная версия устарела")
     task_contract.fail_task(task, data.error)
@@ -844,8 +861,9 @@ async def cancel_agent_task(
     user: CurrentUser = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    await _require_member(db, company_id, user)
     task = await task_contract.owned_task(db, task_id, company_id, lock=True)
+    task = await task_contract.owned_task(db, task_id, company_id, lock=True)
+    await _require_task_role(db, company_id, user, task.scenario_type)
     if data.expected_revision != task.input_revision:
         raise HTTPException(409, "Входная версия устарела")
     task_contract.cancel_task(task, data.reason)
@@ -860,8 +878,9 @@ async def heartbeat_agent_task(
     user: CurrentUser = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    await _require_member(db, company_id, user)
     task = await task_contract.owned_task(db, task_id, company_id, lock=True)
+    task = await task_contract.owned_task(db, task_id, company_id, lock=True)
+    await _require_task_role(db, company_id, user, task.scenario_type)
     task_contract.heartbeat_task(task)
     await db.commit()
     return await _task_out(db, task)
@@ -875,8 +894,9 @@ async def attach_run_to_task(
     user: CurrentUser = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    await _require_member(db, company_id, user)
     task = await task_contract.owned_task(db, task_id, company_id, lock=True)
+    task = await task_contract.owned_task(db, task_id, company_id, lock=True)
+    await _require_task_role(db, company_id, user, task.scenario_type)
     run = await owned_run(db, data.run_id, user)
     await task_contract.attach_run(db, task, run)
     await db.commit()

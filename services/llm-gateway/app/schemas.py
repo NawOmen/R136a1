@@ -269,10 +269,10 @@ class TaskOut(BaseModel):
     attempts: int
     max_attempts: int
     heartbeat_at: datetime | None
+    approval_requested_at: datetime | None = None
     created_at: datetime
     updated_at: datetime
 
 
 class TaskCreateOut(TaskOut):
     created: bool = True
-    reused_cache: dict[str, Any] | None = None
