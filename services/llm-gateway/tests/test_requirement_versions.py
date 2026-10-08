@@ -1,5 +1,7 @@
 import uuid
 
+import pytest
+
 from sqlalchemy import text
 from app.schemas import RawExtraction, RawFact
 
@@ -68,6 +70,9 @@ async def test_clarification_keeps_competing_sources_and_rejects_old_revision(cl
 
 async def test_sources_require_current_membership(client, token, user_id, db_session):
     company = uuid.uuid4()
+    await db_session.execute(text("INSERT INTO auth.companies "
+        "(id,full_name,display_name,legal_form,inn,legal_address,country,verification_status) "
+        "VALUES (:id,'ООО Синтетический покупатель','Синтетический покупатель','ООО','0000000000','г. Москва, ул. Синтетическая, д. 1','RU','verified')"), {"id":company})
     await db_session.execute(text("INSERT INTO auth.company_members(id,company_id,user_id,can_buy) VALUES (:id,:cid,:uid,true)"),
         {"id": uuid.uuid4(), "cid": company, "uid": user_id})
     await db_session.commit()
@@ -85,8 +90,6 @@ async def test_empty_placeholder_and_unknown_answers_are_rejected(client, token)
         response = await client.post(base, headers=auth(token), json={"expected_revision": 1, "answers": answers})
         assert response.status_code == 422, response.text
 
-
-import pytest
 
 @pytest.mark.parametrize('key,first,second', [('material','дерево','сталь'),('purpose','офис','улица'),('quantity_units',5000,6000),('lead_time_days',10,20)])
 async def test_every_critical_conflict_blocks_confirmation(client, token, fake_provider, key, first, second):
