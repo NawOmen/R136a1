@@ -11,8 +11,9 @@ from .models import (Need, NeedRevision, Offer, OfferDraft, Deal, Coalition, Coa
     GroupOffer, ParticipantOrder, OptimizationVariantRecord, ResiliencePlan, ReserveCommitment,
     ResourceReservation)
 from .trust import append_audit_event, record_human_approval
-from .category_units import order_unit
+from .category_units import order_unit, canonical_unit
 from .resources import lock_company
+from .physical_quantities import normalize_physical
 
 SPEC_FIELDS = ("category", "subcategory", "characteristics", "volume_units", "budget_rub",
                "deadline_date", "valid_until", "delivery_address_id")
@@ -24,6 +25,27 @@ def specification(need):
 
 def canonical(value):
     return json.dumps(value, sort_keys=True, ensure_ascii=False, default=str, separators=(",", ":"))
+
+
+def quantity_evidence_conversion(prop, field):
+    """Only a documented, exact unit conversion preserves an agent source."""
+    sources = prop.get("sources", [])
+    units = {canonical_unit(source["original_unit"]) for source in sources
+             if source.get("original_unit") and source.get("active", True)}
+    if len(units) != 1 or not sources or any(not source.get("original_unit") or not source.get("active", True)
+                                          for source in sources):
+        return None
+    try:
+        values, conversion = normalize_physical('need', {
+            'volume_units': prop.get('value'), 'characteristics': {'unit': next(iter(units))},
+        }, require_approval=False)
+    except (ValueError, TypeError, KeyError):
+        return None
+    if values['volume_units'] != field['value'] or values['characteristics']['unit'] != field['normalized_unit']:
+        return None
+    return {'input_value': str(prop['value']), 'input_unit': conversion['input_unit'],
+            'normalized_value': values['volume_units'], 'normalized_unit': conversion['stored_unit'],
+            'factor': conversion['factor'], 'exact': True}
 
 
 async def evidence_snapshot(db, data, user, *, lock=True):
@@ -63,11 +85,22 @@ async def evidence_snapshot(db, data, user, *, lock=True):
         if key not in fields:
             continue
         observed = prop.get("value")
+        conversion = quantity_evidence_conversion(prop, fields[key]) if key == 'quantity_units' else None
         # Forms render scalar facts as text; lists are displayed with commas.
         comparable = ", ".join(map(str, observed)) if isinstance(observed, list) else str(observed)
-        if comparable.strip().casefold() == str(fields[key]["value"]).strip().casefold():
+        # A scalar with no recorded unit retains the existing comparison only
+        # when the form did not convert units. Never infer a conversion for it.
+        direct_comparison = key != 'quantity_units' or (
+            fields[key]['original_unit'] == fields[key]['normalized_unit'] and
+            not any(source.get('original_unit') for source in prop.get('sources', [])))
+        if (conversion is not None or
+            (direct_comparison and comparable.strip().casefold() == str(fields[key]["value"]).strip().casefold())):
             fields[key] = {**fields[key], "origin": "agent", "extraction_status": prop.get("status"),
                            "sources": prop.get("sources", [])}
+            if conversion is not None:
+                fields[key]['conversion'] = conversion
+                if not physical:
+                    fields[key].update(original_value=conversion['input_value'], original_unit=conversion['input_unit'])
         else:
             fields[key]["previous_evidence"] = prop
             fields[key]["origin"] = "manual_override"
@@ -128,6 +161,11 @@ async def revision_impact(db, need, data):
 async def invalidate_dependents(db, need, dependents, user, impact):
     offers, drafts, coalitions, plans, variants = dependents
     recipients = {need.company_id}
+    # All paths acquire the specification/group/plan before resource locks.
+    for coalition in sorted(coalitions, key=lambda value: str(value.id)):
+        await db.refresh(coalition, with_for_update=True)
+    for plan in sorted(plans, key=lambda value: str(value.id)):
+        await db.refresh(plan, with_for_update=True)
     reserve_ids = select(ReserveCommitment.id).where(ReserveCommitment.plan_id.in_([row.id for row in plans]))
     affected_rows = list((await db.scalars(select(ResourceReservation).where(
         ((ResourceReservation.anchor_type == "coalition") & ResourceReservation.anchor_id.in_([row.id for row in coalitions])) |
@@ -143,7 +181,6 @@ async def invalidate_dependents(db, need, dependents, user, impact):
         draft.status = "stale"
         recipients.add(draft.company_id)
     for coalition in sorted(coalitions, key=lambda value: str(value.id)):
-        await db.refresh(coalition, with_for_update=True)
         if coalition.status == "confirmed":
             raise HTTPException(409, "Группа уже создала обязательства; используйте согласованный процесс изменения сделки")
         coalition.status = "cancelled"
@@ -167,7 +204,6 @@ async def invalidate_dependents(db, need, dependents, user, impact):
             if row.status == "held":
                 row.status = "released"
     for plan in sorted(plans, key=lambda row: str(row.id)):
-        await db.refresh(plan, with_for_update=True)
         if plan.confirmed_at is not None:
             raise HTTPException(409, "План уже подтверждён; требуется изменение обязательств")
         plan.status = "stale"

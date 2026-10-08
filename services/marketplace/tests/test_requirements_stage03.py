@@ -183,3 +183,231 @@ async def test_physical_evidence_keeps_input_and_exact_normalization(client, spe
     field=response.json()['requirements_evidence']['fields']['quantity_units']
     assert field['original_value']=='1.25' and field['original_unit']=='кг'
     assert field['value']==1250 and field['normalized_unit']=='г'
+
+
+async def test_physical_edit_refreshes_preloaded_need_before_revision_check(client, db_session, spec, monkeypatch):
+    import asyncio
+    from app.api import physical_quantities
+    nid, _, _, _, headers, payload, *_ = spec
+    loaded, resume = asyncio.Event(), asyncio.Event()
+    original = physical_quantities.approve_conversion
+
+    async def pause_after_preload(*args, **kwargs):
+        loaded.set()
+        await resume.wait()
+        return await original(*args, **kwargs)
+
+    monkeypatch.setattr(physical_quantities, 'approve_conversion', pause_after_preload)
+    stale = asyncio.create_task(client.put(f'/api/v3/physical/needs/{nid}', headers=headers,
+        json={**payload, 'volume_units': 15, 'expected_revision': 1}))
+    try:
+        await asyncio.wait_for(loaded.wait(), 5)
+        body, impact = await preview(client, spec, volume_units=20)
+        saved = await client.put(f'/api/v3/needs/{nid}', headers=headers,
+            json={**body, 'impact_hash': impact['impact_hash']})
+        assert saved.status_code == 200, saved.text
+        resume.set()
+        response = await asyncio.wait_for(stale, 5)
+        assert response.status_code == 409, response.text
+        await db_session.refresh(await db_session.get(Need, nid))
+        assert (await db_session.get(Need, nid)).volume_units == 20
+        history = (await client.get(f'/api/v3/needs/{nid}/revisions', headers=headers)).json()
+        assert [row['revision'] for row in history] == [2, 1]
+    finally:
+        resume.set()
+        if not stale.done():
+            stale.cancel()
+        await asyncio.gather(stale, return_exceptions=True)
+
+
+@pytest.fixture
+async def publishable_group(db_session, spec, monkeypatch):
+    from app.models import CompatibilityProfile, Coalition, CoalitionMember, GroupOffer
+    from conftest import confirmed_quote_terms
+    nid, _, cid, scid, _, _, *_ = spec
+    user2 = await make_user(db_session)
+    company2 = await make_company(db_session, user2, can_buy=True, can_sell=False)
+    need2 = Need(company_id=company2, created_by_user_id=user2, category='Мебель',
+        characteristics={'unit': 'шт', 'material': 'дерево'}, volume_units=10,
+        deadline_date=date.today()+timedelta(days=30), status='open_for_offers')
+    profile = CompatibilityProfile(category='Мебель', input_hash='synthetic-publish-race', common_base={'unit': 'шт'})
+    db_session.add_all([need2, profile]); await db_session.flush()
+    coalition = Coalition(category='Мебель', compatibility_profile_id=profile.id, producer_company_id=scid,
+        combined_volume_units=20, status='candidate')
+    db_session.add(coalition); await db_session.flush()
+    db_session.add_all([CoalitionMember(coalition_id=coalition.id, need_id=nid, buyer_company_id=cid, units=10),
+        CoalitionMember(coalition_id=coalition.id, need_id=need2.id, buyer_company_id=company2, units=10)])
+    group = GroupOffer(coalition_id=coalition.id, company_id=scid, status='draft', seller_approval_status='pending')
+    db_session.add(group); await db_session.commit()
+    seller = await db_session.scalar(text('SELECT user_id FROM auth.company_members WHERE company_id=:id'), {'id': scid})
+    seller_headers = {'Authorization': f'Bearer {make_token(seller)}'}
+    data = {'min_total_units': 1, 'max_total_units': 100, 'available_capacity_units': 100,
+        'price_tiers': [{'min_units': 1, 'unit_price_rub': '10'}],
+        'production_start': str(date.today()+timedelta(days=3)), 'production_end': str(date.today()+timedelta(days=4)),
+        'fill_deadline': str(date.today()+timedelta(days=1)), 'non_fill_rule': 'recalculate',
+        'participant_terms': [{'need_id': str(n), 'delivery_cost_rub': '0', 'commercial_terms': confirmed_quote_terms()}
+                              for n in (nid, need2.id)]}
+
+    async def no_rematch(*args, **kwargs):
+        pass
+
+    async def admitted(*args, **kwargs):
+        return []
+
+    async def evaluated(payload):
+        return {'feasible': True, 'reasons': [], 'members': [
+            {'need_id': member['need_id'], 'common_production_cost_rub': member['volume_units']*10,
+             'delivery_cost_rub': 0, 'total_cost_rub': member['volume_units']*10,
+             'baseline_cost_rub': None, 'benefit_rub': None} for member in payload['members']]}
+
+    monkeypatch.setattr('app.api.market.require_admission_for_specifications', admitted)
+    monkeypatch.setattr('app.api.market.evaluate_coalition', evaluated)
+    monkeypatch.setattr('app.api.market.run_market_rematch', no_rematch)
+    monkeypatch.setattr('app.api.needs.run_market_rematch', no_rematch)
+    return group.id, coalition.id, seller_headers, data
+
+
+async def test_group_publication_refreshes_cancelled_group_after_wait(client, db_session, spec, publishable_group, monkeypatch):
+    import asyncio
+    from app.api import market
+    from app.models import Coalition, GroupOffer, ParticipantOrder
+    group_id, coalition_id, seller_headers, data = publishable_group
+    nid, _, _, _, buyer_headers, *_ = spec
+    read, resume = asyncio.Event(), asyncio.Event()
+    original = market._lock_coalition_needs
+
+    async def pause_before_lock(*args, **kwargs):
+        read.set()
+        await resume.wait()
+        return await original(*args, **kwargs)
+
+    monkeypatch.setattr(market, '_lock_coalition_needs', pause_before_lock)
+    publish = asyncio.create_task(client.post(f'/api/v3/group-offers/{group_id}/publish', headers=seller_headers, json=data))
+    try:
+        await asyncio.wait_for(read.wait(), 5)
+        body, impact = await preview(client, spec, volume_units=20)
+        saved = await client.put(f'/api/v3/needs/{nid}', headers=buyer_headers,
+            json={**body, 'impact_hash': impact['impact_hash']})
+        assert saved.status_code == 200, saved.text
+        resume.set()
+        response = await asyncio.wait_for(publish, 5)
+        assert response.status_code == 409, response.text
+        coalition = await db_session.get(Coalition, coalition_id); await db_session.refresh(coalition)
+        group = await db_session.get(GroupOffer, group_id); await db_session.refresh(group)
+        assert coalition.status == 'cancelled'
+        assert group.status == 'recalculation_required' and group.seller_approval_status == 'pending'
+        assert not (await db_session.scalars(select(ParticipantOrder))).all()
+    finally:
+        resume.set()
+        if not publish.done():
+            publish.cancel()
+        await asyncio.gather(publish, return_exceptions=True)
+
+
+async def test_published_group_binds_consents_to_member_need_revision(client, db_session, spec, publishable_group):
+    from app.models import CoalitionMember
+    group_id, coalition_id, seller_headers, data = publishable_group
+    nid, _, cid, _, buyer_headers, *_ = spec
+    published = await client.post(f'/api/v3/group-offers/{group_id}/publish', headers=seller_headers, json=data)
+    assert published.status_code == 200, published.text
+    members = (await db_session.scalars(select(CoalitionMember).where(CoalitionMember.coalition_id == coalition_id))).all()
+    assert all(member.commercial_estimate['need_revision'] == 1 for member in members)
+    # Even inconsistent legacy/imported state cannot create an obligation for an old specification.
+    need = await db_session.get(Need, nid); await db_session.refresh(need)
+    need.revision = 2
+    await db_session.commit()
+    response = await client.post(f'/api/v3/coalitions/{coalition_id}/decision', headers=buyer_headers,
+        json={'company_id': str(cid), 'decision': 'approved', 'expected_revision': published.json()['version']})
+    assert response.status_code == 409, response.text
+
+
+@pytest.mark.parametrize('quantity,unit,origin', [('1.25','кг','agent'), ('1.250','килограмм','agent'),
+                                                ('1250','г','agent'), ('2','кг','manual_override'), ('1250','шт','manual_override')])
+async def test_gateway_quantity_evidence_preserves_only_equivalent_physical_input(client, db_session, spec, gateway_contract, quantity, unit, origin):
+    import json
+    _, uid, cid, _, headers, payload, *_ = spec
+    run = uuid.uuid4()
+    source = {'source_id': 'synthetic-quantity-source', 'source_name': 'Требования покупателя',
+        'source_kind': 'text', 'value': '1.25', 'original_unit': 'кг', 'normalized_unit': 'кг',
+        'excerpt': 'Нужно 1.25 кг материала', 'content_hash': 'synthetic-sha256',
+        'locator': {'located': True, 'start': 0, 'end': 23}, 'active': True, 'confidence': 1}
+    result = {'can_confirm': True, 'conflicts': [], 'questions': [], 'properties': [
+        {'key': 'quantity_units', 'value': '1.25', 'status': 'confirmed', 'sources': [source]}]}
+    has_type = await db_session.scalar(text("SELECT EXISTS(SELECT 1 FROM information_schema.columns WHERE table_schema='agents' AND table_name='agent_runs' AND column_name='agent_type')"))
+    query = text("INSERT INTO agents.agent_runs (id,revision,state,result,user_id,company_id,agent_type,requested_route,input_summary) VALUES (:id,1,'confirmed_by_user',CAST(:result AS JSONB),:uid,:cid,'buyer_investigator','local','')" if has_type else
+        "INSERT INTO agents.agent_runs (id,revision,state,result,user_id,company_id) VALUES (:id,1,'confirmed_by_user',CAST(:result AS JSONB),:uid,:cid)")
+    await db_session.execute(query, {'id': run, 'uid': uid, 'cid': cid, 'result': json.dumps(result)})
+    await db_session.commit()
+    response = await client.post('/api/v3/physical/needs', headers=headers, json={**payload,
+        'category': 'Мебель' if unit == 'шт' else 'Сырьё и материалы',
+        'subcategory': None if unit == 'шт' else 'Полимеры', 'characteristics': {'unit': unit},
+        'volume_units': quantity, 'quantity_conversion_approved': True, 'agent_run_id': str(run), 'agent_run_revision': 1})
+    assert response.status_code == 201, response.text
+    field = response.json()['requirements_evidence']['fields']['quantity_units']
+    assert field['origin'] == origin
+    if origin == 'agent':
+        assert field['value'] == 1250 and field['normalized_unit'] == 'г'
+        assert field['sources'] == [source]
+        assert field['conversion'] == {'input_value': '1.25', 'input_unit': 'кг',
+            'normalized_value': 1250, 'normalized_unit': 'г', 'factor': 1000, 'exact': True}
+    else:
+        assert field['sources'] == [] and field['previous_evidence']['sources'] == [source]
+
+
+async def test_group_publication_holds_need_lock_until_commit(client, db_session, spec, publishable_group, monkeypatch):
+    import asyncio
+    from app.models import Coalition, CoalitionMember, ParticipantOrder
+    group_id, coalition_id, seller_headers, data = publishable_group
+    nid, _, _, _, buyer_headers, *_ = spec
+    body, impact = await preview(client, spec, volume_units=20)
+    reached, resume = asyncio.Event(), asyncio.Event()
+
+    async def pause_admission(*args, **kwargs):
+        reached.set()
+        await resume.wait()
+        return []
+
+    monkeypatch.setattr('app.api.market.require_admission_for_specifications', pause_admission)
+    publish = asyncio.create_task(client.post(f'/api/v3/group-offers/{group_id}/publish', headers=seller_headers, json=data))
+    edit = None
+    try:
+        await asyncio.wait_for(reached.wait(), 5)
+        edit = asyncio.create_task(client.put(f'/api/v3/needs/{nid}', headers=buyer_headers,
+            json={**body, 'impact_hash': impact['impact_hash']}))
+        # Assert an actual PostgreSQL lock wait rather than relying on timing of tasks.
+        blocked = False
+        for _ in range(100):
+            await db_session.execute(text('SELECT pg_stat_clear_snapshot()'))
+            blocked = await db_session.scalar(text("SELECT EXISTS(SELECT 1 FROM pg_stat_activity WHERE datname=current_database() AND wait_event_type='Lock' AND query LIKE '%marketplace.needs%' AND pid<>pg_backend_pid())"))
+            if blocked:
+                break
+            await asyncio.sleep(0.01)
+        assert blocked and not edit.done()
+        resume.set()
+        published = await asyncio.wait_for(publish, 5)
+        assert published.status_code == 200, published.text
+        edited = await asyncio.wait_for(edit, 5)
+        assert edited.status_code == 409, edited.text  # Publication changed the impact preview.
+        body, fresh = await preview(client, spec, volume_units=20)
+        saved = await client.put(f'/api/v3/needs/{nid}', headers=buyer_headers,
+            json={**body, 'impact_hash': fresh['impact_hash']})
+        assert saved.status_code == 200, saved.text
+        assert saved.json()['volume_units'] == 20 and saved.json()['revision'] == 2
+        coalition = await db_session.get(Coalition, coalition_id); await db_session.refresh(coalition)
+        assert coalition.status == 'cancelled'
+        members = (await db_session.scalars(select(CoalitionMember).where(CoalitionMember.coalition_id == coalition_id))).all()
+        for member in members:
+            user_id = await db_session.scalar(text('SELECT user_id FROM auth.company_members WHERE company_id=:id'), {'id': member.buyer_company_id})
+            decision = await client.post(f'/api/v3/coalitions/{coalition_id}/decision',
+                headers={'Authorization': f'Bearer {make_token(user_id)}'}, json={
+                    'company_id': str(member.buyer_company_id), 'decision': 'approved',
+                    'expected_revision': coalition.version})
+            assert decision.status_code == 409, decision.text
+        assert not (await db_session.scalars(select(ParticipantOrder))).all()
+    finally:
+        resume.set()
+        tasks = [task for task in (publish, edit) if task is not None]
+        for task in tasks:
+            if not task.done():
+                task.cancel()
+        await asyncio.gather(*tasks, return_exceptions=True)

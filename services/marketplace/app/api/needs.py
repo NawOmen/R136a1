@@ -184,7 +184,8 @@ async def create_need(
 @router.put("/needs/{need_id}", response_model=NeedOut)
 async def edit_need(need_id: uuid.UUID, data: NeedEditIn,
                     user: CurrentUser = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
-    need = await db.scalar(select(Need).where(Need.id == need_id).with_for_update())
+    need = await db.scalar(select(Need).where(Need.id == need_id).with_for_update()
+                           .execution_options(populate_existing=True))
     if need is None:
         raise HTTPException(404, "Потребность не найдена")
     await require_company_buyer(need.company_id, user, db)
