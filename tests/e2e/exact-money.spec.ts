@@ -1,5 +1,5 @@
 import { expect, test } from "@playwright/test";
-import { displayMoney, lineAmount, scaledMoney } from "../../apps/web/app/lib/money";
+import { displayMoney, lineAmount, previewLineAmount, scaledMoney } from "../../apps/web/app/lib/money";
 import { marketplace } from "../../apps/web/app/lib/marketplace";
 
 test("exact subkopeck prices, large quantities and negative money retain their values", () => {
@@ -10,6 +10,8 @@ test("exact subkopeck prices, large quantities and negative money retain their v
   expect(displayMoney("-1000.01")).toBe("−1\u00a0000,01 ₽");
   expect(displayMoney("150.123456789012",12)).toBe("150,123456789012 ₽");
   expect(()=>scaledMoney("NaN")).toThrow();
+  expect(previewLineAmount("",1)).toBeNull();
+  expect(previewLineAmount("7","2.5")).toBe("17.500000000000");
 });
 
 test("marketplace client uses exact v3 without converting submitted prices", async () => {

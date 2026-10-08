@@ -1,5 +1,5 @@
 "use client";
-import { lineAmount } from "../../lib/money";
+import { lineAmount, previewLineAmount } from "../../lib/money";
 
 // Товары компании (GET/POST /companies/{id}/products): список, форма создания,
 // публикация/снятие с публикации (POST /products/{id}/publish).
@@ -353,7 +353,7 @@ export default function SellerProductsPage() {
                   onChange={(event) => setTiers((current) => current.map((item, i) => i === index ? {...item, min_units: Number(event.target.value)} : item))} />
                 <input type="number" min="0.000000000001" step="any" value={tier.unit_price_rub} aria-label="Цена ступени"
                   onChange={(event) => setTiers((current) => current.map((item, i) => i === index ? {...item, unit_price_rub: String(event.target.value)} : item))} />
-                <span className="company-meta">{formatRub(lineAmount(tier.unit_price_rub, tier.min_units))} за партию</span>
+                <span className="company-meta">{formatRub(previewLineAmount(tier.unit_price_rub, tier.min_units))} за партию</span>
                 <button type="button" className="btn btn-secondary btn-sm" onClick={() => setTiers((current) => current.filter((_, i) => i !== index))}>Удалить</button>
               </div>
             ))}

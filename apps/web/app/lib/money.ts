@@ -21,6 +21,10 @@ export function lineAmount(price: Money, units: Money): string {
   const rounded = ((positive + cent / BigInt(2)) / cent) * cent;
   return moneyString((raw < BigInt(0) ? -rounded : rounded) / SCALE);
 }
+/** Editable fields may be empty or incomplete; a preview must not break the form. */
+export function previewLineAmount(price: Money, units: Money): string | null {
+  try { return lineAmount(price, units); } catch { return null; }
+}
 export function displayMoney(value: Money | null | undefined, precision = 2): string {
   if (value == null) return '—';
   try {
