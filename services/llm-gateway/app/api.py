@@ -420,6 +420,7 @@ async def clarify_agent_run(
     user: CurrentUser = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
+    await _lock_run_scope(db, run_id)
     run = await owned_run(db, run_id, user, lock=True)
     check_run_revision(run, data.expected_revision, request)
     if run.state not in {"needs_clarification", "ready_for_review"}:
@@ -505,6 +506,7 @@ async def clarify_agent_run(
         f"осталось вопросов: {len(result.questions)}",
         actor="human",
     )
+    await _refresh_linked_tasks(db, run)
     await db.commit()
     await db.refresh(run)
     return await _run_out(db, run)
@@ -519,6 +521,7 @@ async def confirm_agent_run(
     user: CurrentUser = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
+    await _lock_run_scope(db, run_id)
     run = await owned_run(db, run_id, user, lock=True)
     check_run_revision(run, data.expected_revision if data else None, request)
     if run.state == "confirmed_by_user":
@@ -548,6 +551,7 @@ async def confirm_agent_run(
         "Пользователь разрешил перенести данные в черновик",
         actor="human",
     )
+    await _refresh_linked_tasks(db, run)
     await db.commit()
     await db.refresh(run)
     return await _run_out(db, run)
@@ -573,11 +577,9 @@ async def read_source(run_id: uuid.UUID, source_id: str, original: bool = False,
 @router.post("/api/v2/agent-runs/{run_id}/sources/{source_id}/invalidate", response_model=AgentRunOut)
 async def invalidate_source(run_id: uuid.UUID, source_id: str, data: RunRevisionIn, request: Request,
                             user: CurrentUser = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
-    # Порядок блокировок единый для всех операций с задачами: сначала задачи,
-    # затем процесс. Промежуточных commit нет — вся операция в одной транзакции.
-    linked_tasks = (await db.execute(
-        select(AgentTask).where(AgentTask.linked_run_id == run_id).with_for_update()
-    )).scalars().all()
+    # Сериализация с attach/approve/clarify/confirm того же процесса через
+    # advisory lock; промежуточных commit нет — вся операция в одной транзакции.
+    await _lock_run_scope(db, run_id)
     run = await owned_run(db, run_id, user, lock=True)
     check_run_revision(run, data.expected_revision, request)
     source = await db.get(AgentSource, (run_id, source_id))
@@ -607,13 +609,7 @@ async def invalidate_source(run_id: uuid.UUID, source_id: str, data: RunRevision
     await log_tool(db, run.id, "invalidate_source", "success", source_id, "Источник удалён, версия требований изменена",
                    actor="human")
     await task_contract.cache_purge_run(db, run.id)
-    for linked_task in linked_tasks:
-        if linked_task.state in ("completed", "cancelled", "failed"):
-            continue
-        try:
-            await task_contract.attach_run(db, linked_task, run)
-        except HTTPException:
-            task_contract.fail_task(linked_task, "Связанный результат изменился; продолжение требует нового процесса")
+    await _refresh_linked_tasks(db, run)
     await db.commit()
     return await _run_out(db, run)
 
@@ -758,6 +754,30 @@ async def _task_out(db: AsyncSession, task) -> TaskOut:
     return TaskOut.model_validate(task)
 
 
+async def _lock_run_scope(db: AsyncSession, run_id: uuid.UUID) -> None:
+    """Сериализует операции с процессом и его связанными задачами: привязка,
+    согласие, уточнение и инвалидация одного процесса не пересекаются."""
+    await db.execute(
+        text("SELECT pg_advisory_xact_lock(hashtext('agent_run:' || :rid))"),
+        {"rid": str(run_id)},
+    )
+
+
+async def _refresh_linked_tasks(db: AsyncSession, run: AgentRun) -> None:
+    """Шаг и требуемый ответ связанных задач следуют за процессом.
+    Вызывать после изменения процесса, до commit."""
+    linked_tasks = (await db.execute(
+        select(AgentTask).where(AgentTask.linked_run_id == run.id).with_for_update()
+    )).scalars().all()
+    for linked_task in linked_tasks:
+        if linked_task.state in ("completed", "cancelled", "failed"):
+            continue
+        try:
+            await task_contract.attach_run(db, linked_task, run)
+        except HTTPException:
+            task_contract.fail_task(linked_task, "Связанный результат изменился; продолжение требует нового процесса")
+
+
 @router.post("/api/v2/agent-tasks", response_model=TaskCreateOut, status_code=201)
 async def create_agent_task(
     data: TaskCreateIn,
@@ -802,7 +822,6 @@ async def start_agent_task(
     db: AsyncSession = Depends(get_db),
 ):
     task = await task_contract.owned_task(db, task_id, company_id, lock=True)
-    task = await task_contract.owned_task(db, task_id, company_id, lock=True)
     await _require_task_role(db, company_id, user, task.scenario_type)
     task_contract.start_task(task, data.expected_revision if data else None)
     await db.commit()
@@ -817,7 +836,6 @@ async def submit_agent_task_input(
     user: CurrentUser = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    task = await task_contract.owned_task(db, task_id, company_id, lock=True)
     task = await task_contract.owned_task(db, task_id, company_id, lock=True)
     await _require_task_role(db, company_id, user, task.scenario_type)
     task_contract.submit_task_input(task, data.input, data.source_refs, data.expected_revision)
@@ -834,8 +852,12 @@ async def approve_agent_task(
     db: AsyncSession = Depends(get_db),
 ):
     task = await task_contract.owned_task(db, task_id, company_id, lock=True)
-    task = await task_contract.owned_task(db, task_id, company_id, lock=True)
     await _require_task_role(db, company_id, user, task.scenario_type)
+    for raw_id in {task.linked_run_id, data.result_artifact.get("id")}:
+        try:
+            await _lock_run_scope(db, uuid.UUID(str(raw_id)))
+        except (ValueError, AttributeError, TypeError):
+            pass
     approval = {**data.approval, "by_user_id": str(user.id)}
     await task_contract.approve_task(
         db, task, approval=approval, result_artifact=data.result_artifact,
@@ -854,7 +876,6 @@ async def resume_agent_task(
     db: AsyncSession = Depends(get_db),
 ):
     task = await task_contract.owned_task(db, task_id, company_id, lock=True)
-    task = await task_contract.owned_task(db, task_id, company_id, lock=True)
     await _require_task_role(db, company_id, user, task.scenario_type)
     task_contract.resume_task(task, data.expected_revision)
     await db.commit()
@@ -869,7 +890,6 @@ async def fail_agent_task(
     user: CurrentUser = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    task = await task_contract.owned_task(db, task_id, company_id, lock=True)
     task = await task_contract.owned_task(db, task_id, company_id, lock=True)
     await _require_task_role(db, company_id, user, task.scenario_type)
     if data.expected_revision != task.input_revision:
@@ -888,7 +908,6 @@ async def cancel_agent_task(
     db: AsyncSession = Depends(get_db),
 ):
     task = await task_contract.owned_task(db, task_id, company_id, lock=True)
-    task = await task_contract.owned_task(db, task_id, company_id, lock=True)
     await _require_task_role(db, company_id, user, task.scenario_type)
     if data.expected_revision != task.input_revision:
         raise HTTPException(409, "Входная версия устарела")
@@ -905,7 +924,6 @@ async def heartbeat_agent_task(
     db: AsyncSession = Depends(get_db),
 ):
     task = await task_contract.owned_task(db, task_id, company_id, lock=True)
-    task = await task_contract.owned_task(db, task_id, company_id, lock=True)
     await _require_task_role(db, company_id, user, task.scenario_type)
     task_contract.heartbeat_task(task)
     await db.commit()
@@ -920,7 +938,7 @@ async def attach_run_to_task(
     user: CurrentUser = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    task = await task_contract.owned_task(db, task_id, company_id, lock=True)
+    await _lock_run_scope(db, data.run_id)
     task = await task_contract.owned_task(db, task_id, company_id, lock=True)
     await _require_task_role(db, company_id, user, task.scenario_type)
     run = await owned_run_for_task(db, data.run_id, user, task.scenario_type, lock=True)

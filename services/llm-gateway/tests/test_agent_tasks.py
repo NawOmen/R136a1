@@ -720,3 +720,47 @@ async def test_attach_confirmed_run_with_stale_sources_rejected(client, token, d
                              headers=auth(token))).json()
     assert body["state"] == "running"
     assert body["result_artifact"] is None
+
+
+@pytest.mark.asyncio
+async def test_step_follows_run_after_attach_then_invalidate(client, token, db_session, user_id):
+    company_id = await make_company(db_session, user_id)
+    created = await create_task(client, token, company_id)
+    await client.post(TASKS + f"/{created['task_id']}/start", params={"company_id": str(company_id)},
+                      json={"expected_revision": 1}, headers=auth(token))
+    run = await make_buyer_run(client, token, company_id)
+    await client.post(TASKS + f"/{created['task_id']}/attach-run", params={"company_id": str(company_id)},
+                      json={"run_id": run["id"]}, headers=auth(token))
+    invalidated = await client.post(
+        f"/api/v2/agent-runs/{run['id']}/sources/request_text/invalidate",
+        json={"expected_revision": run["revision"]}, headers=auth(token),
+    )
+    assert invalidated.status_code == 200
+    assert invalidated.json()["revision"] == run["revision"] + 1
+    body = (await client.get(TASKS + f"/{created['task_id']}", params={"company_id": str(company_id)},
+                             headers=auth(token))).json()
+    assert body["state"] == "needs_input"
+    assert body["required_response"]["run_revision"] == run["revision"] + 1
+    assert body["required_response"]["questions"]
+    assert body["approval"] is None
+
+
+@pytest.mark.asyncio
+async def test_step_follows_run_after_invalidate_then_attach(client, token, db_session, user_id):
+    company_id = await make_company(db_session, user_id)
+    created = await create_task(client, token, company_id)
+    await client.post(TASKS + f"/{created['task_id']}/start", params={"company_id": str(company_id)},
+                      json={"expected_revision": 1}, headers=auth(token))
+    run = await make_buyer_run(client, token, company_id)
+    invalidated = await client.post(
+        f"/api/v2/agent-runs/{run['id']}/sources/request_text/invalidate",
+        json={"expected_revision": run["revision"]}, headers=auth(token),
+    )
+    assert invalidated.status_code == 200
+    attached = await client.post(TASKS + f"/{created['task_id']}/attach-run", params={"company_id": str(company_id)},
+                                 json={"run_id": run["id"]}, headers=auth(token))
+    assert attached.status_code == 200
+    body = attached.json()
+    assert body["state"] == "needs_input"
+    assert body["required_response"]["run_revision"] == run["revision"] + 1
+    assert body["required_response"]["questions"]
