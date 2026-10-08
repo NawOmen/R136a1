@@ -1,4 +1,5 @@
 from typing import Literal
+from decimal import Decimal
 from pydantic import Field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
@@ -22,7 +23,7 @@ class Settings(BaseSettings):
     ollama_model: str = "qwen3.5:9b"
     ollama_timeout_seconds: float = 180.0
     llm_context_tokens: int = 8192
-    local_inference_cost_rub_per_minute: float = 0.35
+    local_inference_cost_rub_per_minute: Decimal = Field(default=Decimal("0.35"),ge=0,le=Decimal("999999999999.999999999999"),max_digits=24,decimal_places=12,allow_inf_nan=False)
 
     deepseek_base_url: str = "https://api.deepseek.com"
     deepseek_api_key: str = ""

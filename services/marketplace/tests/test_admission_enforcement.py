@@ -1,3 +1,4 @@
+from conftest import confirmed_quote_terms
 from conftest import grant_capacity,grant_category_capability
 """Проверки допуска на всех путях принятия обязательств.
 
@@ -358,7 +359,7 @@ async def test_reserve_commitment_requires_documents(client, db_session, monkeyp
         await client.get(f"/api/v1/reserve-invitations/{reserve}", headers=_auth(reserve_token))
     ).json()[0]
 
-    decision = {
+    decision = {'commercial_terms': confirmed_quote_terms(),
         "company_id": str(reserve),
         "decision": "approved",
         "capacity_units": 5_000,
@@ -498,7 +499,7 @@ async def test_evidence_change_notifies_active_deal(client, db_session):
     await client.post(f"/api/v1/needs/{need.json()['id']}/publish", headers=_auth(buyer_token))
     offer = await client.post(
         f"/api/v1/needs/{need.json()['id']}/offers",
-        json={
+        json={'commercial_terms': confirmed_quote_terms(),
             "company_id": str(seller_company),
             "product_id":product.json()["id"],
             "price_rub": 10,

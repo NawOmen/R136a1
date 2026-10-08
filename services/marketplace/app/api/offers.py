@@ -1,3 +1,5 @@
+from ..commercial import offer_quote, require_complete
+from ..money import decimal
 import uuid
 from datetime import date, datetime, timezone
 
@@ -220,6 +222,7 @@ async def create_offer(
         need_id=need.id,
         company_id=data.company_id,
         created_by_user_id=user.id,
+        commercial_terms=data.commercial_terms.model_dump() if data.commercial_terms else None,
         price_rub=data.price_rub,
         available_units=data.available_units,
         lead_time_days=data.lead_time_days,
@@ -228,8 +231,11 @@ async def create_offer(
         price_tiers=[item.model_dump() for item in data.price_tiers],
         valid_until=data.valid_until,
     )
+    if data.commercial_terms and data.commercial_terms.delivery_method in {"included","self_pickup"} and offer.delivery_cost_rub is None:
+        offer.delivery_cost_rub = decimal(0)
     db.add(offer)
     await db.flush()
+    offer.commercial_quote = await offer_quote(db,offer,need)
     if draft is not None:
         # Фиксируем, что человек исправил перед отправкой: это метрика работы агента.
         draft.status = "used"
@@ -259,6 +265,10 @@ async def create_offer(
             explanation="Продавец подтвердил черновик агента и отправил предложение.",
             payload={"changed_fields": draft.changed_fields},
         )
+    await record_human_approval(db,action='seller_quote_sent',entity_type='offer',entity_id=offer.id,
+        actor_user_id=user.id,actor_company_id=data.company_id,permission='company_admin+seller+verified',decision='approved',
+        payload={'revision':offer.revision,'commercial_quote':offer.commercial_quote},
+        explanation='Уполномоченный продавец направил конкретную версию КП; предварительная неполная смета не разрешает согласование')
     await run_market_rematch(db, "offer_created", offer.id, {"need_id": str(need.id)})
     if need.created_by_user_id:
         await notify(db, need.created_by_user_id, "По вашей потребности поступило новое предложение", "offer_received")
@@ -285,11 +295,12 @@ async def update_offer(
         raise HTTPException(409, "Предложение изменилось. Обновите условия перед подтверждением")
     if offer.status != "sent":
         raise HTTPException(status.HTTP_409_CONFLICT, detail="Можно изменить только действующее предложение")
+    previous_quote = offer.commercial_quote
     patch = data.model_dump(exclude_unset=True, exclude={"expected_revision"})
-    if any(value is None for key, value in patch.items() if key != "valid_until"):
+    if any(value is None for key, value in patch.items() if key not in {"valid_until","delivery_cost_rub","commercial_terms"}):
         raise HTTPException(422, "Обязательное условие предложения не может быть пустым")
     try:
-        merged = {key: getattr(offer, key) for key in ("company_id", "price_rub", "available_units", "lead_time_days", "delivery_cost_rub", "moq_units", "price_tiers", "valid_until", "resource_kind", "product_id")}
+        merged = {key: getattr(offer, key) for key in ("company_id", "price_rub", "available_units", "lead_time_days", "delivery_cost_rub", "moq_units", "price_tiers", "valid_until", "resource_kind", "product_id", "commercial_terms")}
         OfferIn.model_validate({**merged, **patch})
     except ValidationError as exc:
         raise HTTPException(422, "; ".join(error["msg"] for error in exc.errors())) from exc
@@ -304,6 +315,8 @@ async def update_offer(
         compatible, reason = _matches_need(product, need)
         if not compatible:
             raise HTTPException(409, f"Товар не соответствует потребности: {reason}")
+    if offer.commercial_terms and offer.commercial_terms["delivery_method"] in {"included","self_pickup"} and offer.delivery_cost_rub is None:
+        offer.delivery_cost_rub = decimal(0)
     offer.revision += 1
     if offer.moq_units > offer.available_units:
         raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, detail="MOQ превышает доступный объём")
@@ -312,6 +325,13 @@ async def update_offer(
             status.HTTP_422_UNPROCESSABLE_ENTITY,
             detail="Срок действия предложения не может быть в прошлом",
         )
+    offer.commercial_quote = await offer_quote(db,offer,need)
+    await record_human_approval(db, action="seller_quote_changed", entity_type="offer", entity_id=offer.id,
+        actor_user_id=user.id, actor_company_id=offer.company_id, permission="company_admin+seller", decision="approved",
+        payload={'revision':offer.revision,'changed_fields':sorted(patch),
+                 'previous_quote':previous_quote,'commercial_quote':offer.commercial_quote},
+        source_refs=[{'type':'need','id':str(need.id),'revision':need.revision}],
+        explanation="Продавец подтвердил новую версию условий КП; прежние согласованные сделки сохраняют свою смету.")
     await run_market_rematch(db, "offer_terms_changed", offer.id, {"need_id": str(offer.need_id)})
     await db.commit()
     await db.refresh(offer)
@@ -378,11 +398,11 @@ async def select_offer(
         raise HTTPException(status.HTTP_409_CONFLICT, detail="Срок действия предложения истёк")
     if offer.lead_time_days > max(0, (need.deadline_date - date.today()).days):
         raise HTTPException(status.HTTP_409_CONFLICT, detail="Предложение не соблюдает срок потребности")
-    total_price = round(
-        offer_unit_price(offer, need.volume_units) * need.volume_units
-        + offer.delivery_cost_rub,
-        2,
-    )
+    quote = offer.commercial_quote
+    require_complete(quote.get('estimate') if quote else None)
+    if quote['need']['revision'] != need.revision:
+        raise HTTPException(409,'Спецификация изменилась после подтверждения КП. Запросите новую смету')
+    total_price = decimal(quote['estimate']['total_rub'])
     if need.budget_rub is not None and total_price > need.budget_rub:
         raise HTTPException(
             status.HTTP_409_CONFLICT,
@@ -412,6 +432,7 @@ async def select_offer(
         buyer_company_id=need.company_id,
         seller_company_id=offer.company_id,
         performed_by_user_id=user.id,
+        commercial_snapshot=quote,
         units=need.volume_units,
         total_price_rub=total_price,
         unit_price_rub=offer_unit_price(offer, need.volume_units),

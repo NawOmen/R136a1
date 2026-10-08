@@ -1,3 +1,5 @@
+from ..commercial import estimate, distribute, require_complete, baseline_comparable, group_snapshot, offer_quote
+from ..money import decimal
 import uuid
 from datetime import date
 
@@ -96,13 +98,14 @@ async def _coalition_out(
                 need_id=member.need_id,
                 buyer_company_id=member.buyer_company_id if own else None,
                 units=member.units,
+                commercial_estimate=({**(member.commercial_estimate or {}), **({} if own else {'baseline_cost_rub':None,'baseline_offer_id':None,'benefit_rub':None,'baseline_comparable':False,'baseline_snapshot':None})} if show_terms and member.commercial_estimate else None),
                 individual_operations=member.individual_operations if show_terms else {},
                 common_cost_rub=member.common_cost_rub if show_terms else None,
                 individual_cost_rub=member.individual_cost_rub if show_terms else None,
                 delivery_cost_rub=member.delivery_cost_rub if show_terms else None,
                 total_cost_rub=member.total_cost_rub if show_terms else None,
-                baseline_cost_rub=member.baseline_cost_rub if show_terms else None,
-                benefit_rub=member.benefit_rub if show_terms else None,
+                baseline_cost_rub=member.baseline_cost_rub if own else None,
+                benefit_rub=member.benefit_rub if own else None,
                 approval_status=member.approval_status if show_terms else "скрыто",
             )
         )
@@ -277,10 +280,32 @@ async def publish_group_offer(
     company_country = (
         await db.execute(text("SELECT country FROM auth.companies WHERE id = :id"), {"id": group_offer.company_id})
     ).scalar_one()
+    shared = distribute(data.shared_cost_rub,{member.need_id:member.units for member in members})
+    eligible_tiers = [tier for tier in data.price_tiers if tier.min_units<=sum(item.units for item in members)]
+    if not eligible_tiers:raise HTTPException(422,'Нет ценовой ступени для общего объёма')
+    batch_price = sorted(eligible_tiers,key=lambda tier:tier.min_units)[-1].unit_price_rub
+    goods_parts = distribute(sum(item.units for item in members)*batch_price,{member.need_id:member.units for member in members})
+    estimates = {}
     payload_members = []
     for member in members:
         need = await db.get(Need, member.need_id)
         term = terms[member.need_id]
+        tiers = sorted(data.price_tiers,key=lambda tier:tier.min_units)
+        applicable = [tier for tier in tiers if tier.min_units <= sum(item.units for item in members)]
+        if not applicable:raise HTTPException(422,'Нет ценовой ступени для общего объёма')
+        value = estimate(units=need.volume_units,unit_price=applicable[-1].unit_price_rub,
+            delivery=term.delivery_cost_rub,terms={**(term.commercial_terms.model_dump() if term.commercial_terms else {}),'expenses':[(expense.model_dump()) for expense in (term.commercial_terms.expenses if term.commercial_terms else [])]+[{'code':'individual_operations','title':'Индивидуальные операции','amount_rub':term.individual_operations_cost_rub,'source':'Условия участника','version':str(coalition.version+1)}]},buyer=need.company_id,seller=group_offer.company_id,
+            source={'type':'group_offer','id':str(group_offer.id),'revision':coalition.version+1},shared=shared[member.need_id],goods_override=goods_parts[member.need_id])
+        require_complete(value)
+        baseline = await db.get(Offer,term.baseline_offer_id) if term.baseline_offer_id else None
+        if baseline and (baseline.company_id!=group_offer.company_id or baseline.need_id!=need.id or baseline.status not in {'sent','selected'}):
+            raise HTTPException(422,'Индивидуальное КП не относится к потребности участника')
+        value['baseline_offer_id'] = str(baseline.id) if baseline else None
+        value['baseline_snapshot'] = baseline.commercial_quote if baseline else None
+        value['baseline_cost_rub'] = baseline.commercial_quote['estimate']['total_rub'] if baseline and baseline_comparable(baseline.commercial_quote,need,value) else None
+        value['baseline_comparable'] = value['baseline_cost_rub'] is not None
+        value['benefit_rub'] = str(decimal(value['baseline_cost_rub'])-decimal(value['total_rub'])) if value['baseline_comparable'] else None
+        estimates[member.need_id] = value
         payload_members.append(
             {
                 "need_id": str(need.id),
@@ -290,10 +315,10 @@ async def publish_group_offer(
                 "individual_operations": member.individual_operations,
                 "hard_constraints": profile.hard_constraints,
                 "flexible_parameters": profile.flexible_parameters.get(str(need.id), {}),
-                "individual_operations_cost_rub": term.individual_operations_cost_rub,
-                "delivery_cost_rub": term.delivery_cost_rub,
+                "individual_operations_cost_rub": decimal(value["total_rub"])-decimal(value["lines"][0]["amount_rub"])-decimal(value["lines"][2]["amount_rub"]),
+                "delivery_cost_rub": value["lines"][2]["amount_rub"],
                 "budget_rub": need.budget_rub,
-                "individual_baseline_cost_rub": term.individual_baseline_cost_rub,
+                "individual_baseline_cost_rub": value["baseline_cost_rub"],
                 "deadline_days": days_until(need.deadline_date),
                 "delivery_days": term.delivery_days,
             }
@@ -322,7 +347,7 @@ async def publish_group_offer(
     for member in members:
         calculated = result_members[member.need_id]
         member.common_cost_rub = calculated["common_production_cost_rub"]
-        member.individual_cost_rub = calculated["individual_operations_cost_rub"]
+        member.individual_cost_rub = terms[member.need_id].individual_operations_cost_rub
         member.delivery_cost_rub = calculated["delivery_cost_rub"]
         member.total_cost_rub = calculated["total_cost_rub"]
         member.baseline_cost_rub = calculated["baseline_cost_rub"]
@@ -331,6 +356,15 @@ async def publish_group_offer(
         need = await db.get(Need, member.need_id)
         need.status = "awaiting_approvals"
         need.no_match_reason = None
+    for member in members:
+        member.commercial_estimate = estimates[member.need_id]
+        member.common_cost_rub = decimal(member.commercial_estimate['lines'][0]['amount_rub'])
+        member.total_cost_rub = decimal(member.commercial_estimate['total_rub'])
+        member.baseline_cost_rub = decimal(member.commercial_estimate['baseline_cost_rub']) if member.commercial_estimate['baseline_cost_rub'] is not None else None
+        member.benefit_rub = decimal(member.commercial_estimate['benefit_rub']) if member.commercial_estimate['benefit_rub'] is not None else None
+        need = member_needs[member.need_id]
+        if need.budget_rub is not None and member.total_cost_rub>need.budget_rub:
+            raise HTTPException(409,'Полная смета превышает бюджет участника')
     group_offer.min_total_units = data.min_total_units
     group_offer.max_total_units = data.max_total_units
     group_offer.price_tiers = [item.model_dump() for item in data.price_tiers]
@@ -441,6 +475,15 @@ async def decide_coalition(
     await require_verified_company(data.company_id, user, db)
     if member.approval_status != "pending":
         raise HTTPException(status.HTTP_409_CONFLICT, detail="Решение этой компании уже принято")
+    if data.decision == "approved":
+        require_complete(member.commercial_estimate)
+        if member.commercial_estimate.get('baseline_offer_id'):
+            baseline = await db.get(Offer,uuid.UUID(member.commercial_estimate['baseline_offer_id']))
+            saved = member.commercial_estimate.get('baseline_snapshot') or {}
+            need = await db.get(Need,member.need_id)
+            if (baseline is None or baseline.status not in {'sent','selected'} or baseline.revision != saved.get('offer',{}).get('revision')
+                or not baseline_comparable(saved,need,member.commercial_estimate)):
+                raise HTTPException(409,'КП для сравнения устарело. Выберите актуальное КП или продолжите без базы экономии')
     member.approval_status = data.decision
     members = (
         await db.execute(select(CoalitionMember).where(CoalitionMember.coalition_id == coalition.id))
@@ -493,6 +536,7 @@ async def decide_coalition(
         participant_snapshots = []
         for item in members:
             need = member_needs[item.need_id]
+            require_complete(item.commercial_estimate)
             participant_snapshots.append({
                 "need_id": str(need.id),
                 "need_revision": need.revision,
@@ -537,6 +581,7 @@ async def decide_coalition(
                     seller_company_id=group_offer.company_id,
                     units=item.units,
                     total_price_rub=item.total_cost_rub,
+                    commercial_snapshot=await group_snapshot(db,item.commercial_estimate,member_needs[item.need_id],resource={'group_offer_id':str(group_offer.id),'coalition_version':coalition.version,'price_tiers':group_offer.price_tiers,'production_start':str(group_offer.production_start),'production_end':str(group_offer.production_end),'fill_deadline':str(group_offer.fill_deadline)}),
                     status="created",
                 )
             )
@@ -570,53 +615,104 @@ async def optimize_need(
     ).scalars().all()
     if not offers:
         raise HTTPException(status.HTTP_409_CONFLICT, detail="Для оптимизации пока нет предложений")
-    producers = []
+    quote_groups = {}
     for offer in offers:
         country = (
             await db.execute(text("SELECT country FROM auth.companies WHERE id = :id"), {"id": offer.company_id})
         ).scalar_one_or_none()
-        producers.append(
-            {
+        quote = offer.commercial_quote or {}
+        value = quote.get('estimate',{})
+        if not value.get('complete') or quote['need']['revision']!=need.revision:
+            continue
+        terms = value['terms']
+        key = (terms['tax_basis'],terms['vat_rate_pct'],terms['delivery_method'],terms['delivery_conditions'])
+        extra = sum((decimal(line['amount_rub']) for line in value['lines'] if line['code'] not in {'goods','delivery'} and not line['conditional']),decimal(0))
+        option = {
                 "company_id": str(offer.company_id),
                 "unit_price_rub": offer.price_rub,
+                "additional_cost_rub": extra,
                 "moq_units": offer.moq_units,
                 "capacity_units": offer.available_units,
                 "lead_time_days": offer.lead_time_days,
-                "delivery_cost_rub": offer.delivery_cost_rub,
+                "delivery_cost_rub": value["lines"][2]["amount_rub"],
                 "reliability": None,
                 "price_tiers": offer.price_tiers,
                 "serves_region": True,
-                "country": country or "RU",
+                "country": country or "",
             }
-        )
-    result = await optimize_allocations(
-        {
-            "demand_units": need.volume_units,
-            "budget_rub": need.budget_rub,
-            "deadline_days": days_until(need.deadline_date),
-            "producers": producers,
-        }
-    )
+        group = quote_groups.setdefault(key,{})
+        previous = group.get(str(offer.company_id))
+        if previous is None or decimal(value['total_rub']) < decimal(previous[1].commercial_quote['estimate']['total_rub']):
+            group[str(offer.company_id)] = (option,offer)
+    if not quote_groups:
+        raise HTTPException(409,'Нет КП с подтверждённой полной сметой, доставкой и налоговой базой')
     records = []
-    for variant in result["variants"]:
-        existing = (
-            await db.execute(
-                select(OptimizationVariantRecord).where(
-                    OptimizationVariantRecord.need_id == need.id,
-                    OptimizationVariantRecord.kind == variant["kind"],
-                    OptimizationVariantRecord.input_hash == result["input_hash"],
-                )
-            )
-        ).scalar_one_or_none()
-        if existing is None:
-            existing = OptimizationVariantRecord(
-                need_id=need.id,
-                kind=variant["kind"],
-                result=variant,
-                input_hash=result["input_hash"],
-            )
-            db.add(existing)
-            await db.flush()
-        records.append(existing)
+    results = []
+    for key,group in sorted(quote_groups.items(),key=lambda item:str(item[0])):
+        sources = {company_id:pair[1] for company_id,pair in group.items()}
+        calculated = await optimize_allocations({'demand_units':need.volume_units,'budget_rub':need.budget_rub,
+            'deadline_days':days_until(need.deadline_date),'producers':[pair[0] for pair in group.values()],
+            'comparison_context':{'need_id':str(need.id),'need_revision':need.revision,'basis':key,
+                                  'offer_versions':sorted((str(pair[1].id),pair[1].revision) for pair in group.values())}})
+        for variant in calculated['variants']:
+            variant['comparison_basis'] = {'tax_basis':key[0],'vat_rate_pct':key[1],'delivery_method':key[2],'delivery_conditions':key[3]}
+            variant['reasons'].append('Сравнение внутри одинаковой налоговой базы и условий получения; разные базы не ранжируются вместе')
+            for allocation in variant.get('allocations',[]):
+                source = sources[allocation['company_id']]
+                allocation['offer_id'] = str(source.id)
+                allocation['offer_revision'] = source.revision
+                allocation['comparison_basis'] = variant['comparison_basis']
+                allocation['commercial_snapshot'] = await offer_quote(db,source,need,units=allocation['units'])
+        results.append(calculated)
+    for result in results:
+        for variant in result["variants"]:
+            existing = (await db.execute(select(OptimizationVariantRecord).where(
+                OptimizationVariantRecord.need_id==need.id, OptimizationVariantRecord.kind==variant['kind'],
+                OptimizationVariantRecord.input_hash==result['input_hash']))).scalar_one_or_none()
+            if existing is None:
+                existing = OptimizationVariantRecord(need_id=need.id,kind=variant['kind'],result=variant,input_hash=result['input_hash'])
+                db.add(existing)
+            records.append(existing)
     await db.commit()
-    return records
+    return [OptimizationVariantOut.model_validate(record) for record in records]
+
+
+from pydantic import BaseModel
+class BaselineSelectionIn(BaseModel):
+    company_id: uuid.UUID
+    offer_id: uuid.UUID | None
+    expected_revision: int
+
+
+@router.post('/coalitions/{coalition_id}/baseline',response_model=CoalitionOut)
+async def choose_individual_baseline(coalition_id:uuid.UUID,data:BaselineSelectionIn,
+                                     user:CurrentUser=Depends(get_current_user),db:AsyncSession=Depends(get_db)):
+    coalition = await db.scalar(select(Coalition).where(Coalition.id==coalition_id).with_for_update())
+    if coalition is None:raise HTTPException(404,'Коалиция не найдена')
+    await require_company_buyer(data.company_id,user,db)
+    if coalition.version!=data.expected_revision:raise HTTPException(409,'Условия группы изменились')
+    member = await db.scalar(select(CoalitionMember).where(CoalitionMember.coalition_id==coalition.id,
+                                                         CoalitionMember.buyer_company_id==data.company_id))
+    if member is None:raise HTTPException(403,'Компания не участвует в этой коалиции')
+    if member.approval_status!='pending' or coalition.status!='awaiting_approvals':
+        raise HTTPException(409,'Альтернативу можно выбрать до подтверждения собственных условий')
+    need = await db.get(Need,member.need_id)
+    offer = await db.get(Offer,data.offer_id) if data.offer_id else None
+    if data.offer_id:
+        if offer is None or offer.need_id!=need.id or offer.status not in {'sent','selected'} or (offer.valid_until and offer.valid_until<date.today()):
+            raise HTTPException(422,'Нужен действующий подтверждённый КП этой потребности')
+        if not baseline_comparable(offer.commercial_quote,need,member.commercial_estimate):
+            raise HTTPException(422,'КП не сопоставимо по версии требований, объёму, сроку, адресу, доставке или налоговой базе')
+    value = {**member.commercial_estimate,'baseline_offer_id':str(offer.id) if offer else None,
+             'baseline_snapshot':offer.commercial_quote if offer else None,
+             'baseline_cost_rub':offer.commercial_quote['estimate']['total_rub'] if offer else None,'baseline_comparable':offer is not None}
+    value['benefit_rub'] = str(decimal(value['baseline_cost_rub'])-decimal(value['total_rub'])) if offer else None
+    member.commercial_estimate = value
+    member.baseline_cost_rub = decimal(value['baseline_cost_rub']) if offer else None
+    member.benefit_rub = decimal(value['benefit_rub']) if offer else None
+    await append_audit_event(db,event_type='individual_baseline_selected',entity_type='coalition',entity_id=coalition.id,
+        actor_user_id=user.id,actor_company_id=data.company_id,
+        payload={'need_id':str(need.id),'offer_id':str(offer.id) if offer else None,'offer_revision':offer.revision if offer else None,'estimate':value},
+        explanation='Покупатель выбрал своё сопоставимое подтверждённое КП; найденные и каталожные цены не являются базой экономии')
+    await db.commit()
+    return await _coalition_out(db,coalition,await _user_company_ids(db,user.id))

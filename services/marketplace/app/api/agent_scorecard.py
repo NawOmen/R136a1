@@ -6,6 +6,7 @@
 """
 
 from __future__ import annotations
+from ..money import amount
 
 import uuid
 from datetime import datetime, timedelta, timezone
@@ -164,7 +165,7 @@ async def scorecard(db: AsyncSession, *, scope: str, company_id: uuid.UUID | Non
         agent_runs_unknown_route=llm.get("unknown_route", 0),
         agent_costed_runs=llm.get("costed", 0),
         agent_average_duration_ms=round(llm.get("avg_duration", 0.0), 1),
-        agent_estimated_cost_rub=round(llm.get("cost", 0.0), 2),
+        agent_estimated_cost_rub=amount(llm.get("cost", 0)),
         llm_metrics_available=bool(llm["available"]),
         notes=notes,
     )

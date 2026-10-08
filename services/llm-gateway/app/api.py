@@ -1,4 +1,5 @@
 import json
+from decimal import Decimal, ROUND_HALF_UP
 import uuid
 from time import perf_counter
 from typing import Annotated
@@ -231,9 +232,7 @@ async def analyze_buyer_request(
         run.duration_ms = round((perf_counter() - started_at) * 1000)
         run.output_chars = len(json.dumps(run.result, ensure_ascii=False))
         if used_route in {"local", "local_qwen"}:
-            run.estimated_cost_rub = round(
-                run.duration_ms / 60_000 * settings.local_inference_cost_rub_per_minute, 4
-            )
+            run.estimated_cost_rub = (Decimal(run.duration_ms)/Decimal(60_000)*settings.local_inference_cost_rub_per_minute).quantize(Decimal("0.0001"),rounding=ROUND_HALF_UP)
             run.cost_basis = "Оценка времени локального инференса по настраиваемому тарифу эксплуатации"
         else:
             run.estimated_cost_rub = None
@@ -429,7 +428,7 @@ async def explain_seller_match(
     run.error = failure
     run.result = {"eligible": eligible, "reasons": reasons}
     if used_route in {"local", "local_qwen"}:
-        run.estimated_cost_rub = round(run.duration_ms / 60_000 * settings.local_inference_cost_rub_per_minute, 4)
+        run.estimated_cost_rub = (Decimal(run.duration_ms)/Decimal(60_000)*settings.local_inference_cost_rub_per_minute).quantize(Decimal("0.0001"),rounding=ROUND_HALF_UP)
         run.cost_basis = "Оценка локального выполнения, не подтверждённый биллинг"
     await db.commit()
     return SellerExplainOut(

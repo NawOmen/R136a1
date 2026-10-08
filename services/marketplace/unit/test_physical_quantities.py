@@ -1,4 +1,5 @@
 import unittest
+from decimal import Decimal
 from datetime import date
 from types import SimpleNamespace
 from app.physical_quantities import normalize_physical
@@ -19,8 +20,8 @@ class PhysicalQuantityTests(unittest.TestCase):
     def test_prices_tiers_stock_and_multiples_use_same_exact_unit(self):
         raw={'characteristics':{'unit':'м','order_multiple':'0.5'},'moq_units':1.2,'stock_units':0,'price_rub':120,'price_tiers':[{'min_units':2,'unit_price_rub':100}],'quantity_conversion_approved':True}
         data,_=normalize_physical('product',raw)
-        self.assertEqual((data['moq_units'],data['stock_units'],data['price_rub']),(1200,0,0.12))
-        self.assertEqual(data['price_tiers'],[{'min_units':2000,'unit_price_rub':0.1}])
+        self.assertEqual((data['moq_units'],data['stock_units'],data['price_rub']),(1200,0,Decimal("0.12")))
+        self.assertEqual(data['price_tiers'],[{'min_units':2000,'unit_price_rub':Decimal('0.1')}])
         self.assertEqual(data['characteristics']['order_multiple'],500)
 
     def test_no_rounding_nonfinite_boolean_overflow_or_conflicting_aliases(self):

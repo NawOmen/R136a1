@@ -1,3 +1,4 @@
+from conftest import confirmed_quote_terms
 from datetime import date, timedelta
 
 from sqlalchemy import select
@@ -72,7 +73,7 @@ async def test_explicit_parent_child_order_keeps_approval_and_category_admission
     need = response.json()
     assert need["category"] == "Строительство" and need["subcategory"] == "Крепёж"
     assert (await client.post(f"/api/v1/needs/{need['id']}/publish", headers=buyer_auth)).status_code == 200
-    response = await client.post(f"/api/v1/needs/{need['id']}/offers", headers=seller_auth, json={
+    response = await client.post(f"/api/v1/needs/{need['id']}/offers", headers=seller_auth, json={'commercial_terms': confirmed_quote_terms(),
         "company_id": str(seller), "product_id": product["id"], "resource_kind": "stock", "price_rub": 10,
         "available_units": 100, "moq_units": 1, "lead_time_days": 1, "delivery_cost_rub": 0,
     })

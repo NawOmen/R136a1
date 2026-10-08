@@ -1,9 +1,11 @@
 import uuid
+from .money import Amount, Money
 from datetime import date, datetime
 from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, JsonValue, field_validator, model_validator
 
+from .commercial import CommercialTerms
 from .category_characteristics import validate_profile_values
 
 
@@ -64,8 +66,8 @@ class ProductImageOut(BaseModel):
 
 class ProductPriceTier(BaseModel):
     model_config = ConfigDict(allow_inf_nan=False)
-    min_units: int = Field(gt=0)
-    unit_price_rub: float = Field(gt=0)
+    min_units: int = Field(gt=0, le=2147483647)
+    unit_price_rub: Money = Field(gt=0)
 
 
 def validate_order_unit(characteristics: dict[str, Any] | None) -> None:
@@ -115,7 +117,7 @@ class ProductOut(BaseModel):
     subcategory: str | None
     category_profile: dict[str, Any] | None = None
     characteristics: dict[str, Any]
-    price_rub: float
+    price_rub: Money
     price_tiers: list[ProductPriceTier]
     moq_units: int
     lead_time_days: int
@@ -130,9 +132,9 @@ class ProductIn(ProductRules):
     category: str = Field(min_length=2, max_length=120)
     subcategory: str | None = Field(default=None, max_length=120)
     characteristics: dict[str, Any] = Field(default_factory=dict)
-    price_rub: float = Field(gt=0)
+    price_rub: Money = Field(gt=0)
     price_tiers: list[ProductPriceTier] = Field(default_factory=list)
-    moq_units: int = Field(gt=0)
+    moq_units: int = Field(gt=0, le=2147483647)
     lead_time_days: int = Field(gt=0)
     stock_units: int | None = Field(default=None, ge=0)
 
@@ -157,7 +159,7 @@ class ProductPatch(ProductRules):
     category: str | None = Field(default=None, min_length=2, max_length=120)
     subcategory: str | None = Field(default=None, max_length=120)
     characteristics: dict[str, Any] | None = None
-    price_rub: float | None = Field(default=None, gt=0)
+    price_rub: Money | None = Field(default=None, gt=0)
     price_tiers: list[ProductPriceTier] | None = None
     moq_units: int | None = Field(default=None, gt=0)
     lead_time_days: int | None = Field(default=None, gt=0)
@@ -171,7 +173,7 @@ class PublishIn(BaseModel):
 class OfferDraftFieldOut(BaseModel):
     name: str
     label: str
-    value: float | int | None
+    value: Money | int | None
     source: str
     confirmed: bool
     note: str | None = None
@@ -221,7 +223,7 @@ class AgentScorecardOut(BaseModel):
     agent_runs_unknown_route: int = 0
     agent_costed_runs: int = 0
     agent_average_duration_ms: float
-    agent_estimated_cost_rub: float
+    agent_estimated_cost_rub: Amount
     llm_metrics_available: bool
     notes: list[str]
 
@@ -254,7 +256,7 @@ class SellerAnalyticsOut(BaseModel):
     products_published: int
     deals_total: int
     sold_units: int
-    revenue_rub: float | None
+    revenue_rub: Amount | None
     available_capacity_units: int
     capacity_utilization_pct: float | None
 
@@ -525,7 +527,7 @@ class NeedOut(BaseModel):
     category_profile: dict[str, Any] | None = None
     characteristics: dict[str, Any]
     volume_units: int
-    budget_rub: float | None
+    budget_rub: Amount | None
     deadline_date: date
     delivery_address_id: uuid.UUID | None
     visibility: str
@@ -560,8 +562,8 @@ class NeedIn(BaseModel):
     category: str = Field(min_length=2, max_length=120)
     subcategory: str | None = Field(default=None, min_length=2, max_length=120)
     characteristics: dict[str, Any] = Field(default_factory=dict)
-    volume_units: int = Field(gt=0)
-    budget_rub: float | None = Field(default=None, gt=0)
+    volume_units: int = Field(gt=0, le=2147483647)
+    budget_rub: Amount | None = Field(default=None, gt=0)
     deadline_date: date
     delivery_address_id: uuid.UUID | None = None
     visibility: str = Field(default="open_anonymized", pattern="^(open_anonymized|selected_producers|closed)$")
@@ -590,6 +592,8 @@ class NeedEditIn(NeedIn):
 # ---------- Предложения ----------
 
 class OfferOut(BaseModel):
+    commercial_terms: CommercialTerms | None = None
+    commercial_quote: dict | None = None
     resource_kind: str = "capacity"
     product_id: uuid.UUID | None = None
     revision: int = 1
@@ -599,10 +603,10 @@ class OfferOut(BaseModel):
     need_id: uuid.UUID
     company_id: uuid.UUID
     created_by_user_id: uuid.UUID | None
-    price_rub: float
+    price_rub: Money
     available_units: int
     lead_time_days: int
-    delivery_cost_rub: float
+    delivery_cost_rub: Amount | None
     moq_units: int
     price_tiers: list[dict[str, Any]]
     valid_until: date | None
@@ -611,19 +615,20 @@ class OfferOut(BaseModel):
 
 class OfferPriceTierIn(BaseModel):
     model_config = ConfigDict(allow_inf_nan=False)
-    min_units: int = Field(gt=0)
-    unit_price_rub: float = Field(gt=0)
+    min_units: int = Field(gt=0, le=2147483647)
+    unit_price_rub: Money = Field(gt=0)
 
 
 class OfferIn(ProductRules):
+    commercial_terms: CommercialTerms | None = None
     resource_kind: Literal["stock", "capacity"] = "capacity"
     product_id: uuid.UUID | None = None
     model_config = ConfigDict(allow_inf_nan=False)
     company_id: uuid.UUID
-    price_rub: float = Field(gt=0)
-    available_units: int = Field(gt=0)
+    price_rub: Money = Field(gt=0)
+    available_units: int = Field(gt=0, le=2147483647)
     lead_time_days: int = Field(gt=0)
-    delivery_cost_rub: float = Field(default=0, ge=0)
+    delivery_cost_rub: Amount | None = Field(default=None, ge=0)
     moq_units: int = Field(default=1, gt=0)
     price_tiers: list[OfferPriceTierIn] = Field(default_factory=list)
     valid_until: date | None = None
@@ -637,12 +642,13 @@ class OfferDraftIn(BaseModel):
 
 
 class OfferPatch(ProductRules):
+    commercial_terms: CommercialTerms | None = None
     model_config = ConfigDict(allow_inf_nan=False)
     expected_revision: int = Field(gt=0)
-    price_rub: float | None = Field(default=None, gt=0)
+    price_rub: Money | None = Field(default=None, gt=0)
     available_units: int | None = Field(default=None, gt=0)
     lead_time_days: int | None = Field(default=None, gt=0)
-    delivery_cost_rub: float | None = Field(default=None, ge=0)
+    delivery_cost_rub: Amount | None = Field(default=None, ge=0)
     moq_units: int | None = Field(default=None, gt=0)
     price_tiers: list[OfferPriceTierIn] | None = None
     valid_until: date | None = None
@@ -676,22 +682,25 @@ class MarketOpportunityOut(BaseModel):
 
 
 class PriceTierIn(BaseModel):
-    min_units: int = Field(gt=0)
-    unit_price_rub: float = Field(gt=0)
+    min_units: int = Field(gt=0, le=2147483647)
+    unit_price_rub: Money = Field(gt=0)
 
 
 class ParticipantTermsIn(BaseModel):
+    commercial_terms: CommercialTerms | None = None
+    baseline_offer_id: uuid.UUID | None = None
     need_id: uuid.UUID
-    individual_operations_cost_rub: float = Field(default=0, ge=0)
-    delivery_cost_rub: float = Field(default=0, ge=0)
-    individual_baseline_cost_rub: float | None = Field(default=None, gt=0)
+    individual_operations_cost_rub: Amount = Field(default=0, ge=0)
+    delivery_cost_rub: Amount | None = Field(default=None, ge=0)
+    individual_baseline_cost_rub: Amount | None = Field(default=None, gt=0)
     delivery_days: int = Field(default=1, ge=0)
 
 
 class GroupOfferPublishIn(BaseModel):
-    min_total_units: int = Field(gt=0)
-    max_total_units: int = Field(gt=0)
-    available_capacity_units: int = Field(gt=0)
+    shared_cost_rub: Amount = Field(default=0, ge=0)
+    min_total_units: int = Field(gt=0, le=2147483647)
+    max_total_units: int = Field(gt=0, le=2147483647)
+    available_capacity_units: int = Field(gt=0, le=2147483647)
     price_tiers: list[PriceTierIn] = Field(min_length=1)
     production_start: date
     production_end: date
@@ -719,18 +728,19 @@ class GroupOfferOut(BaseModel):
 
 
 class CoalitionMemberOut(BaseModel):
+    commercial_estimate: dict | None = None
     model_config = ConfigDict(from_attributes=True)
 
     need_id: uuid.UUID
     buyer_company_id: uuid.UUID | None
     units: int
     individual_operations: dict[str, Any]
-    common_cost_rub: float | None
-    individual_cost_rub: float | None
-    delivery_cost_rub: float | None
-    total_cost_rub: float | None
-    baseline_cost_rub: float | None
-    benefit_rub: float | None
+    common_cost_rub: Amount | None
+    individual_cost_rub: Amount | None
+    delivery_cost_rub: Amount | None
+    total_cost_rub: Amount | None
+    baseline_cost_rub: Amount | None
+    benefit_rub: Amount | None
     approval_status: str
 
 
@@ -769,12 +779,13 @@ class ResiliencePlanConfirmIn(BaseModel):
 
 
 class ReserveDecisionIn(BaseModel):
+    commercial_terms: CommercialTerms | None = None
     company_id: uuid.UUID
     decision: Literal["approved", "rejected"]
     capacity_units: int | None = Field(default=None, gt=0)
     moq_units: int | None = Field(default=None, gt=0)
-    unit_price_rub: float | None = Field(default=None, gt=0)
-    delivery_cost_rub: float | None = Field(default=None, ge=0)
+    unit_price_rub: Money | None = Field(default=None, gt=0)
+    delivery_cost_rub: Amount | None = Field(default=None, ge=0)
     lead_time_days: int | None = Field(default=None, gt=0)
     price_tiers: list[PriceTierIn] = Field(default_factory=list)
     held_until: date | None = None
@@ -790,6 +801,10 @@ class ProducerFailureIn(BaseModel):
 
 
 class ReserveCommitmentOut(BaseModel):
+    commercial_snapshot: dict | None = None
+    commercial_terms: dict | None = None
+    commercial_terms: CommercialTerms | None = None
+    commercial_snapshot: dict | None = None
     model_config = ConfigDict(from_attributes=True)
 
     id: uuid.UUID
@@ -800,14 +815,14 @@ class ReserveCommitmentOut(BaseModel):
     confirmation_status: str
     proposed_capacity_units: int | None
     proposed_moq_units: int | None
-    proposed_unit_price_rub: float | None
-    proposed_delivery_cost_rub: float | None
+    proposed_unit_price_rub: Money | None
+    proposed_delivery_cost_rub: Amount | None
     proposed_lead_time_days: int | None
     price_tiers: list[dict[str, Any]]
     confirmed_capacity_units: int | None
     confirmed_moq_units: int | None
-    confirmed_unit_price_rub: float | None
-    confirmed_delivery_cost_rub: float | None
+    confirmed_unit_price_rub: Money | None
+    confirmed_delivery_cost_rub: Amount | None
     confirmed_lead_time_days: int | None
     held_until: date | None
 
@@ -845,15 +860,16 @@ class ResilienceEventOut(BaseModel):
 
 
 class ResiliencePlanOut(BaseModel):
+    commercial_snapshot: dict | None = None
     id: uuid.UUID
     need_id: uuid.UUID
     buyer_company_id: uuid.UUID
     baseline_variant_id: uuid.UUID
     baseline_allocations: list[dict[str, Any]]
-    baseline_total_cost_rub: float
+    baseline_total_cost_rub: Amount
     baseline_lead_time_days: int
     current_allocations: list[dict[str, Any]]
-    current_total_cost_rub: float
+    current_total_cost_rub: Amount
     current_lead_time_days: int
     max_price_increase_pct: float
     max_delay_days: int
@@ -870,6 +886,7 @@ class ResiliencePlanOut(BaseModel):
 # ---------- Сделки ----------
 
 class DealOut(BaseModel):
+    commercial_snapshot: dict | None = None
     model_config = ConfigDict(from_attributes=True)
 
     id: uuid.UUID
@@ -879,7 +896,7 @@ class DealOut(BaseModel):
     seller_company_id: uuid.UUID
     performed_by_user_id: uuid.UUID | None
     units: int
-    total_price_rub: float
+    total_price_rub: Amount
     status: str
 
 
@@ -1061,7 +1078,7 @@ class DealReviewOut(BaseModel):
 
 class PriceIndexPoint(BaseModel):
     date: date
-    average_unit_price_rub: float
+    average_unit_price_rub: Amount
     offers_count: int
 
 
@@ -1082,8 +1099,8 @@ class MarketWatchOut(BaseModel):
 
 class BuyerSavingsOut(BaseModel):
     company_id: uuid.UUID
-    confirmed_savings_rub: float
-    calculated_variants_rub: float
+    confirmed_savings_rub: Amount
+    calculated_variants_rub: Amount
     coalitions_count: int
     explanation: str
 

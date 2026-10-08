@@ -1,4 +1,5 @@
 "use client";
+import { lineAmount } from "../../lib/money";
 
 // Товары компании (GET/POST /companies/{id}/products): список, форма создания,
 // публикация/снятие с публикации (POST /products/{id}/publish).
@@ -123,7 +124,7 @@ export default function SellerProductsPage() {
         category,
         subcategory,
         characteristics,
-        price_rub: Number(price),
+        price_rub: String(price),
         price_tiers: tiers,
         moq_units: Number(moq),
         lead_time_days: Number(leadTime),
@@ -132,6 +133,12 @@ export default function SellerProductsPage() {
       const preview = await marketplace.previewPhysicalQuantity("product", input);
       const validation = await marketplace.validateCharacteristics({ category, subcategory, characteristics: preview.normalized.characteristics as Record<string, unknown>, moq_units: preview.conversion.quantities.moq_units ?? 0 });
       if (!validation.valid) { setError(validation.errors.join(". ")); return; }
+      if (editingId) {
+        const previous = products.find(item=>item.id === editingId);
+        const labels: Record<string,string> = {name:"Название",category:"Категория",subcategory:"Подкатегория",characteristics:"Характеристики",price_rub:"Цена",price_tiers:"Ценовые ступени",moq_units:"MOQ",lead_time_days:"Срок",stock_units:"Остаток"};
+        const changes = previous ? Object.entries(labels).filter(([key])=>JSON.stringify(previous[key as keyof Product]) !== JSON.stringify(preview.normalized[key])).map(([key,label])=>`${label}: ${JSON.stringify(previous[key as keyof Product])} → ${JSON.stringify(preview.normalized[key])}`) : [];
+        if (changes.length && !window.confirm(`Сохранить новую версию каталога?\n${changes.join("\n")}\nСогласованные сделки сохранят свои цены и условия.`)) return;
+      }
       const saved = editingId
         ? await marketplace.updateProduct(token, editingId, input)
         : await marketplace.createProduct(token, company.id, input);
@@ -345,13 +352,13 @@ export default function SellerProductsPage() {
                 <input type="number" min="0.000001" step="any" value={tier.min_units} aria-label="Объём ступени"
                   onChange={(event) => setTiers((current) => current.map((item, i) => i === index ? {...item, min_units: Number(event.target.value)} : item))} />
                 <input type="number" min="0.000000000001" step="any" value={tier.unit_price_rub} aria-label="Цена ступени"
-                  onChange={(event) => setTiers((current) => current.map((item, i) => i === index ? {...item, unit_price_rub: Number(event.target.value)} : item))} />
-                <span className="company-meta">{formatRub(tier.min_units * tier.unit_price_rub)} за партию</span>
+                  onChange={(event) => setTiers((current) => current.map((item, i) => i === index ? {...item, unit_price_rub: String(event.target.value)} : item))} />
+                <span className="company-meta">{formatRub(lineAmount(tier.unit_price_rub, tier.min_units))} за партию</span>
                 <button type="button" className="btn btn-secondary btn-sm" onClick={() => setTiers((current) => current.filter((_, i) => i !== index))}>Удалить</button>
               </div>
             ))}
             <button type="button" className="btn btn-secondary btn-sm" disabled={tiers.length >= 10}
-              onClick={() => setTiers((current) => [...current, {min_units: Number(moq) || 1, unit_price_rub: Number(price) || 1}])}>
+              onClick={() => setTiers((current) => [...current, {min_units: Number(moq) || 1, unit_price_rub: String(price) || 1}])}>
               + Добавить ценовую ступень
             </button>
           </div>
@@ -434,7 +441,7 @@ export default function SellerProductsPage() {
                     {company?.membership?.is_admin && <ProfileRevisionPanel key={`${product.id}:${JSON.stringify(product.category_profile)}`} kind="products" id={product.id} draft={!product.is_published} onAdopted={async () => { const token = getToken(); if (token && companyId) setProducts(await marketplace.getCompanyProducts(token, companyId)); }} />}
                     {company?.membership?.is_admin && ["упак","упаковка","рулон","бухта","комплект","мешок"].includes(itemUnit(product.characteristics)) && <PackagingConversionPanel key={`${product.id}:pack:${JSON.stringify(product.category_profile)}:${JSON.stringify(product.quantity_conversion)}`} product={product} onSaved={async()=>{const token=getToken();if(token && companyId)setProducts(await marketplace.getCompanyProducts(token,companyId));}} />}
                     {product.price_tiers.map((tier) => <div className="company-meta" key={tier.min_units}>
-                      От {formatUnits(tier.min_units, itemUnit(product.characteristics))}: {formatRub(tier.unit_price_rub, 12)} / {itemUnit(product.characteristics)} · {formatRub(tier.min_units * tier.unit_price_rub)} за партию
+                      От {formatUnits(tier.min_units, itemUnit(product.characteristics))}: {formatRub(tier.unit_price_rub, 12)} / {itemUnit(product.characteristics)} · {formatRub(lineAmount(tier.unit_price_rub, tier.min_units))} за партию
                     </div>)}
                   </div>
                   <span className={`badge ${product.is_published ? "badge-verified" : "badge-draft"}`}>

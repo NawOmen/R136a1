@@ -1,9 +1,10 @@
 "use client";
+import CommercialEstimate from "../components/CommercialEstimate";
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { getToken } from "../lib/api";
-import { ApiError, Coalition, formatRub, formatUnits, marketplace } from "../lib/marketplace";
+import { ApiError, Coalition, Offer, formatRub, formatUnits, marketplace } from "../lib/marketplace";
 import { useMe } from "../lib/useMe";
 
 const STATUS_LABELS: Record<string, string> = {
@@ -20,6 +21,8 @@ export default function CoalitionsPage() {
   const [items, setItems] = useState<Coalition[]>([]);
   const [loading, setLoading] = useState(true);
   const [workingId, setWorkingId] = useState<string | null>(null);
+  const [baselineChoices,setBaselineChoices]=useState<Record<string,Offer[]>>({});
+  const [baselineSelection,setBaselineSelection]=useState<Record<string,string>>({});
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -33,6 +36,19 @@ export default function CoalitionsPage() {
       )
       .finally(() => setLoading(false));
   }, []);
+
+  async function loadBaselines(coalition:Coalition,needId:string) {
+    const token=getToken();if(!token)return;
+    setWorkingId(coalition.id);setError(null);
+    try {const offers=await marketplace.getOffers(token,needId);setBaselineChoices(current=>({...current,[coalition.id]:offers}));}
+    catch(err){setError(err instanceof Error?err.message:'Не удалось загрузить КП');}finally{setWorkingId(null);}
+  }
+  async function chooseBaseline(coalition:Coalition,companyId:string) {
+    const token=getToken();if(!token)return;
+    setWorkingId(coalition.id);setError(null);
+    try {const updated=await marketplace.chooseBaseline(token,coalition.id,{company_id:companyId,offer_id:baselineSelection[coalition.id]||null,expected_revision:coalition.version});setItems(current=>current.map(item=>item.id===updated.id?updated:item));}
+    catch(err){setError(err instanceof Error?err.message:'Не удалось выбрать альтернативу');}finally{setWorkingId(null);}
+  }
 
   async function decide(coalition: Coalition, companyId: string, decision: "approved" | "rejected") {
     const token = getToken();
@@ -103,7 +119,10 @@ export default function CoalitionsPage() {
                     <p className="hint">Решение вашей компании: {ownMember.approval_status}</p>
                     {coalition.status === "awaiting_approvals" && ownMember.approval_status === "pending" && (
                       <div className="actions">
-                        <button type="button" className="btn btn-success" disabled={workingId === coalition.id} onClick={() => void decide(coalition, ownMember.buyer_company_id!, "approved")}>Подтвердить свои условия</button>
+                        <CommercialEstimate value={ownMember.commercial_estimate} />
+                        <button type="button" className="btn btn-secondary" disabled={workingId===coalition.id} onClick={()=>void loadBaselines(coalition,ownMember.need_id)}>Выбрать подтверждённое КП для сравнения</button>
+                        {baselineChoices[coalition.id] && <div className="field"><label htmlFor={`baseline_${coalition.id}`}>Индивидуальное подтверждённое КП</label><select id={`baseline_${coalition.id}`} value={baselineSelection[coalition.id]||""} onChange={event=>setBaselineSelection(current=>({...current,[coalition.id]:event.target.value}))}><option value="">Без базы экономии</option>{baselineChoices[coalition.id].filter(offer=>offer.commercial_quote?.estimate.complete).map(offer=><option key={offer.id} value={offer.id}>Производитель #{offer.company_id.slice(0,8)} · {formatRub(offer.commercial_quote?.estimate.total_rub)} · {offer.lead_time_days} дн.</option>)}</select><button type="button" className="btn btn-secondary" disabled={workingId===coalition.id} onClick={()=>void chooseBaseline(coalition,ownMember.buyer_company_id!)}>Применить базу сравнения</button><p className="hint">Сопоставимость проверяется по объёму, требованиям, доставке, срокам и налогам. Без подходящего КП экономия не подтверждается.</p></div>}
+                        <button type="button" className="btn btn-success" disabled={workingId === coalition.id || !ownMember.commercial_estimate?.complete} onClick={() => void decide(coalition, ownMember.buyer_company_id!, "approved")}>Подтвердить свои условия</button>
                         <button type="button" className="btn btn-secondary" disabled={workingId === coalition.id} onClick={() => void decide(coalition, ownMember.buyer_company_id!, "rejected")}>Отказаться</button>
                       </div>
                     )}

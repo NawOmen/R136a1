@@ -1,4 +1,6 @@
 "use client";
+import CommercialTermsFields, { emptyCommercialTerms } from "../../components/CommercialTermsFields";
+import type { CommercialTerms } from "../../lib/marketplace";
 
 import Link from "next/link";
 import { FormEvent, useEffect, useState } from "react";
@@ -32,6 +34,8 @@ export default function MarketOpportunitiesPage() {
   const [productionStart, setProductionStart] = useState("");
   const [productionEnd, setProductionEnd] = useState("");
   const [fillDeadline, setFillDeadline] = useState("");
+  const [commercialTerms, setCommercialTerms] = useState<Record<string,CommercialTerms>>({});
+  const [sharedCost, setSharedCost] = useState("0");
   const [memberTerms, setMemberTerms] = useState<MemberTerms>({});
 
   async function reload() {
@@ -67,11 +71,12 @@ export default function MarketOpportunitiesPage() {
       setCoalitions(currentCoalitions);
       const coalition = currentCoalitions.find((entry) => entry.id === prepared.coalition_id);
       if (coalition) {
+        setCommercialTerms(Object.fromEntries(coalition.members.map(member=>[member.need_id,{...emptyCommercialTerms}])));
         setMemberTerms(
           Object.fromEntries(
             coalition.members.map((member) => [
               member.need_id,
-              { individual: "0", delivery: "0", baseline: "", deliveryDays: "1" },
+              { individual: "0", delivery: "", baseline: "", deliveryDays: "1" },
             ]),
           ),
         );
@@ -100,13 +105,14 @@ export default function MarketOpportunitiesPage() {
     setError(null);
     try {
       await marketplace.publishGroupOffer(token, draft.id, {
+        shared_cost_rub: sharedCost,
         min_total_units: draft.min_total_units ?? coalition.target_moq_units ?? 1,
         max_total_units: draft.max_total_units ?? coalition.combined_volume_units,
         available_capacity_units: Number(capacity),
         price_tiers: [
           {
             min_units: draft.min_total_units ?? coalition.target_moq_units ?? 1,
-            unit_price_rub: Number(unitPrice),
+            unit_price_rub: String(unitPrice),
           },
         ],
         production_start: productionStart,
@@ -115,11 +121,10 @@ export default function MarketOpportunitiesPage() {
         non_fill_rule: "close_without_obligations",
         participant_terms: coalition.members.map((member) => ({
           need_id: member.need_id,
-          individual_operations_cost_rub: Number(memberTerms[member.need_id]?.individual ?? 0),
-          delivery_cost_rub: Number(memberTerms[member.need_id]?.delivery ?? 0),
-          individual_baseline_cost_rub: memberTerms[member.need_id]?.baseline
-            ? Number(memberTerms[member.need_id].baseline)
-            : null,
+          commercial_terms: commercialTerms[member.need_id],
+          individual_operations_cost_rub: String(memberTerms[member.need_id]?.individual ?? 0),
+          delivery_cost_rub: commercialTerms[member.need_id]?.delivery_method === "separate" ? (memberTerms[member.need_id]?.delivery || null) : "0",
+          individual_baseline_cost_rub: null,
           delivery_days: Number(memberTerms[member.need_id]?.deliveryDays ?? 1),
         })),
       });
@@ -195,7 +200,7 @@ export default function MarketOpportunitiesPage() {
             Черновик создан без цены и публикации. Заполните условия и подтвердите их вручную.
           </p>
           <div className="form-grid">
-            <div className="field"><label>Цена за единицу, ₽</label><input type="number" step="0.01" min="0.01" required value={unitPrice} onChange={(e) => setUnitPrice(e.target.value)} /></div>
+            <div className="field"><label>Цена за единицу, ₽</label><input type="number" step="any" min="0.000000000001" required value={unitPrice} onChange={(e) => setUnitPrice(e.target.value)} /></div>
             <div className="field"><label>Подтверждённая мощность, {draftCoalition.unit}</label><input type="number" min="1" required value={capacity} onChange={(e) => setCapacity(e.target.value)} /></div>
             <div className="field"><label>Окончание набора</label><input type="date" required value={fillDeadline} onChange={(e) => setFillDeadline(e.target.value)} /></div>
             <div className="field"><label>Начало производства</label><input type="date" required value={productionStart} onChange={(e) => setProductionStart(e.target.value)} /></div>
@@ -204,15 +209,17 @@ export default function MarketOpportunitiesPage() {
           <h3>Отдельные условия покупателей</h3>
           {draftCoalition.members.map((member, index) => (
             <div className="participant-terms" key={member.need_id}>
+              <CommercialTermsFields value={commercialTerms[member.need_id]??emptyCommercialTerms} onChange={value=>setCommercialTerms(current=>({...current,[member.need_id]:value}))} disabled={working} />
               <strong>Участник {index + 1} · {formatUnits(member.units, draftCoalition.unit)}</strong>
               <div className="form-grid">
                 <div className="field"><label>Индивидуальные операции, ₽</label><input type="number" min="0" required value={memberTerms[member.need_id]?.individual ?? ""} onChange={(e) => updateMember(member.need_id, "individual", e.target.value)} /></div>
-                <div className="field"><label>Логистика, ₽</label><input type="number" min="0" required value={memberTerms[member.need_id]?.delivery ?? ""} onChange={(e) => updateMember(member.need_id, "delivery", e.target.value)} /></div>
-                <div className="field"><label>Индивидуальная альтернатива, ₽ (если известна)</label><input type="number" min="0.01" value={memberTerms[member.need_id]?.baseline ?? ""} onChange={(e) => updateMember(member.need_id, "baseline", e.target.value)} /></div>
+                <div className="field"><label>Отдельная доставка, ₽</label><input type="number" min="0" required value={memberTerms[member.need_id]?.delivery ?? ""} onChange={(e) => updateMember(member.need_id, "delivery", e.target.value)} /></div>
+                <p className="hint">Сопоставимое подтверждённое КП выбирает сам покупатель в своей коалиции.</p>
                 <div className="field"><label>Доставка, дней</label><input type="number" min="0" required value={memberTerms[member.need_id]?.deliveryDays ?? "1"} onChange={(e) => updateMember(member.need_id, "deliveryDays", e.target.value)} /></div>
               </div>
             </div>
           ))}
+          <label>Общие расходы на запуск партии, ₽<input type="number" min="0" step="0.01" required value={sharedCost} onChange={event=>setSharedCost(event.target.value)}/></label>
           <p className="hint">Итого партии: {formatUnits(draftCoalition.combined_volume_units, draftCoalition.unit)}. Цена, логистика и выгода будут проверены отдельно для каждого участника обычным кодом.</p>
           <div className="actions">
             <button type="submit" className="btn btn-success" disabled={working}>Проверить и направить участникам</button>

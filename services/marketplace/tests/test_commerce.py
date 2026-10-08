@@ -1,3 +1,4 @@
+from conftest import confirmed_quote_terms
 import uuid
 from datetime import date, timedelta
 from decimal import Decimal
@@ -124,7 +125,7 @@ async def test_stock_offer_requires_matching_product_on_send_and_selection(clien
                       characteristics={"material": "дерево", "unit": "шт"}, price_rub=1000,
                       price_tiers=[], moq_units=1, lead_time_days=1, stock_units=5)
     db_session.add_all([need, product]); await db_session.commit()
-    payload = {"company_id": str(seller), "product_id": str(product.id), "resource_kind": "stock",
+    payload = {'commercial_terms': confirmed_quote_terms(), "company_id": str(seller), "product_id": str(product.id), "resource_kind": "stock",
                "price_rub": 1000, "available_units": 2, "lead_time_days": 1,
                "delivery_cost_rub": 0, "moq_units": 1}
     endpoint = f"/api/v1/needs/{need.id}/offers"

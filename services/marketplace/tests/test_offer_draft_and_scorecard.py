@@ -1,3 +1,4 @@
+from conftest import confirmed_quote_terms
 from conftest import grant_capacity
 """Черновик КП, остатки склада и оценка работы агентов.
 
@@ -235,7 +236,7 @@ async def test_offer_from_draft_records_human_corrections(client, db_session):
 
     offer = await client.post(
         f"/api/v1/needs/{need_id}/offers",
-        json={
+        json={'commercial_terms': confirmed_quote_terms(),
             "company_id": str(company),
             "price_rub": 11.5,
             "available_units": 5_000,
@@ -265,7 +266,7 @@ async def test_offer_from_draft_records_human_corrections(client, db_session):
 
     reused = await client.post(
         f"/api/v1/needs/{need_id}/offers",
-        json={
+        json={'commercial_terms': confirmed_quote_terms(), 'delivery_cost_rub': 0,
             "company_id": str(company),
             "price_rub": 11.5,
             "available_units": 5_000,
@@ -312,7 +313,7 @@ async def test_agent_scorecard_counts_draft_conversion(client, db_session):
     assert draft.status_code == 201
     offer = await client.post(
         f"/api/v1/needs/{need_id}/offers",
-        json={
+        json={'commercial_terms': confirmed_quote_terms(),
             "company_id": str(company),
             "price_rub": 12,
             "available_units": 5_000,

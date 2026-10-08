@@ -6,7 +6,7 @@ import { getToken } from "../lib/api";
 import { CommercialReport, formatRub, marketplace } from "../lib/marketplace";
 import { useCompanySelector } from "../lib/useMe";
 
-const amount = (value: number | null | undefined) => value == null ? "Нет данных" : formatRub(Number(value));
+const amount = (value: string | number | null | undefined) => value == null ? "Нет данных" : formatRub(value);
 const statuses: Record<string, string> = { created: "Оформлен", in_production: "Производство", shipped: "Отгружен", delivered: "Доставлен", partially_accepted: "Частичная приёмка", fulfilled: "Исполнен", cancelled: "Отменён", returned: "Возвращён" };
 
 function csvCell(value: unknown): string {

@@ -1,3 +1,4 @@
+from conftest import confirmed_quote_terms
 """Проверки применимости, перенесённые из обзора PR #47 в штатный набор.
 
 Исходный файл воспроизведения: docs/research/checks/pr49_admission_regressions.py.
@@ -50,7 +51,7 @@ async def test_cups_deal_without_documents_must_not_be_created(client, db_sessio
     need_id = need.json()['id']
     published = await client.post(f'/api/v1/needs/{need_id}/publish', headers=buyer_headers)
     assert published.status_code == 200, published.text
-    offer = await client.post(f'/api/v1/needs/{need_id}/offers', headers=_auth(make_token(seller)), json={
+    offer = await client.post(f'/api/v1/needs/{need_id}/offers', headers=_auth(make_token(seller)), json={'commercial_terms': confirmed_quote_terms(),
         'company_id': str(seller_company), 'price_rub': 11.0, 'available_units': 120000,
         'lead_time_days': 9, 'delivery_cost_rub': 10000,
     })

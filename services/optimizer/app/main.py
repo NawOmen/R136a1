@@ -44,3 +44,9 @@ def opportunity_score(data: OpportunityScoreIn):
 @app.post("/api/v1/optimize/resilience", response_model=ResilienceResponse, dependencies=[Depends(require_service_token)])
 def resilience(data: ResilienceRequest):
     return calculate_resilience(data)
+
+from .money import MoneyWireMiddleware
+app.add_middleware(MoneyWireMiddleware, exact_prefix='/api/v2')
+app.post('/api/v2/optimize/allocations', response_model=OptimizationResponse, dependencies=[Depends(require_service_token)])(allocations)
+app.post('/api/v2/optimize/coalition', response_model=CoalitionResponse, dependencies=[Depends(require_service_token)])(coalition)
+app.post('/api/v2/optimize/resilience', response_model=ResilienceResponse, dependencies=[Depends(require_service_token)])(resilience)

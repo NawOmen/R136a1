@@ -1,3 +1,5 @@
+from app.money import money_values
+from conftest import confirmed_quote_terms
 from conftest import grant_capacity,grant_category_capability
 from datetime import date, timedelta
 from itertools import combinations
@@ -13,6 +15,7 @@ def auth(token: str) -> dict[str, str]:
 
 
 async def fake_resilience(payload):
+    payload = money_values(payload)
     scenarios = []
     baseline_cost = sum(
         item["units"] * item["unit_price_rub"] + item["delivery_cost_rub"]
@@ -51,9 +54,9 @@ async def fake_resilience(payload):
     }
 
 
-@pytest.mark.parametrize("automatic", [False, True])
+@pytest.mark.parametrize("automatic,paid_holding", [(False,False),(True,False),(False,True)])
 async def test_resilience_plan_privacy_confirmation_simulation_and_failure(
-    client, db_session, monkeypatch, automatic
+    client, db_session, monkeypatch, automatic, paid_holding
 ):
     monkeypatch.setattr("app.api.resilience.calculate_resilience", fake_resilience)
     buyer_user = await make_user(db_session)
@@ -125,6 +128,13 @@ async def test_resilience_plan_privacy_confirmation_simulation_and_failure(
     db_session.add(variant)
     await db_session.commit()
 
+    # Explicit current quotes; historical NULL quotes are not backfilled by the application.
+    from sqlalchemy import select
+    for quote in (await db_session.scalars(select(Offer).where(Offer.need_id==need.id))).all():
+        token = primary_token if quote.company_id==primary else reserve_token
+        updated = await client.patch(f'/api/v1/offers/{quote.id}',headers=auth(token),json={
+            'expected_revision':quote.revision,'commercial_terms':confirmed_quote_terms()})
+        assert updated.status_code==200,updated.text
     created = await client.post(
         f"/api/v1/needs/{need.id}/resilience-plans",
         json={"variant_id": str(variant.id), "max_price_increase_pct": 25, "max_delay_days": 2, "auto_replace_within_thresholds":automatic},
@@ -164,7 +174,7 @@ async def test_resilience_plan_privacy_confirmation_simulation_and_failure(
 
     decision = await client.post(
         f"/api/v1/reserve-commitments/{invitation['id']}/decision",
-        json={
+        json={'commercial_terms': {**confirmed_quote_terms(),'expenses':([{'code':'reserve_holding','title':'Удержание производителя','amount_rub':'50.00','source':'Синтетический тариф','version':'1'}] if paid_holding else [])},
             "company_id": str(reserve), "decision": "approved",
             "capacity_units": 5_000, "moq_units": 1_000,
             "unit_price_rub": 12, "delivery_cost_rub": 2_000,
@@ -174,6 +184,36 @@ async def test_resilience_plan_privacy_confirmation_simulation_and_failure(
     )
     assert decision.status_code == 200
     assert decision.json()["reserve_tier"] == "hot"
+
+    if paid_holding:
+        revised = (await client.get(f"/api/v1/resilience-plans/{plan['id']}",headers=auth(buyer_token))).json()
+        assert revised['confirmed_at'] is None and revised['version'] > plan['version']
+        assert revised['status'] == 'ready_for_confirmation'
+        stale = await client.post(f"/api/v1/resilience-plans/{plan['id']}/confirm",
+            headers=auth(buyer_token),json={'approved':True,'expected_revision':plan['version']})
+        assert stale.status_code == 409
+        renewed = await client.post(f"/api/v1/resilience-plans/{plan['id']}/confirm",
+            headers=auth(buyer_token),json={'approved':True,'expected_revision':revised['version']})
+        assert renewed.status_code == 200,renewed.text
+        assert renewed.json()['baseline_total_cost_rub'] == 52050
+        removed = await client.post(f"/api/v1/reserve-commitments/{invitation['id']}/decision",
+            headers=auth(reserve_token),json={'company_id':str(reserve),'decision':'rejected'})
+        assert removed.status_code == 200,removed.text
+        after_cancel=(await client.get(f"/api/v1/resilience-plans/{plan['id']}",headers=auth(buyer_token))).json()
+        assert after_cancel['baseline_total_cost_rub'] == 52050
+        assert after_cancel['confirmed_at'] is not None
+        new_terms={**confirmed_quote_terms(),'expenses':[{'code':'reserve_holding','title':'Новое удержание','amount_rub':'70.00','source':'Новый синтетический тариф','version':'2'}]}
+        renewed_reserve=await client.post(f"/api/v1/reserve-commitments/{invitation['id']}/decision",headers=auth(reserve_token),json={
+            'company_id':str(reserve),'decision':'approved','capacity_units':5000,'moq_units':1000,
+            'unit_price_rub':12,'delivery_cost_rub':2000,'lead_time_days':8,
+            'held_until':str(date.today()+timedelta(days=7)),'commercial_terms':new_terms})
+        assert renewed_reserve.status_code==200,renewed_reserve.text
+        proposed=(await client.get(f"/api/v1/resilience-plans/{plan['id']}",headers=auth(buyer_token))).json()
+        assert proposed['confirmed_at'] is None and proposed['baseline_total_cost_rub']==52120
+        final=await client.post(f"/api/v1/resilience-plans/{plan['id']}/confirm",headers=auth(buyer_token),json={'approved':True,'expected_revision':proposed['version']})
+        assert final.status_code==200,final.text
+        assert final.json()['commercial_snapshot']['reserve_holding_total_rub']==120
+        assert len(final.json()['commercial_snapshot']['holding_quotes'])==2
 
     obligations = await client.get(
         f"/api/v1/primary-obligations/{primary}", headers=auth(primary_token)

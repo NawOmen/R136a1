@@ -1,3 +1,4 @@
+from conftest import confirmed_quote_terms
 from sqlalchemy import func, select, text
 
 from conftest import grant_capacity, grant_packaging_documents, make_company, make_token, make_user
@@ -62,7 +63,7 @@ async def test_full_flow(client, db_session):
     # продавец отвечает предложением
     r = await client.post(
         f"/api/v1/needs/{need_id}/offers",
-        json={"company_id": str(seller_company), "product_id":product_id, "price_rub": 11.0, "available_units": 120000, "lead_time_days": 9, "delivery_cost_rub": 10000},
+        json={'commercial_terms': confirmed_quote_terms(), "company_id": str(seller_company), "product_id":product_id, "price_rub": 11.0, "available_units": 120000, "lead_time_days": 9, "delivery_cost_rub": 10000},
         headers=_auth(seller_token),
     )
     assert r.status_code == 201

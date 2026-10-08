@@ -275,3 +275,8 @@ async def grant_category_capability(db_session,company_id,category_id,characteri
     else:
         passport.details={**(passport.details or {}),'category_scopes':[scope]}
     await db_session.commit()
+
+
+def confirmed_quote_terms():
+    """Explicit synthetic quoted delivery/tax conditions, never a production default."""
+    return {'delivery_method':'separate','tax_basis':'no_vat','vat_rate_pct':None,'delivery_conditions':'Синтетический адрес получателя, Россия','expenses':[]}

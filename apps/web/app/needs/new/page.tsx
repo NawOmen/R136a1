@@ -355,7 +355,7 @@ export default function NewNeedPage() {
         subcategory,
         characteristics,
         volume_units: Number(volumeUnits),
-        budget_rub: Number(budgetRub),
+        budget_rub: String(budgetRub),
         deadline_date: deadlineDate,
         delivery_address_id: deliveryAddressId,
         visibility,
