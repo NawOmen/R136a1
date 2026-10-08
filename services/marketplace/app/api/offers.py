@@ -361,6 +361,7 @@ async def select_offer(
             status.HTTP_409_CONFLICT,
             detail="Объём потребности не достигает MOQ предложения",
         )
+    product = None
     if offer.product_id:
         product = await db.get(Product, offer.product_id)
         if not product or product.company_id != offer.company_id:
@@ -428,6 +429,7 @@ async def select_offer(
         "need_revision": need.revision,
         "need_id": str(need.id),
         "seller_company_id": str(offer.company_id),
+        "product_category_profile": product.category_profile if product is not None else None,
         "units": need.volume_units,
         "total_price_rub": total_price,
         "admission": admission_audit_payload(
@@ -435,6 +437,7 @@ async def select_offer(
             specification={
                 "category": need.category, "subcategory": need.subcategory,
                 "characteristics": need.characteristics,
+                "category_profile": need.category_profile,
                 "moq_units": offer.moq_units,
             },
         ),

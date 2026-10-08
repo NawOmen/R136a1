@@ -40,4 +40,8 @@ def product_specification_hash(product):
     import json
     value = {"category": product.category, "subcategory": product.subcategory,
              "characteristics": product.characteristics, "moq_units": product.moq_units}
+    # Preserve exact legacy hashes; never pretend an unknown profile was current.
+    profile = getattr(product, "category_profile", None)
+    if profile is not None:
+        value["category_profile"] = profile
     return hashlib.sha256(json.dumps(value, sort_keys=True, ensure_ascii=False).encode()).hexdigest()

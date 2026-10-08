@@ -33,3 +33,16 @@ test("generic dimensions do not imply millimetres or hide an explicit dimension 
   expect(characteristicSuggestions("Товары для бизнеса", "Мебель", ["dimensions_mm"])
     .some((field) => field.key === "dimensions_mm")).toBe(false);
 });
+
+
+test("saved technical labels remain tied to their captured profile", async () => {
+  const { formatCharacteristics } = await import("../../apps/web/app/lib/marketplace");
+  const profile = {
+    snapshot_version: 1, registry_version: "previous", category_id: "test", leaf_revision: 1,
+    profile_version: 1, state: "initial", required_for_product: [],
+    fields: { length_mm: { label: "Сохранённая длина, мм", type: "number" as const, aliases: ["длина"] } },
+  };
+  expect(formatCharacteristics({ length_mm: 12, " ДЛИНА ": "15 мм", custom: "значение" }, profile))
+    .toBe("Сохранённая длина, мм: 12 · Сохранённая длина, мм: 15 мм · custom: значение");
+  expect(formatCharacteristics({ length_mm: 12 }, null)).toBe("Длина, мм: 12");
+});

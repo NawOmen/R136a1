@@ -9,6 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..database import get_db
 from ..commerce import product_specification_hash
+from ..category_profile_snapshot import profile_after_specification_change
 from ..deps import (
     CurrentUser,
     get_current_user,
@@ -146,6 +147,9 @@ async def update_product(
         errors, _ = validate_characteristics(validated.category, validated.subcategory, validated.characteristics, validated.moq_units)
         if errors:
             raise HTTPException(422, "; ".join(errors))
+    product.category_profile = profile_after_specification_change(
+        product, validated.category, validated.subcategory, validated.characteristics,
+    )
     for field, value in validated.model_dump().items():
         setattr(product, field, value)
     if "stock_units" in patch:
@@ -209,7 +213,11 @@ async def publish_product(
             actor_company_id=product.company_id,
             source_refs=[{"type": "product", "id": str(product.id)}],
             explanation="Товар опубликован после программной проверки категорийного допуска.",
-            payload={"category": product.category, "admission": admission_audit_payload(admission)},
+            payload={"category": product.category, "admission": admission_audit_payload(admission, specification={
+                "category": product.category, "subcategory": product.subcategory,
+                "characteristics": product.characteristics, "moq_units": product.moq_units,
+                "category_profile": product.category_profile,
+            })},
         )
         await notify_market_watchers(db, product.category, "supply", exclude_user_id=user.id)
     await run_market_rematch(db, "product_publication_changed", product.id)

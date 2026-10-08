@@ -421,7 +421,7 @@ export default function SellerProductsPage() {
                       {product.category} / {product.subcategory ?? "Без подкатегории"} · {formatRub(product.price_rub)} / {itemUnit(product.characteristics)} · МОЗ{" "}
                       {formatUnits(product.moq_units, itemUnit(product.characteristics))} · {product.lead_time_days} дн.
                     </div>
-                    <div className="company-meta">{formatCharacteristics(product.characteristics)}</div>
+                    <div className="company-meta">{formatCharacteristics(product.characteristics, product.category_profile)}</div>
                     {product.price_tiers.map((tier) => <div className="company-meta" key={tier.min_units}>
                       От {formatUnits(tier.min_units, itemUnit(product.characteristics))}: {formatRub(tier.unit_price_rub)} / {itemUnit(product.characteristics)} · {formatRub(tier.min_units * tier.unit_price_rub)} за партию
                     </div>)}

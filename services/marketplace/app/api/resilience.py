@@ -782,6 +782,7 @@ async def decide_reserve_commitment(
             specification={
                 "category": plan_need.category, "subcategory": plan_need.subcategory,
                 "characteristics": plan_need.characteristics,
+                "category_profile": plan_need.category_profile,
                 "moq_units": data.moq_units,
             },
         )
@@ -1058,6 +1059,7 @@ async def approve_recovery(
                     specification={
                         "category": plan_need.category, "subcategory": plan_need.subcategory,
                         "characteristics": plan_need.characteristics,
+                        "category_profile": plan_need.category_profile,
                     },
                 ),
             }

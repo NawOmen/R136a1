@@ -11,6 +11,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..category_admission import catalog_scope
 from ..category_characteristics import validate_profile_values
+from ..category_profile_snapshot import profile_after_specification_change
 from ..database import get_db
 from ..deps import (
     CurrentUser,
@@ -57,6 +58,7 @@ def _need_out(need: Need, files: list[NeedFile] | None = None) -> NeedOut:
         category=need.category,
         subcategory=need.subcategory,
         characteristics=need.characteristics,
+        category_profile=getattr(need, "category_profile", None),
         volume_units=need.volume_units,
         budget_rub=need.budget_rub,
         deadline_date=need.deadline_date,
@@ -190,6 +192,9 @@ async def edit_need(need_id: uuid.UUID, data: NeedEditIn,
         raise HTTPException(422, "Срок поставки и актуальности не может быть в прошлом")
     values = data.model_dump(exclude={"expected_revision", "request_key", "company_id"})
     values["valid_until"] = valid_until
+    need.category_profile = profile_after_specification_change(
+        need, data.category, data.subcategory, data.characteristics,
+    )
     for key, value in values.items():
         setattr(need, key, value)
     need.revision += 1

@@ -216,7 +216,7 @@ export default function SellerRequestsPage() {
   const normalizedQuery = query.trim().toLocaleLowerCase("ru");
   const openNeeds = needs.filter((need) =>
     ["open_for_offers", "waiting_for_match", "coalition_candidate"].includes(need.status) &&
-    (!normalizedQuery || `${need.category} ${formatCharacteristics(need.characteristics)}`.toLocaleLowerCase("ru").includes(normalizedQuery)),
+    (!normalizedQuery || `${need.category} ${formatCharacteristics(need.characteristics, need.category_profile)}`.toLocaleLowerCase("ru").includes(normalizedQuery)),
   );
 
   return (
@@ -252,7 +252,7 @@ export default function SellerRequestsPage() {
             <li key={need.id} className="demand-card">
               <div className="demand-card__top"><span className="demand-kind">Производство</span><span className="demand-deadline">до {need.deadline_date}</span></div>
               <h2>{need.category}</h2>
-              <p className="demand-description">{formatCharacteristics(need.characteristics)}</p>
+              <p className="demand-description">{formatCharacteristics(need.characteristics, need.category_profile)}</p>
               <dl className="demand-facts"><div><dt>Необходимый объём</dt><dd>{formatUnits(need.volume_units, itemUnit(need.characteristics))}</dd></div><div><dt>Статус запроса</dt><dd>{NEED_STATUS_LABELS[need.status]}</dd></div></dl>
 
               {explanations[need.id] && (
