@@ -60,7 +60,7 @@ class StaleCapacityProfileTests(IsolatedAsyncioTestCase):
                     action = lambda: resilience.decide_reserve_commitment(commitment.id, ReserveDecisionIn(company_id=seller, decision='approved'), user, db)
                 else:
                     module = market
-                    stack.enter_context(patch.object(module, '_lock_coalition_needs', AsyncMock()))
+                    stack.enter_context(patch.object(module, '_lock_coalition_needs', AsyncMock(return_value={need.id: need})))
                     coalition = NS(id=uuid.uuid4(), version=1, status='awaiting_approvals', producer_company_id=seller,
                                    compatibility_profile_id=uuid.uuid4())
                     members = [NS(id=uuid.uuid4(), need_id=need.id, buyer_company_id=buyer, units=100, approval_status='pending',commercial_estimate={'complete':True})]
@@ -72,7 +72,9 @@ class StaleCapacityProfileTests(IsolatedAsyncioTestCase):
                         action = lambda: market.decide_coalition(coalition.id, CoalitionDecisionIn(company_id=buyer, decision='approved', expected_revision=1), user, db)
                     else:
                         group.status = 'draft'
-                        db.get.side_effect = [group, coalition, NS(), need]
+                        coalition.status = 'candidate'
+                        db.scalar.return_value = coalition
+                        db.get.side_effect = [group, NS()]
                         db.execute.return_value = result(members)
                         data = GroupOfferPublishIn(min_total_units=100, max_total_units=1000, available_capacity_units=1000,
                             price_tiers=[{'min_units':100,'unit_price_rub':10}], fill_deadline=date.today()+timedelta(days=1),

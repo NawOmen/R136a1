@@ -45,8 +45,9 @@ class ObligationProfileAuditTests(IsolatedAsyncioTestCase):
         members = [SimpleNamespace(id=uuid.uuid4(), need_id=item.id, buyer_company_id=uuid.uuid4(),
                    approval_status='pending' if index == 0 else 'approved', units=item.volume_units,
                    total_cost_rub=item.volume_units*12) for index, item in enumerate(needs)]
-        for member in members:
-            member.commercial_estimate={'complete':True,'total_rub':str(member.total_cost_rub)}
+        for member, original in zip(members, needs, strict=True):
+            member.commercial_estimate={'complete':True,'total_rub':str(member.total_cost_rub),
+                                        'need_revision': original.revision}
         seller = uuid.uuid4()
         coalition = SimpleNamespace(id=uuid.uuid4(), version=4, status='awaiting_approvals',
                                     producer_company_id=seller, category='Строительство')
