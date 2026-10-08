@@ -46,8 +46,9 @@ async def evidence_snapshot(db, data, user, *, lock=True):
         return snapshot
     # Services already share PostgreSQL (capability search/scorecard); this is a
     # read of the Gateway's authoritative confirmation, never client assertions.
-    row = (await db.execute(text("SELECT id,revision,state,result,user_id,company_id FROM agents.agent_runs WHERE id=:id" +
-        (" FOR UPDATE" if lock else "")), {"id": data.agent_run_id})).mappings().first()
+    query = text("SELECT id,revision,state,result,user_id,company_id FROM agents.agent_runs WHERE id=:id FOR UPDATE"
+                 if lock else "SELECT id,revision,state,result,user_id,company_id FROM agents.agent_runs WHERE id=:id")
+    row = (await db.execute(query, {"id": data.agent_run_id})).mappings().first()
     if row is None or row["user_id"] != user.id or row["company_id"] != data.company_id:
         raise HTTPException(403, "Анализ не принадлежит покупателю выбранной компании")
     if row["revision"] != data.agent_run_revision or row["state"] != "confirmed_by_user":
@@ -79,8 +80,9 @@ async def evidence_is_current(db, need, *, lock=False):
     run = (getattr(need, "requirements_evidence", None) or {}).get("run")
     if not run:
         return True
-    row = (await db.execute(text("SELECT revision,state FROM agents.agent_runs WHERE id=:id" + (" FOR UPDATE" if lock else "")),
-        {"id": run["id"]})).first()
+    query = text("SELECT revision,state FROM agents.agent_runs WHERE id=:id FOR UPDATE"
+                 if lock else "SELECT revision,state FROM agents.agent_runs WHERE id=:id")
+    row = (await db.execute(query, {"id": run["id"]})).first()
     return bool(row and row[0] == run["revision"] and row[1] == "confirmed_by_user")
 
 
