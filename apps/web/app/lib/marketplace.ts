@@ -945,7 +945,7 @@ export interface EditorRegistry {
 }
 export interface QuantityConversionPreview {
   input_unit: string; stored_unit: string; factor: number;
-  quantities: Record<string, number | null>; price_rub: Money | null; price_tiers?: {min_units:number;unit_price_rub:number}[];
+  quantities: Record<string, number | null>; price_rub: Money | null; price_tiers?: {min_units:number;unit_price_rub:Money}[];
 }
 export interface ProfileRevisionPreview {
   state: "current" | "update_available" | "unknown" | "unclassified";
