@@ -163,6 +163,10 @@ async def update_product(
         product.stock_updated_at = datetime.now(timezone.utc)
     if product.is_published and (product.price_rub != old_price or product.category != old_category):
         db.add(ProductPriceObservation(product_id=product.id, category=product.category, unit_price_rub=product.price_rub, specification_hash=product_specification_hash(product)))
+    await append_audit_event(db,event_type="product_terms_changed",entity_type="product",entity_id=product.id,
+        actor_user_id=user.id,actor_company_id=product.company_id,
+        payload={'before':current,'after':validated.model_dump(),'changed_fields':sorted(patch)},
+        explanation="Продавец изменил каталог. Согласованные коммерческие снимки и обязательства сохраняют прежние условия.")
     await run_market_rematch(db, "product_terms_changed", product.id)
     if product.is_published:
         await notify_market_watchers(db, product.category, "supply", exclude_user_id=user.id)

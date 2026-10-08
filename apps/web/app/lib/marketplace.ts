@@ -1,3 +1,5 @@
+import { displayMoney, type Money } from "./money";
+export type { Money } from "./money";
 // Клиент marketplace-сервиса (этап 3). Аутентификация — тот же JWT Bearer, что и у
 // gateway-auth: токен хранится в localStorage ("token") и передаётся в каждый запрос.
 // Базовый URL задаётся через NEXT_PUBLIC_MARKETPLACE_URL.
@@ -67,7 +69,7 @@ export interface Product {
   subcategory: string | null;
   category_profile?: CategoryProfileSnapshot | null;
   characteristics: Record<string, unknown>;
-  price_rub: number;
+  price_rub: Money;
   price_tiers: ProductPriceTier[];
   moq_units: number;
   lead_time_days: number;
@@ -79,17 +81,17 @@ export interface Product {
 }
 
 export interface ProductImage { id: string; file_name: string; content_type: string; position: number }
-export interface ProductPriceTier { min_units: number; unit_price_rub: number }
-export interface SellerAnalytics { company_id: string; products_total: number; products_published: number; deals_total: number; sold_units: number; revenue_rub: number | null; available_capacity_units: number; capacity_utilization_pct: number | null }
+export interface ProductPriceTier { min_units: number; unit_price_rub: Money }
+export interface SellerAnalytics { company_id: string; products_total: number; products_published: number; deals_total: number; sold_units: number; revenue_rub: Money | null; available_capacity_units: number; capacity_utilization_pct: number | null }
 export interface DealMessage { id: string; deal_id: string; author_user_id: string; author_company_id: string; message: string; created_at: string }
 export interface PublicProducer { company_id: string; display_name: string; legal_form: string; region: string | null; about: string | null; production_site_address: string | null; has_photo: boolean; rating: number | null; reviews_count: number; capability_details?: CapabilityDetails | null }
 export interface PublicProductDetail extends Product { producer: PublicProducer }
 export interface DealCheckpoint { id: string; deal_id: string; kind: "production" | "shipment" | "delivery"; status: "pending" | "completed"; note: string | null; completed_at: string | null }
 export interface DeliveryArrangement { id: string; deal_id: string; weight_kg: number; volume_m3: number; cargo_class: "small" | "medium" | "large" | "manual_review"; classification_note: string; method: "buyer_carrier" | "self_pickup" | "seller_delivery"; carrier_name: string | null; tracking_number: string | null; buyer_responsible: boolean }
 export interface DealReview { id: string; deal_id: string; reviewer_company_id: string; reviewed_company_id: string; rating: number; comment: string; created_at: string }
-export interface PriceIndexPoint { date: string; average_unit_price_rub: number; offers_count: number }
+export interface PriceIndexPoint { date: string; average_unit_price_rub: Money; offers_count: number }
 export interface MarketWatch { id: string; category: string; demand_changes: boolean; supply_changes: boolean }
-export interface BuyerSavings { company_id: string; confirmed_savings_rub: number; calculated_variants_rub: number; coalitions_count: number; explanation: string }
+export interface BuyerSavings { company_id: string; confirmed_savings_rub: Money; calculated_variants_rub: Money; coalitions_count: number; explanation: string }
 
 export interface CapacityEntry {
   category_conversions?: {category_id: string; order_unit: string; resource_units_per_order_unit: number; profile_version?: number}[];
@@ -257,7 +259,7 @@ export interface Need {
   category_profile?: CategoryProfileSnapshot | null;
   characteristics: Record<string, unknown>;
   volume_units: number;
-  budget_rub: number | null;
+  budget_rub: Money | null;
   deadline_date: string;
   delivery_address_id: string | null;
   visibility: NeedVisibility;
@@ -282,17 +284,19 @@ export interface NeedFeedItem {
 }
 
 export interface Offer {
+  commercial_terms?: CommercialTerms | null;
+  commercial_quote?: CommercialSnapshot | null;
   revision: number;
   id: string;
   need_id: string;
   company_id: string;
   created_by_user_id: string | null;
-  price_rub: number;
+  price_rub: Money;
   available_units: number;
   lead_time_days: number;
-  delivery_cost_rub: number;
+  delivery_cost_rub: Money | null;
   moq_units: number;
-  price_tiers: { min_units: number; unit_price_rub: number }[];
+  price_tiers: { min_units: number; unit_price_rub: Money }[];
   valid_until: string | null;
   status: OfferStatus;
 }
@@ -306,15 +310,16 @@ export interface OptimizationVariant {
     title: string;
     feasible: boolean;
     total_units: number;
-    total_cost_rub: number;
+    total_cost_rub: Money;
     max_lead_time_days: number;
     reliability_score: number | null;
+    comparison_basis?: {tax_basis:string;vat_rate_pct:string|null;delivery_method:string;delivery_conditions:string|null};
     reasons: string[];
     allocations: {
       company_id: string;
       units: number;
-      unit_price_rub: number;
-      total_cost_rub: number;
+      unit_price_rub: Money;
+      total_cost_rub: Money;
     }[];
   };
 }
@@ -341,7 +346,7 @@ export interface GroupOffer {
   opportunity_id: string | null;
   min_total_units: number | null;
   max_total_units: number | null;
-  price_tiers: { min_units: number; unit_price_rub: number }[];
+  price_tiers: { min_units: number; unit_price_rub: Money }[];
   production_start: string | null;
   production_end: string | null;
   fill_deadline: string | null;
@@ -351,16 +356,17 @@ export interface GroupOffer {
 }
 
 export interface CoalitionMember {
+  commercial_estimate?: CommercialEstimate | null;
   need_id: string;
   buyer_company_id: string | null;
   units: number;
   individual_operations: Record<string, unknown>;
-  common_cost_rub: number | null;
-  individual_cost_rub: number | null;
-  delivery_cost_rub: number | null;
-  total_cost_rub: number | null;
-  baseline_cost_rub: number | null;
-  benefit_rub: number | null;
+  common_cost_rub: Money | null;
+  individual_cost_rub: Money | null;
+  delivery_cost_rub: Money | null;
+  total_cost_rub: Money | null;
+  baseline_cost_rub: Money | null;
+  benefit_rub: Money | null;
   approval_status: string;
 }
 
@@ -379,35 +385,39 @@ export interface Coalition {
 }
 
 export interface PublishGroupOfferInput {
+  shared_cost_rub?: Money;
   min_total_units: number;
   max_total_units: number;
   available_capacity_units: number;
-  price_tiers: { min_units: number; unit_price_rub: number }[];
+  price_tiers: { min_units: number; unit_price_rub: Money }[];
   production_start: string;
   production_end: string;
   fill_deadline: string;
   non_fill_rule: "extend_with_approval" | "recalculate" | "close_without_obligations";
-  participant_terms: {
+  participant_terms: { commercial_terms?: CommercialTerms | null; baseline_offer_id?: string | null;
     need_id: string;
-    individual_operations_cost_rub: number;
-    delivery_cost_rub: number;
-    individual_baseline_cost_rub: number | null;
+    individual_operations_cost_rub: Money;
+    delivery_cost_rub: Money | null;
+    individual_baseline_cost_rub: Money | null;
     delivery_days: number;
   }[];
 }
 
 export interface Deal {
+  commercial_snapshot?: CommercialSnapshot | null;
   id: string;
   offer_id: string;
   need_id: string;
   buyer_company_id: string;
   seller_company_id: string;
   units: number;
-  total_price_rub: number;
+  total_price_rub: Money;
   status: DealStatus;
 }
 
 export interface ReserveCommitment {
+  commercial_snapshot?: CommercialSnapshot | null;
+  commercial_terms?: CommercialTerms | null;
   id: string;
   plan_id: string;
   company_id: string;
@@ -416,13 +426,13 @@ export interface ReserveCommitment {
   confirmation_status: string;
   proposed_capacity_units: number | null;
   proposed_moq_units: number | null;
-  proposed_unit_price_rub: number | null;
-  proposed_delivery_cost_rub: number | null;
+  proposed_unit_price_rub: Money | null;
+  proposed_delivery_cost_rub: Money | null;
   proposed_lead_time_days: number | null;
   confirmed_capacity_units: number | null;
   confirmed_moq_units: number | null;
-  confirmed_unit_price_rub: number | null;
-  confirmed_delivery_cost_rub: number | null;
+  confirmed_unit_price_rub: Money | null;
+  confirmed_delivery_cost_rub: Money | null;
   confirmed_lead_time_days: number | null;
   held_until: string | null;
 }
@@ -437,7 +447,7 @@ export interface ResilienceScenario {
     confirmed_covered_units: number;
     uncovered_units: number;
     unconfirmed_units: number;
-    price_delta_rub: number | null;
+    price_delta_rub: Money | null;
     price_delta_pct: number | null;
     cost_comparison_applicable: boolean;
     delay_days: number;
@@ -449,14 +459,15 @@ export interface ResilienceScenario {
 }
 
 export interface ResiliencePlan {
+  commercial_snapshot?: { holding_quotes: CommercialSnapshot[]; reserve_holding_total_rub: Money; total_rub: Money } | null;
   id: string;
   need_id: string;
   baseline_variant_id: string;
-  baseline_allocations: { company_id: string; units: number; total_cost_rub: number }[];
-  baseline_total_cost_rub: number;
+  baseline_allocations: { company_id: string; units: number; total_cost_rub: Money; commercial_snapshot?: CommercialSnapshot | null }[];
+  baseline_total_cost_rub: Money;
   baseline_lead_time_days: number;
-  current_allocations: { company_id: string; units: number; total_cost_rub: number }[];
-  current_total_cost_rub: number;
+  current_allocations: { company_id: string; units: number; total_cost_rub: Money }[];
+  current_total_cost_rub: Money;
   current_lead_time_days: number;
   max_price_increase_pct: number;
   max_delay_days: number;
@@ -473,7 +484,7 @@ export interface PrimaryObligation {
   plan_id: string;
   need_id: string;
   company_id: string;
-  allocation: { company_id: string; units: number; total_cost_rub: number };
+  allocation: { company_id: string; units: number; total_cost_rub: Money };
   plan_status: string;
   confirmed_at: string | null;
 }
@@ -531,7 +542,7 @@ export interface CreateProductInput {
   category: string;
   subcategory?: string | null;
   characteristics: Record<string, unknown>;
-  price_rub: number;
+  price_rub: Money;
   price_tiers: ProductPriceTier[];
   moq_units: number;
   lead_time_days: number;
@@ -547,7 +558,7 @@ export interface CreateNeedInput {
   subcategory?: string | null;
   characteristics: Record<string, unknown>;
   volume_units: number;
-  budget_rub: number;
+  budget_rub: Money;
   deadline_date: string;
   delivery_address_id: string;
   visibility: NeedVisibility;
@@ -555,15 +566,16 @@ export interface CreateNeedInput {
 }
 
 export interface CreateOfferInput {
+  commercial_terms?: CommercialTerms | null;
   resource_kind?: "stock" | "capacity";
   product_id?: string;
   company_id: string;
-  price_rub: number;
+  price_rub: Money;
   available_units: number;
   lead_time_days: number;
-  delivery_cost_rub?: number;
+  delivery_cost_rub?: Money | null;
   moq_units?: number;
-  price_tiers?: { min_units: number; unit_price_rub: number }[];
+  price_tiers?: { min_units: number; unit_price_rub: Money }[];
   valid_until?: string;
   /** Черновик агента, из которого подготовлено предложение. */
   draft_id?: string;
@@ -573,7 +585,7 @@ export interface CreateOfferInput {
 export interface OfferDraftField {
   name: string;
   label: string;
-  value: number | null;
+  value: Money | null;
   source: string;
   confirmed: boolean;
   note: string | null;
@@ -588,12 +600,12 @@ export interface OfferDraft {
     product_id: string | null;
     resource_kind: "stock" | "capacity";
     source_updated_at: string | null;
-    price_rub: number | null;
+    price_rub: Money | null;
     available_units: number | null;
     moq_units: number | null;
     lead_time_days: number | null;
-    delivery_cost_rub: number | null;
-    price_tiers: { min_units: number; unit_price_rub: number }[];
+    delivery_cost_rub: Money | null;
+    price_tiers: { min_units: number; unit_price_rub: Money }[];
   };
   fields: OfferDraftField[];
   missing: string[];
@@ -630,7 +642,7 @@ export interface AgentScorecard {
   agent_runs_unknown_route: number;
   agent_costed_runs: number;
   agent_average_duration_ms: number;
-  agent_estimated_cost_rub: number;
+  agent_estimated_cost_rub: Money;
   llm_metrics_available: boolean;
   notes: string[];
 }
@@ -743,9 +755,8 @@ export function formatCharacteristics(characteristics: Record<string, unknown>, 
   return entries.map(([key, value]) => `${characteristicLabel(key, profile)}: ${String(value)}`).join(" · ");
 }
 
-export function formatRub(value: number | null | undefined, maximumFractionDigits = 2): string {
-  if (value === null || value === undefined) return "—";
-  return new Intl.NumberFormat("ru-RU", { maximumFractionDigits }).format(value) + " ₽";
+export function formatRub(value: Money | null | undefined, maximumFractionDigits = 2): string {
+  return displayMoney(value, maximumFractionDigits);
 }
 
 export function itemUnit(characteristics?: Record<string, unknown>): string {
@@ -836,7 +847,7 @@ async function marketplaceFetch<T>(path: string, options: RequestOptions = {}): 
   if (init.body !== undefined && !isFormData) headers.set("Content-Type", "application/json");
   if (token) headers.set("Authorization", `Bearer ${token}`);
 
-  const response = await fetch(`${marketplaceBaseUrl()}${path}`, { ...init, headers });
+  const response = await fetch(`${marketplaceBaseUrl()}${path.replace("/api/v1", "/api/v3").replace("/api/v2", "/api/v3/physical")}`, { ...init, headers });
 
   if (!response.ok) {
     if (response.status === 401) handleUnauthorized();
@@ -861,7 +872,7 @@ async function marketplaceFetch<T>(path: string, options: RequestOptions = {}): 
 }
 
 async function marketplaceFetchBlob(path: string, token: string): Promise<Blob> {
-  const response = await fetch(`${marketplaceBaseUrl()}${path}`, {
+  const response = await fetch(`${marketplaceBaseUrl()}${path.replace("/api/v1", "/api/v3").replace("/api/v2", "/api/v3/physical")}`, {
     headers: { Authorization: `Bearer ${token}` },
   });
   if (!response.ok) {
@@ -903,14 +914,14 @@ export interface ExecutionTotals {
   cancelled_units: number; net_units: number; open_units: number;
 }
 export interface CommercialValues {
-  unit_price_rub: number | null; ordered_value_rub: number; delivery_price_rub: number | null;
-  net_goods_revenue_rub: number | null; payments_rub: number | null;
-  cost_of_goods_rub?: number | null; gross_profit_rub?: number | null;
-  attributable_expenses_rub?: number | null; contribution_rub?: number | null;
+  unit_price_rub: Money | null; ordered_value_rub: Money; delivery_price_rub: Money | null;
+  net_goods_revenue_rub: Money | null; payments_rub: Money | null;
+  cost_of_goods_rub?: Money | null; gross_profit_rub?: Money | null;
+  attributable_expenses_rub?: Money | null; contribution_rub?: Money | null;
 }
 export interface DealExecution extends ExecutionTotals {
   deal_id: string; status: string; events: ExecutionEvent[]; financials: CommercialValues;
-  cost_revision?: number; unit_cost_rub?: number | null; cost_note?: string;
+  cost_revision?: number; unit_cost_rub?: Money | null; cost_note?: string;
 }
 export interface CommercialOrder extends ExecutionTotals, CommercialValues {
   deal_id: string; category: string; unit: string; created_at: string; status: string;
@@ -920,7 +931,7 @@ export interface CommercialReport {
   orders_count: number; offers_count: number; rejected_offers_count: number;
   payments_rub: null; totals: Record<string, number | null>; orders: CommercialOrder[]; explanation: string;
   group_orders_count: number;
-  group_orders: { order_id: string; coalition_id: string; category: string; unit: string; created_at: string; status: string; units: number; contract_value_rub: number; payments_rub: null }[];
+  group_orders: { order_id: string; coalition_id: string; category: string; unit: string; created_at: string; status: string; units: number; contract_value_rub: Money; payments_rub: null }[];
 }
 
 export interface EditableCategoryProfile {
@@ -934,7 +945,7 @@ export interface EditorRegistry {
 }
 export interface QuantityConversionPreview {
   input_unit: string; stored_unit: string; factor: number;
-  quantities: Record<string, number | null>; price_rub: number | null; price_tiers?: {min_units:number;unit_price_rub:number}[];
+  quantities: Record<string, number | null>; price_rub: Money | null; price_tiers?: {min_units:number;unit_price_rub:Money}[];
 }
 export interface ProfileRevisionPreview {
   state: "current" | "update_available" | "unknown" | "unclassified";
@@ -947,6 +958,9 @@ export interface ProfileRevisionPreview {
 }
 
 export const marketplace = {
+  chooseBaseline(token:string,coalitionId:string,data:{company_id:string;offer_id:string|null;expected_revision:number}):Promise<Coalition> {
+    return marketplaceFetch(`/api/v1/coalitions/${coalitionId}/baseline`,{token,method:'POST',body:JSON.stringify(data)});
+  },
   reviewPackaging(token:string,id:string,input:{target_unit:string;factor:number;approved:boolean;expected_specification_hash?:string;expected_review_hash?:string}):Promise<PackagingDefinition> {return marketplaceFetch(`/api/v1/products/${id}/packaging-conversion`,{token,method:"POST",body:JSON.stringify(input)});},
   getCategoryRegistry(): Promise<EditorRegistry["registry"]> { return marketplaceFetch("/api/v1/categories/profiles"); },
   getEditorRegistry(token: string): Promise<EditorRegistry> { return marketplaceFetch("/api/v1/editor/categories", { token }); },
@@ -1291,7 +1305,7 @@ export const marketplace = {
     return marketplaceFetch("/api/v2/needs", { method: "POST", token, body: JSON.stringify(input) });
   },
 
-  editNeed(token: string, needId: string, input: Omit<CreateNeedInput, "budget_rub" | "delivery_address_id"> & { budget_rub: number | null; delivery_address_id: string | null; expected_revision: number }): Promise<Need> {
+  editNeed(token: string, needId: string, input: Omit<CreateNeedInput, "budget_rub" | "delivery_address_id"> & { budget_rub: Money | null; delivery_address_id: string | null; expected_revision: number }): Promise<Need> {
     return marketplaceFetch(`/api/v2/needs/${needId}`, { method: "PUT", token, body: JSON.stringify(input) });
   },
 
@@ -1532,3 +1546,14 @@ export const marketplace = {
     return marketplaceFetch("/api/v1/audit/verify", { token });
   },
 };
+
+export interface CommercialTerms {
+  delivery_method: "included" | "separate" | "self_pickup" | "unknown";
+  tax_basis: "includes_vat" | "no_vat" | "unknown";
+  vat_rate_pct?: string | null;
+  delivery_conditions?: string | null;
+  exceptions?: string;
+  expenses?: {code:"individual_operations"|"reserve_holding"|"switching"|"other";title:string;amount_rub:Money|null;required:boolean;source:string;version:string}[];
+}
+export interface CommercialEstimate {schema_version:number;complete:boolean;missing:string[];total_rub:Money|null;known_total_rub:Money;lines:{code:string;title:string;amount_rub:Money|null;conditional:boolean;source:unknown;tax_basis:string}[];terms:CommercialTerms;benefit_rub?:Money|null;baseline_comparable?:boolean}
+export interface CommercialSnapshot {schema_version:number;estimate:CommercialEstimate;need:{id:string;revision:number};offer:{id:string;revision:number}|null}

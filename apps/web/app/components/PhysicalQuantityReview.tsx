@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useState } from "react";
-import { marketplace, QuantityConversionPreview } from "../lib/marketplace";
+import { formatRub, marketplace, QuantityConversionPreview } from "../lib/marketplace";
 
 export default function PhysicalQuantityReview({ kind, values, approved, onApproval }: {
   kind: "product" | "need"; values: Record<string, unknown>; approved: boolean; onApproval: (approved: boolean) => void;
@@ -31,8 +31,8 @@ export default function PhysicalQuantityReview({ kind, values, approved, onAppro
   return <div className="field">
     <p className="hint">Точный пересчёт: 1 {preview.input_unit} = {preview.factor} {preview.stored_unit}. В заказах и ресурсах будет использоваться {preview.stored_unit}.</p>
     {Object.entries(preview.quantities).map(([key, value]) => value != null && <p key={key}>{labels[key] ?? key}: {value} {preview.stored_unit}</p>)}
-    {preview.price_rub != null && <p>Цена: {preview.price_rub} ₽ / {preview.stored_unit}</p>}
-    {preview.price_tiers?.map(tier=><p key={tier.min_units}>От {tier.min_units} {preview.stored_unit}: {tier.unit_price_rub} ₽ / {preview.stored_unit}</p>)}
+    {preview.price_rub != null && <p>Цена: {formatRub(preview.price_rub, 12)} / {preview.stored_unit}</p>}
+    {preview.price_tiers?.map(tier=><p key={tier.min_units}>От {tier.min_units} {preview.stored_unit}: {formatRub(tier.unit_price_rub, 12)} / {preview.stored_unit}</p>)}
     <label><input type="checkbox" required checked={approved} onChange={(event) => onApproval(event.target.checked)} /> Пересчёт объёма и цены проверен</label>
   </div>;
 }

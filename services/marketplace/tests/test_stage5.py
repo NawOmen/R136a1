@@ -1,3 +1,5 @@
+from app.money import decimal, amount, money_values
+from conftest import confirmed_quote_terms
 from conftest import grant_capacity
 from datetime import date, timedelta
 import uuid
@@ -120,9 +122,10 @@ async def test_5000_and_45000_create_explainable_coalition_and_private_orders(
     assert draft.json()["price_tiers"] == []
 
     async def fake_evaluate(payload):
+        payload = money_values(payload)
         members = []
         for item in payload["members"]:
-            common = round(item["volume_units"] * 10.9, 2)
+            common = amount(item["volume_units"] * decimal("10.9"))
             total = round(
                 common
                 + item["individual_operations_cost_rub"]
@@ -139,7 +142,7 @@ async def test_5000_and_45000_create_explainable_coalition_and_private_orders(
                     "delivery_cost_rub": item["delivery_cost_rub"],
                     "total_cost_rub": total,
                     "baseline_cost_rub": item["individual_baseline_cost_rub"],
-                    "benefit_rub": round(item["individual_baseline_cost_rub"] - total, 2),
+                    "benefit_rub": None if item["individual_baseline_cost_rub"] is None else round(decimal(item["individual_baseline_cost_rub"]) - total, 2),
                     "within_budget": True,
                     "deadline_met": True,
                 }
@@ -169,14 +172,14 @@ async def test_5000_and_45000_create_explainable_coalition_and_private_orders(
             "fill_deadline": str(production_start - timedelta(days=1)),
             "non_fill_rule": "close_without_obligations",
             "participant_terms": [
-                {
+                {'commercial_terms': confirmed_quote_terms(),
                     "need_id": need_one["id"],
                     "individual_operations_cost_rub": 8_000,
                     "delivery_cost_rub": 3_000,
                     "individual_baseline_cost_rub": 75_000,
                     "delivery_days": 1,
                 },
-                {
+                {'commercial_terms': confirmed_quote_terms(),
                     "need_id": need_two["id"],
                     "individual_operations_cost_rub": 15_000,
                     "delivery_cost_rub": 12_000,

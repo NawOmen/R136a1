@@ -1,3 +1,4 @@
+from ..money import Money, Amount
 import uuid
 from datetime import date, datetime, time, timezone
 from decimal import Decimal
@@ -37,8 +38,8 @@ class DecisionIn(BaseModel):
 class CostsIn(BaseModel):
     company_id: uuid.UUID
     expected_revision: int = Field(ge=0)
-    unit_cost_rub: Decimal | None = Field(default=None, ge=0, max_digits=18, decimal_places=2)
-    attributable_expenses_rub: Decimal | None = Field(default=None, ge=0, max_digits=18, decimal_places=2)
+    unit_cost_rub: Money | None = Field(default=None, ge=0)
+    attributable_expenses_rub: Amount | None = Field(default=None, ge=0)
     note: str = Field(min_length=3, max_length=1000)
     human_approved: Literal[True]
 

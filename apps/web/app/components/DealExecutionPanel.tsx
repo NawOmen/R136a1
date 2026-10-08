@@ -6,7 +6,7 @@ import { DealExecution, ExecutionKind, formatRub, marketplace } from "../lib/mar
 
 const labels: Record<ExecutionKind, string> = { acceptance: "Приёмка", return: "Возврат", cancellation: "Отмена остатка" };
 const states = { pending: "Ожидает второй стороны", confirmed: "Подтверждено", rejected: "Отклонено" };
-const rub = (value: number | null | undefined) => value == null ? "Нет данных" : formatRub(Number(value));
+const rub = (value: string | number | null | undefined) => value == null ? "Нет данных" : formatRub(value);
 
 export default function DealExecutionPanel({ dealId, companyId, isBuyer, canManage }: { dealId: string; companyId: string; isBuyer: boolean; canManage: boolean }) {
   const [data, setData] = useState<DealExecution | null>(null);

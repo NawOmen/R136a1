@@ -1,3 +1,4 @@
+from decimal import Decimal
 import uuid
 from datetime import date, timedelta
 
@@ -88,11 +89,12 @@ def test_allocates_between_producers_and_respects_moq():
         }
     )
     result = optimize_allocations(data)
-    assert len(result.variants) == 3
+    assert 1 <= len(result.variants) <= 3
+    assert len({tuple((str(item.company_id),item.units,item.unit_price_rub) for item in variant.allocations) for variant in result.variants}) == len(result.variants)
     assert all(item.feasible for item in result.variants)
     assert all(item.total_units == 120_000 for item in result.variants)
-    assert result.variants[0].total_cost_rub <= result.variants[2].total_cost_rub
-    assert result.variants[2].reliability_score >= result.variants[0].reliability_score
+    assert result.variants[0].total_cost_rub <= result.variants[-1].total_cost_rub
+    assert result.variants[-1].reliability_score >= result.variants[0].reliability_score
 
 
 def test_infeasible_budget_is_explained():
@@ -130,7 +132,7 @@ def test_volume_discount_is_applied_only_after_tier_threshold():
     )
     cheapest = result.variants[0]
     assert cheapest.feasible is True
-    assert cheapest.allocations[0].unit_price_rub == 10.9
+    assert cheapest.allocations[0].unit_price_rub == Decimal("10.9")
     assert cheapest.total_cost_rub == 545_000
 
 

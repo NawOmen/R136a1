@@ -1,4 +1,5 @@
 "use client";
+import CommercialEstimate from "../components/CommercialEstimate";
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
@@ -62,17 +63,21 @@ export default function ResiliencePage() {
         <Link href="/dashboard" className="btn btn-secondary btn-sm">На главную</Link>
       </div>
       {error && <div className="alert alert-error">{error}</div>}
-      {plans.length === 0 ? <p className="hint">Планов нет. Рассчитайте варианты в карточке потребности и выберите надёжный.</p> : plans.map((plan) => {
+      {plans.length === 0 ? <p className="hint">Планов нет. Рассчитайте варианты в карточке потребности и выберите выполнимый.</p> : plans.map((plan) => {
         const n1 = plan.scenarios.filter((item) => item.scenario_type === "n1" && item.status === "calculated");
         const n2 = plan.scenarios.filter((item) => item.scenario_type === "n2" && item.status === "calculated");
         return <section className="card" key={plan.id}>
           <div className="company-row"><h2>План #{plan.id.slice(0, 8)}</h2><span className="badge">{plan.status}</span></div>
           <p>{formatRub(plan.baseline_total_cost_rub)} · {plan.baseline_lead_time_days} дн. · версия {plan.version}</p>
+          {plan.commercial_snapshot && <p>Уже согласованное удержание резерва: {formatRub(plan.commercial_snapshot.reserve_holding_total_rub)}. Оно остаётся понесённым расходом при отмене и входит в итог; новые удержания согласуются отдельно.</p>}
+          {!plan.confirmed_at && plan.commercial_snapshot && <p className="alert alert-error">Смета изменилась. До повторного согласия замена не активируется.</p>}
           <p className="hint">Автозамена: {plan.auto_replace_within_thresholds ? "разрешена" : "требует подтверждения"}; пороги: +{plan.max_price_increase_pct}% и +{plan.max_delay_days} дн.</p>
           <div className="market-grid">
             <div><strong>Основные: {plan.baseline_allocations.length}</strong><p className="hint">{plan.baseline_allocations.map((a) => `#${a.company_id.slice(0, 8)} — ${formatUnits(a.units)}`).join("; ")}</p></div>
             <div><strong>Резерв: {plan.reserves.length}</strong><p className="hint">горячий: {plan.reserves.filter((r) => r.reserve_tier === "hot").length}; тёплый: {plan.reserves.filter((r) => r.reserve_tier === "warm").length}; холодный: {plan.reserves.filter((r) => r.reserve_tier === "cold").length}</p></div>
           </div>
+          {plan.baseline_allocations.map(item=><div key={item.company_id}><p>Смета основного поставщика #{item.company_id.slice(0,8)}</p><CommercialEstimate value={item.commercial_snapshot?.estimate} /></div>)}
+          {plan.reserves.filter(item=>item.confirmation_status === "approved").map(item=><div key={item.id}><p>КП резерва #{item.company_id.slice(0,8)}. При переключении плата за уже согласованное удержание повторно не начисляется.</p><CommercialEstimate value={item.commercial_snapshot?.estimate} /></div>)}
           <p><strong>N-1:</strong> {n1.length} сценариев · <strong>N-2:</strong> {n2.length} сценариев</p>
           <ul className="evidence-list">{[...n1, ...n2].map((s) => <li key={s.id}>{s.scenario_type} ({s.failed_company_ids.map((id) => `#${id.slice(0, 8)}`).join(" + ")}): подтверждено {formatUnits(s.result.confirmed_covered_units)}, дефицит {formatUnits(s.result.uncovered_units)}, изменение полной цены {s.result.cost_comparison_applicable ? formatRub(s.result.price_delta_rub) : "неприменимо"}, +{s.result.delay_days} дн.</li>)}</ul>
           <div className="actions">

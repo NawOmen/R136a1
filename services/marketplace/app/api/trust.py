@@ -1,3 +1,4 @@
+from ..money import amount, decimal
 import uuid
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
@@ -198,10 +199,10 @@ async def calculate_kpi(
     recoveries = [p for e, p in zip(rows, payloads) if e.event_type == "recovery_activated"]
     buyer_value_events = [p for p in payloads if p.get("buyer_value_rub") is not None]
     seller_value_events = [p for p in payloads if p.get("seller_value_rub") is not None]
-    buyer_value = sum(float(p["buyer_value_rub"]) for p in buyer_value_events)
-    seller_value = sum(float(p["seller_value_rub"]) for p in seller_value_events)
+    buyer_value = sum(decimal(p["buyer_value_rub"]) for p in buyer_value_events)
+    seller_value = sum(decimal(p["seller_value_rub"]) for p in seller_value_events)
     deal_events = [p for e, p in zip(rows, payloads) if e.event_type == "deal_created"]
-    gmv = sum(float(p.get("gmv_rub", 0)) for p in deal_events)
+    gmv = sum(decimal(p.get("gmv_rub", 0)) for p in deal_events)
     reserve_units = sum(
         int(p.get("decision_payload", {}).get("capacity_units") or 0)
         for e, p in zip(rows, payloads)
@@ -212,18 +213,18 @@ async def calculate_kpi(
         company_id=company_id,
         generated_from_events=len(rows),
         buyer={
-            "created_value_rub": round(buyer_value, 2),
+            "created_value_rub": amount(buyer_value),
             "value_events": len(buyer_value_events),
             "human_approvals": buyer_approvals,
             "successful_recoveries": len(recoveries),
         },
         seller={
-            "created_value_rub": round(seller_value, 2),
+            "created_value_rub": amount(seller_value),
             "value_events": len(seller_value_events),
             "confirmed_reserve_units": reserve_units,
-            "sales_gmv_rub": round(gmv, 2),
+            "sales_gmv_rub": amount(gmv),
             "human_approvals": seller_approvals,
         },
-        marketplace={"gmv_rub": round(gmv, 2), "audited_events": len(rows), "deals": len(deal_events)},
+        marketplace={"gmv_rub": amount(gmv), "audited_events": len(rows), "deals": len(deal_events)},
         baseline_note="Созданная ценность — разница с зафиксированной до оптимизации базовой конфигурацией. При нуле событий с сопоставимой базой данных для оценки нет.",
     )

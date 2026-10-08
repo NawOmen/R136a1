@@ -1,4 +1,6 @@
 import uuid
+from decimal import Decimal
+from .money import Amount, Money, amount
 from datetime import date
 from typing import Literal
 
@@ -6,17 +8,19 @@ from pydantic import BaseModel, Field, model_validator
 
 
 class VolumePriceTier(BaseModel):
-    min_units: int = Field(gt=0)
-    unit_price_rub: float = Field(gt=0)
+    min_units: int = Field(gt=0, le=2147483647)
+    unit_price_rub: Money = Field(gt=0)
 
 
 class ProducerOption(BaseModel):
+    additional_cost_rub: Amount = Field(default=0,ge=0)
+
     company_id: uuid.UUID
-    unit_price_rub: float = Field(gt=0)
-    moq_units: int = Field(gt=0)
-    capacity_units: int = Field(gt=0)
+    unit_price_rub: Money = Field(gt=0)
+    moq_units: int = Field(gt=0, le=2147483647)
+    capacity_units: int = Field(gt=0, le=2147483647)
     lead_time_days: int = Field(gt=0)
-    delivery_cost_rub: float = Field(default=0, ge=0)
+    delivery_cost_rub: Amount = Field(default=0, ge=0)
     reliability: float | None = Field(default=None, ge=0, le=1)
     price_tiers: list[VolumePriceTier] = Field(default_factory=list, max_length=25)
     serves_region: bool = True
@@ -30,19 +34,22 @@ class ProducerOption(BaseModel):
 
 
 class AllocationRequest(BaseModel):
-    demand_units: int = Field(gt=0)
-    budget_rub: float | None = Field(default=None, gt=0)
+    comparison_context: dict = Field(default_factory=dict)
+    demand_units: int = Field(gt=0, le=2147483647)
+    budget_rub: Amount | None = Field(default=None, gt=0)
     deadline_days: int = Field(gt=0)
     producers: list[ProducerOption] = Field(min_length=1, max_length=25)
 
 
 class Allocation(BaseModel):
+    additional_cost_rub: Amount = 0
+
     company_id: uuid.UUID
     units: int
-    unit_price_rub: float
-    production_cost_rub: float
-    delivery_cost_rub: float
-    total_cost_rub: float
+    unit_price_rub: Money
+    production_cost_rub: Amount
+    delivery_cost_rub: Amount
+    total_cost_rub: Amount
     lead_time_days: int
     reliability: float | None
 
@@ -53,7 +60,7 @@ class OptimizationVariant(BaseModel):
     feasible: bool
     allocations: list[Allocation] = Field(default_factory=list)
     total_units: int = 0
-    total_cost_rub: float = 0
+    total_cost_rub: Amount = 0
     max_lead_time_days: int = 0
     reliability_score: float | None = None
     reasons: list[str] = Field(default_factory=list)
@@ -67,30 +74,30 @@ class OptimizationResponse(BaseModel):
 class CoalitionMemberIn(BaseModel):
     need_id: uuid.UUID
     buyer_company_id: uuid.UUID
-    volume_units: int = Field(gt=0)
+    volume_units: int = Field(gt=0, le=2147483647)
     common_base: dict[str, str | int | float | bool]
     individual_operations: dict[str, str | int | float | bool] = Field(default_factory=dict)
     hard_constraints: dict[str, str | int | float | bool] = Field(default_factory=dict)
     flexible_parameters: dict[str, str | int | float | bool] = Field(default_factory=dict)
-    individual_operations_cost_rub: float = Field(default=0, ge=0)
-    delivery_cost_rub: float = Field(default=0, ge=0)
-    budget_rub: float | None = Field(default=None, gt=0)
-    individual_baseline_cost_rub: float | None = Field(default=None, gt=0)
+    individual_operations_cost_rub: Amount = Field(default=0, ge=0)
+    delivery_cost_rub: Amount = Field(default=0, ge=0)
+    budget_rub: Amount | None = Field(default=None, gt=0)
+    individual_baseline_cost_rub: Amount | None = Field(default=None, gt=0)
     deadline_days: int = Field(gt=0)
     delivery_days: int = Field(default=1, ge=0)
 
 
 class PriceTier(BaseModel):
-    min_units: int = Field(gt=0)
-    unit_price_rub: float = Field(gt=0)
+    min_units: int = Field(gt=0, le=2147483647)
+    unit_price_rub: Money = Field(gt=0)
 
 
 class CoalitionRequest(BaseModel):
     producer_company_id: uuid.UUID
     producer_country: str = "RU"
-    min_total_units: int = Field(gt=0)
-    max_total_units: int = Field(gt=0)
-    available_capacity_units: int = Field(gt=0)
+    min_total_units: int = Field(gt=0, le=2147483647)
+    max_total_units: int = Field(gt=0, le=2147483647)
+    available_capacity_units: int = Field(gt=0, le=2147483647)
     production_days: int = Field(gt=0)
     price_tiers: list[PriceTier] = Field(min_length=1, max_length=25)
     members: list[CoalitionMemberIn] = Field(min_length=2, max_length=100)
@@ -106,12 +113,12 @@ class CoalitionMemberResult(BaseModel):
     need_id: uuid.UUID
     buyer_company_id: uuid.UUID
     units: int
-    common_production_cost_rub: float
-    individual_operations_cost_rub: float
-    delivery_cost_rub: float
-    total_cost_rub: float
-    baseline_cost_rub: float | None
-    benefit_rub: float | None
+    common_production_cost_rub: Amount
+    individual_operations_cost_rub: Amount
+    delivery_cost_rub: Amount
+    total_cost_rub: Amount
+    baseline_cost_rub: Amount | None
+    benefit_rub: Amount | None
     within_budget: bool
     deadline_met: bool
 
@@ -120,7 +127,7 @@ class CoalitionResponse(BaseModel):
     compatible: bool
     feasible: bool
     combined_volume_units: int
-    unit_price_rub: float | None = None
+    unit_price_rub: Money | None = None
     members: list[CoalitionMemberResult] = Field(default_factory=list)
     reasons: list[str] = Field(default_factory=list)
     input_hash: str
@@ -142,15 +149,17 @@ class OpportunityScoreOut(BaseModel):
 
 
 class PrimaryAllocationIn(BaseModel):
+    additional_cost_rub: Amount = Field(default=0,ge=0)
+
     company_id: uuid.UUID
-    units: int = Field(gt=0)
-    unit_price_rub: float = Field(gt=0)
-    delivery_cost_rub: float = Field(default=0, ge=0)
+    units: int = Field(gt=0, le=2147483647)
+    unit_price_rub: Money = Field(gt=0)
+    delivery_cost_rub: Amount = Field(default=0, ge=0)
     lead_time_days: int = Field(gt=0)
 
     @property
-    def total_cost_rub(self) -> float:
-        return round(self.units * self.unit_price_rub + self.delivery_cost_rub, 2)
+    def total_cost_rub(self) -> Decimal:
+        return amount(self.units * self.unit_price_rub + self.delivery_cost_rub + self.additional_cost_rub)
 
 
 class ReserveOptionIn(ProducerOption):
@@ -162,6 +171,8 @@ class ReserveOptionIn(ProducerOption):
 
 
 class ResilienceRequest(BaseModel):
+    reserve_holding_total_rub: Amount = Field(default=0,ge=0)
+
     primary_allocations: list[PrimaryAllocationIn] = Field(min_length=1, max_length=6)
     reserve_options: list[ReserveOptionIn] = Field(default_factory=list, max_length=20)
     max_price_increase_pct: float = Field(default=5, ge=0, le=100)
@@ -181,11 +192,13 @@ class ResilienceRequest(BaseModel):
 
 
 class ReplacementAllocation(BaseModel):
+    additional_cost_rub: Amount = 0
+
     company_id: uuid.UUID
     units: int
-    unit_price_rub: float
-    delivery_cost_rub: float
-    total_cost_rub: float
+    unit_price_rub: Money
+    delivery_cost_rub: Amount
+    total_cost_rub: Amount
     lead_time_days: int
     reserve_tier: Literal["hot", "warm"]
     confirmed: bool
@@ -196,9 +209,9 @@ class FailureScenarioOut(BaseModel):
     failed_company_ids: list[uuid.UUID]
     failed_units: int
     replacement_allocations: list[ReplacementAllocation]
-    baseline_total_cost_rub: float
-    new_total_cost_rub: float | None
-    price_delta_rub: float | None
+    baseline_total_cost_rub: Amount
+    new_total_cost_rub: Amount | None
+    price_delta_rub: Amount | None
     price_delta_pct: float | None
     cost_comparison_applicable: bool
     baseline_lead_time_days: int

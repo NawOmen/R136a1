@@ -6,10 +6,20 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..database import get_db
 from ..deps import CurrentUser, get_current_user, require_company_admin, require_company_buyer
-from ..models import DeliveryAddress
+from ..models import DeliveryAddress, Need
 from ..schemas import DeliveryAddressIn, DeliveryAddressOut, DeliveryAddressPatch
 
 router = APIRouter(prefix="/companies", tags=["addresses"])
+
+
+async def _require_unreferenced_address(db: AsyncSession, address_id: uuid.UUID) -> None:
+    referenced = await db.scalar(select(Need.id).where(Need.delivery_address_id == address_id).limit(1))
+    if referenced is not None:
+        raise HTTPException(
+            status.HTTP_409_CONFLICT,
+            detail="Адрес используется в потребности. Создайте новый адрес и измените потребность, "
+            "чтобы заново согласовать условия доставки.",
+        )
 
 
 async def _unset_default(db: AsyncSession, company_id: uuid.UUID) -> None:
@@ -64,9 +74,14 @@ async def update_address(
     address = await db.get(DeliveryAddress, address_id)
     if address is None or address.company_id != company_id:
         raise HTTPException(status.HTTP_404_NOT_FOUND, detail="Адрес не найден")
+    changes = data.model_dump(exclude_unset=True)
+    if any(value is None for value in changes.values()):
+        raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, detail="Поля адреса не могут быть пустыми")
+    if any(field in changes and changes[field] != getattr(address, field) for field in ("address", "city", "region")):
+        await _require_unreferenced_address(db, address_id)
     if data.is_default:
         await _unset_default(db, company_id)
-    for field, value in data.model_dump(exclude_unset=True).items():
+    for field, value in changes.items():
         setattr(address, field, value)
     await db.commit()
     await db.refresh(address)
@@ -85,5 +100,6 @@ async def delete_address(
     address = await db.get(DeliveryAddress, address_id)
     if address is None or address.company_id != company_id:
         raise HTTPException(status.HTTP_404_NOT_FOUND, detail="Адрес не найден")
+    await _require_unreferenced_address(db, address_id)
     await db.delete(address)
     await db.commit()

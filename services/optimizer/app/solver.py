@@ -1,3 +1,6 @@
+from decimal import Decimal, ROUND_FLOOR
+from fastapi import HTTPException
+from .money import EXACT_WIRE, MAX_AMOUNT, decimal, amount
 import hashlib
 import json
 from datetime import date
@@ -31,9 +34,44 @@ VARIANT_TITLES = {
 
 
 def _input_hash(value) -> str:
-    payload = value.model_dump(mode="json")
+    token = EXACT_WIRE.set(True)
+    try:payload = value.model_dump(mode='json')
+    finally:EXACT_WIRE.reset(token)
+    payload = {'money_contract_version':2,'request':payload}
     raw = json.dumps(payload, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
     return hashlib.sha256(raw.encode()).hexdigest()
+
+
+def _validate_integer_budget(producers,demand):
+    # Bound every tier domain, not just a feasible allocation. CP-SAT validates
+    # inactive domains too. Integer arithmetic avoids intermediate rounding.
+    bound = 0
+    for producer in producers:
+        upper = min(producer.capacity_units,demand)
+        prices = [producer.unit_price_rub,*[tier.unit_price_rub for tier in producer.price_tiers]]
+        for price in prices:
+            numerator, denominator = decimal(price).as_integer_ratio()
+            cents = (numerator*upper*100 + denominator//2)//denominator
+            bound += cents + 10_000_000*upper
+        bound += int(producer.delivery_cost_rub*100)+int(producer.additional_cost_rub*100)
+    if bound>2**61:raise HTTPException(422,'Суммарные коэффициенты выходят за целочисленные границы расчётчика')
+
+
+def _line_kopecks(model, price, units, upper, name):
+    """Exact CP-SAT amount: HALF_UP only after multiplying the whole line.
+
+    Dynamic decimal scale <=10^12; numerator and total objectives <=2^61.
+    Reject out-of-range requests instead of truncating a sub-kopeck price.
+    """
+    price = decimal(price).normalize()
+    scale = 10 ** max(0, -price.as_tuple().exponent)
+    coefficient = int(price * scale) * 100
+    bound = coefficient * upper + scale // 2
+    if scale > 10**12 or bound > 2**61:
+        raise HTTPException(422, 'Цена и объём выходят за точные целочисленные границы расчётчика')
+    cents = model.new_int_var(0, int(amount(price * upper) * 100), name)
+    model.add_division_equality(cents, coefficient * units + scale // 2, scale)
+    return cents
 
 
 def _solve_variant(request: AllocationRequest, kind: str) -> OptimizationVariant:
@@ -52,6 +90,7 @@ def _solve_variant(request: AllocationRequest, kind: str) -> OptimizationVariant
         )
 
     reliability_known = all(item.reliability is not None for item in eligible)
+    _validate_integer_budget(eligible,request.demand_units)
     model = cp_model.CpModel()
     allocations = []
     producer_tiers = []
@@ -66,7 +105,7 @@ def _solve_variant(request: AllocationRequest, kind: str) -> OptimizationVariant
         tier_variables = []
         tier_used = []
         for tier_index, (minimum, price) in enumerate(tiers):
-            upper = producer.capacity_units
+            upper = min(producer.capacity_units, request.demand_units)
             if tier_index + 1 < len(tiers):
                 upper = min(upper, tiers[tier_index + 1][0] - 1)
             if upper < minimum:
@@ -77,29 +116,30 @@ def _solve_variant(request: AllocationRequest, kind: str) -> OptimizationVariant
             model.add(tier_units <= upper * selected)
             tier_variables.append((tier_units, price))
             tier_used.append(selected)
-            unit_kopecks = round(price * 100)
+            line_kopecks = _line_kopecks(model, price, tier_units, upper, f"cost_{index}_{tier_index}")
             reliability_penalty = round((1 - producer.reliability) * 1000) if reliability_known else 0
-            total_cost_terms.append(unit_kopecks * tier_units)
+            total_cost_terms.append(line_kopecks)
             if kind == "cheapest":
-                objective_terms.append(unit_kopecks * tier_units)
+                objective_terms.append(line_kopecks)
             elif kind == "balanced":
-                objective_terms.append((unit_kopecks + reliability_penalty * 2) * tier_units)
+                objective_terms.append(line_kopecks + reliability_penalty * 2 * tier_units)
             else:
                 objective_terms.append(
-                    (reliability_penalty * 10_000 + unit_kopecks) * tier_units
+                    reliability_penalty * 10_000 * tier_units + line_kopecks
                 )
         model.add(sum(tier_used) <= 1)
         units = model.new_int_var(0, producer.capacity_units, f"units_{index}")
         model.add(units == sum(variable for variable, _ in tier_variables))
         allocations.append(units)
         producer_tiers.append((tier_variables, tier_used))
-        delivery_kopecks = round(producer.delivery_cost_rub * 100)
+        delivery_kopecks = int(amount(producer.delivery_cost_rub + producer.additional_cost_rub) * 100)
         total_cost_terms.append(delivery_kopecks * sum(tier_used))
         objective_terms.append(delivery_kopecks * sum(tier_used))
 
     model.add(sum(allocations) == request.demand_units)
+    model.add(sum(total_cost_terms) <= int(MAX_AMOUNT*100))
     if request.budget_rub is not None:
-        model.add(sum(total_cost_terms) <= round(request.budget_rub * 100))
+        model.add(sum(total_cost_terms) <= int(amount(request.budget_rub) * 100))
     model.minimize(sum(objective_terms))
 
     solver = cp_model.CpSolver()
@@ -127,8 +167,8 @@ def _solve_variant(request: AllocationRequest, kind: str) -> OptimizationVariant
             if solver.value(selected)
         ]
         unit_price = selected_prices[0]
-        production = round(units * unit_price, 2)
-        total = round(production + producer.delivery_cost_rub, 2)
+        production = amount(units * unit_price)
+        total = amount(production + producer.delivery_cost_rub + producer.additional_cost_rub)
         result.append(
             Allocation(
                 company_id=producer.company_id,
@@ -136,12 +176,13 @@ def _solve_variant(request: AllocationRequest, kind: str) -> OptimizationVariant
                 unit_price_rub=unit_price,
                 production_cost_rub=production,
                 delivery_cost_rub=producer.delivery_cost_rub,
+                additional_cost_rub=producer.additional_cost_rub,
                 total_cost_rub=total,
                 lead_time_days=producer.lead_time_days,
                 reliability=producer.reliability,
             )
         )
-    total_cost = round(sum(item.total_cost_rub for item in result), 2)
+    total_cost = amount(sum(item.total_cost_rub for item in result))
     weighted_reliability = (sum(item.units * item.reliability for item in result) / request.demand_units
                             if all(item.reliability is not None for item in result) else None)
     return OptimizationVariant(
@@ -159,10 +200,17 @@ def _solve_variant(request: AllocationRequest, kind: str) -> OptimizationVariant
 
 
 def optimize_allocations(request: AllocationRequest) -> OptimizationResponse:
-    return OptimizationResponse(
-        variants=[_solve_variant(request, kind) for kind in ("cheapest", "balanced", "reliable")],
-        input_hash=_input_hash(request),
-    )
+    variants = []
+    seen = set()
+    for kind in ('cheapest', 'balanced', 'reliable'):
+        variant = _solve_variant(request, kind)
+        signature = (variant.feasible,tuple((str(item.company_id), item.units, item.unit_price_rub) for item in variant.allocations),
+                     tuple(variant.reasons) if not variant.feasible else ())
+        if signature in seen:
+            continue
+        seen.add(signature)
+        variants.append(variant)
+    return OptimizationResponse(variants=variants, input_hash=_input_hash(request))
 
 
 def evaluate_coalition(request: CoalitionRequest) -> CoalitionResponse:
@@ -195,20 +243,23 @@ def evaluate_coalition(request: CoalitionRequest) -> CoalitionResponse:
 
     member_results = []
     if unit_price is not None:
+        cents = int(amount(total_units * unit_price) * 100)
+        shares = {member.need_id: Decimal(cents)*member.volume_units/total_units for member in request.members}
+        allocated = {key:int(value.to_integral_value(rounding=ROUND_FLOOR)) for key,value in shares.items()}
+        ordered = sorted(shares, key=lambda key: (-(shares[key]-allocated[key]),str(key)))
+        for key in ordered[:cents-sum(allocated.values())]: allocated[key] += 1
         for member in request.members:
-            common_cost = round(member.volume_units * unit_price, 2)
-            total_cost = round(
-                common_cost
+            common_cost = Decimal(allocated[member.need_id])/100
+            total_cost = amount(common_cost
                 + member.individual_operations_cost_rub
-                + member.delivery_cost_rub,
-                2,
-            )
+                + member.delivery_cost_rub)
+            if total_cost>MAX_AMOUNT:raise HTTPException(422,'Смета участника выходит за денежный диапазон платформы')
             within_budget = member.budget_rub is None or total_cost <= member.budget_rub
             deadline_met = request.production_days + member.delivery_days <= member.deadline_days
             benefit = (
                 None
                 if member.individual_baseline_cost_rub is None
-                else round(member.individual_baseline_cost_rub - total_cost, 2)
+                else amount(member.individual_baseline_cost_rub - total_cost)
             )
             member_results.append(
                 CoalitionMemberResult(
@@ -229,14 +280,13 @@ def evaluate_coalition(request: CoalitionRequest) -> CoalitionResponse:
                 reasons.append(f"Бюджет участника {member.need_id} превышен")
             if not deadline_met:
                 reasons.append(f"Срок участника {member.need_id} не соблюдён")
-            if benefit is not None and benefit <= 0:
-                reasons.append(f"Объединение невыгодно участнику {member.need_id}")
+
 
     feasible = compatible and unit_price is not None and not reasons
     if feasible:
         reasons.append("MOQ, мощность, совместимость и сроки подтверждены")
         if all(member.individual_baseline_cost_rub is not None for member in request.members):
-            reasons.append("Выгода каждого участника подтверждена относительно указанной индивидуальной альтернативы")
+            reasons.append("Сравнение каждого участника выполнено относительно подтверждённого сопоставимого КП; отрицательная разница означает отсутствие экономии")
         else:
             reasons.append("Выгода не подтверждена для участников без индивидуальной альтернативы; сравните одинаковые условия до принятия решения")
     return CoalitionResponse(
@@ -267,7 +317,7 @@ def calculate_opportunity_score(data: OpportunityScoreIn) -> OpportunityScoreOut
 
 def _partial_replacement(
     demand_units: int, reserves: list[ReserveOptionIn]
-) -> tuple[list[ReplacementAllocation], int, float, int]:
+) -> tuple[list[ReplacementAllocation], int, Decimal, int]:
     eligible = sorted(
         (
             item
@@ -279,6 +329,7 @@ def _partial_replacement(
     if demand_units <= 0 or not eligible:
         return [], 0, 0, 0
 
+    _validate_integer_budget(eligible,demand_units)
     model = cp_model.CpModel()
     total_units_terms = []
     total_cost_terms = []
@@ -303,7 +354,7 @@ def _partial_replacement(
             model.add(units <= upper * selected)
             tier_variables.append((units, price))
             tier_selected.append(selected)
-            total_cost_terms.append(round(price * 100) * units)
+            total_cost_terms.append(_line_kopecks(model, price, units, upper, f"reserve_cost_{index}_{tier_index}"))
         if not tier_variables:
             continue
         model.add(sum(tier_selected) <= 1)
@@ -312,7 +363,7 @@ def _partial_replacement(
         )
         model.add(producer_units == sum(item[0] for item in tier_variables))
         total_units_terms.append(producer_units)
-        delivery_kopecks = round(producer.delivery_cost_rub * 100)
+        delivery_kopecks = int(amount(producer.delivery_cost_rub + producer.additional_cost_rub) * 100)
         total_cost_terms.append(delivery_kopecks * sum(tier_selected))
         producer_data.append(
             (producer, producer_units, tier_variables, tier_selected)
@@ -323,6 +374,7 @@ def _partial_replacement(
     covered = sum(total_units_terms)
     cost = sum(total_cost_terms)
     model.add(covered <= demand_units)
+    model.add(cost <= int(MAX_AMOUNT*100))
     model.maximize(covered)
 
     solver = cp_model.CpSolver()
@@ -367,9 +419,8 @@ def _partial_replacement(
                 units=units,
                 unit_price_rub=unit_price,
                 delivery_cost_rub=producer.delivery_cost_rub,
-                total_cost_rub=round(
-                    units * unit_price + producer.delivery_cost_rub, 2
-                ),
+                additional_cost_rub=producer.additional_cost_rub,
+                total_cost_rub=amount(units * unit_price + producer.delivery_cost_rub + producer.additional_cost_rub),
                 lead_time_days=producer.lead_time_days,
                 reserve_tier=producer.reserve_tier,
                 confirmed=confirmed,
@@ -378,15 +429,14 @@ def _partial_replacement(
     return (
         allocations,
         sum(item.units for item in allocations),
-        round(sum(item.total_cost_rub for item in allocations), 2),
+        amount(sum(item.total_cost_rub for item in allocations)),
         max((item.lead_time_days for item in allocations), default=0),
     )
 
 
 def calculate_resilience(request: ResilienceRequest) -> ResilienceResponse:
-    baseline_cost = round(
-        sum(item.total_cost_rub for item in request.primary_allocations), 2
-    )
+    baseline_cost = amount(sum(item.total_cost_rub for item in request.primary_allocations) + request.reserve_holding_total_rub)
+    if baseline_cost>MAX_AMOUNT:raise HTTPException(422,'Смета основного распределения выходит за денежный диапазон платформы')
     baseline_lead = max(
         item.lead_time_days for item in request.primary_allocations
     )
@@ -429,10 +479,11 @@ def calculate_resilience(request: ResilienceRequest) -> ResilienceResponse:
         replacement_lead = max(confirmed_lead, probable_lead)
         uncovered = max(0, failed_units - covered)
         unconfirmed = probable_covered
-        candidate_cost = round(baseline_cost - failed_cost + replacement_cost, 2)
-        candidate_price_delta = round(candidate_cost - baseline_cost, 2)
+        candidate_cost = amount(baseline_cost - failed_cost + replacement_cost)
+        if candidate_cost>MAX_AMOUNT:raise HTTPException(422,'Смета замены выходит за денежный диапазон платформы')
+        candidate_price_delta = amount(candidate_cost - baseline_cost)
         candidate_price_delta_pct = (
-            round(candidate_price_delta / baseline_cost * 100, 2)
+            amount(candidate_price_delta / baseline_cost * 100)
             if baseline_cost
             else 0
         )
@@ -452,7 +503,7 @@ def calculate_resilience(request: ResilienceRequest) -> ResilienceResponse:
         auto_eligible = (
             uncovered == 0
             and unconfirmed == 0
-            and candidate_price_delta_pct <= request.max_price_increase_pct
+            and candidate_price_delta_pct <= decimal(request.max_price_increase_pct)
             and delay <= request.max_delay_days
         )
         explanations = [
@@ -516,8 +567,6 @@ def calculate_resilience(request: ResilienceRequest) -> ResilienceResponse:
             item.unconfirmed_units == 0 and item.uncovered_units == 0
             for item in n2
         ),
-        confirmed_coverage_pct=round(
-            100 * min(coverage_ratios), 2
-        ) if coverage_ratios else 0,
+        confirmed_coverage_pct=amount(100 * min(coverage_ratios)) if coverage_ratios else 0,
         input_hash=_input_hash(request),
     )

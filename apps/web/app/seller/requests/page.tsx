@@ -1,4 +1,6 @@
 "use client";
+import CommercialTermsFields, { emptyCommercialTerms } from "../../components/CommercialTermsFields";
+import type { CommercialTerms } from "../../lib/marketplace";
 
 // Лента открытых потребностей для продавца (GET /needs).
 // У каждой — кнопка «Предложить условия»: форма (цена, объём, срок) →
@@ -39,10 +41,11 @@ export default function SellerRequestsPage() {
   const [products, setProducts] = useState<Product[]>([]);
   const [resourceKind, setResourceKind] = useState<"capacity" | "stock">("capacity");
   const [productId, setProductId] = useState("");
+  const [commercialTerms, setCommercialTerms] = useState<CommercialTerms>(emptyCommercialTerms);
   const [price, setPrice] = useState("");
   const [units, setUnits] = useState("");
   const [leadTime, setLeadTime] = useState("");
-  const [deliveryCost, setDeliveryCost] = useState("0");
+  const [deliveryCost, setDeliveryCost] = useState("");
   const [moq, setMoq] = useState("");
   const [submittedIds, setSubmittedIds] = useState<Set<string>>(new Set());
   const [submitting, setSubmitting] = useState(false);
@@ -83,6 +86,7 @@ export default function SellerRequestsPage() {
     const draft = drafts[needId];
     setResourceKind(draft?.payload.resource_kind ?? "capacity");
     setProductId(draft?.payload.product_id ?? "");
+    setCommercialTerms(emptyCommercialTerms);
     setOpenFormId((current) => (current === needId ? null : needId));
     setPrice(draft?.payload.price_rub != null ? String(draft.payload.price_rub) : "");
     setUnits(draft?.payload.available_units != null ? String(draft.payload.available_units) : "");
@@ -103,10 +107,11 @@ export default function SellerRequestsPage() {
     try {
       await marketplace.createOffer(token, need.id, {
         company_id: company.id,
-        price_rub: Number(price),
+        commercial_terms: commercialTerms,
+        price_rub: price,
         available_units: Number(units),
         lead_time_days: Number(leadTime),
-        delivery_cost_rub: Number(deliveryCost),
+        delivery_cost_rub: commercialTerms.delivery_method === "separate" ? (deliveryCost || null) : commercialTerms.delivery_method === "unknown" ? null : "0",
         moq_units: Number(moq || 1),
         draft_id: drafts[need.id]?.id,
         resource_kind: resourceKind,
@@ -337,15 +342,17 @@ export default function SellerRequestsPage() {
                       required
                     />
                   </div>
+                  <CommercialTermsFields value={commercialTerms} onChange={setCommercialTerms} disabled={submitting} />
                   <div className="field">
                     <label htmlFor={`offer_delivery_${need.id}`}>
-                      Логистика, ₽<span className="req">*</span>
+                      Отдельная доставка, ₽<span className="req">*</span>
                     </label>
                     <input
                       id={`offer_delivery_${need.id}`}
                       type="number"
                       min="0"
                       step="0.01"
+                      disabled={commercialTerms.delivery_method !== "separate"}
                       value={deliveryCost}
                       onChange={(event) => setDeliveryCost(event.target.value)}
                       required

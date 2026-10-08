@@ -1,8 +1,9 @@
+from decimal import Decimal
 import uuid
 from datetime import datetime
 from typing import Any, Literal
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import field_serializer, BaseModel, ConfigDict, Field
 
 FactValue = str | int | float | bool | list[str]
 
@@ -119,7 +120,11 @@ class AgentRunOut(BaseModel):
     duration_ms: int | None
     input_chars: int | None
     output_chars: int | None
-    estimated_cost_rub: float | None
+    estimated_cost_rub: Decimal | None
+    @field_serializer('estimated_cost_rub')
+    def legacy_cost_number(self, value):
+        return float(value) if value is not None else None
+
     cost_basis: str | None
     created_at: datetime
     updated_at: datetime

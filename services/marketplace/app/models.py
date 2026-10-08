@@ -2,12 +2,13 @@ import uuid
 from decimal import Decimal
 from datetime import date, datetime
 
-from sqlalchemy import Boolean, CheckConstraint, Date, DateTime, Float, ForeignKey, Integer, Numeric, String, Text, UniqueConstraint, func, text
-from sqlalchemy.dialects.postgresql import JSONB, UUID
+from sqlalchemy import Boolean, CheckConstraint, Date, DateTime, Float, ForeignKey, Integer, String, Text, UniqueConstraint, func, text
+from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
 from .database import Base
 from .category_profile_snapshot import profile_for_insert
+from .money_storage import ExactJSONB, ExactNumeric
 
 SCHEMA = "marketplace"
 
@@ -64,11 +65,11 @@ class Product(Base):
     name: Mapped[str] = mapped_column(String(255), nullable=False)
     category: Mapped[str] = mapped_column(String(120), nullable=False, index=True)
     subcategory: Mapped[str | None] = mapped_column(String(120), nullable=True)
-    characteristics: Mapped[dict] = mapped_column(JSONB, nullable=False, default=dict)
-    quantity_conversion: Mapped[dict | None] = mapped_column(JSONB(none_as_null=True), nullable=True)
-    category_profile: Mapped[dict | None] = mapped_column(JSONB(none_as_null=True), nullable=True, default=profile_for_insert)
-    price_rub: Mapped[float] = mapped_column(Float, nullable=False)
-    price_tiers: Mapped[list] = mapped_column(JSONB, nullable=False, default=list, server_default="[]")
+    characteristics: Mapped[dict] = mapped_column(ExactJSONB, nullable=False, default=dict)
+    quantity_conversion: Mapped[dict | None] = mapped_column(ExactJSONB(none_as_null=True), nullable=True)
+    category_profile: Mapped[dict | None] = mapped_column(ExactJSONB(none_as_null=True), nullable=True, default=profile_for_insert)
+    price_rub: Mapped[Decimal] = mapped_column(ExactNumeric(), nullable=False)
+    price_tiers: Mapped[list] = mapped_column(ExactJSONB, nullable=False, default=list, server_default="[]")
     moq_units: Mapped[int] = mapped_column(Integer, nullable=False)
     lead_time_days: Mapped[int] = mapped_column(Integer, nullable=False)
     # Остаток на складе нужен для роли «поставка со склада»; производственная
@@ -105,7 +106,7 @@ class CapacityEntry(Base):
     category: Mapped[str] = mapped_column(String(120), nullable=False, default="", server_default="")
     unit: Mapped[str] = mapped_column(String(32), nullable=False, default="шт", server_default="шт")
     available_units: Mapped[int] = mapped_column(Integer, nullable=False)
-    category_conversions: Mapped[list] = mapped_column(JSONB, nullable=False, default=list, server_default="[]")
+    category_conversions: Mapped[list] = mapped_column(ExactJSONB, nullable=False, default=list, server_default="[]")
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now())
 
 
@@ -130,7 +131,7 @@ class Document(Base):
     valid_until: Mapped[date | None] = mapped_column(Date, nullable=True)
     # Подтверждённые проверяющим значения характеристик изделия: например,
     # {"material": ["крафт-картон"], "coating": ["PE"]}.
-    confirms: Mapped[dict] = mapped_column(JSONB, nullable=False, default=dict, server_default="{}")
+    confirms: Mapped[dict] = mapped_column(ExactJSONB, nullable=False, default=dict, server_default="{}")
     verified_by_user_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), nullable=True)
     verified_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     verification_note: Mapped[str | None] = mapped_column(String(500), nullable=True)
@@ -142,17 +143,17 @@ class CapabilityPassport(Base):
     __table_args__ = {"schema": SCHEMA}
 
     company_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True)
-    details: Mapped[dict] = mapped_column(JSONB, nullable=False, default=dict, server_default="{}")
-    technologies: Mapped[list] = mapped_column(JSONB, nullable=False, default=list)
-    equipment: Mapped[list] = mapped_column(JSONB, nullable=False, default=list)
-    materials: Mapped[list] = mapped_column(JSONB, nullable=False, default=list)
-    size_ranges: Mapped[dict] = mapped_column(JSONB, nullable=False, default=dict)
+    details: Mapped[dict] = mapped_column(ExactJSONB, nullable=False, default=dict, server_default="{}")
+    technologies: Mapped[list] = mapped_column(ExactJSONB, nullable=False, default=list)
+    equipment: Mapped[list] = mapped_column(ExactJSONB, nullable=False, default=list)
+    materials: Mapped[list] = mapped_column(ExactJSONB, nullable=False, default=list)
+    size_ranges: Mapped[dict] = mapped_column(ExactJSONB, nullable=False, default=dict)
     tolerances: Mapped[str | None] = mapped_column(String(500), nullable=True)
-    certifications: Mapped[list] = mapped_column(JSONB, nullable=False, default=list)
+    certifications: Mapped[list] = mapped_column(ExactJSONB, nullable=False, default=list)
     min_order_units: Mapped[int | None] = mapped_column(Integer, nullable=True)
     max_order_units: Mapped[int | None] = mapped_column(Integer, nullable=True)
-    delivery_regions: Mapped[list] = mapped_column(JSONB, nullable=False, default=list)
-    completed_order_types: Mapped[list] = mapped_column(JSONB, nullable=False, default=list)
+    delivery_regions: Mapped[list] = mapped_column(ExactJSONB, nullable=False, default=list)
+    completed_order_types: Mapped[list] = mapped_column(ExactJSONB, nullable=False, default=list)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, server_default=func.now(), onupdate=func.now()
@@ -172,10 +173,10 @@ class Need(Base):
     created_by_user_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), nullable=True)
     category: Mapped[str] = mapped_column(String(120), nullable=False, index=True)
     subcategory: Mapped[str | None] = mapped_column(String(120), nullable=True)
-    characteristics: Mapped[dict] = mapped_column(JSONB, nullable=False, default=dict)
-    category_profile: Mapped[dict | None] = mapped_column(JSONB(none_as_null=True), nullable=True, default=profile_for_insert)
+    characteristics: Mapped[dict] = mapped_column(ExactJSONB, nullable=False, default=dict)
+    category_profile: Mapped[dict | None] = mapped_column(ExactJSONB(none_as_null=True), nullable=True, default=profile_for_insert)
     volume_units: Mapped[int] = mapped_column(Integer, nullable=False)
-    budget_rub: Mapped[float | None] = mapped_column(Float, nullable=True)
+    budget_rub: Mapped[Decimal | None] = mapped_column(ExactNumeric(), nullable=True)
     deadline_date: Mapped[date] = mapped_column(Date, nullable=False)
     delivery_address_id: Mapped[uuid.UUID | None] = mapped_column(
         ForeignKey(f"{SCHEMA}.delivery_addresses.id", ondelete="SET NULL"), nullable=True
@@ -207,6 +208,8 @@ class NeedFile(Base):
 
 
 class Offer(Base):
+    commercial_terms: Mapped[dict | None] = mapped_column(ExactJSONB(none_as_null=True), nullable=True)
+    commercial_quote: Mapped[dict | None] = mapped_column(ExactJSONB(none_as_null=True), nullable=True)
     __tablename__ = "offers"
     __table_args__ = {"schema": SCHEMA}
 
@@ -218,14 +221,14 @@ class Offer(Base):
     need_id: Mapped[uuid.UUID] = mapped_column(ForeignKey(f"{SCHEMA}.needs.id", ondelete="CASCADE"), nullable=False)
     company_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), nullable=False)
     created_by_user_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), nullable=True)
-    price_rub: Mapped[float] = mapped_column(Float, nullable=False)
+    price_rub: Mapped[Decimal] = mapped_column(ExactNumeric(), nullable=False)
     available_units: Mapped[int] = mapped_column(Integer, nullable=False)
     lead_time_days: Mapped[int] = mapped_column(Integer, nullable=False)
-    delivery_cost_rub: Mapped[float] = mapped_column(
-        Float, nullable=False, default=0, server_default="0"
+    delivery_cost_rub: Mapped[Decimal | None] = mapped_column(
+        ExactNumeric(), nullable=True, default=None
     )
     moq_units: Mapped[int] = mapped_column(Integer, nullable=False, default=1, server_default="1")
-    price_tiers: Mapped[list] = mapped_column(JSONB, nullable=False, default=list, server_default="[]")
+    price_tiers: Mapped[list] = mapped_column(ExactJSONB, nullable=False, default=list, server_default="[]")
     valid_until: Mapped[date | None] = mapped_column(Date, nullable=True)
     status: Mapped[str] = mapped_column(String(32), nullable=False, default="sent")
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now())
@@ -253,19 +256,20 @@ class OfferDraft(Base):
     status: Mapped[str] = mapped_column(
         String(16), nullable=False, default="draft", server_default="draft"
     )
-    payload: Mapped[dict] = mapped_column(JSONB, nullable=False, default=dict)
-    fields: Mapped[list] = mapped_column(JSONB, nullable=False, default=list)
-    missing: Mapped[list] = mapped_column(JSONB, nullable=False, default=list)
-    warnings: Mapped[list] = mapped_column(JSONB, nullable=False, default=list)
+    payload: Mapped[dict] = mapped_column(ExactJSONB, nullable=False, default=dict)
+    fields: Mapped[list] = mapped_column(ExactJSONB, nullable=False, default=list)
+    missing: Mapped[list] = mapped_column(ExactJSONB, nullable=False, default=list)
+    warnings: Mapped[list] = mapped_column(ExactJSONB, nullable=False, default=list)
     explanation: Mapped[str] = mapped_column(Text, nullable=False, default="")
     used_offer_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), nullable=True)
     # Поля, которые человек изменил перед отправкой: нужны для оценки агента.
-    changed_fields: Mapped[list] = mapped_column(JSONB, nullable=False, default=list)
+    changed_fields: Mapped[list] = mapped_column(ExactJSONB, nullable=False, default=list)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now())
     used_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
 
 class Deal(Base):
+    commercial_snapshot: Mapped[dict | None] = mapped_column(ExactJSONB(none_as_null=True), nullable=True)
     __tablename__ = "deals"
     __table_args__ = {"schema": SCHEMA}
 
@@ -276,9 +280,9 @@ class Deal(Base):
     seller_company_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), nullable=False)
     performed_by_user_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), nullable=True)
     units: Mapped[int] = mapped_column(Integer, nullable=False)
-    unit_price_rub: Mapped[Decimal | None] = mapped_column(Numeric(18, 2), nullable=True)
-    delivery_price_rub: Mapped[Decimal | None] = mapped_column(Numeric(18, 2), nullable=True)
-    total_price_rub: Mapped[float] = mapped_column(Float, nullable=False)
+    unit_price_rub: Mapped[Decimal | None] = mapped_column(ExactNumeric(), nullable=True)
+    delivery_price_rub: Mapped[Decimal | None] = mapped_column(ExactNumeric(), nullable=True)
+    total_price_rub: Mapped[Decimal] = mapped_column(ExactNumeric(), nullable=False)
     status: Mapped[str] = mapped_column(String(32), nullable=False, default="created")
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now())
 
@@ -310,8 +314,8 @@ class DealCostSnapshot(Base):
     __table_args__ = {"schema": SCHEMA}
 
     deal_id: Mapped[uuid.UUID] = mapped_column(ForeignKey(f"{SCHEMA}.deals.id", ondelete="CASCADE"), primary_key=True)
-    unit_cost_rub: Mapped[Decimal | None] = mapped_column(Numeric(18, 2), nullable=True)
-    attributable_expenses_rub: Mapped[Decimal | None] = mapped_column(Numeric(18, 2), nullable=True)
+    unit_cost_rub: Mapped[Decimal | None] = mapped_column(ExactNumeric(), nullable=True)
+    attributable_expenses_rub: Mapped[Decimal | None] = mapped_column(ExactNumeric(), nullable=True)
     revision: Mapped[int] = mapped_column(Integer, default=1)
     note: Mapped[str] = mapped_column(String(1000))
     updated_by_user_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True))
@@ -398,7 +402,7 @@ class ProductPriceObservation(Base):
         ForeignKey(f"{SCHEMA}.products.id", ondelete="CASCADE"), nullable=False, index=True
     )
     category: Mapped[str] = mapped_column(String(120), nullable=False, index=True)
-    unit_price_rub: Mapped[float] = mapped_column(Float, nullable=False)
+    unit_price_rub: Mapped[Decimal] = mapped_column(ExactNumeric(), nullable=False)
     observed_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now())
 
 
@@ -436,7 +440,7 @@ class MatchEvent(Base):
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=_uuid)
     event_type: Mapped[str] = mapped_column(String(64), nullable=False, index=True)
     entity_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), nullable=True)
-    payload: Mapped[dict] = mapped_column(JSONB, nullable=False, default=dict)
+    payload: Mapped[dict] = mapped_column(ExactJSONB, nullable=False, default=dict)
     status: Mapped[str] = mapped_column(String(32), nullable=False, default="processed")
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now())
 
@@ -457,9 +461,9 @@ class MarketOpportunity(Base):
     saturation_risk: Mapped[str] = mapped_column(String(32), nullable=False)
     unmet_volume_units: Mapped[int] = mapped_column(Integer, nullable=False)
     buyers_count: Mapped[int] = mapped_column(Integer, nullable=False)
-    need_ids: Mapped[list] = mapped_column(JSONB, nullable=False, default=list)
-    reasons: Mapped[list] = mapped_column(JSONB, nullable=False, default=list)
-    missing_data: Mapped[list] = mapped_column(JSONB, nullable=False, default=list)
+    need_ids: Mapped[list] = mapped_column(ExactJSONB, nullable=False, default=list)
+    reasons: Mapped[list] = mapped_column(ExactJSONB, nullable=False, default=list)
+    missing_data: Mapped[list] = mapped_column(ExactJSONB, nullable=False, default=list)
     status: Mapped[str] = mapped_column(String(32), nullable=False, default="active")
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(
@@ -473,10 +477,10 @@ class CompatibilityProfile(Base):
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=_uuid)
     category: Mapped[str] = mapped_column(String(120), nullable=False)
-    common_base: Mapped[dict] = mapped_column(JSONB, nullable=False, default=dict)
-    hard_constraints: Mapped[dict] = mapped_column(JSONB, nullable=False, default=dict)
-    flexible_parameters: Mapped[dict] = mapped_column(JSONB, nullable=False, default=dict)
-    individual_parts: Mapped[dict] = mapped_column(JSONB, nullable=False, default=dict)
+    common_base: Mapped[dict] = mapped_column(ExactJSONB, nullable=False, default=dict)
+    hard_constraints: Mapped[dict] = mapped_column(ExactJSONB, nullable=False, default=dict)
+    flexible_parameters: Mapped[dict] = mapped_column(ExactJSONB, nullable=False, default=dict)
+    individual_parts: Mapped[dict] = mapped_column(ExactJSONB, nullable=False, default=dict)
     input_hash: Mapped[str] = mapped_column(String(64), nullable=False, unique=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now())
 
@@ -495,7 +499,7 @@ class Coalition(Base):
     target_moq_units: Mapped[int | None] = mapped_column(Integer, nullable=True)
     status: Mapped[str] = mapped_column(String(32), nullable=False, default="candidate")
     version: Mapped[int] = mapped_column(Integer, nullable=False, default=1, server_default="1")
-    explanation: Mapped[list] = mapped_column(JSONB, nullable=False, default=list)
+    explanation: Mapped[list] = mapped_column(ExactJSONB, nullable=False, default=list)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, server_default=func.now(), onupdate=func.now()
@@ -503,6 +507,7 @@ class Coalition(Base):
 
 
 class CoalitionMember(Base):
+    commercial_estimate: Mapped[dict | None] = mapped_column(ExactJSONB(none_as_null=True), nullable=True)
     __tablename__ = "coalition_members"
     __table_args__ = (
         UniqueConstraint("coalition_id", "need_id", name="uq_coalition_member_need"),
@@ -516,13 +521,13 @@ class CoalitionMember(Base):
     need_id: Mapped[uuid.UUID] = mapped_column(ForeignKey(f"{SCHEMA}.needs.id", ondelete="CASCADE"), nullable=False)
     buyer_company_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), nullable=False)
     units: Mapped[int] = mapped_column(Integer, nullable=False)
-    individual_operations: Mapped[dict] = mapped_column(JSONB, nullable=False, default=dict)
-    common_cost_rub: Mapped[float | None] = mapped_column(Float, nullable=True)
-    individual_cost_rub: Mapped[float | None] = mapped_column(Float, nullable=True)
-    delivery_cost_rub: Mapped[float | None] = mapped_column(Float, nullable=True)
-    total_cost_rub: Mapped[float | None] = mapped_column(Float, nullable=True)
-    baseline_cost_rub: Mapped[float | None] = mapped_column(Float, nullable=True)
-    benefit_rub: Mapped[float | None] = mapped_column(Float, nullable=True)
+    individual_operations: Mapped[dict] = mapped_column(ExactJSONB, nullable=False, default=dict)
+    common_cost_rub: Mapped[Decimal | None] = mapped_column(ExactNumeric(), nullable=True)
+    individual_cost_rub: Mapped[Decimal | None] = mapped_column(ExactNumeric(), nullable=True)
+    delivery_cost_rub: Mapped[Decimal | None] = mapped_column(ExactNumeric(), nullable=True)
+    total_cost_rub: Mapped[Decimal | None] = mapped_column(ExactNumeric(), nullable=True)
+    baseline_cost_rub: Mapped[Decimal | None] = mapped_column(ExactNumeric(), nullable=True)
+    benefit_rub: Mapped[Decimal | None] = mapped_column(ExactNumeric(), nullable=True)
     approval_status: Mapped[str] = mapped_column(String(32), nullable=False, default="pending")
 
 
@@ -540,7 +545,7 @@ class GroupOffer(Base):
     )
     min_total_units: Mapped[int | None] = mapped_column(Integer, nullable=True)
     max_total_units: Mapped[int | None] = mapped_column(Integer, nullable=True)
-    price_tiers: Mapped[list] = mapped_column(JSONB, nullable=False, default=list)
+    price_tiers: Mapped[list] = mapped_column(ExactJSONB, nullable=False, default=list)
     production_start: Mapped[date | None] = mapped_column(Date, nullable=True)
     production_end: Mapped[date | None] = mapped_column(Date, nullable=True)
     fill_deadline: Mapped[date | None] = mapped_column(Date, nullable=True)
@@ -555,6 +560,7 @@ class GroupOffer(Base):
 
 
 class ParticipantOrder(Base):
+    commercial_snapshot: Mapped[dict | None] = mapped_column(ExactJSONB(none_as_null=True), nullable=True)
     __tablename__ = "participant_orders"
     __table_args__ = (
         UniqueConstraint("coalition_id", "need_id", name="uq_participant_order_need"),
@@ -572,7 +578,7 @@ class ParticipantOrder(Base):
     buyer_company_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), nullable=False)
     seller_company_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), nullable=False)
     units: Mapped[int] = mapped_column(Integer, nullable=False)
-    total_price_rub: Mapped[float] = mapped_column(Float, nullable=False)
+    total_price_rub: Mapped[Decimal] = mapped_column(ExactNumeric(), nullable=False)
     status: Mapped[str] = mapped_column(String(32), nullable=False, default="created")
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now())
 
@@ -587,12 +593,13 @@ class OptimizationVariantRecord(Base):
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=_uuid)
     need_id: Mapped[uuid.UUID] = mapped_column(ForeignKey(f"{SCHEMA}.needs.id", ondelete="CASCADE"), nullable=False)
     kind: Mapped[str] = mapped_column(String(32), nullable=False)
-    result: Mapped[dict] = mapped_column(JSONB, nullable=False)
+    result: Mapped[dict] = mapped_column(ExactJSONB, nullable=False)
     input_hash: Mapped[str] = mapped_column(String(64), nullable=False)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now())
 
 
 class ResiliencePlan(Base):
+    commercial_snapshot: Mapped[dict | None] = mapped_column(ExactJSONB(none_as_null=True),nullable=True)
     __tablename__ = "resilience_plans"
     __table_args__ = (
         UniqueConstraint("need_id", name="uq_resilience_plan_need"),
@@ -608,18 +615,18 @@ class ResiliencePlan(Base):
         ForeignKey(f"{SCHEMA}.optimization_variants.id", ondelete="RESTRICT"),
         nullable=False,
     )
-    baseline_allocations: Mapped[list] = mapped_column(JSONB, nullable=False)
-    baseline_total_cost_rub: Mapped[float] = mapped_column(Float, nullable=False)
+    baseline_allocations: Mapped[list] = mapped_column(ExactJSONB, nullable=False)
+    baseline_total_cost_rub: Mapped[Decimal] = mapped_column(ExactNumeric(), nullable=False)
     baseline_lead_time_days: Mapped[int] = mapped_column(Integer, nullable=False)
-    current_allocations: Mapped[list] = mapped_column(JSONB, nullable=False, default=list)
-    current_total_cost_rub: Mapped[float] = mapped_column(Float, nullable=False)
+    current_allocations: Mapped[list] = mapped_column(ExactJSONB, nullable=False, default=list)
+    current_total_cost_rub: Mapped[Decimal] = mapped_column(ExactNumeric(), nullable=False)
     current_lead_time_days: Mapped[int] = mapped_column(Integer, nullable=False)
     max_price_increase_pct: Mapped[float] = mapped_column(Float, nullable=False, default=5)
     max_delay_days: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     auto_replace_within_thresholds: Mapped[bool] = mapped_column(
         Boolean, nullable=False, default=False, server_default=text("false")
     )
-    failed_company_ids: Mapped[list] = mapped_column(JSONB, nullable=False, default=list)
+    failed_company_ids: Mapped[list] = mapped_column(ExactJSONB, nullable=False, default=list)
     status: Mapped[str] = mapped_column(String(48), nullable=False, default="preparing_reserves")
     version: Mapped[int] = mapped_column(Integer, nullable=False, default=1, server_default="1")
     confirmed_by_user_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), nullable=True)
@@ -631,6 +638,8 @@ class ResiliencePlan(Base):
 
 
 class ReserveCommitment(Base):
+    commercial_terms: Mapped[dict | None] = mapped_column(ExactJSONB(none_as_null=True), nullable=True)
+    commercial_snapshot: Mapped[dict | None] = mapped_column(ExactJSONB(none_as_null=True), nullable=True)
     __tablename__ = "reserve_commitments"
     __table_args__ = (
         UniqueConstraint("plan_id", "company_id", name="uq_reserve_plan_company"),
@@ -649,14 +658,14 @@ class ReserveCommitment(Base):
     confirmation_status: Mapped[str] = mapped_column(String(32), nullable=False, default="pending")
     proposed_capacity_units: Mapped[int | None] = mapped_column(Integer, nullable=True)
     proposed_moq_units: Mapped[int | None] = mapped_column(Integer, nullable=True)
-    proposed_unit_price_rub: Mapped[float | None] = mapped_column(Float, nullable=True)
-    proposed_delivery_cost_rub: Mapped[float | None] = mapped_column(Float, nullable=True)
+    proposed_unit_price_rub: Mapped[Decimal | None] = mapped_column(ExactNumeric(), nullable=True)
+    proposed_delivery_cost_rub: Mapped[Decimal | None] = mapped_column(ExactNumeric(), nullable=True)
     proposed_lead_time_days: Mapped[int | None] = mapped_column(Integer, nullable=True)
-    price_tiers: Mapped[list] = mapped_column(JSONB, nullable=False, default=list)
+    price_tiers: Mapped[list] = mapped_column(ExactJSONB, nullable=False, default=list)
     confirmed_capacity_units: Mapped[int | None] = mapped_column(Integer, nullable=True)
     confirmed_moq_units: Mapped[int | None] = mapped_column(Integer, nullable=True)
-    confirmed_unit_price_rub: Mapped[float | None] = mapped_column(Float, nullable=True)
-    confirmed_delivery_cost_rub: Mapped[float | None] = mapped_column(Float, nullable=True)
+    confirmed_unit_price_rub: Mapped[Decimal | None] = mapped_column(ExactNumeric(), nullable=True)
+    confirmed_delivery_cost_rub: Mapped[Decimal | None] = mapped_column(ExactNumeric(), nullable=True)
     confirmed_lead_time_days: Mapped[int | None] = mapped_column(Integer, nullable=True)
     held_until: Mapped[date | None] = mapped_column(Date, nullable=True)
     confirmed_by_user_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), nullable=True)
@@ -676,8 +685,8 @@ class ResilienceScenario(Base):
         ForeignKey(f"{SCHEMA}.resilience_plans.id", ondelete="CASCADE"), nullable=False
     )
     scenario_type: Mapped[str] = mapped_column(String(24), nullable=False)
-    failed_company_ids: Mapped[list] = mapped_column(JSONB, nullable=False)
-    result: Mapped[dict] = mapped_column(JSONB, nullable=False)
+    failed_company_ids: Mapped[list] = mapped_column(ExactJSONB, nullable=False)
+    result: Mapped[dict] = mapped_column(ExactJSONB, nullable=False)
     input_hash: Mapped[str] = mapped_column(String(64), nullable=False)
     status: Mapped[str] = mapped_column(String(32), nullable=False, default="calculated")
     is_simulation: Mapped[bool] = mapped_column(
@@ -698,7 +707,7 @@ class ResilienceEvent(Base):
     event_type: Mapped[str] = mapped_column(String(64), nullable=False, index=True)
     actor_user_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), nullable=True)
     actor_company_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), nullable=True)
-    payload: Mapped[dict] = mapped_column(JSONB, nullable=False, default=dict)
+    payload: Mapped[dict] = mapped_column(ExactJSONB, nullable=False, default=dict)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now())
 
 
@@ -715,9 +724,9 @@ class TrustAuditEvent(Base):
     entity_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), nullable=True)
     actor_user_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), nullable=True)
     actor_company_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), nullable=True)
-    source_refs: Mapped[list] = mapped_column(JSONB, nullable=False, default=list)
+    source_refs: Mapped[list] = mapped_column(ExactJSONB, nullable=False, default=list)
     explanation: Mapped[str] = mapped_column(Text, nullable=False)
-    payload: Mapped[dict] = mapped_column(JSONB, nullable=False, default=dict)
+    payload: Mapped[dict] = mapped_column(ExactJSONB, nullable=False, default=dict)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now())
 
 
@@ -774,7 +783,7 @@ class ResourceReservation(Base):
     anchor_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), index=True)
     units: Mapped[int] = mapped_column(Integer)
     resource_units: Mapped[int | None] = mapped_column(Integer, nullable=True)
-    resource_conversion: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
+    resource_conversion: Mapped[dict | None] = mapped_column(ExactJSONB, nullable=True)
     status: Mapped[str] = mapped_column(String(16), default="committed")
     expires_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
@@ -787,7 +796,7 @@ class CatalogImport(Base):
     company_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True))
     request_key: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True))
     content_hash: Mapped[str] = mapped_column(String(64))
-    product_ids: Mapped[list] = mapped_column(JSONB)
+    product_ids: Mapped[list] = mapped_column(ExactJSONB)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
 
@@ -798,6 +807,6 @@ class CategoryRegistryRevision(Base):
     sequence: Mapped[int] = mapped_column(Integer, nullable=False, unique=True)
     parent_hash: Mapped[str] = mapped_column(String(64), nullable=False, unique=True)
     registry_hash: Mapped[str] = mapped_column(String(64), nullable=False, unique=True)
-    registry: Mapped[dict] = mapped_column(JSONB, nullable=False)
+    registry: Mapped[dict] = mapped_column(ExactJSONB, nullable=False)
     published_by_user_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), nullable=False)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now())

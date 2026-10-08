@@ -1,3 +1,5 @@
+from ..commercial import offer_quote, estimate, frozen_snapshot, require_complete, holding_quotes, holding_total
+from ..money import amount, decimal
 import uuid
 from copy import deepcopy
 from datetime import date, datetime, time, timezone
@@ -100,7 +102,7 @@ async def _plan_out(db: AsyncSession, plan: ResiliencePlan) -> ResiliencePlanOut
         )
     ).scalars().all()
     return ResiliencePlanOut(
-        id=plan.id,
+        commercial_snapshot=plan.commercial_snapshot,        id=plan.id,
         need_id=plan.need_id,
         buyer_company_id=plan.buyer_company_id,
         baseline_variant_id=plan.baseline_variant_id,
@@ -129,6 +131,7 @@ def _primary_payload(plan: ResiliencePlan) -> list[dict]:
             "company_id": item["company_id"],
             "units": item["units"],
             "unit_price_rub": item["unit_price_rub"],
+            "additional_cost_rub": item.get("additional_cost_rub",0),
             "delivery_cost_rub": item.get("delivery_cost_rub", 0),
             "lead_time_days": item["lead_time_days"],
         }
@@ -146,6 +149,7 @@ async def _resilience_payload(db: AsyncSession, plan: ResiliencePlan) -> dict:
         )
     ).scalars().all()
     reserve_options = []
+    holding_cost = holding_total(holding_quotes(plan.commercial_snapshot,commitments))
     for item in commitments:
         approved = item.confirmation_status == "approved"
         capacity = (
@@ -165,10 +169,22 @@ async def _resilience_payload(db: AsyncSession, plan: ResiliencePlan) -> dict:
         )
         if None in {capacity, moq, price, delivery, lead}:
             continue
+        quote = item.commercial_snapshot or {}
+        if approved:
+            require_complete(quote.get('estimate'))
+        terms = item.commercial_terms or {}
+        if not quote.get('estimate',{}).get('complete'):continue
+        expected_basis = plan.baseline_allocations[0].get('comparison_basis')
+        if expected_basis and any(terms.get(key)!=value for key,value in expected_basis.items()):
+            continue
+        additional = sum((decimal(expense['amount_rub']) for expense in terms.get('expenses',[]) if expense['amount_rub'] is not None and expense['code']!='reserve_holding'),decimal(0))
+        if any(expense['required'] and expense['amount_rub'] is None for expense in terms.get('expenses',[])):
+            continue
         reserve_options.append(
             {
                 "company_id": str(item.company_id),
                 "unit_price_rub": price,
+                "additional_cost_rub": additional,
                 "moq_units": moq,
                 "capacity_units": capacity,
                 "lead_time_days": lead,
@@ -184,6 +200,7 @@ async def _resilience_payload(db: AsyncSession, plan: ResiliencePlan) -> dict:
         )
     return {
         "primary_allocations": _primary_payload(plan),
+        "reserve_holding_total_rub": holding_cost,
         "reserve_options": reserve_options,
         "max_price_increase_pct": plan.max_price_increase_pct,
         "max_delay_days": plan.max_delay_days,
@@ -230,6 +247,13 @@ async def _activate_scenario(
             product_id=source_offer.product_id if source_offer else None, volume_units=replacement["units"], category_profile=need.category_profile,
             subcategory=need.subcategory,
             characteristics=need.characteristics, moq_units=replacement["units"], label="спецификация восстановления"), context="Замена не активирована")
+        require_complete(commitment.commercial_snapshot.get('estimate') if commitment.commercial_snapshot else None)
+        recovery_quote = estimate(units=replacement['units'],unit_price=replacement['unit_price_rub'],delivery=replacement['delivery_cost_rub'],
+            terms=commitment.commercial_terms,buyer=plan.buyer_company_id,seller=company_id,
+            source={'type':'recovery','scenario_id':str(scenario.id),'commitment_id':str(commitment.id)},switching=True)
+        require_complete(recovery_quote)
+        replacement['commercial_snapshot'] = frozen_snapshot(estimate_value=recovery_quote,need=need,offer=source_offer,
+            resource={'commitment_id':str(commitment.id),'scenario_id':str(scenario.id)})
         await activate_hold(db, company_id=company_id, anchor_id=commitment.id, units=replacement["units"])
     plan.current_allocations = [*surviving, *replacements]
     plan.current_total_cost_rub = scenario.result["new_total_cost_rub"]
@@ -268,7 +292,7 @@ async def _activate_scenario(
             "automatic": automatic,
             "baseline_cost_rub": plan.baseline_total_cost_rub,
             "new_cost_rub": scenario.result["new_total_cost_rub"],
-            "buyer_value_rub": round(plan.baseline_total_cost_rub - scenario.result["new_total_cost_rub"], 2),
+            "buyer_value_rub": amount(decimal(plan.baseline_total_cost_rub) - decimal(scenario.result["new_total_cost_rub"])),
             "price_delta_rub": scenario.result["price_delta_rub"],
             "delay_days": scenario.result["delay_days"],
         },
@@ -482,6 +506,8 @@ async def create_resilience_plan(
                 confirmation_status="pending",
                 proposed_capacity_units=offer.available_units,
                 proposed_moq_units=offer.moq_units,
+                commercial_terms=offer.commercial_terms,
+                commercial_snapshot=offer.commercial_quote,
                 proposed_unit_price_rub=offer.price_rub,
                 proposed_delivery_cost_rub=offer.delivery_cost_rub,
                 proposed_lead_time_days=offer.lead_time_days,
@@ -615,7 +641,7 @@ async def confirm_resilience_plan(
     if data.expected_revision != plan.version:
         raise HTTPException(409, "План изменился. Обновите его перед подтверждением")
     need = await db.scalar(select(Need).where(Need.id == plan.need_id).with_for_update())
-    if need.status not in ACTIVE_NEED_STATUSES or need.deadline_date < date.today():
+    if (need.status not in ACTIVE_NEED_STATUSES and not (need.status == "matched" and plan.commercial_snapshot)) or need.deadline_date < date.today():
         raise HTTPException(409, "Потребность уже закрыта или срок поставки истёк")
     if sum(item["units"] for item in plan.baseline_allocations) != need.volume_units:
         raise HTTPException(409, "Объём плана не соответствует потребности. Нужен новый расчёт")
@@ -626,20 +652,28 @@ async def confirm_resilience_plan(
         offers = list((await db.scalars(select(Offer).where(Offer.need_id == need.id, Offer.company_id == company_id,
             Offer.status == "sent").with_for_update())).all())
         matching = [offer for offer in offers if offer.moq_units <= allocation["units"] <= offer.available_units
-            and offer_unit_price(offer, allocation["units"]) == allocation["unit_price_rub"]
-            and offer.delivery_cost_rub == allocation["delivery_cost_rub"]
+            and offer_unit_price(offer, allocation["units"]) == decimal(allocation["unit_price_rub"])
+            and offer.delivery_cost_rub == decimal(allocation["delivery_cost_rub"])
             and offer.lead_time_days == allocation["lead_time_days"]
             and offer.lead_time_days <= (need.deadline_date - date.today()).days
-            and (offer.valid_until is None or offer.valid_until >= date.today())]
+            and (offer.valid_until is None or offer.valid_until >= date.today())
+            and (not allocation.get('offer_id') or (str(offer.id)==allocation['offer_id'] and offer.revision==allocation['offer_revision']))]
         if len(matching) != 1:
             raise HTTPException(409, "Исходное предложение изменилось или истекло. Пересчитайте план")
         offer = matching[0]
+        require_complete(offer.commercial_quote['estimate'] if offer.commercial_quote else None)
+        if offer.commercial_quote['need']['revision']!=need.revision:
+            raise HTTPException(409,'Потребность изменилась после подтверждения исходного КП')
         admission = await require_company_admission(db, company_id, SpecificationCheck(category=need.category,
             subcategory=need.subcategory,
             characteristics=need.characteristics, moq_units=allocation["units"], product_id=offer.product_id,
             volume_units=allocation["units"],category_profile=need.category_profile), context="Основной объём не подтверждён")
+        allocated_quote = await offer_quote(db,offer,need,units=allocation['units'])
+        if decimal(allocated_quote['estimate']['total_rub']) != decimal(allocation['total_cost_rub']):
+            raise HTTPException(409,'Полная смета исходного КП изменилась. Пересчитайте план перед согласием')
         baseline_snapshots.append({
             "allocation": deepcopy(allocation),
+            "commercial_snapshot": allocated_quote,
             "offer_id": str(offer.id),
             "need_id": str(need.id),
             "need_revision": need.revision,
@@ -652,6 +686,16 @@ async def confirm_resilience_plan(
         await reserve(db, company_id=company_id, anchor_type="resilience_primary", anchor_id=plan.id,
             units=allocation["units"], deadline=need.deadline_date, resource_kind=offer.resource_kind, product_id=offer.product_id,
             category=need.category, subcategory=need.subcategory, unit=order_unit(need.characteristics))
+    commitments = list((await db.scalars(select(ReserveCommitment).where(ReserveCommitment.plan_id==plan.id, ReserveCommitment.confirmation_status=='approved'))).all())
+    quotes = holding_quotes(plan.commercial_snapshot,commitments)
+    holding = holding_total(quotes)
+    plan.baseline_total_cost_rub = sum((decimal(item['total_cost_rub']) for item in plan.baseline_allocations),decimal(0)) + holding
+    if need.budget_rub is not None and plan.baseline_total_cost_rub>need.budget_rub:
+        raise HTTPException(409,"Полная смета с удержанием резерва превышает бюджет потребности")
+    plan.current_total_cost_rub = plan.baseline_total_cost_rub
+    plan.commercial_snapshot = {'schema_version':1,'primary':baseline_snapshots,
+        'holding_quotes':quotes,
+        'reserve_holding_total_rub':str(holding),'total_rub':str(plan.baseline_total_cost_rub)}
     need.status = "matched"
     plan.status = "active"
     plan.confirmed_by_user_id = user.id
@@ -783,6 +827,8 @@ async def decide_reserve_commitment(
     ).scalar_one()
     await db.refresh(commitment, with_for_update=True)
     await _lock_plan_resources(db, plan)
+    if data.decision == "approved" and commitment.confirmation_status == "approved":
+        raise HTTPException(409, "Уже подтверждённый резерв нельзя повторно тарифицировать. Согласованные условия сохранены.")
     admission_payload: dict | None = None
     if data.decision == "approved":
         # Резерв — это обязательство: документы компании должны подтверждать
@@ -833,6 +879,16 @@ async def decide_reserve_commitment(
                 detail="Нельзя подтвердить удержание мощности в прошлом",
             )
         source_offer = await db.get(Offer, commitment.offer_id) if commitment.offer_id else None
+        quote = estimate(units=plan_need.volume_units,unit_price=data.unit_price_rub,delivery=data.delivery_cost_rub,
+            terms=data.commercial_terms,buyer=plan.buyer_company_id,seller=data.company_id,
+            source={'type':'reserve_commitment','id':str(commitment.id),'plan_version':plan.version,
+                    'revision':((commitment.commercial_snapshot or {}).get('estimate',{}).get('source',{}).get('revision',0)+1)})
+        require_complete(quote)
+        if any(line['conditional'] and line['required'] and line['amount_rub'] is None for line in quote['lines']):
+            raise HTTPException(409,'Уточните стоимость переключения до подтверждения резерва')
+        commitment.commercial_terms = data.commercial_terms.model_dump() if data.commercial_terms else None
+        commitment.commercial_snapshot = frozen_snapshot(estimate_value=quote,need=plan_need,offer=source_offer,
+            resource={'capacity_units':data.capacity_units,'held_until':str(data.held_until)})
         await reserve(db, company_id=data.company_id, anchor_type="reserve", anchor_id=commitment.id,
                       units=data.capacity_units, deadline=plan_need.deadline_date,
                       resource_kind=source_offer.resource_kind if source_offer else "capacity",
@@ -889,6 +945,23 @@ async def decide_reserve_commitment(
         ],
         explanation="Администратор проверенной компании-производителя явно принял решение по резервной мощности.",
     )
+    # A seller may add paid holding after the original buyer approval. That
+    # changes the payable bill and requires a new, versioned buyer approval.
+    if data.decision == "approved" and plan.confirmed_at is not None:
+        accepted = (plan.commercial_snapshot or {}).get('holding_quotes', [])
+        fee = sum((decimal(line['amount_rub']) for line in commitment.commercial_snapshot['estimate']['lines']
+                   if line['code'] == 'reserve_holding'), decimal(0))
+        if fee > 0 and commitment.commercial_snapshot not in accepted:
+            plan.confirmed_at = None
+            plan.confirmed_by_user_id = None
+            plan.version += 1
+            plan.status = "ready_for_confirmation"
+            all_commitments = list((await db.scalars(select(ReserveCommitment).where(ReserveCommitment.plan_id==plan.id))).all())
+            plan.baseline_total_cost_rub = sum((decimal(item['total_cost_rub']) for item in plan.baseline_allocations),decimal(0)) + holding_total(holding_quotes(plan.commercial_snapshot,all_commitments))
+            plan.current_total_cost_rub = plan.baseline_total_cost_rub
+            db.add(ResilienceEvent(plan_id=plan.id, event_type="commercial_reapproval_required",
+                actor_user_id=user.id, actor_company_id=data.company_id,
+                payload={'commitment_id':str(commitment.id),'holding_fee_rub':fee,'version':plan.version}))
     await _calculate_and_store(db, plan, user.id)
     await db.commit()
     await db.refresh(commitment)
@@ -1053,6 +1126,8 @@ async def approve_recovery(
     await require_company_buyer(plan.buyer_company_id, user, db)
     await require_company_admin(plan.buyer_company_id, user, db)
     await require_verified_company(plan.buyer_company_id, user, db)
+    if plan.confirmed_at is None:
+        raise HTTPException(409, "Сначала согласуйте актуальную полную смету плана")
     await _lock_plan_resources(db, plan)
     result = scenario.result
     if result["uncovered_units"] > 0 or result["unconfirmed_units"] > 0:

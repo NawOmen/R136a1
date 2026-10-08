@@ -1,6 +1,8 @@
 import hashlib
 import json
 import re
+from .money import decimal
+from decimal import Decimal
 import uuid
 from collections import defaultdict
 from datetime import date, datetime, timezone
@@ -55,25 +57,25 @@ def order_unit(characteristics: dict | None) -> str:
 
 
 def offer_unit_price(offer: Offer, volume_units: int) -> float:
-    price = offer.price_rub
+    price = decimal(offer.price_rub)
     tiers = sorted(
         (
             item
             for item in (offer.price_tiers or [])
             if isinstance(item, dict)
             and isinstance(item.get("min_units"), int)
-            and isinstance(item.get("unit_price_rub"), (int, float))
+            and isinstance(item.get("unit_price_rub"), (int, float, str, Decimal))
         ),
         key=lambda item: item["min_units"],
     )
     for tier in tiers:
         if volume_units >= tier["min_units"]:
-            price = float(tier["unit_price_rub"])
+            price = decimal(tier["unit_price_rub"])
     return price
 
 
 def _canonical_json(value: object) -> str:
-    return json.dumps(value, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
+    return json.dumps(value, ensure_ascii=False, sort_keys=True, separators=(",", ":"), default=str)
 
 
 def _need_parts(need: Need) -> tuple[dict, dict, dict, dict]:
@@ -180,10 +182,12 @@ async def _has_direct_match(db: AsyncSession, need: Need) -> tuple[bool, str]:
     ).scalars().all()
     days_left = max(0, (need.deadline_date - date.today()).days)
     for offer in offers:
-        total = (
-            offer_unit_price(offer, need.volume_units) * need.volume_units
-            + offer.delivery_cost_rub
-        )
+        quote = offer.commercial_quote
+        if not quote or not quote.get('estimate', {}).get('complete'):
+            continue
+        if quote['need']['revision'] != need.revision:
+            continue
+        total = decimal(quote['estimate']['total_rub'])
         if (
             offer.moq_units <= need.volume_units <= offer.available_units
             and offer.lead_time_days <= days_left

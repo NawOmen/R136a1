@@ -44,12 +44,12 @@ def normalize_physical(kind,raw, *, require_approval=True):
         if 'price_rub' in data:
             price=decimal_value(data['price_rub'])/factor
             if price<=0 or price.as_tuple().exponent < -12:raise ValueError('Уточните цену за меньшую единицу; автоматическое округление не выполняется')
-            data['price_rub']=float(price)
+            data['price_rub']=price
         for tier in data.get('price_tiers',[]):
             tier['min_units']=quantity(tier['min_units'],factor)
             price=decimal_value(tier['unit_price_rub'])/factor
             if price<=0 or price.as_tuple().exponent < -12:raise ValueError('Цена уровня требует точного пересчёта без округления')
-            tier['unit_price_rub']=float(price)
+            tier['unit_price_rub']=price
         for key in ('order_multiple','кратность'):
             if key in chars:chars[key]=quantity(chars[key],factor)
     return data,{'input_unit':unit,'stored_unit':definition['base'],'factor':int(factor),

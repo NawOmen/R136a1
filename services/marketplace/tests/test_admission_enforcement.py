@@ -1,3 +1,4 @@
+from conftest import confirmed_quote_terms
 from conftest import grant_capacity,grant_category_capability
 """Проверки допуска на всех путях принятия обязательств.
 
@@ -320,6 +321,12 @@ async def test_reserve_commitment_requires_documents(client, db_session, monkeyp
     db_session.add(variant)
     await db_session.commit()
 
+    # This scenario isolates missing reserve documents, not missing commercial terms.
+    from sqlalchemy import select
+    primary_offer=(await db_session.scalars(select(Offer).where(Offer.need_id==need.id,Offer.company_id==primary))).one()
+    updated=await client.patch(f'/api/v1/offers/{primary_offer.id}',headers=_auth(make_token(primary_user)),
+        json={'expected_revision':primary_offer.revision,'commercial_terms':confirmed_quote_terms()})
+    assert updated.status_code==200,updated.text
     plan_response = await client.post(
         f"/api/v1/needs/{need.id}/resilience-plans",
         json={"variant_id": str(variant.id), "max_price_increase_pct": 5, "max_delay_days": 2},
@@ -358,7 +365,7 @@ async def test_reserve_commitment_requires_documents(client, db_session, monkeyp
         await client.get(f"/api/v1/reserve-invitations/{reserve}", headers=_auth(reserve_token))
     ).json()[0]
 
-    decision = {
+    decision = {'commercial_terms': confirmed_quote_terms(),
         "company_id": str(reserve),
         "decision": "approved",
         "capacity_units": 5_000,
@@ -498,7 +505,7 @@ async def test_evidence_change_notifies_active_deal(client, db_session):
     await client.post(f"/api/v1/needs/{need.json()['id']}/publish", headers=_auth(buyer_token))
     offer = await client.post(
         f"/api/v1/needs/{need.json()['id']}/offers",
-        json={
+        json={'commercial_terms': confirmed_quote_terms(),
             "company_id": str(seller_company),
             "product_id":product.json()["id"],
             "price_rub": 10,

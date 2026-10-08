@@ -1,7 +1,8 @@
 import uuid
 from datetime import datetime
+from decimal import Decimal
 
-from sqlalchemy import DateTime, Float, ForeignKey, Integer, String, Text, func
+from sqlalchemy import DateTime, Numeric, ForeignKey, Integer, String, Text, func
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -31,7 +32,7 @@ class AgentRun(Base):
     duration_ms: Mapped[int | None] = mapped_column(Integer, nullable=True)
     input_chars: Mapped[int | None] = mapped_column(Integer, nullable=True)
     output_chars: Mapped[int | None] = mapped_column(Integer, nullable=True)
-    estimated_cost_rub: Mapped[float | None] = mapped_column(Float, nullable=True)
+    estimated_cost_rub: Mapped[Decimal | None] = mapped_column(Numeric(24,12), nullable=True)
     cost_basis: Mapped[str | None] = mapped_column(String(160), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(

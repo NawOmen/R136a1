@@ -63,3 +63,15 @@ app.include_router(physical_quantities.router, prefix="/api/v2")
 
 from .api import packaging_conversion
 app.include_router(packaging_conversion.router, prefix="/api/v1")
+
+# v3 exposes exact decimal strings; v1/v2 keep their numeric wire contracts.
+from .money import MoneyWireMiddleware, wire
+from decimal import Decimal
+from fastapi.encoders import ENCODERS_BY_TYPE
+ENCODERS_BY_TYPE[Decimal] = wire
+app.add_middleware(MoneyWireMiddleware)
+for exact_router in (addresses, production, products, catalog_import, capacity, documents, needs, offers,
+                     notifications, market, resilience, trust, stage8, stage9, agent_scorecard, commerce,
+                     category_profiles, category_editor, packaging_conversion):
+    app.include_router(exact_router.router, prefix='/api/v3')
+app.include_router(physical_quantities.router, prefix='/api/v3/physical')

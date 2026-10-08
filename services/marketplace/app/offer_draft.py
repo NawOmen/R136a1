@@ -13,8 +13,9 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from datetime import date
-from decimal import Decimal, InvalidOperation
+from decimal import Decimal
 
+from .money import decimal
 from .category_admission import normalize
 from .matching import order_unit
 from .models import CapacityEntry, CapabilityPassport, Need, Product
@@ -24,7 +25,7 @@ from .models import CapacityEntry, CapabilityPassport, Need, Product
 class DraftField:
     name: str
     label: str
-    value: float | int | None
+    value: Decimal | float | int | None
     source: str
     confirmed: bool
     note: str | None = None
@@ -42,11 +43,11 @@ class DraftField:
 
 @dataclass
 class OfferDraftResult:
-    price_rub: float | None
+    price_rub: Decimal | None
     available_units: int | None
     moq_units: int | None
     lead_time_days: int | None
-    delivery_cost_rub: float | None
+    delivery_cost_rub: Decimal | None
     price_tiers: list[dict] = field(default_factory=list)
     fields: list[DraftField] = field(default_factory=list)
     missing: list[str] = field(default_factory=list)
@@ -109,14 +110,14 @@ def _matches_need(product: Product, need: Need) -> tuple[bool, str]:
     return result.matches, result.reason
 
 
-def _tier_price(product: Product, volume: int, unit: str) -> tuple[float, str]:
+def _tier_price(product: Product, volume: int, unit: str) -> tuple[Decimal, str]:
     """Цена за единицу с учётом ступеней: берём лучшую подходящую ступень."""
-    price = float(product.price_rub)
+    price = decimal(product.price_rub)
     source = "товар каталога: базовая цена"
     for tier in sorted(product.price_tiers or [], key=lambda item: item.get("min_units", 0)):
         try:
             min_units = int(tier.get("min_units") or 0)
-            unit_price = float(tier.get("unit_price_rub") or 0)
+            unit_price = decimal(tier.get("unit_price_rub") or 0)
         except (TypeError, ValueError):
             continue
         if unit_price > 0 and volume >= min_units:
@@ -336,7 +337,7 @@ def changed_fields(draft_payload: dict, offer_values: dict) -> list[str]:
             continue
         if isinstance(value, float) or isinstance(original, float):
             try:
-                if original is not None and abs(float(original) - float(value or 0)) < 0.01:
+                if original is not None and abs(decimal(original) - decimal(value or 0)) < decimal("0.01"):
                     continue
             except (TypeError, ValueError):
                 pass

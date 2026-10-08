@@ -1,4 +1,5 @@
 "use client";
+import CommercialEstimate from "../../components/CommercialEstimate";
 
 // Деталь потребности: характеристики, файлы, список предложений.
 // Покупатель может выбрать предложение (POST /offers/{id}/select) —
@@ -247,6 +248,7 @@ export default function NeedDetailPage() {
           <p className="hint mode-hint">
             Объём: {formatUnits(deal.units, itemUnit(need?.characteristics))} · Сумма: {formatRub(deal.total_price_rub)}
           </p>
+          <CommercialEstimate value={deal.commercial_snapshot?.estimate} />
         </section>
       )}
 
@@ -318,7 +320,7 @@ export default function NeedDetailPage() {
               disabled={optimizing}
               onClick={() => void handleOptimize()}
             >
-              {optimizing ? "Считаем..." : "Рассчитать 3 варианта"}
+              {optimizing ? "Считаем..." : "Рассчитать доступные варианты"}
             </button>
           )}
         </div>
@@ -327,14 +329,14 @@ export default function NeedDetailPage() {
         ) : (
           <ul className="company-list">
             {offers.map((offer) => (
-              <li key={offer.id} className="card">
+              <li key={offer.id} className="card"><CommercialEstimate value={offer.commercial_quote?.estimate} />
                 <div className="company-row">
                   <div>
                     <div className="company-item__name">
                       Предложение #{offer.id.slice(0, 8)}
                     </div>
                     <div className="company-meta">
-                      Цена: {formatRub(offer.price_rub, 12)} · Объём: {formatUnits(offer.available_units, itemUnit(need.characteristics))} ·
+                      КП {offer.id} · Цена: {formatRub(offer.price_rub, 12)} · Объём: {formatUnits(offer.available_units, itemUnit(need.characteristics))} ·
                       MOQ: {formatUnits(offer.moq_units, itemUnit(need.characteristics))} · Логистика: {formatRub(offer.delivery_cost_rub)} ·
                       Срок: {offer.lead_time_days} дн. · Действует до: {offer.valid_until ?? "не ограничено"}
                     </div>
@@ -352,7 +354,7 @@ export default function NeedDetailPage() {
                     <button
                       type="button"
                       className="btn btn-success btn-sm"
-                      disabled={selectingId === offer.id}
+                      disabled={selectingId === offer.id || !offer.commercial_quote?.estimate.complete}
                       onClick={() => void handleSelect(offer)}
                     >
                       {selectingId === offer.id ? "Заключаем сделку..." : "Выбрать предложение"}
@@ -380,6 +382,7 @@ export default function NeedDetailPage() {
                     {variant.result.feasible ? "Выполнимо" : "Нет варианта"}
                   </span>
                 </div>
+                {variant.result.comparison_basis && <p className="hint">{variant.result.comparison_basis.tax_basis === "no_vat" ? "Без НДС" : `Включая НДС ${variant.result.comparison_basis.vat_rate_pct}%`} · {variant.result.comparison_basis.delivery_method === "self_pickup" ? "Самовывоз" : "Доставка"}: {variant.result.comparison_basis.delivery_conditions}. Сравнение выполняется внутри этих условий.</p>}
                 {variant.result.feasible ? (
                   <>
                     <p>
@@ -394,7 +397,7 @@ export default function NeedDetailPage() {
                         </li>
                       ))}
                     </ul>
-                    {variant.kind === "reliable" && (
+                    {variant.result.feasible && (
                       <button
                         type="button"
                         className="btn btn-primary btn-sm"

@@ -1,3 +1,5 @@
+from ..money import amount, decimal, PRICE_QUANTUM
+from decimal import ROUND_HALF_UP
 import uuid
 import hashlib
 import json
@@ -327,7 +329,7 @@ async def price_index(category: str, product_id: uuid.UUID | None = None, db: As
     ).where(ProductPriceObservation.product_id == product.id,
             ProductPriceObservation.specification_hash == product_specification_hash(product)).subquery()
     rows = (await db.execute(select(latest.c.day, latest.c.price).where(latest.c.rank == 1).order_by(latest.c.day))).all()
-    return [PriceIndexPoint(date=row.day, average_unit_price_rub=round(float(row.price), 2), offers_count=1) for row in rows]
+    return [PriceIndexPoint(date=row.day, average_unit_price_rub=decimal(row.price).quantize(PRICE_QUANTUM,rounding=ROUND_HALF_UP), offers_count=1) for row in rows]
 
 
 @router.get("/market-watches", response_model=list[MarketWatchOut])
@@ -355,8 +357,8 @@ async def delete_watch(watch_id: uuid.UUID, user: CurrentUser = Depends(get_curr
 async def buyer_savings(company_id: uuid.UUID, user: CurrentUser = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
     await require_company_buyer(company_id, user, db)
     members = (await db.execute(select(CoalitionMember).where(CoalitionMember.buyer_company_id == company_id))).scalars().all()
-    confirmed = sum(float(item.benefit_rub or 0) for item in members if item.approval_status == "approved")
-    calculated = sum(float(item.benefit_rub or 0) for item in members)
-    return BuyerSavingsOut(company_id=company_id, confirmed_savings_rub=round(confirmed, 2),
-        calculated_variants_rub=round(calculated, 2), coalitions_count=len({item.coalition_id for item in members}),
+    confirmed = sum(decimal(item.benefit_rub or 0) for item in members if item.approval_status == "approved")
+    calculated = sum(decimal(item.benefit_rub or 0) for item in members)
+    return BuyerSavingsOut(company_id=company_id, confirmed_savings_rub=amount(confirmed),
+        calculated_variants_rub=amount(calculated), coalitions_count=len({item.coalition_id for item in members}),
         explanation="Подтверждённая экономия считается только по одобренным участником вариантам относительно зафиксированной индивидуальной альтернативы.")

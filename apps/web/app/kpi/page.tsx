@@ -1,4 +1,5 @@
 "use client";
+import { formatRub } from "../lib/marketplace";
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
@@ -6,7 +7,7 @@ import { getToken } from "../lib/api";
 import { AgentScorecard, AuditEvent, AuditVerification, marketplace, TrustKpi } from "../lib/marketplace";
 import { useMe } from "../lib/useMe";
 
-function rub(value: number) { return new Intl.NumberFormat("ru-RU", { style: "currency", currency: "RUB" }).format(value); }
+function rub(value: string | number) { return formatRub(value); }
 
 export default function KpiPage() {
   const { companies, user } = useMe();

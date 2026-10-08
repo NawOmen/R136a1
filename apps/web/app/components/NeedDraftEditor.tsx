@@ -42,7 +42,7 @@ export default function NeedDraftEditor({ need, onSaved }: { need: Need; onSaved
       onSaved(await marketplace.editNeed(token, need.id, {
         quantity_conversion_approved: quantityApproved,
         company_id: need.company_id, expected_revision: need.revision, category, subcategory, characteristics,
-        volume_units: Number(quantity), budget_rub: budget ? Number(budget) : null,
+        volume_units: Number(quantity), budget_rub: budget ? String(budget) : null,
         deadline_date: deadline, valid_until: validUntil, delivery_address_id: address || null, visibility,
       }));
       setEditing(false);

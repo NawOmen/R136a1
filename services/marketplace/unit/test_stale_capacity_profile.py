@@ -33,7 +33,7 @@ class StaleCapacityProfileTests(IsolatedAsyncioTestCase):
         for route in ('direct', 'group_publish', 'group_confirm', 'reserve'):
             with self.subTest(route=route), registry_context(registry), ExitStack() as stack:
                 seller, buyer = uuid.uuid4(), uuid.uuid4()
-                need = NS(id=uuid.uuid4(), company_id=buyer, category='Упаковка и тара',
+                need = NS(id=uuid.uuid4(), revision=1, company_id=buyer, category='Упаковка и тара',
                           subcategory='Бумажные стаканы', characteristics={'unit':'шт', 'material':'бумага', 'volume_ml':400},
                           category_profile=saved, volume_units=100, budget_rub=10000,
                           deadline_date=date.today()+timedelta(days=20), valid_until=None, status='awaiting_approvals')
@@ -44,14 +44,14 @@ class StaleCapacityProfileTests(IsolatedAsyncioTestCase):
                     module = offers
                     offer = NS(id=uuid.uuid4(), company_id=seller, need_id=need.id, revision=1, status='sent',
                                available_units=100, moq_units=1, product_id=None, valid_until=None,
-                               lead_time_days=1, price_rub=10, price_tiers=[], delivery_cost_rub=0)
+                               lead_time_days=1, price_rub=10, price_tiers=[], delivery_cost_rub=0,commercial_quote={'estimate':{'complete':True,'total_rub':'1000'},'need':{'revision':1}})
                     db.get.return_value = offer
                     db.execute.return_value = result(need)
                     stack.enter_context(patch.object(module, 'get_company', AsyncMock(return_value={'verification_status':'verified'})))
                     action = lambda: offers.select_offer(offer.id, OfferSelectIn(expected_revision=1, human_approved=True), user, db)
                 elif route == 'reserve':
                     module = resilience
-                    commitment = NS(id=uuid.uuid4(), company_id=seller, plan_id=uuid.uuid4(), offer_id=None, approval_status='pending')
+                    commitment = NS(id=uuid.uuid4(), company_id=seller, plan_id=uuid.uuid4(), offer_id=None, confirmation_status='pending')
                     plan = NS(id=commitment.plan_id, need_id=need.id)
                     db.execute.side_effect = [result(commitment), result(plan)]
                     db.get.return_value = need
@@ -61,7 +61,7 @@ class StaleCapacityProfileTests(IsolatedAsyncioTestCase):
                     module = market
                     coalition = NS(id=uuid.uuid4(), version=1, status='awaiting_approvals', producer_company_id=seller,
                                    compatibility_profile_id=uuid.uuid4())
-                    members = [NS(id=uuid.uuid4(), need_id=need.id, buyer_company_id=buyer, units=100, approval_status='pending')]
+                    members = [NS(id=uuid.uuid4(), need_id=need.id, buyer_company_id=buyer, units=100, approval_status='pending',commercial_estimate={'complete':True})]
                     group = NS(id=uuid.uuid4(), coalition_id=coalition.id, company_id=seller, status='preliminary',
                                seller_approval_status='approved', fill_deadline=date.today()+timedelta(days=1))
                     if route == 'group_confirm':
