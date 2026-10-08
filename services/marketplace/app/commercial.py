@@ -2,7 +2,7 @@
 from copy import deepcopy
 from decimal import Decimal, ROUND_FLOOR
 from typing import Literal
-from pydantic import BaseModel, Field, model_validator
+from pydantic import BaseModel, Field, model_validator, field_validator
 from fastapi import HTTPException
 from .money import Amount, MAX_AMOUNT, amount, decimal, exact_json
 
@@ -18,6 +18,13 @@ class Expense(BaseModel):
     source: str = Field(min_length=1,max_length=300)
     version: str = Field(min_length=1,max_length=80)
 
+    @field_validator('title','source','version')
+    @classmethod
+    def meaningful_text(cls, value):
+        value=value.strip()
+        if not value:raise ValueError('Название статьи, источник и версия не могут быть пустыми')
+        return value
+
 
 class CommercialTerms(BaseModel):
     delivery_method: Literal['included','separate','self_pickup','unknown'] = 'unknown'
@@ -29,6 +36,8 @@ class CommercialTerms(BaseModel):
 
     @model_validator(mode='after')
     def coherent(self):
+        if self.vat_rate_pct is not None:self.vat_rate_pct=self.vat_rate_pct.normalize()
+        if self.delivery_conditions is not None:self.delivery_conditions=self.delivery_conditions.strip() or None
         if self.tax_basis == 'includes_vat' and self.vat_rate_pct is None:
             raise ValueError('Укажите включённую ставку НДС')
         if self.tax_basis != 'includes_vat' and self.vat_rate_pct is not None:

@@ -71,13 +71,17 @@ class MoneyWireMiddleware:
             nonlocal start
             if message['type']=='http.response.start':
                 headers = dict(message.get('headers',[]))
-                if b'application/json' in headers.get(b'content-type',b''):
+                if b'application/json' in headers.get(b'content-type',b'') and b'content-disposition' not in headers and message['status'] not in {204,304}:
                     start=message
                     return
             if message['type']=='http.response.body' and start is not None:
                 chunks.append(message.get('body',b''))
                 if message.get('more_body'):return
                 body = b''.join(chunks)
+                if not body:
+                    await send(start)
+                    await send(message)
+                    return
                 def numeric_compatibility(value):
                     if isinstance(value,list):return [numeric_compatibility(item) for item in value]
                     if isinstance(value,dict):

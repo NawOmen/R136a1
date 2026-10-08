@@ -321,6 +321,12 @@ async def test_reserve_commitment_requires_documents(client, db_session, monkeyp
     db_session.add(variant)
     await db_session.commit()
 
+    # This scenario isolates missing reserve documents, not missing commercial terms.
+    from sqlalchemy import select
+    primary_offer=(await db_session.scalars(select(Offer).where(Offer.need_id==need.id,Offer.company_id==primary))).one()
+    updated=await client.patch(f'/api/v1/offers/{primary_offer.id}',headers=_auth(make_token(primary_user)),
+        json={'expected_revision':primary_offer.revision,'commercial_terms':confirmed_quote_terms()})
+    assert updated.status_code==200,updated.text
     plan_response = await client.post(
         f"/api/v1/needs/{need.id}/resilience-plans",
         json={"variant_id": str(variant.id), "max_price_increase_pct": 5, "max_delay_days": 2},

@@ -78,6 +78,9 @@ def test_commercial_snapshot_is_detached_and_baseline_requires_same_confirmed_co
     assert baseline_comparable(quote,need,bill(delivery=5000))  # Same service, price may differ.
     assert not baseline_comparable(quote,need,bill(terms={**TERMS,'delivery_conditions':'Другой адрес'}))
     assert not baseline_comparable(quote,need,bill(terms={**TERMS,'tax_basis':'includes_vat','vat_rate_pct':'22'}))
+    equivalent_a=bill(terms={**TERMS,'tax_basis':'includes_vat','vat_rate_pct':'22.00'})
+    equivalent_b=bill(terms={**TERMS,'tax_basis':'includes_vat','vat_rate_pct':'22'})
+    assert equivalent_a['terms']==equivalent_b['terms']
     need.characteristics['unit']='упак'
     need.category_profile['profile_version']=3
     assert quote['need']['characteristics']=={'unit':'шт'}
