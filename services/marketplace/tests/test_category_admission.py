@@ -114,7 +114,7 @@ async def test_seller_cannot_verify_own_document(client, db_session):
         headers=_auth(token),
     )
     assert response.status_code == 403
-    assert "администратора площадки" in response.json()["detail"]
+    assert "редактора категорий" in response.json()["detail"]
 
 
 async def test_admission_after_verifier_confirms_both_documents(client, db_session):
@@ -379,7 +379,7 @@ async def test_published_product_cannot_change_category_without_evidence(client,
     assert "Изменение отклонено" in changed.json()["detail"]
 
 
-async def test_category_without_configured_rules_stays_publishable(client, db_session):
+async def test_category_with_manual_review_requires_subject_evidence(client, db_session):
     _, _, token, product_id = await _seller_with_product(
         client, db_session, category="Полиграфия и реклама", subcategory="Этикетки"
     )
@@ -387,12 +387,19 @@ async def test_category_without_configured_rules_stays_publishable(client, db_se
         "/api/v1/category-requirements",
         params={"category": "Полиграфия и реклама", "subcategory": "Этикетки"},
     )
-    assert admission.json()["profile_title"] is None
+    assert admission.json()["profile_title"] == "Проверка спецификации и применимости: Этикетки"
+    assert admission.json()["checklist"][0]["code"] == "specification_review"
 
+    from app.category_characteristics import validate_profile_values
+    attributes={"material":"синтетическая бумага","dimensions_mm":"40×30","finish":"матовая", "printing_method":"цифровая"}
+    assert not validate_profile_values("Полиграфия и реклама","Этикетки",attributes,require_product_fields=True)
+    edited=await client.patch(f"/api/v1/products/{product_id}",headers=_auth(token),json={"characteristics":attributes})
+    assert edited.status_code==200,edited.text
     publish = await client.post(
         f"/api/v1/products/{product_id}/publish", json={"published": True}, headers=_auth(token)
     )
-    assert publish.status_code == 200
+    assert publish.status_code == 409
+    assert "Заключение" in publish.json()["detail"]
 
 
 async def test_admission_report_keeps_history_of_publication(client, db_session):

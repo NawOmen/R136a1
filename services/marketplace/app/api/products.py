@@ -139,6 +139,11 @@ async def update_product(
             characteristics=validated.characteristics,
             moq_units=validated.moq_units,
         )
+        if not admission.supported:
+            raise HTTPException(409, "Публикация заблокирована: " + admission.summary)
+        errors, _ = validate_characteristics(product.category, product.subcategory, product.characteristics, product.moq_units)
+        if errors:
+            raise HTTPException(422, "; ".join(errors))
         if admission.blocking_open:
             raise HTTPException(
                 status.HTTP_409_CONFLICT,
@@ -186,9 +191,6 @@ async def publish_product(
     admission = None
     if data.published:
         await require_verified_company(product.company_id, user, db)
-        errors, _ = validate_characteristics(product.category, product.subcategory, product.characteristics, product.moq_units)
-        if errors:
-            raise HTTPException(422, "; ".join(errors))
         # Проверка компании не подтверждает документы конкретного товара.
         admission = await company_admission(
             db,

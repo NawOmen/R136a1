@@ -52,6 +52,11 @@ async def _notify_affected_deals(
 ) -> int:
     """Действующие сделки: изменение допуска требует ручного решения, а не отмены договорённостей."""
     document_scope = canonical_scope(scope_category, scope_subcategory)
+    # A legacy subtype below a known leaf must not suppress its change alert.
+    # This affects notifications only; verified legal scope is never broadened.
+    from ..category_registry import resolve_category
+    if scope_subcategory and resolve_category(scope_category, scope_subcategory) is None and resolve_category(scope_category, None):
+        document_scope = canonical_scope(scope_category, None)
     rows = (
         await db.execute(
             text(
