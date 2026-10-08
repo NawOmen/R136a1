@@ -6,6 +6,36 @@ from conftest import make_user,make_company,make_token,grant_packaging_documents
 
 
 @pytest.mark.asyncio
+async def test_referenced_delivery_destination_cannot_change_without_need_revision(client, db_session):
+    from app.models import Need
+    user = await make_user(db_session)
+    company = await make_company(db_session, user, can_buy=True, can_sell=False)
+    headers = {'Authorization': f'Bearer {make_token(user)}'}
+    base = f'/api/v3/companies/{company}/addresses'
+    created = await client.post(base, headers=headers, json={
+        'address': 'Синтетическая улица, 1', 'city': 'Москва', 'region': 'Москва'})
+    assert created.status_code == 201, created.text
+    address_id = created.json()['id']
+    url = f'{base}/{address_id}'
+    editable = await client.patch(url, headers=headers, json={'address': 'Синтетическая улица, 2'})
+    assert editable.status_code == 200
+    need = Need(company_id=company, created_by_user_id=user, category='Строительство',
+                characteristics={'unit': 'шт'}, volume_units=100, deadline_date=date.today()+timedelta(days=10),
+                delivery_address_id=address_id, status='draft')
+    db_session.add(need)
+    await db_session.commit()
+    for field, value in [('address', 'Синтетическая улица, 3'), ('city', 'Тула'), ('region', 'Тульская область')]:
+        response = await client.patch(url, headers=headers, json={field: value})
+        assert response.status_code == 409, response.text
+    assert (await client.delete(url, headers=headers)).status_code == 409
+    unchanged = await client.patch(url, headers=headers, json={'address': 'Синтетическая улица, 2', 'is_default': True})
+    assert unchanged.status_code == 200
+    assert unchanged.json()['address'] == 'Синтетическая улица, 2'
+    assert unchanged.json()['is_default'] is True
+    assert (await client.patch(url, headers=headers, json={'city': None})).status_code == 422
+
+
+@pytest.mark.asyncio
 async def test_v3_exact_large_batch_complete_consent_and_immutable_snapshot(client,db_session):
     buyer_user=await make_user(db_session);buyer=await make_company(db_session,buyer_user,can_buy=True,can_sell=False)
     seller_user=await make_user(db_session);seller=await make_company(db_session,seller_user,can_buy=False,can_sell=True)
