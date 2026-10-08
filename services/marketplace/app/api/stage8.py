@@ -7,7 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..database import get_db
 from ..deps import CurrentUser, get_current_user, require_company_seller, require_membership
-from ..models import CapacityEntry, Deal, DealMessage, DealExecutionEvent, Product
+from ..models import CapacityEntry, Deal, DealMessage, DealExecutionEvent, Product, Need
 from ..commerce import execution_totals, financials
 from ..schemas import DealMessageIn, DealMessageOut, DealOut, SellerAnalyticsOut
 
@@ -31,6 +31,12 @@ async def seller_analytics(company_id: uuid.UUID, user: CurrentUser = Depends(ge
     for event in events:
         by_deal.setdefault(event.deal_id, []).append(event)
     totals = [(deal, execution_totals(deal, by_deal.get(deal.id, []))) for deal in deals]
+    from ..category_units import order_unit
+    needs=(await db.scalars(select(Need).where(Need.id.in_([deal.need_id for deal in deals])))).all() if deals else []
+    units={order_unit(need.characteristics) for need in needs}
+    capacity_units=set((await db.scalars(select(CapacityEntry.unit).where(CapacityEntry.company_id==company_id,CapacityEntry.date>=date.today()))).all())
+    if len(units)>1 or len(capacity_units)>1:
+        raise HTTPException(409,"Разные единицы нельзя суммировать. Используйте подробную коммерческую статистику и календарь мощности по единицам")
     sold_units = sum(item["net_units"] for _, item in totals)
     revenues = [financials(deal, item)["net_goods_revenue_rub"] for deal, item in totals]
     revenue = sum(revenues) if all(value is not None for value in revenues) else None

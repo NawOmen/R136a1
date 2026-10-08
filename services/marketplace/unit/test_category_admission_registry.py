@@ -21,7 +21,7 @@ class RegistryAdmissionTests(unittest.TestCase):
                 result = evaluate_admission(category=group["label"], subcategory="Несуществующая подкатегория", characteristics={}, documents=[])
                 self.assertEqual(result.state, "needs_classification")
                 self.assertEqual(result.blocking_open, 1)
-                self.assertEqual(result.rules_version, "categories-4")
+                self.assertEqual(result.rules_version, "categories-5")
 
     def test_registered_leaves_keep_existing_admission_behavior(self):
         for group in registry_snapshot()["groups"]:
@@ -39,7 +39,8 @@ class RegistryAdmissionTests(unittest.TestCase):
 
     def test_legacy_and_wrong_branch_do_not_get_new_permission(self):
         legacy = evaluate_admission(category="Крепёж", subcategory=None, characteristics={}, documents=[])
-        self.assertEqual(legacy.state, "not_configured")
+        self.assertEqual(legacy.state, "blocked")
+        self.assertGreater(legacy.blocking_open, 0)
         wrong = evaluate_admission(category="Строительство", subcategory="Металлы", characteristics={}, documents=[])
         self.assertEqual(wrong.blocking_open, 1)
         medicine = evaluate_admission(category="Медицинские изделия", subcategory=None, characteristics={}, documents=[])

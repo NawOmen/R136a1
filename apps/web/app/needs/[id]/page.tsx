@@ -5,6 +5,7 @@
 // создаётся сделка, потребность переходит в статус matched.
 
 import Link from "next/link";
+import ProfileRevisionPanel from "../../components/ProfileRevisionPanel";
 import NeedDraftEditor from "../../components/NeedDraftEditor";
 import { useParams } from "next/navigation";
 import { useEffect, useState } from "react";
@@ -217,6 +218,7 @@ export default function NeedDetailPage() {
         <section className="card">
           <h2>Черновик потребности</h2>
           {buyerCompany?.membership?.is_admin && <NeedDraftEditor key={`${need.id}:${need.revision}`} need={need} onSaved={setNeed} />}
+          {buyerCompany?.membership?.is_admin && <ProfileRevisionPanel kind="needs" id={need.id} revision={need.revision} draft={need.status === "draft"} onAdopted={async () => { const token = getToken(); if (token) setNeed(await marketplace.getNeed(token, need.id)); }} />}
           {buyerCompany?.verification_status === "verified" ? (
             <div className="actions">
               <button
@@ -332,7 +334,7 @@ export default function NeedDetailPage() {
                       Предложение #{offer.id.slice(0, 8)}
                     </div>
                     <div className="company-meta">
-                      Цена: {formatRub(offer.price_rub)} · Объём: {formatUnits(offer.available_units, itemUnit(need.characteristics))} ·
+                      Цена: {formatRub(offer.price_rub, 12)} · Объём: {formatUnits(offer.available_units, itemUnit(need.characteristics))} ·
                       MOQ: {formatUnits(offer.moq_units, itemUnit(need.characteristics))} · Логистика: {formatRub(offer.delivery_cost_rub)} ·
                       Срок: {offer.lead_time_days} дн. · Действует до: {offer.valid_until ?? "не ограничено"}
                     </div>

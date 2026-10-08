@@ -21,6 +21,7 @@ from .models import (
     Offer,
 )
 from .resources import occupies, reservations
+from .category_registry import resolve_category
 
 COMMON_KEYS = {
     "volume_ml",
@@ -49,8 +50,8 @@ def need_is_current(need: Need, today: date | None = None) -> bool:
 
 
 def order_unit(characteristics: dict | None) -> str:
-    value = str((characteristics or {}).get("unit") or (characteristics or {}).get("единица измерения") or "шт").strip().lower().rstrip(".") or "шт"
-    return "шт" if value in {"шт", "штука", "штуки", "штук"} else value
+    from .category_units import order_unit as canonical_order_unit
+    return canonical_order_unit(characteristics)
 
 
 def offer_unit_price(offer: Offer, volume_units: int) -> float:
@@ -77,10 +78,15 @@ def _canonical_json(value: object) -> str:
 
 def _need_parts(need: Need) -> tuple[dict, dict, dict, dict]:
     characteristics = need.characteristics or {}
+    from .category_compatibility import canonical_characteristics
+    normalized = canonical_characteristics(characteristics, (getattr(need,'category_profile',None) or {}).get('fields'))
+    characteristics = {key: (format(values[0].normalize(),'f') if hasattr(values[0], 'as_tuple') else values[0]) for key, values in normalized.items()}
     common = {key: order_unit(characteristics) if key == "unit" else characteristics[key] for key in sorted(characteristics)
               if key not in INDIVIDUAL_KEYS | HARD_KEYS | FLEXIBLE_KEYS}
     common.setdefault("unit", "шт")
     hard = {key: characteristics[key] for key in sorted(HARD_KEYS) if key in characteristics}
+    profile = getattr(need,"category_profile",None)
+    if profile: hard["category_profile_version"] = {"category_id":profile["category_id"],"version":profile["profile_version"]}
     flexible = {key: characteristics[key] for key in sorted(FLEXIBLE_KEYS) if key in characteristics}
     individual = {
         key: characteristics[key]
@@ -94,25 +100,46 @@ def _tokens(value: str) -> set[str]:
     return {item for item in re.findall(r"[а-яёa-z0-9]+", value.lower()) if len(item) > 2}
 
 
-def _passport_matches(passport: CapabilityPassport, category: str, common: dict) -> bool:
-    corpus = " ".join(
-        str(item)
-        for collection in (
-            passport.technologies,
-            passport.materials,
-            passport.completed_order_types,
-        )
-        for item in (collection or [])
-    ).lower()
-    category_tokens = _tokens(category)
-    material_values = " ".join(
-        str(value)
-        for key, value in common.items()
-        if key in {"body_material", "material", "inner_coating", "coating"}
-    ).lower()
-    return bool(category_tokens & _tokens(corpus)) or any(
-        token in corpus for token in _tokens(material_values)
-    )
+def _passport_matches(passport: CapabilityPassport, category: str, common: dict, subcategory=None, volume_units=None, *, category_profile=None) -> bool:
+    # Scoped declarations are authoritative for discovery; free text is only a legacy hint.
+    from .category_compatibility import canonical_characteristics
+    from .category_registry import registry_snapshot, normalize_label
+    scopes = (getattr(passport, 'details', None) or {}).get('category_scopes', [])
+    if scopes:
+        registry = registry_snapshot()
+        from .category_registry import resolve_category
+        resolved=resolve_category(category,subcategory)
+        from .category_profile_snapshot import profile_matches_leaf
+        if not profile_matches_leaf(category_profile, resolved) or not profile_matches_leaf(
+            common.get('category_profile_version'), resolved, version_key='version'
+        ):
+            return False
+        leaves=[resolved] if resolved else []
+        for scope in scopes:
+            leaf = next((leaf for leaf in leaves if leaf['id'] == scope['category_id']), None)
+            if leaf is None or scope.get('profile_version') != leaf['technical_profile']['version']: continue
+            if order_unit(common) != scope['unit']: continue
+            if volume_units is not None and (volume_units < scope.get('min_units',1) or (scope.get('max_units') is not None and volume_units > scope['max_units'])): continue
+            requested = canonical_characteristics(common)
+            allowed = scope.get('characteristics', {})
+            from .category_compatibility import canonical_key, canonical_value
+            from .category_compatibility import equal_value
+            admitted = {canonical_key(key):[canonical_value(canonical_key(key),option) for option in options] for key,options in allowed.items()}
+            requested = {key:values for key,values in requested.items() if key not in {'unit','category_profile_version'} | INDIVIDUAL_KEYS}
+            if all(key in admitted and all(any(equal_value(value,option) for option in admitted[key]) for value in values) for key,values in requested.items()): return True
+        return False
+    return False  # Legacy text remains descriptive, never confirmed category capability.
+
+
+
+def passport_scope_limits(passport,category,characteristics,subcategory=None):
+    from types import SimpleNamespace
+    scopes=(getattr(passport,'details',None) or {}).get('category_scopes',[])
+    matching=[scope for scope in scopes if _passport_matches(SimpleNamespace(details={'category_scopes':[scope]}),category,characteristics,subcategory)]
+    if not matching:return None,None
+    minimum=min(scope.get('min_units',1) for scope in matching)
+    maximum=None if any(scope.get('max_units') is None for scope in matching) else max(scope['max_units'] for scope in matching)
+    return minimum,maximum
 
 
 async def _active_needs(db: AsyncSession) -> list[Need]:
@@ -167,13 +194,12 @@ async def _has_direct_match(db: AsyncSession, need: Need) -> tuple[bool, str]:
     if offers:
         return False, "Предложения есть, но они не соблюдают объём, MOQ, бюджет или срок"
     passports = (
-        await db.execute(select(CapabilityPassport).where(CapabilityPassport.min_order_units.is_not(None)))
+        await db.execute(select(CapabilityPassport))
     ).scalars().all()
-    moqs = [
-        item.min_order_units
-        for item in passports
-        if item.min_order_units and _passport_matches(item, need.category, _need_parts(need)[0])
-    ]
+    moqs=[]
+    for item in passports:
+        minimum,_=passport_scope_limits(item,need.category,{**_need_parts(need)[0],**_need_parts(need)[1]},need.subcategory)
+        if minimum is not None:moqs.append(minimum)
     if moqs and min(moqs) > need.volume_units:
         return False, f"Не достигнут минимальный объём производителя (MOQ {min(moqs):,} {order_unit(need.characteristics)})".replace(",", " ")
     return False, "Пока нет выполнимого предложения от подходящего производителя"
@@ -183,7 +209,10 @@ async def _build_coalitions(db: AsyncSession, needs: list[Need]) -> None:
     groups: dict[tuple[str, str, str, str], list[Need]] = defaultdict(list)
     for need in needs:
         common, hard, _, _ = _need_parts(need)
-        groups[(need.category.strip().lower(), (need.subcategory or "").strip().lower(), _canonical_json(common), _canonical_json(hard))].append(need)
+        leaf = resolve_category(need.category, need.subcategory)
+        if leaf is None:
+            continue
+        groups[(leaf['parent_id'], leaf['id'], _canonical_json(common), _canonical_json(hard))].append(need)
 
     passports = (await db.execute(select(CapabilityPassport))).scalars().all()
     for (_, subtype, common_json, hard_json), members in groups.items():
@@ -195,15 +224,14 @@ async def _build_coalitions(db: AsyncSession, needs: list[Need]) -> None:
         compatible_passports = [
             item
             for item in passports
-            if _passport_matches(item, members[0].category, json.loads(common_json))
+            if _passport_matches(item, members[0].category, {**json.loads(common_json),**json.loads(hard_json)},members[0].subcategory,total_units)
             and item.company_id not in distinct_companies
-            and (item.min_order_units is None or total_units >= item.min_order_units)
-            and (item.max_order_units is None or total_units <= item.max_order_units)
         ]
         if not compatible_passports:
             continue
-        compatible_passports.sort(key=lambda item: (item.min_order_units or 0, str(item.company_id)))
+        compatible_passports.sort(key=lambda item: (passport_scope_limits(item,members[0].category,{**json.loads(common_json),**json.loads(hard_json)},members[0].subcategory)[0] or 0,str(item.company_id)))
         passport = compatible_passports[0]
+        target_moq,_=passport_scope_limits(passport,members[0].category,{**json.loads(common_json),**json.loads(hard_json)},members[0].subcategory)
         identity = {
             "need_ids": [str(item.id) for item in members],
             "producer_company_id": str(passport.company_id),
@@ -249,11 +277,11 @@ async def _build_coalitions(db: AsyncSession, needs: list[Need]) -> None:
                 producer_company_id=passport.company_id,
                 category=members[0].category,
                 combined_volume_units=total_units,
-                target_moq_units=passport.min_order_units,
+                target_moq_units=target_moq,
                 status="candidate",
                 explanation=[
                     "Общая производственная основа и жёсткие ограничения совпадают",
-                    f"Общий объём {total_units:,} {order_unit(members[0].characteristics)} достигает MOQ {passport.min_order_units or 0:,} {order_unit(members[0].characteristics)}".replace(",", " "),
+                    f"Общий объём {total_units:,} {order_unit(members[0].characteristics)} достигает MOQ {target_moq or 0:,} {order_unit(members[0].characteristics)}".replace(",", " "),
                     "Индивидуальная печать, упаковка и логистика будут рассчитаны отдельно",
                 ],
             )
@@ -284,16 +312,16 @@ async def _rebuild_opportunities(db: AsyncSession, needs: list[Need]) -> None:
     grouped: dict[tuple[str, str], list[Need]] = defaultdict(list)
     for need in needs:
         unit = order_unit(need.characteristics)
-        grouped[(need.category.strip().lower(), unit)].append(need)
+        grouped[((need.subcategory or need.category).strip().lower(), unit)].append(need)
 
     active_keys = set()
     for passport in passports:
         if passport.company_id not in verified:
             continue
         for (_, unit), category_needs in grouped.items():
-            category = category_needs[0].category
-            common = _need_parts(category_needs[0])[0]
-            if not _passport_matches(passport, category, common):
+            category = category_needs[0].subcategory or category_needs[0].category
+            category_needs = [item for item in category_needs if _passport_matches(passport,item.category,{**_need_parts(item)[0],**_need_parts(item)[1]},item.subcategory)]
+            if not category_needs:
                 continue
             total_demand = sum(item.volume_units for item in category_needs)
             buyer_count = len({item.company_id for item in category_needs})
@@ -348,19 +376,25 @@ async def _rebuild_opportunities(db: AsyncSession, needs: list[Need]) -> None:
                 CapacityEntry.company_id == passport.company_id,
                 CapacityEntry.date >= date.today(),
                 CapacityEntry.date <= max(item.deadline_date for item in category_needs),
-                CapacityEntry.category.in_(["", category]),
-                CapacityEntry.unit == unit,
             ))).all()
             held = await reservations(db, passport.company_id) if capacity_entries else []
-            recorded_capacity = sum(max(0, entry.available_units - sum(row.units for row in held
-                if row.capacity_entry_id == entry.id and occupies(row))) for entry in capacity_entries) if capacity_entries else None
+            from .resource_scopes import conversion_for, occupied_units
+            recorded_capacity = None
+            for entry in capacity_entries:
+                sample = category_needs[0]
+                conversion = conversion_for(entry,sample.category,sample.subcategory,unit)
+                if conversion is None: continue
+                if recorded_capacity is None:recorded_capacity=0
+                free = max(0,entry.available_units-sum(occupied_units(row) for row in held if row.capacity_entry_id==entry.id and occupies(row)))
+                recorded_capacity += free // conversion['resource_units_per_order_unit']
+            scope_min,scope_max=passport_scope_limits(passport,category_needs[0].category,{**_need_parts(category_needs[0])[0],**_need_parts(category_needs[0])[1]},category_needs[0].subcategory)
             capacity_limit = (
                 recorded_capacity
                 if recorded_capacity is not None
-                else passport.max_order_units
+                else scope_max
             )
             capacity_ok = (
-                (passport.min_order_units is None or total_demand >= passport.min_order_units)
+                (scope_min is None or total_demand >= scope_min)
                 and (capacity_limit is None or total_demand <= capacity_limit)
             )
             logistics_factor = 1 if passport.delivery_regions else 0.5
@@ -368,7 +402,7 @@ async def _rebuild_opportunities(db: AsyncSession, needs: list[Need]) -> None:
                 "confirmed_unmet_volume": volume_factor,
                 "share_without_feasible_offer": share_factor,
                 "passport_match": 1,
-                "moq_and_capacity": 1 if capacity_ok else 0.3,
+                "moq_and_capacity": 0.5 if recorded_capacity is None and capacity_ok else 1 if capacity_ok else 0.3,
                 "logistics": logistics_factor,
                 "competition_and_saturation": 1 - supply_ratio,
                 "data_quality": 1,
@@ -394,6 +428,7 @@ async def _rebuild_opportunities(db: AsyncSession, needs: list[Need]) -> None:
                 "Расчёт не является гарантией продаж или прибыли",
             ]
             opportunity.missing_data = ["Себестоимость и целевая маржа производителя"]
+            if recorded_capacity is None:opportunity.missing_data.append("Нет подтверждённого календаря мощности этой категории и единицы")
             opportunity.status = "active"
 
     existing = (await db.execute(select(MarketOpportunity))).scalars().all()

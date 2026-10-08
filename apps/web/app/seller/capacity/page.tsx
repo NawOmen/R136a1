@@ -6,7 +6,7 @@
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { getToken } from "../../lib/api";
-import { ApiError, CapacityEntry, formatUnits, marketplace, PRODUCT_CATEGORIES } from "../../lib/marketplace";
+import { ApiError, CapacityEntry, formatUnits, marketplace } from "../../lib/marketplace";
 import { useCompanySelector } from "../../lib/useMe";
 
 const DAYS_COUNT = 30;
@@ -44,6 +44,15 @@ export default function SellerCapacityPage() {
   const [allEntries, setAllEntries] = useState<CapacityEntry[]>([]);
   const [scopeCategory, setScopeCategory] = useState("");
   const [scopeUnit, setScopeUnit] = useState("шт");
+  const [conversions, setConversions] = useState<NonNullable<CapacityEntry["category_conversions"]>>([]);
+  const [conversionApproved, setConversionApproved] = useState(false);
+  const [leafOptions, setLeafOptions] = useState<{id:string;label:string}[]>([]);
+  useEffect(() => {
+    let active=true;
+    marketplace.getCategoryRegistry().then(data => {if(active)setLeafOptions(data.groups.flatMap(group=>group.leaves.filter(leaf=>leaf.admission_state!=="unsupported").map(leaf=>({id:leaf.id,label:group.label+" / "+leaf.label}))));})
+      .catch(err=>{if(active)setError(err instanceof Error?err.message:"Не удалось загрузить категории.");});
+    return ()=>{active=false;};
+  }, []);
   const [loaded, setLoaded] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
@@ -77,6 +86,7 @@ export default function SellerCapacityPage() {
   useEffect(() => {
     const scoped = allEntries.filter(entry => entry.category === scopeCategory && entry.unit === scopeUnit);
     setValues(Object.fromEntries(scoped.filter(entry => dates.includes(entry.date)).map(entry => [entry.date, String(entry.available_units)])));
+    setConversions(scoped[0]?.category_conversions ?? []); setConversionApproved(false);
     setReserved(Object.fromEntries(scoped.map(entry => [entry.date, entry.reserved_units ?? 0])));
   }, [allEntries, scopeCategory, scopeUnit, dates]);
 
@@ -95,8 +105,10 @@ export default function SellerCapacityPage() {
         category: scopeCategory,
         unit,
         available_units: Number(values[date] || 0),
+        category_conversions: scopeCategory ? [] : conversions, conversions_approved: conversionApproved,
       }));
       if (entries.some(entry=>!Number.isSafeInteger(entry.available_units) || entry.available_units < 0)) throw new Error("Укажите целое количество единиц для каждого дня.");
+      if(!scopeCategory && conversions.length && !conversionApproved) throw new Error("Проверьте и подтвердите коэффициенты для каждого дня календаря.");
       await marketplace.updateCapacity(token, company.id, entries);
       const updated = await marketplace.getCapacity(token, company.id);
       setScopeUnit(unit);
@@ -169,9 +181,20 @@ export default function SellerCapacityPage() {
       {error && <div className="alert alert-error">{error}</div>}
 
       <div className="form-grid card">
-        <div className="field"><label htmlFor="capacity-category">Категория ресурса</label><select id="capacity-category" value={scopeCategory} disabled={saving} onChange={event => { setScopeCategory(event.target.value); setSaved(false); }}><option value="">Общий ресурс для выбранной единицы</option>{PRODUCT_CATEGORIES.map(item => <option key={item} value={item}>{item}</option>)}</select></div>
-        <div className="field"><label htmlFor="capacity-unit">Единица измерения</label><input id="capacity-unit" value={scopeUnit} maxLength={32} disabled={saving} onChange={event => { setScopeUnit(event.target.value); setSaved(false); }} /></div>
-        <p className="hint">Отдельная категория доступна только для заказов этой категории. Общий ресурс делят все категории с той же единицей измерения; занятый объём учитывается совместно.</p>
+        <div className="field"><label htmlFor="capacity-category">Категория ресурса</label><select id="capacity-category" value={scopeCategory} disabled={saving} onChange={event => { setScopeCategory(event.target.value); setSaved(false); }}><option value="">Общий ресурс с явными коэффициентами</option>{leafOptions.map(item => <option key={item.id} value={item.id}>{item.label}</option>)}</select></div>
+        <div className="field"><label htmlFor="capacity-unit">Единица измерения</label><input id="capacity-unit" value={scopeUnit} maxLength={32} disabled={saving} onChange={event => { setScopeUnit(event.target.value); setSaved(false); setConversionApproved(false); }} /></div>
+        <p className="hint">Отдельный ресурс относится к одной подкатегории и единице. Общий ресурс распределяется только по подтверждённым коэффициентам; каждый день — отдельный период. Занятое считается в единице ресурса. Для дробных физических заказов используйте единицу хранения: г, мм, см² или мл. Например 2,5 кг — 2500 г; 0,5 часа ресурса — 30 мин.</p>
+        {!scopeCategory && <div className="field"><h3>Расход общего ресурса</h3>
+          {conversions.map((item,index)=><div key={index}>
+            <label>Подкатегория<select value={item.category_id} disabled={saving} onChange={event=>{setConversions(previous=>previous.map((value,i)=>i===index?{...value,category_id:event.target.value}:value));setConversionApproved(false);}}><option value="">Выберите</option>{leafOptions.map(leaf=><option key={leaf.id} value={leaf.id}>{leaf.label}</option>)}</select></label>
+            <label>Единица заказа<input value={item.order_unit} disabled={saving} onChange={event=>{setConversions(previous=>previous.map((value,i)=>i===index?{...value,order_unit:event.target.value}:value));setConversionApproved(false);}} /></label>
+            <label>Расход {scopeUnit} на одну единицу заказа<input type="number" min={1} step={1} value={item.resource_units_per_order_unit} disabled={saving} onChange={event=>{setConversions(previous=>previous.map((value,i)=>i===index?{...value,resource_units_per_order_unit:Number(event.target.value)}:value));setConversionApproved(false);}} /></label>
+            <button type="button" disabled={saving} onClick={()=>{setConversions(previous=>previous.filter((_,i)=>i!==index));setConversionApproved(false);}}>Удалить коэффициент</button>
+          </div>)}
+          <button type="button" disabled={saving} onClick={()=>{setConversions(previous=>[...previous,{category_id:"",order_unit:"шт",resource_units_per_order_unit:1}]);setConversionApproved(false);}}>Добавить категорию</button>
+          <p className="hint">Расход задаётся целым числом в выбранной меньшей единице ресурса, без округления. Для 0,5 часа используйте 30 минут. Коэффициенты относятся ко всем показанным дням; прежние резервы сохраняют свои условия.</p>
+          {!!conversions.length && <label><input type="checkbox" checked={conversionApproved} disabled={saving} onChange={event=>setConversionApproved(event.target.checked)} /> Коэффициенты и дни календаря проверены</label>}
+        </div>}
       </div>
 
       <section className="card">

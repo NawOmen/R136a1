@@ -22,9 +22,18 @@ async def seed_assortment(db):
         if row is None:
             continue
         company_id, user_id = row
+        items = ASSORTMENT if seller_index == 0 else [ASSORTMENT[i] for i in (3, 9, 16)]
+        from app.category_registry import resolve_category
+        from app.category_units import order_unit
+        scopes = []
+        for _, _, category, subcategory, _, attributes, _, moq, stock, _ in items:
+            leaf = resolve_category(category, subcategory)
+            scopes.append({"category_id":leaf["id"], "profile_version":leaf["technical_profile"]["version"],
+                           "unit":order_unit(attributes), "min_units":moq, "max_units":stock,
+                           "characteristics":{key:[value] for key,value in attributes.items() if key != "unit"}})
         if await db.get(CapabilityPassport, company_id) is None:
             db.add(CapabilityPassport(company_id=company_id, details={
-                "business_kind": "stock_supplier", "product_types": "Товары для снабжения бизнеса",
+                "category_scopes": scopes, "business_kind": "stock_supplier", "product_types": "Товары для снабжения бизнеса",
                 "delivery": "Самовывоз; стоимость перевозчика согласовывается отдельно",
                 "limitations": "Точные характеристики и доступность указаны в карточке товара",
             }, technologies=[], materials=[], equipment=[], certifications=[], size_ranges={},

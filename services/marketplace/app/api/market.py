@@ -259,7 +259,9 @@ async def publish_group_offer(
                 category=need.category,
                 subcategory=need.subcategory,
                 characteristics=need.characteristics,
+                category_profile=need.category_profile,
                 moq_units=need.volume_units,
+                volume_units=sum(item.units for item in members),
                 label=f"потребность {need.id}",
             )
             for need in member_needs.values()
@@ -478,7 +480,9 @@ async def decide_coalition(
                     category=need.category,
                     subcategory=need.subcategory,
                     characteristics=need.characteristics,
+                    category_profile=need.category_profile,
                     moq_units=need.volume_units,
+                    volume_units=sum(item.units for item in members),
                     label=f"потребность {need.id}",
                 )
                 for need in member_needs.values()
@@ -505,6 +509,7 @@ async def decide_coalition(
         await reserve(db, company_id=group_offer.company_id, anchor_type="coalition", anchor_id=coalition.id,
                       units=sum(item.units for item in members), start=group_offer.production_start,
                       deadline=group_offer.production_end, category=coalition.category,
+                      subcategory=next(iter(member_needs.values())).subcategory,
                       unit=order_unit(next(iter(member_needs.values())).characteristics))
         await append_audit_event(
             db,

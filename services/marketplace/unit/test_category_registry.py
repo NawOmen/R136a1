@@ -25,8 +25,8 @@ class CategoryRegistryTests(unittest.TestCase):
         self.assertEqual(len(groups), 12)
         self.assertEqual(len(leaves), 47)
         self.assertEqual(len({leaf["id"] for leaf in leaves}), 47)
-        self.assertTrue(all(leaf["functional_state"] == "classification_only" for leaf in leaves))
-        self.assertTrue(all("S01.02" in leaf["next_tasks"] and "S15.01" in leaf["next_tasks"] for leaf in leaves))
+        self.assertTrue(all(leaf["functional_state"] == "profile_ready" for leaf in leaves))
+        self.assertTrue(all("S02.03" in leaf["next_tasks"] and "S15.01" in leaf["next_tasks"] for leaf in leaves))
 
     def test_every_parent_leaf_pair_resolves_and_legacy_names_are_supported(self):
         for group in registry.registry_snapshot()["groups"]:

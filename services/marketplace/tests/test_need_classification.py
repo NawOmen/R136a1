@@ -2,8 +2,8 @@ from datetime import date, timedelta
 
 from sqlalchemy import select
 
-from conftest import make_company, make_token, make_user
-from app.models import CapabilityPassport, Coalition, Need, Product
+from conftest import make_company, make_token, make_user, grant_category_capability, make_marketplace_admin
+from app.models import CapabilityPassport, Coalition, Need, Product, Document
 
 
 def auth(token):
@@ -50,9 +50,13 @@ async def test_explicit_parent_child_order_keeps_approval_and_category_admission
     buyer_user = await make_user(db_session)
     buyer = await make_company(db_session, buyer_user, can_buy=True, can_sell=False)
     seller_auth, buyer_auth = auth(make_token(seller_user)), auth(make_token(buyer_user))
+    attributes={"unit":"шт","thread":"М8","material":"сталь","standard":"СИН-Б8","product_kind":"болт","diameter_mm":8,"length_mm":40}
+    from datetime import datetime,timezone
+    db_session.add(Document(company_id=seller,name="Синтетическая проверка спецификации",document_type="specification_review",file_key="synthetic/fastener",content_type="text/plain",verification_status="verified",scope_category="Строительство",scope_subcategory="Крепёж",confirms={key:[value] for key,value in attributes.items()},verified_by_user_id=await make_marketplace_admin(db_session),verified_at=datetime.now(timezone.utc),valid_until=date.today()+timedelta(days=30)))
+    await db_session.commit()
     response = await client.post(f"/api/v1/companies/{seller}/products", headers=seller_auth, json={
         "name": "Синтетический болт М8", "category": "Строительство", "subcategory": "Крепёж",
-        "characteristics": {"unit": "шт", "thread": "М8"}, "price_rub": 10,
+        "characteristics": attributes, "price_rub": 10,
         "moq_units": 1, "lead_time_days": 1, "stock_units": 500,
     })
     assert response.status_code == 201, response.text
@@ -61,7 +65,7 @@ async def test_explicit_parent_child_order_keeps_approval_and_category_admission
     assert response.status_code == 200, response.text
     response = await client.post("/api/v1/needs", headers=buyer_auth, json={
         "company_id": str(buyer), "category": "Строительство", "subcategory": "Крепёж",
-        "characteristics": {"unit": "шт", "thread": "М8"}, "volume_units": 100,
+        "characteristics": attributes, "volume_units": 100,
         "budget_rub": 5000, "deadline_date": (date.today()+timedelta(days=30)).isoformat(),
     })
     assert response.status_code == 201, response.text
@@ -83,8 +87,7 @@ async def test_explicit_parent_child_order_keeps_approval_and_category_admission
 async def test_different_subcategories_are_not_combined_in_coalition(client, db_session):
     seller_user = await make_user(db_session)
     seller = await make_company(db_session, seller_user, can_buy=False, can_sell=True)
-    db_session.add(CapabilityPassport(company_id=seller, technologies=["Строительство"], min_order_units=1000))
-    await db_session.commit()
+    await grant_category_capability(db_session,seller,"construction.fasteners",{},min_units=1000)
     for subtype in ("Крепёж", "Инструмент"):
         user = await make_user(db_session)
         buyer = await make_company(db_session, user, can_buy=True, can_sell=False)
@@ -103,8 +106,8 @@ def test_catalog_classification_does_not_bypass_regulated_or_unknown_subtypes():
     from app.category_admission import evaluate_admission
     known = evaluate_admission(category="Строительство", subcategory="Крепёж", characteristics={}, documents=[])
     legacy = evaluate_admission(category="Крепёж", subcategory=None, characteristics={}, documents=[])
-    assert known.state == legacy.state == "not_configured"
-    assert known.blocking_open == legacy.blocking_open == 0
+    assert known.state == legacy.state == "blocked"
+    assert known.blocking_open > 0 and legacy.blocking_open > 0
     for category, subtype in [("Строительство", "Выдуманный вид"), ("Медицина и гигиена", "Расходные материалы"), ("Продукты питания", "Напитки")]:
         report = evaluate_admission(category=category, subcategory=subtype, characteristics={}, documents=[])
         assert report.blocking_open > 0

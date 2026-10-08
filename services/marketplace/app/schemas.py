@@ -2,7 +2,7 @@ import uuid
 from datetime import date, datetime
 from typing import Any, Literal
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
+from pydantic import BaseModel, ConfigDict, Field, JsonValue, field_validator, model_validator
 
 from .category_characteristics import validate_profile_values
 
@@ -105,6 +105,7 @@ class ProductRules(BaseModel):
 
 
 class ProductOut(BaseModel):
+    quantity_conversion: dict | None = None
     model_config = ConfigDict(from_attributes=True)
 
     id: uuid.UUID
@@ -260,11 +261,20 @@ class SellerAnalyticsOut(BaseModel):
 
 # ---------- Мощности ----------
 
+class CapacityConversion(BaseModel):
+    category_id: str = Field(min_length=1, max_length=120)
+    order_unit: str = Field(min_length=1, max_length=32)
+    resource_units_per_order_unit: int = Field(gt=0, le=2147483647, strict=True)
+    profile_version: int = Field(default=0, ge=0)
+
+
 class CapacityEntryIn(BaseModel):
+    category_conversions: list[CapacityConversion] = Field(default_factory=list,max_length=47)
+    conversions_approved: bool = False
     date: date
     category: str = Field(default="", max_length=120)
     unit: str = Field(default="шт", min_length=1, max_length=32)
-    available_units: int = Field(ge=0)
+    available_units: int = Field(ge=0, le=2147483647)
 
     @field_validator("category")
     @classmethod
@@ -277,7 +287,8 @@ class CapacityEntryIn(BaseModel):
         value = value.strip().lower().rstrip(".")
         if not value:
             raise ValueError("Укажите единицу измерения")
-        return "шт" if value in {"шт", "штука", "штуки", "штук"} else value
+        from .category_units import canonical_unit
+        return canonical_unit(value)
 
 
 class CapacityEntryOut(CapacityEntryIn):
@@ -421,11 +432,30 @@ class AdmissionChecklistOut(BaseModel):
 
 # ---------- Capability Passport ----------
 
+class CategoryCapability(BaseModel):
+    category_id: str
+    unit: str = "шт"
+    characteristics: dict[str, list[JsonValue]] = Field(default_factory=dict)
+    min_units: int = Field(default=1, gt=0)
+    max_units: int | None = Field(default=None, gt=0)
+    profile_version: int = 0
+
+    @model_validator(mode="after")
+    def validate_scope(self):
+        from .category_units import canonical_unit
+        self.unit = canonical_unit(self.unit)
+        if self.max_units is not None and self.max_units < self.min_units: raise ValueError("Максимум не может быть меньше минимума")
+        if len(self.characteristics) > 25 or any(not values or any(value is None or (isinstance(value,str) and not value.strip()) for value in values) for values in self.characteristics.values()):
+            raise ValueError("Для каждого ограничения укажите непустые допустимые значения")
+        return self
+
+
 class CapabilityDetails(BaseModel):
     """Ограниченный структурированный контекст производителя или поставщика."""
 
     model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
     business_kind: Literal["manufacturer", "stock_supplier", "both"] = "manufacturer"
+    category_scopes: list[CategoryCapability] = Field(default_factory=list,max_length=100)
     product_types: str = Field(default="", max_length=1200)
     complexity: str = Field(default="", max_length=1200)
     material_grades: str = Field(default="", max_length=800)

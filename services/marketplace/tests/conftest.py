@@ -18,7 +18,7 @@ AUTH_DDL_STATEMENTS = [
     " id UUID PRIMARY KEY, last_name VARCHAR(120) NOT NULL, first_name VARCHAR(120) NOT NULL,"
     " middle_name VARCHAR(120), email VARCHAR(255) NOT NULL UNIQUE, password_hash VARCHAR(255) NOT NULL,"
     " phone VARCHAR(40), account_status VARCHAR(16) NOT NULL DEFAULT 'active',"
-    " is_marketplace_admin BOOLEAN NOT NULL DEFAULT false, created_at TIMESTAMPTZ NOT NULL DEFAULT now(),"
+    " is_category_editor BOOLEAN NOT NULL DEFAULT false, is_marketplace_admin BOOLEAN NOT NULL DEFAULT false, created_at TIMESTAMPTZ NOT NULL DEFAULT now(),"
     " updated_at TIMESTAMPTZ NOT NULL DEFAULT now())",
     "CREATE TABLE IF NOT EXISTS auth.companies ("
     " id UUID PRIMARY KEY, full_name VARCHAR(255) NOT NULL, display_name VARCHAR(255) NOT NULL,"
@@ -38,7 +38,7 @@ AUTH_DDL_STATEMENTS = [
 TRUNCATE = """
 TRUNCATE
   auth.company_members, auth.companies, auth.users,
-  marketplace.market_watches, marketplace.product_price_observations,
+  marketplace.category_registry_revisions, marketplace.market_watches, marketplace.product_price_observations,
   marketplace.deal_reviews, marketplace.delivery_arrangements, marketplace.deal_checkpoints,
   marketplace.support_tickets, marketplace.human_approval_records, marketplace.trust_audit_events,
   marketplace.resilience_events, marketplace.resilience_scenarios,
@@ -116,7 +116,9 @@ async def client(session_factory):
 
     async def override_get_db():
         async with session_factory() as session:
-            yield session
+            from app.category_runtime import current_registry_context
+            async with current_registry_context(session):
+                yield session
 
     app.dependency_overrides[get_db] = override_get_db
     transport = ASGITransport(app=app)
@@ -247,8 +249,29 @@ async def grant_packaging_documents(
     return created
 
 
-async def grant_capacity(db_session, company_id, units, day=None):
+async def grant_capacity(db_session, company_id, units, day=None, *, category_id="packaging.paper-cups", unit="шт"):
     """Explicit physical capacity for tests that create binding obligations."""
     from app.models import CapacityEntry
-    db_session.add(CapacityEntry(company_id=company_id, date=day or datetime.now(timezone.utc).date(), available_units=units))
+    from app.resource_scopes import prepare_conversions
+    conversions=prepare_conversions([{"category_id":category_id,"order_unit":unit,"resource_units_per_order_unit":1}],True)
+    db_session.add(CapacityEntry(company_id=company_id, date=day or datetime.now(timezone.utc).date(), unit=unit,
+                                 category_conversions=conversions,available_units=units))
+    await db_session.commit()
+
+
+async def grant_category_capability(db_session,company_id,category_id,characteristics,*,unit='шт',min_units=1,max_units=None):
+    """Explicit synthetic producer declaration; never substitutes document review."""
+    from app.models import CapabilityPassport
+    from app.resource_scopes import find_leaf
+    leaf=find_leaf(category_id)
+    assert leaf is not None
+    scope={'category_id':category_id,'unit':unit,'profile_version':leaf['technical_profile']['version'],
+           'min_units':min_units,'max_units':max_units,'characteristics':{key:[value] for key,value in characteristics.items()}}
+    passport=await db_session.get(CapabilityPassport,company_id)
+    if passport is None:
+        passport=CapabilityPassport(company_id=company_id,details={'business_kind':'manufacturer','category_scopes':[scope]},
+            technologies=[],materials=[],equipment=[],certifications=[],size_ranges={},delivery_regions=['Москва'],completed_order_types=[])
+        db_session.add(passport)
+    else:
+        passport.details={**(passport.details or {}),'category_scopes':[scope]}
     await db_session.commit()

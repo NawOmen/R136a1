@@ -11,6 +11,7 @@ from sqlalchemy import or_, select
 
 from .models import CapacityEntry, Product, ResourceReservation
 from sqlalchemy import text
+from .resource_scopes import conversion_for, occupied_units, resize_reservation
 
 
 async def lock_company(db, company_id):
@@ -32,7 +33,7 @@ async def free_stock(db, product, rows=None):
     return max(0, (product.stock_units or 0) - sum(row.units for row in rows if row.product_id == product.id and occupies(row, stock=True)))
 
 
-async def reserve(db, *, company_id, anchor_type, anchor_id, units, deadline, resource_kind="capacity", product_id=None, expires_at=None, start=None, category="", unit="шт"):
+async def reserve(db, *, company_id, anchor_type, anchor_id, units, deadline, resource_kind="capacity", product_id=None, expires_at=None, start=None, category="", subcategory=None, unit="шт"):
     await lock_company(db, company_id)
     rows = await reservations(db, company_id)
     previous = [row for row in rows if row.anchor_type == anchor_type and row.anchor_id == anchor_id]
@@ -60,15 +61,16 @@ async def reserve(db, *, company_id, anchor_type, anchor_id, units, deadline, re
             CapacityEntry.company_id == company_id,
             CapacityEntry.date >= max(date.today(), start or date.today()),
             CapacityEntry.date <= deadline,
-            CapacityEntry.unit == unit,
-            or_(CapacityEntry.category == category, CapacityEntry.category == ""),
         ).order_by(CapacityEntry.date, CapacityEntry.category.desc()))).all())
         remaining = units
         for entry in entries:
-            occupied = sum(row.units for row in rows if row.capacity_entry_id == entry.id and occupies(row))
-            take = min(remaining, max(0, entry.available_units - occupied))
+            conversion = conversion_for(entry,category,subcategory,unit)
+            if conversion is None: continue
+            coefficient = conversion["resource_units_per_order_unit"]
+            occupied = sum(occupied_units(row) for row in rows if row.capacity_entry_id == entry.id and occupies(row))
+            take = min(remaining, max(0, entry.available_units - occupied) // coefficient)
             if take:
-                allocation.append(ResourceReservation(company_id=company_id, anchor_type=anchor_type, anchor_id=anchor_id, capacity_entry_id=entry.id, units=take, status=state, expires_at=expires_at))
+                allocation.append(ResourceReservation(company_id=company_id, anchor_type=anchor_type, anchor_id=anchor_id, capacity_entry_id=entry.id, units=take, resource_units=take*coefficient, resource_conversion=conversion, status=state, expires_at=expires_at))
                 remaining -= take
             if not remaining: break
         if remaining:
@@ -87,7 +89,7 @@ async def release(db, *, company_id, anchor_type, anchor_id, units=None):
         if take == row.units:
             row.status = "released"
         elif take:
-            row.units -= take
+            resize_reservation(row,row.units-take)
         remaining -= take
         if not remaining: break
     await db.flush()
@@ -118,7 +120,7 @@ async def activate_hold(db, *, company_id, anchor_id, units):
     for row in held:
         take = min(remaining, row.units)
         if take:
-            row.units = take
+            resize_reservation(row,take)
             row.status, row.expires_at = "committed", None
             remaining -= take
         else:

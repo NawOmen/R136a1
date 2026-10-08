@@ -1,6 +1,7 @@
-from conftest import grant_capacity
+from conftest import grant_capacity,grant_category_capability
 from datetime import date, timedelta
 from itertools import combinations
+import pytest
 from uuid import UUID
 
 from app.models import Need, Offer, OptimizationVariantRecord, ResiliencePlan
@@ -50,8 +51,9 @@ async def fake_resilience(payload):
     }
 
 
+@pytest.mark.parametrize("automatic", [False, True])
 async def test_resilience_plan_privacy_confirmation_simulation_and_failure(
-    client, db_session, monkeypatch
+    client, db_session, monkeypatch, automatic
 ):
     monkeypatch.setattr("app.api.resilience.calculate_resilience", fake_resilience)
     buyer_user = await make_user(db_session)
@@ -65,13 +67,15 @@ async def test_resilience_plan_privacy_confirmation_simulation_and_failure(
     reserve_token = make_token(reserve_user)
     await grant_capacity(db_session, reserve, 5_000)
     # Резерв — обязательство: у компании резерва должны быть подтверждённые документы.
-    await grant_packaging_documents(db_session, reserve, decision_user_id=reserve_user)
+    await grant_packaging_documents(db_session, reserve, decision_user_id=reserve_user,confirms={"material":["крафт-картон"]})
+
+    for supplier in (primary,reserve):await grant_category_capability(db_session,supplier,"packaging.paper-cups",{"volume_ml":400,"material":"крафт-картон"})
 
     need = Need(
         company_id=buyer,
         created_by_user_id=buyer_user,
         category="бумажные стаканы",
-        characteristics={"volume_ml": 400},
+        characteristics={"volume_ml": 400,"material":"крафт-картон"},
         volume_units=5_000,
         budget_rub=100_000,
         deadline_date=date.today() + timedelta(days=30),
@@ -94,7 +98,7 @@ async def test_resilience_plan_privacy_confirmation_simulation_and_failure(
         )
     )
     await grant_capacity(db_session, primary, 5_000)
-    await grant_packaging_documents(db_session, primary, decision_user_id=primary_user)
+    await grant_packaging_documents(db_session, primary, decision_user_id=primary_user,confirms={"material":["крафт-картон"]})
     db_session.add(Offer(need_id=need.id, company_id=primary, created_by_user_id=primary_user,
         price_rub=10, available_units=5_000, lead_time_days=10, delivery_cost_rub=2_000,
         moq_units=1_000, price_tiers=[], status="sent"))
@@ -123,7 +127,7 @@ async def test_resilience_plan_privacy_confirmation_simulation_and_failure(
 
     created = await client.post(
         f"/api/v1/needs/{need.id}/resilience-plans",
-        json={"variant_id": str(variant.id), "max_price_increase_pct": 5, "max_delay_days": 2},
+        json={"variant_id": str(variant.id), "max_price_increase_pct": 25, "max_delay_days": 2, "auto_replace_within_thresholds":automatic},
         headers=auth(buyer_token),
     )
     assert created.status_code == 201
@@ -176,12 +180,21 @@ async def test_resilience_plan_privacy_confirmation_simulation_and_failure(
     )
     assert obligations.status_code == 200
     assert obligations.json()[0]["allocation"]["units"] == 5_000
+    if automatic:
+        async def covered(payload):
+            result = await fake_resilience(payload)
+            for scenario in result['scenarios']:
+                scenario.update(replacement_allocations=[{'company_id':str(reserve),'units':5000,'unit_price_rub':12,'delivery_cost_rub':2000,'total_cost_rub':62000,'lead_time_days':8}],
+                    new_total_cost_rub=62000,new_lead_time_days=8,uncovered_units=0,confirmed_covered_units=5000,
+                    auto_eligible=True,requires_human_approval=False)
+            return result
+        monkeypatch.setattr("app.api.resilience.calculate_resilience",covered)
     failed = await client.post(
         f"/api/v1/resilience-plans/{plan['id']}/failures",
         json={"company_id": str(primary), "reason": "Синтетическая поломка линии"},
         headers=auth(primary_token),
     )
     assert failed.status_code == 200
-    assert failed.json()["status"] == "partially_covered"
+    assert failed.json()["status"] == ("recovered" if automatic else "partially_covered")
     stored = await db_session.get(ResiliencePlan, UUID(plan["id"]))
     assert stored.failed_company_ids == [str(primary)]

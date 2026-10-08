@@ -26,13 +26,23 @@ DETAILS = {
     "trial_batch": "Непечатные образцы по запросу; цена и срок согласуются отдельно",
 }
 
+def synthetic_scopes():
+    from app.category_registry import resolve_category
+    leaf = resolve_category("Упаковка и тара", "Бумажные стаканы")
+    return [{"category_id": leaf["id"], "profile_version": leaf["technical_profile"]["version"],
+             "unit": "шт", "min_units": 5000, "max_units": 50000,
+             "characteristics": {"material": ["крафт-картон 300 г/м²"], "coating": ["PE"],
+                                 "volume_ml": [350,400], "food_contact": [True]}}]
+
+
 BUYER_COMPANY_NAME = "ООО «Вектор Снабжения»"
 SELLER_COMPANY_NAME = "ООО «Урал Комплект»"
 SELLER_USER_EMAIL = os.getenv("SEED_SELLER_EMAIL", "seller@demo.ru")
 
 
 async def seed() -> None:
-    async with SessionLocal() as db:
+    from app.category_runtime import current_registry_context
+    async with SessionLocal() as db, current_registry_context(db):
         seller_row = (
             await db.execute(
                 text("SELECT id FROM auth.companies WHERE display_name = :name"),
@@ -88,16 +98,12 @@ async def seed() -> None:
             )
 
         passport = await db.get(CapabilityPassport, seller_company_id)
-        if passport is not None and not passport.details:
-            # Паспорта, созданные до появления структурированных сведений, остаются
-            # пустыми: без вида деятельности черновик КП не учитывает остаток склада.
-            passport.details = DETAILS
         if passport is None:
             db.add(
                 CapabilityPassport(
                     company_id=seller_company_id,
                     technologies=["высечка бумажных стаканов", "ламинирование PE-покрытием"],
-                    details=DETAILS,
+                    details={**DETAILS, "category_scopes": synthetic_scopes()},
                     equipment=["высекальный пресс", "флексопечатная машина"],
                     materials=["крафт-картон 260–320 г/м²"],
                     size_ranges={"cup_volume_ml": [150, 600]},
@@ -127,7 +133,7 @@ async def seed() -> None:
                     moq_units=20000,
                     lead_time_days=9,
                     stock_units=12000,
-                    is_published=True,
+                    is_published=False,
                 )
             )
             db.add(
@@ -136,11 +142,11 @@ async def seed() -> None:
                     created_by_user_id=user_id,
                     name="Стакан 350 мл PE",
                     category="бумажные стаканы",
-                    characteristics={"volume_ml": 350, "coating": "PE"},
+                    characteristics={"volume_ml": 350, "coating": "PE", "material": "крафт-картон 300 г/м²"},
                     price_rub=10.5,
                     moq_units=15000,
                     lead_time_days=8,
-                    is_published=True,
+                    is_published=False,
                 )
             )
 

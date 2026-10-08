@@ -62,7 +62,7 @@ async def test_full_flow(client, db_session):
     # продавец отвечает предложением
     r = await client.post(
         f"/api/v1/needs/{need_id}/offers",
-        json={"company_id": str(seller_company), "price_rub": 11.0, "available_units": 120000, "lead_time_days": 9, "delivery_cost_rub": 10000},
+        json={"company_id": str(seller_company), "product_id":product_id, "price_rub": 11.0, "available_units": 120000, "lead_time_days": 9, "delivery_cost_rub": 10000},
         headers=_auth(seller_token),
     )
     assert r.status_code == 201

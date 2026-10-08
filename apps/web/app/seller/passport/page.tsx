@@ -4,6 +4,7 @@
 // Массивы вводятся построчно (каждая строка = элемент), size_ranges — min/max.
 
 import Link from "next/link";
+import CategoryCapabilitiesEditor from "../../components/CategoryCapabilitiesEditor";
 import { FormEvent, useEffect, useState } from "react";
 import { getToken } from "../../lib/api";
 import { ApiError, marketplace, CapabilityDetails } from "../../lib/marketplace";
@@ -187,6 +188,7 @@ export default function SellerPassportPage() {
               <option value="both">Производство и склад</option>
             </select>
           </div>
+          <CategoryCapabilitiesEditor value={details.category_scopes ?? []} disabled={saving} onChange={scopes=>setDetails({...details,category_scopes:scopes})} />
           {CAPABILITY_FIELDS.map((field) => <div className="field" key={field.key}>
             <label htmlFor={field.key}>{field.label}</label>
             <textarea id={field.key} value={details[field.key]} maxLength={field.max} placeholder={field.example} onChange={(event) => setDetails({ ...details, [field.key]: event.target.value })} />

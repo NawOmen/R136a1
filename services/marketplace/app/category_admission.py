@@ -17,11 +17,11 @@ from dataclasses import dataclass, field
 from datetime import date, datetime, timezone
 
 from .category_tree import CATALOG_TREE
-from .category_registry import resolve_category
+from .category_registry import resolve_category,registry_snapshot
 from .experience import validate_characteristics
 from .models import Document
 
-RULES_VERSION = "categories-4"
+RULES_VERSION = "categories-5"
 
 # Статусы документа и требования для продавца и покупателя.
 STATE_LABELS = {
@@ -326,8 +326,27 @@ PROFILES: tuple[CategoryProfile, ...] = (
 )
 
 
-def match_profile(category: str, subcategory: str | None) -> CategoryProfile | None:
+def match_profile(category: str, subcategory: str | None, characteristics: dict | None = None) -> CategoryProfile | None:
     """Найти профиль категории: точное совпадение подкатегории важнее общего правила категории."""
+    leaf = resolve_category(category, subcategory)
+    if leaf:
+        if leaf['admission_profile_key'] == 'manual_review':
+            required=list(leaf['technical_profile']['required_for_product'])
+            for rule in leaf['technical_profile']['passport']['identification'].get('required_when',[]):
+                value=characteristic_value(characteristics,rule['field'])
+                if value is not None and normalize(str(value)) in {normalize(option) for option in rule['values']}:
+                    required.extend(key for key in rule['required'] if key not in required)
+            return CategoryProfile(key='manual_review', title='Проверка спецификации и применимости: '+leaf['label'],
+                categories=(normalize(category),), requirements=(CategoryRequirement(
+                    code='specification_review', title='Заключение о спецификации и применимых требованиях',
+                    legal_reference='Правила платформы; нормативную применимость определяет проверяющий человек',
+                    document_types=('specification_review',),
+                    seller_hint='Приложите спецификацию и заключение о применимых требованиях. Редактор проверит назначение, область и характеристики.',
+                    buyer_note='Это проверка применимости на платформе, а не сертификат или разрешение государственного органа.',
+                    confirmable=tuple(required)),),
+                summary='Обязательства требуют проверенного человеком заключения по конкретной спецификации. Проверка компании его не заменяет.')
+        existing = next((profile for profile in PROFILES if profile.key == leaf['admission_profile_key']),None)
+        if existing:return existing
     norm_category = normalize(category)
     norm_subcategory = normalize(subcategory)
     best: CategoryProfile | None = None
@@ -381,6 +400,11 @@ def canonical_scope(category: str | None, subcategory: str | None) -> tuple[str,
     Товар может быть назван точным именем вместо ветки каталога: тогда название
     считается подкатегорией, а родитель берётся из профилей.
     """
+    leaf = resolve_category(category, subcategory)
+    if leaf:
+        from .category_registry import registry_snapshot
+        parent = next(group['label'] for group in registry_snapshot()['groups'] if group['id'] == leaf['parent_id'])
+        return normalize(parent), normalize(leaf['label'])
     norm_category = normalize(category)
     norm_subcategory = normalize(subcategory)
     if norm_subcategory:
@@ -402,7 +426,9 @@ def catalog_scope(category: str | None, subcategory: str | None) -> tuple[str, s
 
 def characteristic_value(characteristics: dict | None, attribute: str) -> str | None:
     normalized = {normalize(str(key)): value for key, value in (characteristics or {}).items()}
-    for alias in CHARACTERISTIC_ALIASES.get(attribute, (attribute,)):
+    from .category_registry import registry_snapshot
+    field = registry_snapshot()["characteristic_fields"].get(attribute,{})
+    for alias in {*CHARACTERISTIC_ALIASES.get(attribute,(attribute,)),*field.get("aliases",[])}:
         value = normalized.get(normalize(alias))
         if value not in (None, ""):
             return str(value)
@@ -472,14 +498,16 @@ def _coverage_state(
     """Проверить, подтверждает ли документ характеристики изделия."""
     for attribute in requirement.confirmable:
         product_value = characteristic_value(characteristics, attribute)
-        if not product_value:
+        if product_value is None or product_value == '':
+            if requirement.code == 'specification_review':
+                return 'needs_confirmation','Спецификация не определена полностью: укажите обязательные характеристики перед подтверждением применимости'
             continue
         confirmed = [
             str(value)
             for document in documents
             for value in (document.confirms or {}).get(attribute, [])
         ]
-        label = ATTRIBUTE_LABELS.get(attribute, attribute)
+        label = ATTRIBUTE_LABELS.get(attribute, registry_snapshot()["characteristic_fields"].get(attribute,{}).get("label",attribute))
         if not confirmed:
             # Проверяющий не сопоставил документ с характеристикой изделия:
             # считать требование закрытым нельзя.
@@ -487,7 +515,12 @@ def _coverage_state(
                 f"Проверяющий не зафиксировал подтверждённые значения для «{label}»: "
                 f"у товара указано «{product_value}». Подтвердите применимость документа к этой характеристике."
             )
-        if not any(_values_relate(product_value, value) for value in confirmed):
+        if requirement.code == 'specification_review':
+            from .category_compatibility import canonical_value
+            relates = any(canonical_value(attribute, product_value) == canonical_value(attribute, value) for value in confirmed)
+        else:
+            relates = any(_values_relate(product_value, value) for value in confirmed)
+        if not relates:
             return "attribute_mismatch", (
                 f"Документ подтверждает {label}: {', '.join(sorted(set(confirmed)))}; "
                 f"у товара указано «{product_value}». Нужен документ на этот материал или покрытие."
@@ -573,7 +606,7 @@ def evaluate_admission(
             blocking_open=1,
             checked_at=now,
         )
-    profile = match_profile(category, subcategory)
+    profile = match_profile(category, subcategory, characteristics)
     if profile is None:
         known_subcategory = normalize(subcategory) in {
             normalize(child) for parent, children in CATALOG_TREE.items()
@@ -604,10 +637,10 @@ def evaluate_admission(
             supported=True,
             profile_title=None,
             summary="Для этой категории обязательные доказательства ещё не заданы. "
-            "Допуск опирается на проверку компании; при необходимости правила уточняются.",
+            "Выберите известную листовую категорию; до классификации обязательства заблокированы.",
             requirements=[],
             advisories=[],
-            blocking_open=0,
+            blocking_open=1,
             checked_at=now,
         )
 

@@ -119,6 +119,10 @@ async def update_product(
         validated = ProductIn.model_validate({**current, **patch})
     except ValidationError as exc:
         raise HTTPException(422, "; ".join(error["msg"] for error in exc.errors())) from exc
+    from ..category_units import order_unit
+    if order_unit(validated.characteristics) != order_unit(product.characteristics):
+        if any(row.product_id == product.id and occupies(row,stock=True) for row in await reservations(db,product.company_id)):
+            raise HTTPException(409,"Нельзя менять единицу товара с действующим резервом. Сначала согласуйте изменение обязательств")
     # Допуск зависит не только от категории: материал, покрытие и назначение
     # определяют применимость документов, поэтому изменение характеристик тоже
     # требует повторной проверки опубликованного товара.
@@ -147,6 +151,8 @@ async def update_product(
         errors, _ = validate_characteristics(validated.category, validated.subcategory, validated.characteristics, validated.moq_units)
         if errors:
             raise HTTPException(422, "; ".join(errors))
+    if admission_inputs_changed:
+        product.quantity_conversion = None
     product.category_profile = profile_after_specification_change(
         product, validated.category, validated.subcategory, validated.characteristics,
     )
@@ -180,6 +186,10 @@ async def publish_product(
     admission = None
     if data.published:
         await require_verified_company(product.company_id, user, db)
+        from ..category_admission import match_profile
+        profile = match_profile(product.category, product.subcategory, product.characteristics)
+        if profile is not None and not profile.supported:
+            raise HTTPException(409, "Публикация заблокирована: " + profile.summary)
         errors, _ = validate_characteristics(product.category, product.subcategory, product.characteristics, product.moq_units)
         if errors:
             raise HTTPException(422, "; ".join(errors))

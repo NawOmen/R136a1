@@ -225,7 +225,9 @@ async def _activate_scenario(
         commitment = await db.scalar(select(ReserveCommitment).where(ReserveCommitment.plan_id == plan.id, ReserveCommitment.company_id == company_id))
         if commitment is None:
             raise HTTPException(409, "Подтверждённый резерв не найден")
+        source_offer = await db.get(Offer, commitment.offer_id) if commitment.offer_id else None
         await require_company_admission(db, company_id, SpecificationCheck(category=need.category,
+            product_id=source_offer.product_id if source_offer else None, volume_units=replacement["units"], category_profile=need.category_profile,
             subcategory=need.subcategory,
             characteristics=need.characteristics, moq_units=replacement["units"], label="спецификация восстановления"), context="Замена не активирована")
         await activate_hold(db, company_id=company_id, anchor_id=commitment.id, units=replacement["units"])
@@ -346,6 +348,8 @@ async def _calculate_and_store(
         plan_need = await db.get(Need, plan.need_id)
         blockers: list[str] = []
         for allocation in live_result["replacement_allocations"]:
+            commitment = await db.scalar(select(ReserveCommitment).where(ReserveCommitment.plan_id == plan.id, ReserveCommitment.company_id == uuid.UUID(str(allocation["company_id"]))))
+            source_offer = await db.get(Offer, commitment.offer_id) if commitment and commitment.offer_id else None
             try:
                 await require_company_admission(
                     db,
@@ -356,6 +360,9 @@ async def _calculate_and_store(
                         characteristics=plan_need.characteristics,
                         moq_units=int(allocation.get("units") or plan_need.volume_units),
                         label="поставщик замены",
+                        product_id=source_offer.product_id if source_offer else None,
+                        volume_units=int(allocation.get("units") or plan_need.volume_units),
+                        category_profile=plan_need.category_profile,
                     ),
                     context="Автоматическая замена не выполнена",
                 )
@@ -500,7 +507,7 @@ async def create_resilience_plan(
             or passport.company_id in reserve_company_ids
             or passport.company_id == need.company_id
             or passport.company_id not in verified_ids
-            or not _passport_matches(passport, need.category, common)
+            or not _passport_matches(passport, need.category, {**common,**_need_parts(need)[1]},need.subcategory,need.volume_units)
         ):
             continue
         db.add(
@@ -629,7 +636,8 @@ async def confirm_resilience_plan(
         offer = matching[0]
         admission = await require_company_admission(db, company_id, SpecificationCheck(category=need.category,
             subcategory=need.subcategory,
-            characteristics=need.characteristics, moq_units=allocation["units"]), context="Основной объём не подтверждён")
+            characteristics=need.characteristics, moq_units=allocation["units"], product_id=offer.product_id,
+            volume_units=allocation["units"],category_profile=need.category_profile), context="Основной объём не подтверждён")
         baseline_snapshots.append({
             "allocation": deepcopy(allocation),
             "offer_id": str(offer.id),
@@ -643,7 +651,7 @@ async def confirm_resilience_plan(
         })
         await reserve(db, company_id=company_id, anchor_type="resilience_primary", anchor_id=plan.id,
             units=allocation["units"], deadline=need.deadline_date, resource_kind=offer.resource_kind, product_id=offer.product_id,
-            category=need.category, unit=order_unit(need.characteristics))
+            category=need.category, subcategory=need.subcategory, unit=order_unit(need.characteristics))
     need.status = "matched"
     plan.status = "active"
     plan.confirmed_by_user_id = user.id
@@ -780,6 +788,7 @@ async def decide_reserve_commitment(
         # Резерв — это обязательство: документы компании должны подтверждать
         # спецификацию потребности, для которой удерживается мощность.
         plan_need = await db.get(Need, plan.need_id)
+        source_offer = await db.get(Offer, commitment.offer_id) if commitment.offer_id else None
         admission = await require_company_admission(
             db,
             data.company_id,
@@ -789,6 +798,8 @@ async def decide_reserve_commitment(
                 characteristics=plan_need.characteristics,
                 moq_units=data.moq_units or plan_need.volume_units,
                 label="спецификация потребности",
+                product_id=source_offer.product_id if source_offer else None,
+                volume_units=plan_need.volume_units,category_profile=plan_need.category_profile,
             ),
             context="Резерв не подтверждён",
         )
@@ -827,7 +838,7 @@ async def decide_reserve_commitment(
                       resource_kind=source_offer.resource_kind if source_offer else "capacity",
                       product_id=source_offer.product_id if source_offer else None,
                       expires_at=datetime.combine(data.held_until, time.max, tzinfo=timezone.utc),
-                      category=plan_need.category, unit=order_unit(plan_need.characteristics))
+                      category=plan_need.category, subcategory=plan_need.subcategory, unit=order_unit(plan_need.characteristics))
         commitment.reserve_tier = "hot"
         commitment.confirmation_status = "approved"
         commitment.confirmed_capacity_units = data.capacity_units
@@ -1054,6 +1065,8 @@ async def approve_recovery(
     # компании, которая получит заказ.
     replacement_admissions: list[dict] = []
     for allocation in result["replacement_allocations"]:
+        commitment = await db.scalar(select(ReserveCommitment).where(ReserveCommitment.plan_id == plan.id, ReserveCommitment.company_id == uuid.UUID(str(allocation["company_id"]))))
+        source_offer = await db.get(Offer, commitment.offer_id) if commitment and commitment.offer_id else None
         admission = await require_company_admission(
             db,
             uuid.UUID(str(allocation["company_id"])),
@@ -1063,6 +1076,9 @@ async def approve_recovery(
                 characteristics=plan_need.characteristics,
                 moq_units=int(allocation.get("units") or plan_need.volume_units),
                 label="поставщик замены",
+                product_id=source_offer.product_id if source_offer else None,
+                volume_units=int(allocation.get("units") or plan_need.volume_units),
+                category_profile=plan_need.category_profile,
             ),
             context="Замена поставщика не активирована",
         )

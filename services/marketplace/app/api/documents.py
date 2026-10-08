@@ -1,4 +1,5 @@
 import uuid
+from typing import Literal
 from datetime import date, datetime, timezone
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, UploadFile, status
@@ -14,7 +15,7 @@ from ..deps import (
     notify,
     require_company_admin,
     require_company_seller,
-    require_marketplace_admin,
+    require_category_editor,
 )
 from ..models import Document
 from ..schemas import (
@@ -51,6 +52,11 @@ async def _notify_affected_deals(
 ) -> int:
     """Действующие сделки: изменение допуска требует ручного решения, а не отмены договорённостей."""
     document_scope = canonical_scope(scope_category, scope_subcategory)
+    # A legacy subtype below a known leaf must not suppress its change alert.
+    # This affects notifications only; verified legal scope is never broadened.
+    from ..category_registry import resolve_category
+    if scope_subcategory and resolve_category(scope_category, scope_subcategory) is None and resolve_category(scope_category, None):
+        document_scope = canonical_scope(scope_category, None)
     rows = (
         await db.execute(
             text(
@@ -186,7 +192,7 @@ async def verify_document(
     db: AsyncSession = Depends(get_db),
 ):
     """Решение по документу принимает проверяющий площадки, а не продавец."""
-    await require_marketplace_admin(user, db)
+    await require_category_editor(user, db)
     document = await db.get(Document, document_id)
     if document is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, detail="Документ не найден")
@@ -220,7 +226,7 @@ async def verify_document(
         entity_id=document.id,
         actor_user_id=user.id,
         actor_company_id=document.company_id,
-        permission="marketplace_admin",
+        permission="category_editor_or_marketplace_admin",
         decision="approved" if data.decision == "verified" else "rejected",
         payload={
             "document_id": str(document.id),
@@ -274,27 +280,29 @@ async def verify_document(
     return document
 
 
+@router.get("/editor/documents", response_model=list[PendingDocumentOut])
 @router.get("/admin/documents/pending", response_model=list[PendingDocumentOut])
 async def pending_documents(
     user: CurrentUser = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
     limit: int = Query(default=50, ge=1, le=200),
+    verification_status: Literal["unverified","verified","rejected"] = "unverified",
 ):
     """Очередь проверки документов для администратора площадки."""
-    await require_marketplace_admin(user, db)
+    await require_category_editor(user, db)
     rows = (
         await db.execute(
             text(
                 "SELECT d.id, d.company_id, d.name, d.document_type, d.file_key, d.content_type, "
-                "d.verification_status, d.scope_category, d.scope_subcategory, d.valid_until, "
+                "d.verification_status, d.scope_category, d.scope_subcategory, d.valid_until, d.confirms, "
                 "d.verified_by_user_id, d.verified_at, d.verification_note, d.created_at, "
                 "c.display_name AS company_display_name "
                 "FROM marketplace.documents d "
                 "JOIN auth.companies c ON c.id = d.company_id "
-                "WHERE d.verification_status = 'unverified' "
+                "WHERE d.verification_status = :verification_status "
                 "ORDER BY d.created_at DESC LIMIT :limit"
             ),
-            {"limit": limit},
+            {"limit": limit,"verification_status":verification_status},
         )
     ).mappings().all()
     return [PendingDocumentOut(**row) for row in rows]
@@ -341,10 +349,10 @@ async def category_requirements(
             category=category,
             subcategory=subcategory,
             profile_title=None,
-            supported=True,
-            summary="Для этой категории обязательные доказательства ещё не заданы.",
+            supported=False,
+            summary="Категория не определена. Выберите известную подкатегорию: без классификации публикация и обязательства заблокированы.",
             checklist=[],
-            advisories=[],
+            advisories=["Неизвестная категория не означает отсутствие обязательных требований"],
             note=BUYER_CHECKLIST_NOTE,
         )
     if not profile.supported:
@@ -381,3 +389,14 @@ async def category_requirements(
         advisories=list(profile.advisories),
         note=BUYER_CHECKLIST_NOTE,
     )
+
+
+@router.get("/editor/documents/{document_id}/download")
+async def editor_document_file(document_id: uuid.UUID,user:CurrentUser=Depends(get_current_user),db:AsyncSession=Depends(get_db)):
+    await require_category_editor(user,db)
+    document=await db.get(Document,document_id)
+    if document is None:raise HTTPException(404,"Документ не найден")
+    from fastapi.responses import Response
+    from ..storage import download_object
+    return Response(download_object(document.file_key),media_type="application/octet-stream",
+                    headers={"Content-Disposition":f'attachment; filename="document-{document.id}"',"X-Content-Type-Options":"nosniff"})

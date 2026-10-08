@@ -34,7 +34,7 @@ class TechnicalProfileTests(unittest.TestCase):
         data=registry_snapshot()
         self.assertNotIn('dimensions',data['characteristic_fields']['dimensions_mm']['aliases'])
         self.assertNotIn('unit',data['characteristic_fields']['dimensions'])
-        self.assertEqual(characteristic_profile('Товары для бизнеса','Мебель')['version'],2)
+        self.assertEqual(characteristic_profile('Товары для бизнеса','Мебель')['version'],3)
 
     def test_seed_values_and_compound_dimensions_remain_valid(self):
         for row in ASSORTMENT:
@@ -64,7 +64,7 @@ class TechnicalProfileTests(unittest.TestCase):
     def test_product_drafts_and_needs_can_be_incomplete(self):
         self.assertEqual(validate_profile_values('Упаковка и тара','Бумажные стаканы',{}),[])
         self.assertTrue(validate_profile_values('Упаковка и тара','Бумажные стаканы',{},require_product_fields=True))
-        self.assertEqual(validate_profile_values('Товары для бизнеса','Мебель',{},require_product_fields=True),[])
+        self.assertEqual(validate_profile_values('Несуществующая категория','Несуществующий лист',{},require_product_fields=True),[])
 
     def test_temperature_dependency_and_integer_shelf_life(self):
         self.assertTrue(validate_profile_values('Продукты питания','Замороженная продукция',{'temperature_min_c':-10,'temperature_max_c':-20}))

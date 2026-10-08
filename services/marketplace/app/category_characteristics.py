@@ -2,6 +2,7 @@
 from decimal import Decimal, InvalidOperation
 
 from .category_registry import registry_snapshot, resolve_category, normalize_label
+from .category_units import validate_unit
 
 _FIELDS = registry_snapshot()["characteristic_fields"]
 
@@ -27,18 +28,25 @@ def validate_profile_values(
     category: str, subcategory: str | None, characteristics: dict,
     *, require_product_fields: bool = False,
 ) -> list[str]:
+    _FIELDS = registry_snapshot()["characteristic_fields"]
     profile = characteristic_profile(category, subcategory)
     if profile is None:
         return []  # Legacy/free classifications need their own migration policy.
-    errors = []
+    errors = validate_unit(category, subcategory, characteristics)
     normalized = {normalize_label(str(key)): value for key, value in characteristics.items()}
+    mandatory = set(profile["required_for_product"])
+    for rule in profile.get("passport",{}).get("identification",{}).get("required_when",[]):
+        field = _FIELDS[rule["field"]]
+        values=[normalized.get(normalize_label(alias)) for alias in [rule["field"],*field["aliases"]]]
+        if any(normalize_label(str(value)) in {normalize_label(item) for item in rule["values"]} for value in values if value is not None):
+            mandatory.update(rule["required"])
     for key in profile["fields"]:
         field = _FIELDS[key]
         aliases = {normalize_label(key), *(normalize_label(alias) for alias in field["aliases"])}
         values = [(normalize_label(str(alias)), value) for alias, value in characteristics.items()
                   if normalize_label(str(alias)) in aliases]
         if not values:
-            if require_product_fields and key in profile["required_for_product"]:
+            if require_product_fields and key in mandatory:
                 errors.append(f"Укажите характеристику «{field['label']}»")
             continue
         canonical = []
@@ -61,6 +69,9 @@ def validate_profile_values(
                     errors.append(f"«{field['label']}»: укажите {kind} в указанной единице")
         if len(set(canonical)) > 1:
             errors.append(f"«{field['label']}»: значения в синонимах противоречат друг другу")
+    tax = normalized.get("tax_basis") or normalized.get("налоговая база")
+    if tax is not None and tax not in profile.get("passport", {}).get("commercial", {}).get("tax_values", [tax]):
+        errors.append("Налоговая база: выберите «с НДС», «без НДС» или «НДС не применяется»")
     minimum = normalized.get("temperature_min_c")
     maximum = normalized.get("temperature_max_c")
     if "temperature_min_c" in profile["fields"] and minimum is not None and maximum is not None:

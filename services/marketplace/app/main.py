@@ -7,6 +7,9 @@ from .api import (
     capacity,
     catalog_import,
     commerce,
+    category_profiles,
+    category_editor,
+    physical_quantities,
     documents,
     health,
     market,
@@ -51,3 +54,12 @@ app.include_router(stage9.router, prefix="/api/v1")
 app.include_router(agent_scorecard.router, prefix="/api/v1")
 
 app.include_router(commerce.router, prefix="/api/v1")
+
+app.include_router(category_profiles.router, prefix="/api/v1")
+
+app.include_router(category_editor.router, prefix="/api/v1")
+
+app.include_router(physical_quantities.router, prefix="/api/v2")
+
+from .api import packaging_conversion
+app.include_router(packaging_conversion.router, prefix="/api/v1")
