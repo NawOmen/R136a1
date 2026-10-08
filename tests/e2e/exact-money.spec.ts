@@ -4,6 +4,7 @@ import { marketplace } from "../../apps/web/app/lib/marketplace";
 
 test("exact subkopeck prices, large quantities and negative money retain their values", () => {
   expect(lineAmount("0.00000000125", 1_000_000_000)).toBe("1.250000000000");
+  expect(lineAmount("7", "2.5")).toBe("17.500000000000");
   expect(lineAmount("0.005",1)).toBe("0.010000000000");
   expect(displayMoney("2.675")).toBe("2,68 ₽");
   expect(displayMoney("-1000.01")).toBe("−1\u00a0000,01 ₽");

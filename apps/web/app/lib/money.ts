@@ -14,12 +14,12 @@ export function moneyString(value: bigint): string {
   const positive = value < BigInt(0) ? -value : value;
   return `${sign}${positive / SCALE}.${(positive % SCALE).toString().padStart(12, '0')}`;
 }
-export function lineAmount(price: Money, units: number): string {
-  const raw = scaledMoney(price) * BigInt(units);
-  const cent = SCALE / BigInt(100);
+export function lineAmount(price: Money, units: Money): string {
+  const raw = scaledMoney(price) * scaledMoney(units);
+  const cent = SCALE * SCALE / BigInt(100);
   const positive = raw < BigInt(0) ? -raw : raw;
   const rounded = ((positive + cent / BigInt(2)) / cent) * cent;
-  return moneyString(raw < BigInt(0) ? -rounded : rounded);
+  return moneyString((raw < BigInt(0) ? -rounded : rounded) / SCALE);
 }
 export function displayMoney(value: Money | null | undefined, precision = 2): string {
   if (value == null) return '—';

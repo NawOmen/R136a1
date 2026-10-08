@@ -39,6 +39,7 @@ async def test_0023_preserves_values_nulls_and_refuses_loss():
                 with pytest.raises(RuntimeError,match='не округляет'):await connection.run_sync(run,'upgrade')
                 await connection.execute(text(f'UPDATE {schema}.offers SET price_rub=10.9 WHERE id=1'))
                 await connection.run_sync(run,'upgrade')
+                await connection.run_sync(run,'upgrade')  # Fresh bootstrap / repeated migration is safe.
                 rows=(await connection.execute(text(f'SELECT price_rub,delivery_cost_rub,commercial_quote FROM {schema}.offers ORDER BY id'))).all()
                 assert rows==[(Decimal('10.9'),None,None),(None,Decimal('2.675'),None)]
                 assert (await connection.execute(text(f"SELECT data_type,numeric_scale FROM information_schema.columns WHERE table_schema='{schema}' AND table_name='offers' AND column_name='price_rub'"))).one()==('numeric',12)

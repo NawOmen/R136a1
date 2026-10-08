@@ -1,7 +1,6 @@
 """Migrate recorded monetary scalars without inventing legacy missing terms."""
 from alembic import op
 import sqlalchemy as sa
-from sqlalchemy.dialects.postgresql import JSONB
 
 revision = '0023'
 down_revision = '0022'
@@ -28,7 +27,7 @@ def upgrade():
     for table,column in [('offers','commercial_terms'),('offers','commercial_quote'),('deals','commercial_snapshot'),
                          ('coalition_members','commercial_estimate'),('participant_orders','commercial_snapshot'),
                          ('resilience_plans','commercial_snapshot'),('reserve_commitments','commercial_terms'),('reserve_commitments','commercial_snapshot')]:
-        op.add_column(table,sa.Column(column,JSONB(),nullable=True),schema='marketplace')
+        conn.execute(sa.text(f'ALTER TABLE marketplace."{table}" ADD COLUMN IF NOT EXISTS "{column}" JSONB'))
     op.alter_column('offers','delivery_cost_rub',nullable=True,server_default=None,schema='marketplace')
 
 
