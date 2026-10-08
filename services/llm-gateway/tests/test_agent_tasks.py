@@ -673,3 +673,50 @@ async def test_invalidate_with_failed_linked_task_returns_ok(client, token, db_s
     task = (await client.get(TASKS + f"/{created['task_id']}", params={"company_id": str(company_id)},
                              headers=auth(token))).json()
     assert task["state"] == "failed"
+
+
+@pytest.mark.asyncio
+async def test_attach_personal_run_without_company_cannot_complete(client, token, db_session, user_id):
+    company_id = await make_company(db_session, user_id)
+    created = await create_task(client, token, company_id)
+    await client.post(TASKS + f"/{created['task_id']}/start", params={"company_id": str(company_id)},
+                      json={"expected_revision": 1}, headers=auth(token))
+    personal = await client.post(
+        "/api/v1/buyer-agent/runs",
+        data={"request_text": "Нужно 5000 бумажных стаканов в Москву за десять дней"},
+        headers=auth(token),
+    )
+    assert personal.status_code == 201
+    run = personal.json()
+    confirmed = await client.post(f"/api/v1/agent-runs/{run['id']}/confirm", headers=auth(token))
+    assert confirmed.status_code == 200
+    attached = await client.post(TASKS + f"/{created['task_id']}/attach-run", params={"company_id": str(company_id)},
+                                 json={"run_id": run["id"]}, headers=auth(token))
+    assert attached.status_code == 403
+    body = (await client.get(TASKS + f"/{created['task_id']}", params={"company_id": str(company_id)},
+                             headers=auth(token))).json()
+    assert body["state"] == "running"
+    assert body["result_artifact"] is None
+
+
+@pytest.mark.asyncio
+async def test_attach_confirmed_run_with_stale_sources_rejected(client, token, db_session, user_id):
+    company_id = await make_company(db_session, user_id)
+    created = await create_task(client, token, company_id)
+    await client.post(TASKS + f"/{created['task_id']}/start", params={"company_id": str(company_id)},
+                      json={"expected_revision": 1}, headers=auth(token))
+    run = await make_buyer_run(client, token, company_id)
+    confirmed = await client.post(f"/api/v1/agent-runs/{run['id']}/confirm", headers=auth(token))
+    assert confirmed.status_code == 200
+    await db_session.execute(
+        text("UPDATE agents.agent_sources SET active = false WHERE run_id = :id AND source_id = 'request_text'"),
+        {"id": uuid.UUID(run["id"])},
+    )
+    await db_session.commit()
+    attached = await client.post(TASKS + f"/{created['task_id']}/attach-run", params={"company_id": str(company_id)},
+                                 json={"run_id": run["id"]}, headers=auth(token))
+    assert attached.status_code == 409
+    body = (await client.get(TASKS + f"/{created['task_id']}", params={"company_id": str(company_id)},
+                             headers=auth(token))).json()
+    assert body["state"] == "running"
+    assert body["result_artifact"] is None

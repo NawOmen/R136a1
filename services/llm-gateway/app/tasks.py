@@ -338,6 +338,15 @@ async def attach_run(db: AsyncSession, task: AgentTask, run: AgentRun) -> AgentT
     previous_shown_revision = (task.required_response or {}).get("run_revision")
     task.linked_run_id = run.id
     if run.state == "confirmed_by_user":
+        # Автозавершение проходит те же проверки сохранённого результата, что
+        # явное согласие: старая запись human_approval сама по себе недостаточна.
+        task.required_response = {
+            "summary": (run.result or {}).get("summary", ""),
+            "run_id": str(run.id),
+            "run_revision": run.revision,
+        }
+        artifact = {"type": "agent_run_result", "id": str(run.id), "revision": run.revision}
+        await verify_run_artifact(db, task, artifact)
         consent_rows = (await db.execute(
             select(ToolCall).where(
                 ToolCall.run_id == run.id, ToolCall.tool_name == "human_approval",

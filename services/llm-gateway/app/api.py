@@ -731,10 +731,11 @@ async def _require_task_role(db: AsyncSession, company_id: uuid.UUID, user, scen
         raise HTTPException(status.HTTP_403_FORBIDDEN, detail="Нет актуального права роли этой компании")
 
 
-async def owned_run_for_task(db: AsyncSession, run_id: uuid.UUID, user, scenario_type: str) -> AgentRun:
+async def owned_run_for_task(db: AsyncSession, run_id: uuid.UUID, user, scenario_type: str, *, lock=False) -> AgentRun:
     """Доступ к процессу с учётом сценария задачи: seller-процесс требует
     can_sell компании процесса, остальные — can_buy."""
-    run = await db.scalar(select(AgentRun).where(AgentRun.id == run_id, AgentRun.user_id == user.id))
+    query = select(AgentRun).where(AgentRun.id == run_id, AgentRun.user_id == user.id)
+    run = await db.scalar(query.with_for_update() if lock else query)
     if run is None:
         raise HTTPException(404, "Агентный процесс не найден")
     permission = "can_sell" if run.agent_type == "seller_agent" else SCENARIO_PERMISSIONS.get(scenario_type)
@@ -922,7 +923,7 @@ async def attach_run_to_task(
     task = await task_contract.owned_task(db, task_id, company_id, lock=True)
     task = await task_contract.owned_task(db, task_id, company_id, lock=True)
     await _require_task_role(db, company_id, user, task.scenario_type)
-    run = await owned_run_for_task(db, data.run_id, user, task.scenario_type)
+    run = await owned_run_for_task(db, data.run_id, user, task.scenario_type, lock=True)
     await task_contract.attach_run(db, task, run)
     await db.commit()
     return await _task_out(db, task)
