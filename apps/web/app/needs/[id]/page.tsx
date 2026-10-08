@@ -253,7 +253,7 @@ export default function NeedDetailPage() {
         <dl className="company-details">
           <div>
             <dt>Характеристики</dt>
-            <dd>{formatCharacteristics(need.characteristics)}</dd>
+            <dd>{formatCharacteristics(need.characteristics, need.category_profile)}</dd>
           </div>
           <div>
             <dt>Объём</dt>

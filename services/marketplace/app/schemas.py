@@ -112,6 +112,7 @@ class ProductOut(BaseModel):
     name: str
     category: str
     subcategory: str | None
+    category_profile: dict[str, Any] | None = None
     characteristics: dict[str, Any]
     price_rub: float
     price_tiers: list[ProductPriceTier]
@@ -491,6 +492,7 @@ class NeedOut(BaseModel):
     created_by_user_id: uuid.UUID | None
     category: str
     subcategory: str | None = None
+    category_profile: dict[str, Any] | None = None
     characteristics: dict[str, Any]
     volume_units: int
     budget_rub: float | None
@@ -512,6 +514,7 @@ class NeedFeedOut(BaseModel):
     id: uuid.UUID
     category: str
     subcategory: str | None = None
+    category_profile: dict[str, Any] | None = None
     characteristics: dict[str, Any]
     volume_units: int
     deadline_date: date

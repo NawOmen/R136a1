@@ -7,6 +7,7 @@ from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
 from .database import Base
+from .category_profile_snapshot import profile_for_insert
 
 SCHEMA = "marketplace"
 
@@ -64,6 +65,7 @@ class Product(Base):
     category: Mapped[str] = mapped_column(String(120), nullable=False, index=True)
     subcategory: Mapped[str | None] = mapped_column(String(120), nullable=True)
     characteristics: Mapped[dict] = mapped_column(JSONB, nullable=False, default=dict)
+    category_profile: Mapped[dict | None] = mapped_column(JSONB(none_as_null=True), nullable=True, default=profile_for_insert)
     price_rub: Mapped[float] = mapped_column(Float, nullable=False)
     price_tiers: Mapped[list] = mapped_column(JSONB, nullable=False, default=list, server_default="[]")
     moq_units: Mapped[int] = mapped_column(Integer, nullable=False)
@@ -169,6 +171,7 @@ class Need(Base):
     category: Mapped[str] = mapped_column(String(120), nullable=False, index=True)
     subcategory: Mapped[str | None] = mapped_column(String(120), nullable=True)
     characteristics: Mapped[dict] = mapped_column(JSONB, nullable=False, default=dict)
+    category_profile: Mapped[dict | None] = mapped_column(JSONB(none_as_null=True), nullable=True, default=profile_for_insert)
     volume_units: Mapped[int] = mapped_column(Integer, nullable=False)
     budget_rub: Mapped[float | None] = mapped_column(Float, nullable=True)
     deadline_date: Mapped[date] = mapped_column(Date, nullable=False)

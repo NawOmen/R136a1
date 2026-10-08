@@ -12,6 +12,7 @@ from ..admission import publicly_available_products
 from ..database import get_db
 from ..commerce import product_specification_hash
 from ..deps import CurrentUser, get_current_user, notify, require_company_admin, require_company_buyer, require_company_seller, require_membership
+from ..category_characteristics import validate_profile_values
 from ..experience import classify_cargo, validate_characteristics
 from ..models import (
     CoalitionMember, Deal, DealCheckpoint, DealExecutionEvent, DealReview, DeliveryArrangement, MarketWatch,
@@ -165,6 +166,9 @@ async def repeat_need(need_id: uuid.UUID, data: NeedRepeatIn, user: CurrentUser 
             {"id": original.delivery_address_id})
         if address_owner != original.company_id:
             raise HTTPException(status.HTTP_409_CONFLICT, detail="Адрес прежнего заказа больше недоступен. Выберите новый адрес")
+    errors = validate_profile_values(original.category, original.subcategory, original.characteristics)
+    if errors:
+        raise HTTPException(422, "; ".join(errors))
     copy = Need(
         company_id=original.company_id, created_by_user_id=user.id, category=original.category, subcategory=original.subcategory,
         characteristics=original.characteristics, volume_units=original.volume_units, budget_rub=original.budget_rub,

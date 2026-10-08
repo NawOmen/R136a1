@@ -45,12 +45,24 @@ export interface ProductionProfile {
   about: string | null;
 }
 
+export interface CategoryProfileSnapshot {
+  snapshot_version: number;
+  registry_version: string;
+  category_id: string;
+  leaf_revision: number;
+  profile_version: number;
+  state: string;
+  fields: Record<string, { label: string; type: string; aliases: string[]; unit?: string; positive?: boolean; max_length?: number }>;
+  required_for_product: string[];
+}
+
 export interface Product {
   id: string;
   company_id: string;
   name: string;
   category: string;
   subcategory: string | null;
+  category_profile?: CategoryProfileSnapshot | null;
   characteristics: Record<string, unknown>;
   price_rub: number;
   price_tiers: ProductPriceTier[];
@@ -232,6 +244,7 @@ export interface Need {
   created_by_user_id: string | null;
   category: string;
   subcategory?: string | null;
+  category_profile?: CategoryProfileSnapshot | null;
   characteristics: Record<string, unknown>;
   volume_units: number;
   budget_rub: number | null;
@@ -249,6 +262,7 @@ export interface NeedFeedItem {
   id: string;
   category: string;
   subcategory?: string | null;
+  category_profile?: CategoryProfileSnapshot | null;
   characteristics: Record<string, unknown>;
   volume_units: number;
   deadline_date: string;
@@ -700,14 +714,21 @@ const CHARACTERISTIC_LABELS: Record<string, string> = {
   diameter_mm: "Диаметр, мм",
 };
 
-export function characteristicLabel(key: string): string {
+export function characteristicLabel(key: string, profile?: CategoryProfileSnapshot | null): string {
+  const normalize = (value: string) => value.trim().toLowerCase().replace(/ё/g, "е");
+  const normalized = normalize(key);
+  for (const [fieldKey, field] of Object.entries(profile?.fields ?? {})) {
+    if ([fieldKey, ...(field.aliases ?? [])].some((alias) => normalize(alias) === normalized)) {
+      return field.label;
+    }
+  }
   return registryCharacteristicLabel(key) ?? CHARACTERISTIC_LABELS[key] ?? key;
 }
 
-export function formatCharacteristics(characteristics: Record<string, unknown>): string {
+export function formatCharacteristics(characteristics: Record<string, unknown>, profile?: CategoryProfileSnapshot | null): string {
   const entries = Object.entries(characteristics);
   if (entries.length === 0) return "—";
-  return entries.map(([key, value]) => `${characteristicLabel(key)}: ${String(value)}`).join(" · ");
+  return entries.map(([key, value]) => `${characteristicLabel(key, profile)}: ${String(value)}`).join(" · ");
 }
 
 export function formatRub(value: number | null | undefined): string {

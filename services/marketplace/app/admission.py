@@ -8,6 +8,7 @@
 from __future__ import annotations
 
 import uuid
+from copy import deepcopy
 from dataclasses import dataclass, field
 
 from fastapi import HTTPException, status
@@ -103,7 +104,7 @@ def admission_audit_payload(admission: CategoryAdmissionOut, *, specification: d
         "rules_version": admission.rules_version,
         "blocking_open": admission.blocking_open,
         "checked_at": admission.checked_at.isoformat(),
-        "specification": specification or {},
+        "specification": deepcopy(specification) if specification is not None else {},
         "requirements": [
             {"code": item.code, "state": item.state, "documents": [str(doc) for doc in item.document_ids]}
             for item in admission.requirements
