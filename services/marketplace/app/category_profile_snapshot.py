@@ -34,3 +34,17 @@ def profile_after_specification_change(record, category, subcategory, characteri
     if previous == (category, subcategory, characteristics):
         return deepcopy(getattr(record, 'category_profile', None))
     return capture_category_profile(category, subcategory)
+
+
+def profile_matches_leaf(profile: dict | None, leaf: dict | None, *, version_key="profile_version") -> bool:
+    """Known saved versions must match the current leaf; legacy NULL stays unknown."""
+    if leaf is None:
+        return False
+    if profile is None:
+        return True
+    return (
+        isinstance(profile, dict)
+        and profile.get('category_id') == leaf['id']
+        and type(profile.get(version_key)) is int
+        and profile[version_key] == leaf['technical_profile']['version']
+    )

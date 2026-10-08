@@ -130,3 +130,98 @@ async def test_packaging_confirmation_binds_reviewed_factor_and_preserves_order_
     assert equivalent.json()['equivalent_quantity']==200
     stored=(await client.get(f'/api/v1/companies/{company}/products',headers=headers)).json()[0]
     assert (stored['characteristics']['unit'],stored['moq_units'],stored['price_rub'])==('упак',2,1000)
+
+
+@pytest.mark.asyncio
+async def test_v1_product_unit_change_requires_complete_commercial_values(client, db_session):
+    seller = await make_user(db_session)
+    company = await make_company(db_session, seller)
+    headers = {'Authorization': f'Bearer {make_token(seller)}'}
+    values = {'name': 'Синтетическое сырьё', 'category': 'Сырьё и материалы', 'subcategory': 'Полимеры',
+              'characteristics': {'unit': 'кг', 'material': 'полипропилен', 'grade': 'СИН-01'},
+              'price_rub': 150, 'moq_units': 2, 'stock_units': 10, 'lead_time_days': 1,
+              'price_tiers': [{'min_units': 5, 'unit_price_rub': 140}, {'min_units': 10, 'unit_price_rub': 135}]}
+    created = await client.post(f'/api/v1/companies/{company}/products', headers=headers, json=values)
+    assert created.status_code == 201, created.text
+    original = created.json()
+    route = f"/api/v2/products/{original['id']}"
+    patch = {key: values[key] for key in ('characteristics', 'price_rub', 'moq_units', 'stock_units', 'price_tiers')}
+    patch['quantity_conversion_approved'] = True
+    commercial = ('price_rub', 'moq_units', 'stock_units', 'price_tiers')
+    for missing in (*commercial, 'all'):
+        incomplete = {key: value for key, value in patch.items() if key != missing and not (missing == 'all' and key in commercial)}
+        rejected = await client.patch(route, headers=headers, json=incomplete)
+        assert rejected.status_code == 422, (missing, rejected.text)
+        stored = (await client.get(f'/api/v1/companies/{company}/products', headers=headers)).json()[0]
+        assert all(stored[key] == original[key] for key in (*commercial, 'characteristics'))
+    assert (await db_session.execute(text("SELECT count(*) FROM marketplace.human_approval_records WHERE action='physical_quantity_conversion'"))).scalar() == 0
+    changed = await client.patch(route, headers=headers, json=patch)
+    assert changed.status_code == 200, changed.text
+    product = changed.json()
+    assert (product['characteristics']['unit'], product['price_rub'], product['moq_units'], product['stock_units']) == ('г', .15, 2000, 10000)
+    assert product['price_tiers'] == [{'min_units': 5000, 'unit_price_rub': .14}, {'min_units': 10000, 'unit_price_rub': .135}]
+    # Same stored unit permits ordinary partial edits without converting other fields again.
+    partial = await client.patch(route, headers=headers, json={'characteristics': product['characteristics'], 'price_rub': .16})
+    assert partial.status_code == 200, partial.text
+    assert all(partial.json()[key] == product[key] for key in ('moq_units', 'stock_units', 'price_tiers'))
+    patch['stock_units'] = None
+    # Explicitly unknown stock and an empty tier list are complete, valid values.
+    patch['price_tiers'] = []
+    nullable = await client.patch(route, headers=headers, json=patch)
+    assert nullable.status_code == 200, nullable.text
+    assert nullable.json()['stock_units'] is None and nullable.json()['price_tiers'] == []
+
+
+@pytest.mark.asyncio
+async def test_current_producer_scope_requires_explicit_need_adoption(client, db_session):
+    from datetime import date, timedelta
+    from fastapi import HTTPException
+    from app.admission import SpecificationCheck, require_company_admission, company_admission
+    from app.category_registry import registry_context
+    from app.models import Need
+    from conftest import grant_packaging_documents
+    editor, buyer, seller = [await make_user(db_session) for _ in range(3)]
+    buyer_company = await make_company(db_session, buyer)
+    seller_company = await make_company(db_session, seller)
+    auth = lambda identifier: {'Authorization': f'Bearer {make_token(identifier)}'}
+    chars = {'unit':'шт','material':'бумага','volume_ml':400}
+    await grant_packaging_documents(db_session,seller_company,decision_user_id=editor,confirms={'material':['бумага'],'volume_ml':[400]})
+    created = await client.post('/api/v1/needs',headers=auth(buyer),json={
+        'company_id':str(buyer_company),'category':'Упаковка и тара','subcategory':'Бумажные стаканы',
+        'characteristics':chars,'volume_units':100,'budget_rub':10000,'deadline_date':str(date.today()+timedelta(days=30))})
+    assert created.status_code == 201, created.text
+    need_id = uuid.UUID(created.json()['id'])
+    old = created.json()['category_profile']
+    await db_session.execute(text('UPDATE auth.users SET is_category_editor=true WHERE id=:id'),{'id':editor})
+    await db_session.commit()
+    current = (await client.get('/api/v1/editor/categories',headers=auth(editor))).json()
+    leaf = next(leaf for group in current['registry']['groups'] for leaf in group['leaves'] if leaf['id']==old['category_id'])
+    leaf['technical_profile']['passport']['acceptance']['checks'].append('Синтетическая проверка новой редакции')
+    published = await client.post('/api/v1/editor/categories/publish',headers=auth(editor),json={
+        'category_id':leaf['id'],'technical_profile':leaf['technical_profile'],'expected_registry_hash':current['registry_hash'],
+        'reason':'Уточнение синтетических требований приёмки','approved':True})
+    assert published.status_code == 200, published.text
+    scope = await client.put(f'/api/v1/companies/{seller_company}/capability-passport',headers=auth(seller),json={
+        'details':{'category_scopes':[{'category_id':leaf['id'],'unit':'шт','min_units':1,'max_units':1000,
+                                     'characteristics':{'material':['бумага'],'volume_ml':[400]}}]}})
+    assert scope.status_code == 200, scope.text
+    latest = (await client.get('/api/v1/editor/categories',headers=auth(editor))).json()['registry']
+    async def check(snapshot):
+        return await require_company_admission(db_session,seller_company,SpecificationCheck(category='Упаковка и тара',
+            subcategory='Бумажные стаканы',characteristics=chars,moq_units=1,volume_units=100,category_profile=snapshot),context='Новое обязательство')
+    with registry_context(latest):
+        assert (await company_admission(db_session,seller_company,'Упаковка и тара','Бумажные стаканы',characteristics=chars)).blocking_open == 0
+        with pytest.raises(HTTPException) as rejected:
+            await check(old)
+        assert rejected.value.status_code == 409 and 'Сохранённая версия' in rejected.value.detail
+    diff = (await client.get(f'/api/v1/needs/{need_id}/category-profile',headers=auth(buyer))).json()
+    adoption = {key:diff[key] for key in ('expected_specification_hash','expected_snapshot_hash','expected_current_hash')}
+    adoption.update(approved=True,expected_revision=created.json()['revision'])
+    adopted = await client.post(f'/api/v1/needs/{need_id}/category-profile/adopt',headers=auth(buyer),json=adoption)
+    assert adopted.status_code == 200, adopted.text
+    need = await db_session.get(Need,need_id)
+    await db_session.refresh(need)
+    with registry_context(latest):
+        assert (await check(need.category_profile)).blocking_open == 0
+    assert old['profile_version']+1 == need.category_profile['profile_version']
+    assert need.characteristics == chars

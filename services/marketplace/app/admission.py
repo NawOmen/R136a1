@@ -136,8 +136,15 @@ async def require_company_admission(
         if not compatibility.matches:raise HTTPException(409,"Товар обязательства не соответствует потребности: "+compatibility.reason)
         check=SpecificationCheck(category=product.category,subcategory=product.subcategory,characteristics=product.characteristics,
             moq_units=check.moq_units,label=check.label,product_id=product.id,volume_units=check.volume_units,category_profile=product.category_profile)
-    if resolve_category(check.category,check.subcategory) is None:
+    leaf = resolve_category(check.category,check.subcategory)
+    if leaf is None:
         raise HTTPException(409,(context+": " if context else "")+"Выберите известную листовую категорию; исходная классификация не подтверждена")
+    if check.product_id is None:
+        from .category_profile_snapshot import profile_matches_leaf
+        if not profile_matches_leaf(check.category_profile, leaf):
+            raise HTTPException(409, (context + ': ' if context else '') +
+                                'Сохранённая версия правил потребности не совпадает с актуальной категорией. '
+                                'Владелец должен сравнить изменения и явно принять правила в черновике')
     admission = await company_admission(
         db,
         company_id,
@@ -163,12 +170,13 @@ async def require_company_admission(
     if check.product_id is None:
         from .matching import _passport_matches
         passport = await db.get(CapabilityPassport,company_id)
-        if passport is None or not _passport_matches(passport,check.category,check.characteristics,check.subcategory,check.volume_units):
+        if passport is None or not _passport_matches(passport,check.category,check.characteristics,check.subcategory,check.volume_units,category_profile=check.category_profile):
             raise HTTPException(409,(context+": " if context else "")+"Заполните и подтвердите область возможностей производителя для этой категории, единицы и спецификации")
         from .trust import append_audit_event
         await append_audit_event(db,event_type="capability_scope_checked",entity_type="company",entity_id=company_id,
             actor_company_id=company_id,payload={"details":deepcopy(passport.details),"category":check.category,
-                "subcategory":check.subcategory,"characteristics":deepcopy(check.characteristics),"quantity":check.volume_units},
+                "subcategory":check.subcategory,"characteristics":deepcopy(check.characteristics),"quantity":check.volume_units,
+                "category_profile":deepcopy(check.category_profile)},
             explanation="Перед обязательством проверены актуальная область возможностей и её версия; сохранён неизменяемый снимок заявления продавца")
     return admission
 

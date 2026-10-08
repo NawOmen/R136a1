@@ -100,7 +100,7 @@ def _tokens(value: str) -> set[str]:
     return {item for item in re.findall(r"[а-яёa-z0-9]+", value.lower()) if len(item) > 2}
 
 
-def _passport_matches(passport: CapabilityPassport, category: str, common: dict, subcategory=None, volume_units=None) -> bool:
+def _passport_matches(passport: CapabilityPassport, category: str, common: dict, subcategory=None, volume_units=None, *, category_profile=None) -> bool:
     # Scoped declarations are authoritative for discovery; free text is only a legacy hint.
     from .category_compatibility import canonical_characteristics
     from .category_registry import registry_snapshot, normalize_label
@@ -109,6 +109,11 @@ def _passport_matches(passport: CapabilityPassport, category: str, common: dict,
         registry = registry_snapshot()
         from .category_registry import resolve_category
         resolved=resolve_category(category,subcategory)
+        from .category_profile_snapshot import profile_matches_leaf
+        if not profile_matches_leaf(category_profile, resolved) or not profile_matches_leaf(
+            common.get('category_profile_version'), resolved, version_key='version'
+        ):
+            return False
         leaves=[resolved] if resolved else []
         for scope in scopes:
             leaf = next((leaf for leaf in leaves if leaf['id'] == scope['category_id']), None)

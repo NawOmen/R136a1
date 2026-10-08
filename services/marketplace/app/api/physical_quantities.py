@@ -7,6 +7,8 @@ from ..database import get_db
 from ..deps import CurrentUser,get_current_user,require_company_admin,require_company_seller,require_company_buyer
 from ..schemas import ProductIn,ProductPatch,NeedIn,NeedEditIn,ProductOut,NeedOut
 from ..physical_quantities import normalize_physical
+from ..category_units import order_unit
+from ..resources import lock_company
 from ..trust import record_human_approval
 from ..models import Product,Need
 from .products import create_product,update_product
@@ -58,6 +60,18 @@ async def edit_physical_product(product_id:uuid.UUID,raw:dict,user:CurrentUser=D
     data=normalized('product',raw,ProductPatch)
     product=await db.get(Product,product_id)
     if product is None:raise HTTPException(404,'Товар не найден')
+    await require_company_seller(product.company_id, user, db)
+    await require_company_admin(product.company_id, user, db)
+    # Read the unit under the same transaction lock used by v1 updates.
+    # A concurrent unit change must not turn this into a partial conversion.
+    await lock_company(db, product.company_id)
+    await db.refresh(product)
+    if order_unit(data.characteristics) != order_unit(product.characteristics):
+        required = {'price_rub', 'moq_units', 'stock_units', 'price_tiers'}
+        if not required.issubset(raw):
+            raise HTTPException(422, 'При смене единицы передайте цену, минимальный заказ, остаток '
+                                'и все ценовые ступени в исходной единице пересчёта. '
+                                'Если ступеней нет, передайте пустой список; неизвестный остаток — null')
     await approve_conversion('product',raw,product.company_id,user,db)
     return await update_product(product_id,data,user,db)
 
