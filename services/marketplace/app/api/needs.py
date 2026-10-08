@@ -27,7 +27,7 @@ from ..matching import ACTIVE_NEED_STATUSES, need_is_current, run_market_rematch
 from ..experience import notify_market_watchers
 from ..schemas import NeedFeedOut, NeedFileOut, NeedIn, NeedOut, NeedEditIn
 from ..storage import download_object, upload_object
-from ..requirements import evidence_snapshot, evidence_is_current, require_current_evidence, revision_impact, invalidate_dependents, store_revision
+from ..requirements import evidence_snapshot, evidence_is_current, require_current_evidence, revision_impact, invalidate_dependents, store_revision, lock_specification_edit
 from ..models import NeedRevision
 
 router = APIRouter(tags=["needs"])
@@ -184,6 +184,13 @@ async def create_need(
 @router.put("/needs/{need_id}", response_model=NeedOut)
 async def edit_need(need_id: uuid.UUID, data: NeedEditIn,
                     user: CurrentUser = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
+    # Rematch can update any active need, including another participant's row.
+    # Serialize specification edits BEFORE taking a Need lock so competing
+    # editors cannot hold different needs while waiting for the same coalition.
+    # This transaction lock covers ordinary and physical edits; invalidation,
+    # history and rematch remain atomic. Other marketplace actions retain their
+    # own locks; this is deliberately a specification-edit boundary.
+    await lock_specification_edit(db)
     need = await db.scalar(select(Need).where(Need.id == need_id).with_for_update()
                            .execution_options(populate_existing=True))
     if need is None:

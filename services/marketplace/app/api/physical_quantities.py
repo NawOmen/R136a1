@@ -10,6 +10,7 @@ from ..physical_quantities import normalize_physical
 from ..category_units import order_unit
 from ..resources import lock_company
 from ..trust import record_human_approval
+from ..requirements import lock_specification_edit
 from ..models import Product,Need
 from .products import create_product,update_product
 from .needs import create_need,edit_need,preview_need_edit
@@ -91,6 +92,9 @@ async def edit_physical_need(need_id:uuid.UUID,raw:dict,user:CurrentUser=Depends
     data=normalized('need',raw,NeedEditIn)
     need=await db.get(Need,need_id)
     if need is None:raise HTTPException(404,'Потребность не найдена')
+    # Conversion writes the audit chain: take the edit boundary before that
+    # lock as well as before the Need row lock in the shared handler.
+    await lock_specification_edit(db)
     await approve_conversion('need',raw,need.company_id,user,db)
     return await edit_need(need_id,data,user,db)
 

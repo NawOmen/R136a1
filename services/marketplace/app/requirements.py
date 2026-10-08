@@ -27,6 +27,12 @@ def canonical(value):
     return json.dumps(value, sort_keys=True, ensure_ascii=False, default=str, separators=(",", ":"))
 
 
+async def lock_specification_edit(db):
+    # Rematch can update any active need. Serialize edits before acquiring a
+    # Need, coalition, resource or audit lock, including physical conversion.
+    await db.execute(text("SELECT pg_advisory_xact_lock(hashtext('marketplace.need_specification_edit'), 0)"))
+
+
 def quantity_evidence_conversion(prop, field):
     """Only a documented, exact unit conversion preserves an agent source."""
     sources = prop.get("sources", [])

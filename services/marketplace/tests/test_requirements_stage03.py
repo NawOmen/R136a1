@@ -190,14 +190,14 @@ async def test_physical_edit_refreshes_preloaded_need_before_revision_check(clie
     from app.api import physical_quantities
     nid, _, _, _, headers, payload, *_ = spec
     loaded, resume = asyncio.Event(), asyncio.Event()
-    original = physical_quantities.approve_conversion
+    original = physical_quantities.lock_specification_edit
 
     async def pause_after_preload(*args, **kwargs):
         loaded.set()
         await resume.wait()
         return await original(*args, **kwargs)
 
-    monkeypatch.setattr(physical_quantities, 'approve_conversion', pause_after_preload)
+    monkeypatch.setattr(physical_quantities, 'lock_specification_edit', pause_after_preload)
     stale = asyncio.create_task(client.put(f'/api/v3/physical/needs/{nid}', headers=headers,
         json={**payload, 'volume_units': 15, 'expected_revision': 1}))
     try:
@@ -407,6 +407,88 @@ async def test_group_publication_holds_need_lock_until_commit(client, db_session
     finally:
         resume.set()
         tasks = [task for task in (publish, edit) if task is not None]
+        for task in tasks:
+            if not task.done():
+                task.cancel()
+        await asyncio.gather(*tasks, return_exceptions=True)
+
+
+@pytest.mark.parametrize('physical', [False, True])
+async def test_two_member_edits_serialize_before_need_and_audit_locks(client, db_session, session_factory,
+                                                                    spec, publishable_group, monkeypatch, physical):
+    import asyncio
+    from app.api import needs as needs_api
+    from app.matching import run_market_rematch
+    from app.models import Coalition, CoalitionMember, MatchEvent, ParticipantOrder
+    _, coalition_id, _, _ = publishable_group
+    nid, _, _, _, headers, *_ = spec
+    other = await db_session.scalar(select(CoalitionMember).where(
+        CoalitionMember.coalition_id == coalition_id, CoalitionMember.need_id != nid))
+    other_need = await db_session.get(Need, other.need_id)
+    other_headers = {'Authorization': f'Bearer {make_token(other_need.created_by_user_id)}'}
+    other_body = {'company_id': str(other_need.company_id), 'category': other_need.category,
+        'characteristics': other_need.characteristics, 'volume_units': 11,
+        'deadline_date': str(other_need.deadline_date), 'expected_revision': 1}
+    other_base = '/api/v3/physical/needs' if physical else '/api/v3/needs'
+    if physical:
+        other_body.update(category='Сырьё и материалы', subcategory='Полимеры', characteristics={'unit': 'кг'},
+                          volume_units='0.011', quantity_conversion_approved=True)
+    second_preview = await client.post(f'{other_base}/{other.need_id}/edit-preview',
+        headers=other_headers, json=other_body)
+    assert second_preview.status_code == 200, second_preview.text
+    first_body, first_impact = await preview(client, spec, volume_units=20)
+    # Keep the actual cross-market status updates that caused the deadlock.
+    monkeypatch.setattr(needs_api, 'run_market_rematch', run_market_rematch)
+    entered, resume = asyncio.Event(), asyncio.Event()
+    original = needs_api.revision_impact
+
+    async def pause_first_editor(db, need, data):
+        if need.id == nid:
+            entered.set()
+            await resume.wait()
+        return await original(db, need, data)
+
+    monkeypatch.setattr(needs_api, 'revision_impact', pause_first_editor)
+    first = asyncio.create_task(client.put(f'/api/v3/needs/{nid}', headers=headers,
+        json={**first_body, 'impact_hash': first_impact['impact_hash']}))
+    second = None
+    try:
+        await asyncio.wait_for(entered.wait(), 5)
+        second = asyncio.create_task(client.put(f'{other_base}/{other.need_id}', headers=other_headers,
+            json={**other_body, 'impact_hash': second_preview.json()['impact_hash']}))
+        waiting = False
+        for _ in range(100):
+            await db_session.execute(text('SELECT pg_stat_clear_snapshot()'))
+            waiting = await db_session.scalar(text("SELECT EXISTS(SELECT 1 FROM pg_stat_activity WHERE datname=current_database() AND wait_event_type='Lock' AND query LIKE '%need_specification_edit%' AND pid<>pg_backend_pid())"))
+            if waiting:
+                break
+            await asyncio.sleep(0.01)
+        assert waiting and not second.done()
+        # The second request must not hold its Need row while waiting for the edit boundary.
+        async with session_factory() as probe:
+            assert await probe.scalar(select(Need.id).where(Need.id == other.need_id).with_for_update(nowait=True)) == other.need_id
+            await probe.rollback()
+        resume.set()
+        first_response, second_response = await asyncio.wait_for(asyncio.gather(first, second), 10)
+        assert first_response.status_code == 200, first_response.text
+        assert second_response.status_code == 409, second_response.text
+        # The changed group requires fresh consent, not a hidden automatic retry of stale approval.
+        refreshed = await client.post(f'{other_base}/{other.need_id}/edit-preview', headers=other_headers, json=other_body)
+        assert refreshed.status_code == 200, refreshed.text
+        retried = await client.put(f'{other_base}/{other.need_id}', headers=other_headers,
+            json={**other_body, 'impact_hash': refreshed.json()['impact_hash']})
+        assert retried.status_code == 200, retried.text
+        for need_id, expected_units, owner_headers in ((nid, 20, headers), (other.need_id, 11, other_headers)):
+            saved = await client.get(f'/api/v3/needs/{need_id}', headers=owner_headers)
+            assert saved.json()['revision'] == 2 and saved.json()['volume_units'] == expected_units
+        coalition = await db_session.get(Coalition, coalition_id); await db_session.refresh(coalition)
+        assert coalition.status == 'cancelled'
+        assert not (await db_session.scalars(select(ParticipantOrder))).all()
+        events = (await db_session.scalars(select(MatchEvent).where(MatchEvent.event_type == 'need_specification_changed'))).all()
+        assert len(events) == 2 and all(event.status == 'processed' for event in events)
+    finally:
+        resume.set()
+        tasks = [task for task in (first, second) if task is not None]
         for task in tasks:
             if not task.done():
                 task.cancel()
