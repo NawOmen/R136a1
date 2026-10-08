@@ -573,6 +573,11 @@ async def read_source(run_id: uuid.UUID, source_id: str, original: bool = False,
 @router.post("/api/v2/agent-runs/{run_id}/sources/{source_id}/invalidate", response_model=AgentRunOut)
 async def invalidate_source(run_id: uuid.UUID, source_id: str, data: RunRevisionIn, request: Request,
                             user: CurrentUser = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
+    # Порядок блокировок единый для всех операций с задачами: сначала задачи,
+    # затем процесс. Промежуточных commit нет — вся операция в одной транзакции.
+    linked_tasks = (await db.execute(
+        select(AgentTask).where(AgentTask.linked_run_id == run_id).with_for_update()
+    )).scalars().all()
     run = await owned_run(db, run_id, user, lock=True)
     check_run_revision(run, data.expected_revision, request)
     source = await db.get(AgentSource, (run_id, source_id))
@@ -602,11 +607,8 @@ async def invalidate_source(run_id: uuid.UUID, source_id: str, data: RunRevision
     await log_tool(db, run.id, "invalidate_source", "success", source_id, "Источник удалён, версия требований изменена",
                    actor="human")
     await task_contract.cache_purge_run(db, run.id)
-    linked_tasks = (await db.execute(
-        select(AgentTask).where(AgentTask.linked_run_id == run.id)
-    )).scalars().all()
     for linked_task in linked_tasks:
-        if linked_task.state in ("completed", "cancelled"):
+        if linked_task.state in ("completed", "cancelled", "failed"):
             continue
         try:
             await task_contract.attach_run(db, linked_task, run)
@@ -719,12 +721,35 @@ async def _require_task_role(db: AsyncSession, company_id: uuid.UUID, user, scen
     permission = SCENARIO_PERMISSIONS.get(scenario_type)
     if permission is None:
         raise HTTPException(422, f"Неизвестный тип сценария: {scenario_type}")
-    allowed = await db.scalar(
-        text(f"SELECT {permission} FROM auth.company_members WHERE company_id=:cid AND user_id=:uid"),
-        {"cid": company_id, "uid": user.id},
-    )
-    if not allowed:
+    flags = (
+        await db.execute(
+            text("SELECT can_buy, can_sell FROM auth.company_members WHERE company_id=:cid AND user_id=:uid"),
+            {"cid": company_id, "uid": user.id},
+        )
+    ).mappings().first()
+    if not flags or not flags[permission]:
         raise HTTPException(status.HTTP_403_FORBIDDEN, detail="Нет актуального права роли этой компании")
+
+
+async def owned_run_for_task(db: AsyncSession, run_id: uuid.UUID, user, scenario_type: str) -> AgentRun:
+    """Доступ к процессу с учётом сценария задачи: seller-процесс требует
+    can_sell компании процесса, остальные — can_buy."""
+    run = await db.scalar(select(AgentRun).where(AgentRun.id == run_id, AgentRun.user_id == user.id))
+    if run is None:
+        raise HTTPException(404, "Агентный процесс не найден")
+    permission = "can_sell" if run.agent_type == "seller_agent" else SCENARIO_PERMISSIONS.get(scenario_type)
+    if permission is None:
+        raise HTTPException(422, f"Неизвестный тип сценария: {scenario_type}")
+    if run.company_id is not None:
+        flags = (
+            await db.execute(
+                text("SELECT can_buy, can_sell FROM auth.company_members WHERE company_id=:cid AND user_id=:uid"),
+                {"cid": run.company_id, "uid": user.id},
+            )
+        ).mappings().first()
+        if not flags or not flags[permission]:
+            raise HTTPException(status.HTTP_403_FORBIDDEN, detail="Нет актуального права роли компании процесса")
+    return run
 
 
 async def _task_out(db: AsyncSession, task) -> TaskOut:
@@ -897,7 +922,7 @@ async def attach_run_to_task(
     task = await task_contract.owned_task(db, task_id, company_id, lock=True)
     task = await task_contract.owned_task(db, task_id, company_id, lock=True)
     await _require_task_role(db, company_id, user, task.scenario_type)
-    run = await owned_run(db, data.run_id, user)
+    run = await owned_run_for_task(db, data.run_id, user, task.scenario_type)
     await task_contract.attach_run(db, task, run)
     await db.commit()
     return await _task_out(db, task)

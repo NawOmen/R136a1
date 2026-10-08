@@ -60,19 +60,12 @@ STEP_TEXT = {
 
 ARTIFACT_TYPES = frozenset({
     "agent_run_result",
-    "coalition_calculation",
-    "resilience_plan",
 })
 
-SCENARIO_ARTIFACTS: dict[str, frozenset[str]] = {
-    "buyer_investigation": frozenset({"agent_run_result"}),
-    "seller_explain": frozenset({"agent_run_result"}),
-    "marketplace_match": frozenset({"agent_run_result"}),
-    "coalition_build": frozenset({"agent_run_result", "coalition_calculation"}),
-    "resilience_plan": frozenset({"agent_run_result", "resilience_plan"}),
+RUN_READY_BY_AGENT: dict[str, frozenset[str]] = {
+    "buyer_agent": frozenset({"ready_for_review", "confirmed_by_user"}),
+    "seller_agent": frozenset({"completed", "completed_with_fallback"}),
 }
-
-RUN_READY_STATES = frozenset({"ready_for_review", "confirmed_by_user"})
 
 RUN_STATE_TO_TASK = {
     "processing_sources": "running",
@@ -219,24 +212,28 @@ def submit_task_input(
 
 async def verify_run_artifact(db: AsyncSession, task: AgentTask, artifact: dict) -> None:
     """Проверка сохранённой сущности в транзакции: существование, компания,
-    допустимость для сценария, текущая ревизия, готовность и свежесть источников."""
-    if artifact["type"] not in SCENARIO_ARTIFACTS.get(task.scenario_type, frozenset()):
-        raise HTTPException(422, f"Артефакт {artifact['type']} недопустим для сценария {task.scenario_type}")
+    привязка к показанному задачей процессу и его текущей ревизии, готовность
+    по типу процесса и свежесть источников. Вызывать с заблокированными
+    строками задачи и процесса (порядок: задача, затем процесс)."""
     if artifact["type"] != "agent_run_result":
-        return
+        raise HTTPException(422, "Завершение требует сохранённого результата процесса")
     try:
         run_id = uuid.UUID(str(artifact["id"]))
     except ValueError:
         raise HTTPException(422, "Артефакт обязан ссылаться на сохранённый процесс") from None
-    run = await db.get(AgentRun, run_id)
+    if task.linked_run_id is None or run_id != task.linked_run_id:
+        raise HTTPException(409, "Согласие привязано к показанному задачей процессу; замена — через явное обновление привязки")
+    run = await db.get(AgentRun, run_id, with_for_update=True)
     if run is None:
         raise HTTPException(409, "Связанный процесс не найден; завершение без сохранённого результата запрещено")
     if run.company_id != task.company_id:
         raise HTTPException(403, "Процесс принадлежит другой компании")
-    if artifact.get("revision") != run.revision:
+    shown_revision = (task.required_response or {}).get("run_revision")
+    if artifact.get("revision") != run.revision or shown_revision != run.revision:
         raise HTTPException(409, "Ревизия процесса изменилась; согласие на старых условиях недействительно")
-    if run.state not in RUN_READY_STATES:
-        raise HTTPException(409, f"Процесс в состоянии {run.state} не готов к согласию")
+    ready_states = RUN_READY_BY_AGENT.get(run.agent_type)
+    if not ready_states or run.state not in ready_states:
+        raise HTTPException(409, f"Процесс типа {run.agent_type} в состоянии {run.state} не готов к согласию")
     stale_sources = await db.scalar(
         select(AgentSource.run_id).where(
             AgentSource.run_id == run.id, AgentSource.active.is_(False)
@@ -337,6 +334,8 @@ async def attach_run(db: AsyncSession, task: AgentTask, run: AgentRun) -> AgentT
     mapped = RUN_STATE_TO_TASK.get(run.state)
     if mapped is None:
         raise HTTPException(409, f"Состояние процесса {run.state} не продолжается задачей")
+    previous_run_id = task.linked_run_id
+    previous_shown_revision = (task.required_response or {}).get("run_revision")
     task.linked_run_id = run.id
     if run.state == "confirmed_by_user":
         consent_rows = (await db.execute(
@@ -374,7 +373,8 @@ async def attach_run(db: AsyncSession, task: AgentTask, run: AgentRun) -> AgentT
             "run_id": str(run.id),
             "run_revision": run.revision,
         }
-        task.approval_requested_at = _utcnow()
+        if previous_run_id != run.id or previous_shown_revision != run.revision:
+            task.approval_requested_at = _utcnow()
     elif mapped == "failed":
         task.error = run.error or "Процесс завершился ошибкой"
         task.result_artifact = None
@@ -434,5 +434,5 @@ async def cache_purge_run(db: AsyncSession, run_id: uuid.UUID) -> int:
     )).scalars().all()
     for row in rows:
         await db.delete(row)
-    await db.commit()
+    await db.flush()
     return len(rows)

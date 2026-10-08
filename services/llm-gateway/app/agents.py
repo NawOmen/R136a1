@@ -178,7 +178,8 @@ async def log_tool(
     actor: ToolActor = "system",
 ) -> None:
     """Журнал вызова с серверной проверкой allowlist: неизвестный инструмент
-    или чужой исполнитель отклоняются независимо от текста модели."""
+    или чужой исполнитель отклоняются независимо от текста модели.
+    Запись фиксируется внешней транзакцией операции без промежуточных commit."""
     executor = check_tool_call(tool_name, actor)
     db.add(
         ToolCall(
@@ -190,7 +191,7 @@ async def log_tool(
             output_summary=output_summary[:1000],
         )
     )
-    await db.commit()
+    await db.flush()
 
 
 def build_extraction_prompt(sources: list[SourceDescriptor]) -> str:

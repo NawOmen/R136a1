@@ -519,3 +519,157 @@ async def test_cache_key_includes_model_versions_and_hit_returns_them(client, to
     fourth = await make_buyer_run(client, token, company_id, text_value)
     assert any(call["status"] == "cached" for call in fourth["tool_calls"])
     assert fourth["model_version"] == "synthetic-model-v2"
+
+
+@pytest.mark.asyncio
+async def test_unverifiable_calculation_artifacts_rejected(client, token, db_session, user_id):
+    company_id = await make_company(db_session, user_id)
+    for scenario, artifact_type in (("coalition_build", "coalition_calculation"),
+                                    ("resilience_plan", "resilience_plan")):
+        created = await create_task(client, token, company_id, key=f"calc-{scenario}", scenario=scenario)
+        await client.post(TASKS + f"/{created['task_id']}/start", params={"company_id": str(company_id)},
+                          json={"expected_revision": 1}, headers=auth(token))
+        run = await make_buyer_run(client, token, company_id)
+        await client.post(TASKS + f"/{created['task_id']}/attach-run", params={"company_id": str(company_id)},
+                          json={"run_id": run["id"]}, headers=auth(token))
+        response = await client.post(
+            TASKS + f"/{created['task_id']}/approve", params={"company_id": str(company_id)},
+            json={"expected_revision": 1, "approval": {"decision": "approved"},
+                  "result_artifact": {"type": artifact_type, "id": str(uuid.uuid4())}},
+            headers=auth(token),
+        )
+        assert response.status_code == 422, scenario
+
+
+@pytest.mark.asyncio
+async def test_approve_bound_to_shown_linked_run(client, token, db_session, user_id):
+    company_id = await make_company(db_session, user_id)
+    created = await create_task(client, token, company_id)
+    await client.post(TASKS + f"/{created['task_id']}/start", params={"company_id": str(company_id)},
+                      json={"expected_revision": 1}, headers=auth(token))
+    run_a = await make_buyer_run(client, token, company_id)
+    run_b = await make_buyer_run(client, token, company_id, "Нужно 7000 бумажных стаканов в Москву за десять дней")
+    await client.post(TASKS + f"/{created['task_id']}/attach-run", params={"company_id": str(company_id)},
+                      json={"run_id": run_a["id"]}, headers=auth(token))
+    swapped = await client.post(
+        TASKS + f"/{created['task_id']}/approve", params={"company_id": str(company_id)},
+        json={"expected_revision": 1, "approval": {"decision": "approved"},
+              "result_artifact": {"type": "agent_run_result", "id": run_b["id"], "revision": run_b["revision"]}},
+        headers=auth(token),
+    )
+    assert swapped.status_code == 409
+    body = (await client.get(TASKS + f"/{created['task_id']}", params={"company_id": str(company_id)},
+                             headers=auth(token))).json()
+    assert body["state"] == "awaiting_approval"
+    assert body["linked_run_id"] == run_a["id"]
+
+
+@pytest.mark.asyncio
+async def test_reattach_same_run_keeps_approval_deadline(client, token, db_session, user_id):
+    company_id = await make_company(db_session, user_id)
+    created = await create_task(client, token, company_id)
+    await client.post(TASKS + f"/{created['task_id']}/start", params={"company_id": str(company_id)},
+                      json={"expected_revision": 1}, headers=auth(token))
+    run = await make_buyer_run(client, token, company_id)
+    await client.post(TASKS + f"/{created['task_id']}/attach-run", params={"company_id": str(company_id)},
+                      json={"run_id": run["id"]}, headers=auth(token))
+    await db_session.execute(
+        text("UPDATE agents.agent_tasks SET approval_requested_at = now() - interval '25 hours' WHERE task_id = :id"),
+        {"id": uuid.UUID(created["task_id"])},
+    )
+    await db_session.commit()
+    before = (await client.get(TASKS + f"/{created['task_id']}", params={"company_id": str(company_id)},
+                               headers=auth(token))).json()["approval_requested_at"]
+    repeated = await client.post(TASKS + f"/{created['task_id']}/attach-run", params={"company_id": str(company_id)},
+                                 json={"run_id": run["id"]}, headers=auth(token))
+    assert repeated.status_code == 200
+    assert repeated.json()["approval_requested_at"] == before
+    late = await client.post(
+        TASKS + f"/{created['task_id']}/approve", params={"company_id": str(company_id)},
+        json={"expected_revision": 1, "approval": {"decision": "approved"},
+              "result_artifact": {"type": "agent_run_result", "id": run["id"], "revision": run["revision"]}},
+        headers=auth(token),
+    )
+    assert late.status_code == 409
+
+
+@pytest.mark.asyncio
+async def test_seller_task_full_lifecycle_without_buyer_right(client, token, db_session, user_id):
+    seller_company = uuid.uuid4()
+    await db_session.execute(
+        text(
+            "INSERT INTO auth.companies "
+            "(id, full_name, display_name, legal_form, inn, legal_address, country, verification_status) "
+            "VALUES (:id, 'ООО «Тест»', 'ООО «Тест»', 'ООО', '7700000001', "
+            "'г. Москва, ул. Синтетическая, д. 1', 'RU', 'verified')"
+        ),
+        {"id": seller_company},
+    )
+    await db_session.execute(
+        text(
+            "INSERT INTO auth.company_members (id, company_id, user_id, can_buy, can_sell) "
+            "VALUES (:id, :company_id, :user_id, false, true)"
+        ),
+        {"id": uuid.uuid4(), "company_id": seller_company, "user_id": user_id},
+    )
+    await db_session.execute(
+        text(
+            "INSERT INTO marketplace.capability_passports "
+            "(company_id, technologies, equipment, materials, size_ranges, certifications, "
+            "delivery_regions, completed_order_types) "
+            "VALUES (:id, '[\"высечка\"]', '[]', '[\"крафт-картон\"]', '{}', '[]', '[]', "
+            "'[\"бумажные стаканы\"]')"
+        ),
+        {"id": seller_company},
+    )
+    await db_session.commit()
+    explained = await client.post(
+        "/api/v1/seller-agent/explain",
+        json={"company_id": str(seller_company), "category": "бумажные стаканы", "requirements": {}},
+        headers=auth(token),
+    )
+    assert explained.status_code == 200
+    params = {"company_id": str(seller_company)}
+    created = await create_task(client, token, seller_company, key="seller-life", scenario="seller_explain")
+    await client.post(TASKS + f"/{created['task_id']}/start", params=params,
+                      json={"expected_revision": 1}, headers=auth(token))
+    run_row = (await db_session.execute(
+        text("SELECT id, revision, state FROM agents.agent_runs WHERE company_id = :cid ORDER BY created_at DESC LIMIT 1"),
+        {"cid": seller_company},
+    )).mappings().first()
+    assert run_row["state"] == "completed"
+    attached = await client.post(TASKS + f"/{created['task_id']}/attach-run", params=params,
+                                 json={"run_id": str(run_row["id"])}, headers=auth(token))
+    assert attached.status_code == 200, attached.text
+    assert attached.json()["state"] == "awaiting_approval"
+    approved = await client.post(
+        TASKS + f"/{created['task_id']}/approve", params=params,
+        json={"expected_revision": 1, "approval": {"decision": "approved"},
+              "result_artifact": {"type": "agent_run_result", "id": str(run_row["id"]),
+                                  "revision": run_row["revision"]}},
+        headers=auth(token),
+    )
+    assert approved.status_code == 200, approved.text
+    assert approved.json()["state"] == "completed"
+
+
+@pytest.mark.asyncio
+async def test_invalidate_with_failed_linked_task_returns_ok(client, token, db_session, user_id):
+    company_id = await make_company(db_session, user_id)
+    created = await create_task(client, token, company_id)
+    await client.post(TASKS + f"/{created['task_id']}/start", params={"company_id": str(company_id)},
+                      json={"expected_revision": 1}, headers=auth(token))
+    run = await make_buyer_run(client, token, company_id)
+    await client.post(TASKS + f"/{created['task_id']}/attach-run", params={"company_id": str(company_id)},
+                      json={"run_id": run["id"]}, headers=auth(token))
+    await client.post(TASKS + f"/{created['task_id']}/fail", params={"company_id": str(company_id)},
+                      json={"expected_revision": 1, "error": "прервано"}, headers=auth(token))
+    invalidated = await client.post(
+        f"/api/v2/agent-runs/{run['id']}/sources/request_text/invalidate",
+        json={"expected_revision": run["revision"]}, headers=auth(token),
+    )
+    assert invalidated.status_code == 200, invalidated.text
+    assert invalidated.json()["revision"] == run["revision"] + 1
+    task = (await client.get(TASKS + f"/{created['task_id']}", params={"company_id": str(company_id)},
+                             headers=auth(token))).json()
+    assert task["state"] == "failed"
