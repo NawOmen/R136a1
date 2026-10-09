@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { marketplace, EditorRegistry } from "../lib/marketplace";
-import { countUserCharacteristics } from "../lib/categoryProfiles";
+import { countUserCharacteristics, requiredCharacteristicKeys } from "../lib/categoryProfiles";
 
 export default function CharacteristicSuggestions({ category, subcategory, keys, onAdd, disabled = false, product = false }: {
   category: string; subcategory: string; keys: string[]; onAdd: (key: string) => void; disabled?: boolean; product?: boolean;
@@ -21,8 +21,9 @@ export default function CharacteristicSuggestions({ category, subcategory, keys,
   const profile=registry.groups.find(group=>group.label===category)?.leaves.find(leaf=>leaf.label===subcategory)?.technical_profile;
   const normalize=(value:string)=>value.trim().toLowerCase().replaceAll("ё","е");
   const present=new Set(keys.map(normalize));
+  const requiredKeys = requiredCharacteristicKeys(category, subcategory);
   const suggestions=(profile?.fields ?? []).filter(key=>![key,...registry.characteristic_fields[key].aliases].some(alias=>present.has(normalize(alias))))
-    .map(key=>({key,...registry.characteristic_fields[key],required:profile?.required_for_product.includes(key)}));
+    .map(key=>({key,...registry.characteristic_fields[key],required:profile?.required_for_product.includes(key),outsideLimit:requiredKeys.has(normalize(key))}));
   if (!suggestions.length) return null;
   const full = countUserCharacteristics(keys.map((key) => ({ key })), category, subcategory) >= 25;
   return (
@@ -31,7 +32,7 @@ export default function CharacteristicSuggestions({ category, subcategory, keys,
         onChange={(event) => {
           if (!event.target.value) return;
           const picked = suggestions.find((field) => field.key === event.target.value);
-          if (full && !picked?.required) {
+          if (full && !picked?.outsideLimit) {
             setLimitMessage("Лимит 25 пользовательских исчерпан: можно добавить только обязательные для публикации поля.");
             return;
           }

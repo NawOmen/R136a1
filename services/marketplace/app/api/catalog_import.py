@@ -18,7 +18,7 @@ from ..category_profile_snapshot import profile_after_specification_change
 from ..category_units import order_unit
 from ..database import get_db
 from ..deps import CurrentUser, get_current_user, require_company_admin, require_company_seller
-from ..models import CatalogImport, Product, ResourceReservation
+from ..models import CatalogImport, Offer, Product, ResourceReservation
 from ..money import decimal
 from ..resources import lock_company, occupies, reservations
 from ..schemas import ProductIn
@@ -149,7 +149,7 @@ def _expected_binding(revisions: dict, product_id: str) -> tuple:
     if not isinstance(entry, dict):
         return None, None
     revision = entry.get("revision")
-    return (revision if isinstance(revision, int) else None, entry.get("status"))
+    return (revision if type(revision) is int else None, entry.get("status"))
 
 
 async def match_rows(db: AsyncSession, company_id: uuid.UUID, rows: list[dict]) -> list[dict]:
@@ -215,7 +215,7 @@ async def import_catalog(company_id: uuid.UUID, file: UploadFile = File(...),
     try:
         revisions = json.loads(expected_revisions) if expected_revisions else {}
         if not isinstance(revisions, dict):
-            raise ValueError("Ожидались ревизии вида {id: revision}")
+            raise ValueError("Ожидались привязки вида {id: {revision, status}}")
     except (ValueError, TypeError) as exc:
         raise HTTPException(422, "Некорректные ожидаемые ревизии предпросмотра") from exc
     matched = await match_rows(db, company_id, rows)
@@ -229,7 +229,7 @@ async def import_catalog(company_id: uuid.UUID, file: UploadFile = File(...),
                 if saved is None or saved.company_id != company_id or saved.is_published:
                     continue
                 exp_revision, exp_status = _expected_binding(revisions, str(saved.id))
-                if exp_status is not None and exp_status != "changed":
+                if exp_status != "changed":
                     raise HTTPException(409, "Показанное решение для строки изменилось. Запросите новый preview")
                 if exp_revision != saved.revision:
                     raise HTTPException(409, "Карточка изменилась после предпросмотра. Запросите новый preview")
@@ -322,7 +322,9 @@ async def rollback_catalog_import(company_id: uuid.UUID, import_id: uuid.UUID,
         if str(raw_id) in list(record.product_ids or []):
             referenced = await db.scalar(select(ResourceReservation.id).where(
                 ResourceReservation.product_id == product.id).limit(1))
-            if referenced is not None:
+            offer_reference = await db.scalar(select(Offer.id).where(
+                Offer.product_id == product.id).limit(1))
+            if referenced is not None or offer_reference is not None:
                 # Исторические ссылки (в т.ч. released) сохраняются: удаление
                 # нарушило бы FK и потеряло историю вместо отката.
                 conflicted.append(str(product.id))

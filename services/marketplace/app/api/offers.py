@@ -74,19 +74,20 @@ async def _send_blockers(db: AsyncSession, *, need: Need, company_id: uuid.UUID,
         from ..resource_scopes import conversion_for, occupied_units
         unit = order_unit(need.characteristics)
         entries = (await db.execute(select(CapacityEntry).where(CapacityEntry.company_id == company_id))).scalars().all()
-        free_capacity, has_entries = 0, False
+        free_capacity = 0
         for entry in entries:
             if not date.today() <= entry.date <= need.deadline_date:
                 continue
             conversion = conversion_for(entry, need.category, need.subcategory, unit)
             if conversion is None:
                 continue
-            has_entries = True
             coefficient = conversion["resource_units_per_order_unit"]
             occupied = sum(occupied_units(row) for row in held
                            if row.capacity_entry_id == entry.id and occupies(row))
             free_capacity += max(0, entry.available_units - occupied) // coefficient
-        if has_entries and available_units > free_capacity:
+        # Пустой календарь — неизвестный ресурс; известный календарь без
+        # совместимых записей в срок подтверждает нулевую доступность.
+        if entries and available_units > free_capacity:
             blockers.append("Доступный объём превышает подтверждённую свободную мощность")
     return blockers, warnings
 
@@ -274,6 +275,7 @@ async def preview_offer_send(
         raise HTTPException(status.HTTP_403_FORBIDDEN, detail="Нельзя отправить предложение на потребность своей компании")
     if need.visibility != "open_anonymized":
         raise HTTPException(status.HTTP_403_FORBIDDEN, detail="Потребность недоступна этой компании")
+    await require_current_evidence(db, need)
     blockers: list[str] = []
     if need.status not in ACTIVE_NEED_STATUSES or not need_is_current(need):
         blockers.append("Потребность закрыта или срок её актуальности истёк")
@@ -292,18 +294,20 @@ async def preview_offer_send(
     if draft is not None:
         resource_kind = draft.payload.get("resource_kind", "capacity")
         product_id = uuid.UUID(draft.payload["product_id"]) if draft.payload.get("product_id") else None
-    if data.request_key:
-        previous = await db.scalar(select(Offer).where(
-            Offer.need_id == need.id, Offer.company_id == data.company_id, Offer.request_key == data.request_key))
-        if previous is not None:
+    previous = await db.scalar(select(Offer).where(
+        Offer.need_id == need.id, Offer.company_id == data.company_id))
+    if previous is not None:
+        if data.request_key is not None and previous.request_key == data.request_key:
             if _same_offer_terms(previous, data, product_id=product_id, resource_kind=resource_kind):
+                # Повтор возвращает сохранённое КП, но не отменяет обязательные
+                # проверки потребности, условий запроса и существования черновика.
                 warnings = await _sending_warnings(db, data.company_id, need, data.moq_units,
                                                    data.available_units, previous.product_id)
-                return OfferSendPreviewOut(blockers=[], warnings=warnings, missing=[],
-                                           can_send=True, existing_offer_id=previous.id)
+                return OfferSendPreviewOut(blockers=blockers, warnings=warnings, missing=[],
+                                           can_send=not blockers, existing_offer_id=previous.id)
             blockers.append("Повтор с тем же ключом содержит другие условия")
-    elif await db.scalar(select(Offer.id).where(Offer.need_id == need.id, Offer.company_id == data.company_id)):
-        blockers.append("Компания уже отправила предложение по этой потребности")
+        else:
+            blockers.append("Компания уже отправила предложение по этой потребности")
     if draft is not None:
         if draft.status != "draft":
             blockers.append("Черновик уже использован")
