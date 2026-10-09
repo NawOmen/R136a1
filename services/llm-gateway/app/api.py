@@ -12,13 +12,22 @@ from fastapi.responses import Response, JSONResponse
 from sqlalchemy import select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from .agents import BuyerAgent, SellerAgent, log_tool, search_capabilities, _without_placeholders
+from .agents import BuyerAgent, SellerAgent, log_tool, merge_facts, search_capabilities, _without_placeholders
 from .buyer_comparison import buyer_summary
 from .config import settings
 from .database import get_db
 from .extractors import LocalTranscriber, UnreadableMaterial, material_to_text
-from .models import AgentRun, AgentSource, ToolCall
+from .models import AgentRun, AgentSource, AgentTask, ToolCall
 from .providers import ModelUnavailable, RoutedProvider
+from .role_passports import (
+    PROMPT_VERSION,
+    ROLE_PASSPORTS,
+    RUN_TYPE_PERMISSIONS,
+    SCENARIO_PERMISSIONS,
+    SCENARIO_RUN_TYPES,
+    SELLER_PROMPT_VERSION,
+)
+from . import tasks as task_contract
 from .schemas import (
     AgentRunOut,
     BuyerAgentResult,
@@ -27,9 +36,20 @@ from .schemas import (
     ClarificationQuestion,
     EvidenceItem,
     HealthOut,
+    RawExtraction,
+    RolePassportOut,
     SellerExplainIn,
     SellerExplainOut,
     SourceDescriptor,
+    TaskApproveIn,
+    TaskAttachIn,
+    TaskCancelIn,
+    TaskCreateIn,
+    TaskCreateOut,
+    TaskFailIn,
+    TaskInputIn,
+    TaskOut,
+    TaskRevisionIn,
     TranscriptionOut,
     PlatformAssistantIn,
     PlatformAssistantOut,
@@ -46,17 +66,46 @@ def _provider(request: Request) -> RoutedProvider:
     return getattr(request.app.state, "llm_provider", None) or RoutedProvider()
 
 
+def _provider_kind(provider) -> str:
+    """Живой запуск и тестовая двойная реализация различимы на трассе."""
+    return "live" if isinstance(provider, RoutedProvider) else "test_double"
+
+
+def _model_version(used_route: str) -> str:
+    if used_route == "external_deepseek":
+        return settings.deepseek_model
+    if used_route == "local_qwen+external_deepseek":
+        return f"{settings.ollama_model}+{settings.deepseek_model}"
+    if used_route == "rules_only":
+        return "rules_only"
+    return settings.ollama_model
+
+
 async def owned_run(db, run_id, user, *, lock=False):
     query = select(AgentRun).where(AgentRun.id == run_id, AgentRun.user_id == user.id)
+    if lock:
+        query = query.execution_options(populate_existing=True)
     run = await db.scalar(query.with_for_update() if lock else query)
     if run is None:
         raise HTTPException(404, "Агентный процесс не найден")
-    if run.company_id is not None:
-        allowed = await db.scalar(text("SELECT can_buy FROM auth.company_members WHERE company_id=:cid AND user_id=:uid"),
-            {"cid": run.company_id, "uid": user.id})
-        if not allowed:
-            raise HTTPException(403, "Нет прав покупателя выбранной компании")
+    await _require_run_role(db, run, user)
     return run
+
+
+async def _require_run_role(db, run: AgentRun, user) -> None:
+    """Актуальное право по типу самого процесса, а не вызывающего сценария."""
+    permission = RUN_TYPE_PERMISSIONS.get(run.agent_type)
+    if permission is None:
+        raise HTTPException(422, f"Неизвестный тип процесса: {run.agent_type}")
+    if run.company_id is not None:
+        flags = (
+            await db.execute(
+                text("SELECT can_buy, can_sell FROM auth.company_members WHERE company_id=:cid AND user_id=:uid"),
+                {"cid": run.company_id, "uid": user.id},
+            )
+        ).mappings().first()
+        if not flags or not flags[permission]:
+            raise HTTPException(status.HTTP_403_FORBIDDEN, detail="Нет актуального права роли компании процесса")
 
 
 def check_run_revision(run, expected, request):
@@ -230,6 +279,7 @@ async def analyze_buyer_request(
                 "success",
                 upload.filename or f"Материал {index}",
                 f"распознано символов: {len(extracted)}",
+                actor="model",
             )
         except (UnreadableMaterial, ModelUnavailable) as exc:
             warning = f"{upload.filename or f'Материал {index}'}: {exc}"
@@ -241,6 +291,7 @@ async def analyze_buyer_request(
                 "failed",
                 upload.filename or f"Материал {index}",
                 str(exc),
+                actor="model",
             )
 
     combined_length = sum(len(source.text) for source in sources)
@@ -252,12 +303,72 @@ async def analyze_buyer_request(
 
     run.state = "extracting_requirements"
     run.input_chars = combined_length
+    run.prompt_version = PROMPT_VERSION
+    provider = _provider(request)
+    run.provider_kind = _provider_kind(provider)
     await db.commit()
+    cache_binding = None
+    if company_id is not None:
+        source_versions = [(source.id, source.content_hash) for source in sources]
+        generation = {
+            "model_version": settings.ollama_model if route == "local"
+            else f"{settings.ollama_model}+{settings.deepseek_model}",
+            "prompt_version": PROMPT_VERSION,
+            "schema_version": task_contract.SCHEMA_VERSION,
+        }
+        cache_binding = {
+            "cache_key": task_contract.extraction_cache_key("buyer_investigation", **generation),
+            "input_hash": task_contract.canonical_hash(
+                {"request_text": request_text, "route": route, "sources": source_versions}
+            ),
+            "source_versions_hash": task_contract.canonical_hash(source_versions),
+        }
+    cached = (
+        await task_contract.cache_lookup(db, company_id=company_id, **cache_binding)
+        if cache_binding is not None
+        else None
+    )
     started_at = perf_counter()
     try:
-        result, used_route, fallback = await BuyerAgent(_provider(request)).run(
-            db, run.id, sources, warnings, route, buyer_company_id=company_id
-        )
+        if cached is not None:
+            extraction = RawExtraction.model_validate(cached["extraction"])
+            used_route, fallback = cached["used_route"], None
+            warnings = [*warnings, *cached.get("review_notes", [])]
+            await log_tool(
+                db,
+                run.id,
+                "extract_requirements",
+                "cached",
+                f"источников: {len(sources)}; повторный одинаковый вход",
+                f"фактов: {len(extraction.facts)}; модель не вызывалась; маршрут: {used_route}",
+                actor="model",
+            )
+            properties, conflicts, questions = merge_facts(extraction, sources, warnings)
+            matches = await search_capabilities(db, extraction.category, properties, company_id)
+            await log_tool(
+                db,
+                run.id,
+                "search_capability_passports",
+                "success",
+                f"категория: {extraction.category}",
+                f"найдено производителей: {len(matches)}",
+                actor="model",
+            )
+            result = BuyerAgentResult(
+                buyer_company_id=company_id,
+                category=extraction.category,
+                properties=properties,
+                conflicts=conflicts,
+                questions=questions,
+                matches=matches,
+                warnings=warnings,
+                summary=buyer_summary(matches, bool(conflicts or questions)),
+                can_confirm=not conflicts and not questions,
+            )
+        else:
+            result, used_route, fallback, extraction = await BuyerAgent(provider).run_with_extraction(
+                db, run.id, sources, warnings, route, buyer_company_id=company_id
+            )
         if fallback:
             await log_tool(
                 db,
@@ -277,8 +388,29 @@ async def analyze_buyer_request(
             run.estimated_cost_rub = None
             run.cost_basis = "Стоимость внешнего маршрута не оценивается без подтверждённого биллинга"
         run.used_route = used_route
+        run.model_version = _model_version(used_route)
         run.state = "needs_clarification" if result.questions else "ready_for_review"
         await db.commit()
+        if cached is not None:
+            run.model_version = cached.get("model_version") or _model_version(used_route)
+            run.prompt_version = cached.get("prompt_version") or PROMPT_VERSION
+            await db.commit()
+        if cached is None and cache_binding is not None:
+            review_notes = result.warnings[len(warnings):]
+            await task_contract.cache_store(
+                db,
+                company_id=company_id,
+                **cache_binding,
+                run_id=run.id,
+                source_ids=[source.id for source in sources],
+                payload={
+                    "extraction": extraction.model_dump(mode="json"),
+                    "used_route": used_route,
+                    "review_notes": review_notes,
+                    "model_version": run.model_version,
+                    "prompt_version": run.prompt_version,
+                },
+            )
         await db.refresh(run)
         return await _run_out(db, run)
     except ModelUnavailable as exc:
@@ -309,7 +441,10 @@ async def clarify_agent_run(
     user: CurrentUser = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
+    await _lock_run_scope(db, run_id)
     run = await owned_run(db, run_id, user, lock=True)
+    if run.agent_type != "buyer_agent":
+        raise HTTPException(409, "Операция доступна только для buyer-процессов")
     check_run_revision(run, data.expected_revision, request)
     if run.state not in {"needs_clarification", "ready_for_review"}:
         raise HTTPException(status.HTTP_409_CONFLICT, detail="Процесс нельзя уточнить в этом состоянии")
@@ -392,7 +527,9 @@ async def clarify_agent_run(
         "success",
         f"ответов: {len(data.answers)}",
         f"осталось вопросов: {len(result.questions)}",
+        actor="human",
     )
+    await _refresh_linked_tasks(db, run)
     await db.commit()
     await db.refresh(run)
     return await _run_out(db, run)
@@ -407,7 +544,10 @@ async def confirm_agent_run(
     user: CurrentUser = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
+    await _lock_run_scope(db, run_id)
     run = await owned_run(db, run_id, user, lock=True)
+    if run.agent_type != "buyer_agent":
+        raise HTTPException(409, "Операция доступна только для buyer-процессов")
     check_run_revision(run, data.expected_revision if data else None, request)
     if run.state == "confirmed_by_user":
         return await _run_out(db, run)
@@ -434,7 +574,9 @@ async def confirm_agent_run(
         "success",
         "Подтверждение восстановленной спецификации",
         "Пользователь разрешил перенести данные в черновик",
+        actor="human",
     )
+    await _refresh_linked_tasks(db, run)
     await db.commit()
     await db.refresh(run)
     return await _run_out(db, run)
@@ -460,7 +602,12 @@ async def read_source(run_id: uuid.UUID, source_id: str, original: bool = False,
 @router.post("/api/v2/agent-runs/{run_id}/sources/{source_id}/invalidate", response_model=AgentRunOut)
 async def invalidate_source(run_id: uuid.UUID, source_id: str, data: RunRevisionIn, request: Request,
                             user: CurrentUser = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
+    # Сериализация с attach/approve/clarify/confirm того же процесса через
+    # advisory lock; промежуточных commit нет — вся операция в одной транзакции.
+    await _lock_run_scope(db, run_id)
     run = await owned_run(db, run_id, user, lock=True)
+    if run.agent_type != "buyer_agent":
+        raise HTTPException(409, "Операция доступна только для buyer-процессов")
     check_run_revision(run, data.expected_revision, request)
     source = await db.get(AgentSource, (run_id, source_id))
     if source is None:
@@ -486,7 +633,10 @@ async def invalidate_source(run_id: uuid.UUID, source_id: str, data: RunRevision
         run.result = result.model_dump(mode="json")
         run.state = "needs_clarification"
     run.revision += 1
-    await log_tool(db, run.id, "invalidate_source", "success", source_id, "Источник удалён, версия требований изменена")
+    await log_tool(db, run.id, "invalidate_source", "success", source_id, "Источник удалён, версия требований изменена",
+                   actor="human")
+    await task_contract.cache_purge_run(db, run.id)
+    await _refresh_linked_tasks(db, run)
     await db.commit()
     return await _run_out(db, run)
 
@@ -534,30 +684,295 @@ async def explain_seller_match(
     )
     run = AgentRun(user_id=user.id, company_id=data.company_id, agent_type="seller_agent",
                    state="running", requested_route="local", input_summary="Объяснение совместимости")
+    provider = _provider(request)
+    run.provider_kind = _provider_kind(provider)
+    run.prompt_version = SELLER_PROMPT_VERSION
     db.add(run)
     await db.commit()
     started_at = perf_counter()
     failure = None
     try:
-        explanation, used_route = await SellerAgent(_provider(request)).explain(
+        explanation, used_route = await SellerAgent(provider).explain(
             dict(passport), data.category, data.requirements
         )
     except ModelUnavailable as exc:
         failure = str(exc)
         explanation = "Совпадение рассчитано правилами. Локальное объяснение временно недоступно."
         used_route = "rules_only"
+    await log_tool(
+        db,
+        run.id,
+        "seller_explain",
+        "failed" if failure else "success",
+        f"категория: {data.category}",
+        f"маршрут: {used_route}",
+        actor="model" if used_route != "rules_only" else "system",
+    )
     run.duration_ms = round((perf_counter() - started_at) * 1000)
     run.used_route = used_route
+    run.model_version = _model_version(used_route)
     run.state = "completed_with_fallback" if failure else "completed"
     run.error = failure
-    run.result = {"eligible": eligible, "reasons": reasons}
+    run.result = {"eligible": eligible, "reasons": reasons, "explanation": explanation}
     if used_route in {"local", "local_qwen"}:
         run.estimated_cost_rub = (Decimal(run.duration_ms)/Decimal(60_000)*settings.local_inference_cost_rub_per_minute).quantize(Decimal("0.0001"),rounding=ROUND_HALF_UP)
         run.cost_basis = "Оценка локального выполнения, не подтверждённый биллинг"
     await db.commit()
+    await db.refresh(run)
     return SellerExplainOut(
+        run_id=run.id,
+        revision=run.revision,
         eligible=eligible,
         reasons=reasons,
         explanation=explanation,
         used_route=used_route,
     )
+
+
+@router.get("/api/v2/agent-roles", response_model=list[RolePassportOut])
+async def list_agent_roles() -> list[RolePassportOut]:
+    return [RolePassportOut(id=role_id, **passport) for role_id, passport in ROLE_PASSPORTS.items()]
+
+
+@router.get("/api/v2/agent-roles/{role_id}", response_model=RolePassportOut)
+async def get_agent_role(role_id: str) -> RolePassportOut:
+    passport = ROLE_PASSPORTS.get(role_id)
+    if passport is None:
+        raise HTTPException(404, "Паспорт роли не найден")
+    return RolePassportOut(id=role_id, **passport)
+
+
+async def _require_task_role(db: AsyncSession, company_id: uuid.UUID, user, scenario_type: str) -> None:
+    """Актуальное право роли по сценарию: отозванное право блокирует и согласие."""
+    permission = SCENARIO_PERMISSIONS.get(scenario_type)
+    if permission is None:
+        raise HTTPException(422, f"Неизвестный тип сценария: {scenario_type}")
+    flags = (
+        await db.execute(
+            text("SELECT can_buy, can_sell FROM auth.company_members WHERE company_id=:cid AND user_id=:uid"),
+            {"cid": company_id, "uid": user.id},
+        )
+    ).mappings().first()
+    if not flags or not flags[permission]:
+        raise HTTPException(status.HTTP_403_FORBIDDEN, detail="Нет актуального права роли этой компании")
+
+
+async def owned_run_for_task(db: AsyncSession, run_id: uuid.UUID, user, scenario_type: str, *, lock=False) -> AgentRun:
+    """Доступ к процессу для задачи: право по типу самого процесса и
+    разрешённое соответствие сценария задачи типу процесса."""
+    query = select(AgentRun).where(AgentRun.id == run_id, AgentRun.user_id == user.id)
+    if lock:
+        query = query.execution_options(populate_existing=True)
+    run = await db.scalar(query.with_for_update() if lock else query)
+    if run is None:
+        raise HTTPException(404, "Агентный процесс не найден")
+    await _require_run_role(db, run, user)
+    allowed_types = SCENARIO_RUN_TYPES.get(scenario_type)
+    if allowed_types is None:
+        raise HTTPException(422, f"Неизвестный тип сценария: {scenario_type}")
+    if run.agent_type not in allowed_types:
+        raise HTTPException(409, f"Процесс типа {run.agent_type} недопустим для сценария {scenario_type}")
+    return run
+
+
+async def _task_out(db: AsyncSession, task) -> TaskOut:
+    await db.refresh(task)
+    return TaskOut.model_validate(task)
+
+
+async def _lock_run_scope(db: AsyncSession, run_id: uuid.UUID) -> None:
+    """Сериализует операции с процессом и его связанными задачами: привязка,
+    согласие, уточнение и инвалидация одного процесса не пересекаются."""
+    await db.execute(
+        text("SELECT pg_advisory_xact_lock(hashtext('agent_run:' || :rid))"),
+        {"rid": str(run_id)},
+    )
+
+
+async def _refresh_linked_tasks(db: AsyncSession, run: AgentRun) -> None:
+    """Шаг и требуемый ответ связанных задач следуют за процессом.
+    Вызывать после изменения процесса, до commit."""
+    linked_tasks = (await db.execute(
+        select(AgentTask).where(AgentTask.linked_run_id == run.id).with_for_update()
+    )).scalars().all()
+    for linked_task in linked_tasks:
+        if linked_task.state in ("completed", "cancelled", "failed"):
+            continue
+        try:
+            await task_contract.attach_run(db, linked_task, run)
+        except HTTPException:
+            task_contract.fail_task(linked_task, "Связанный результат изменился; продолжение требует нового процесса")
+
+
+@router.post("/api/v2/agent-tasks", response_model=TaskCreateOut, status_code=201)
+async def create_agent_task(
+    data: TaskCreateIn,
+    user: CurrentUser = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    await _require_task_role(db, data.company_id, user, data.scenario_type)
+    task, created = await task_contract.create_task(
+        db,
+        company_id=data.company_id,
+        actor_user_id=user.id,
+        scenario_type=data.scenario_type,
+        input_payload=data.input,
+        source_refs=data.source_refs,
+        idempotency_key=data.idempotency_key,
+        parent_task_id=data.parent_task_id,
+        prompt_version=PROMPT_VERSION,
+    )
+    await _require_task_role(db, data.company_id, user, task.scenario_type)
+    out = await _task_out(db, task)
+    return TaskCreateOut(**out.model_dump(), created=created)
+
+
+@router.get("/api/v2/agent-tasks/{task_id}", response_model=TaskOut)
+async def get_agent_task(
+    task_id: uuid.UUID,
+    company_id: uuid.UUID,
+    user: CurrentUser = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    task = await task_contract.owned_task(db, task_id, company_id)
+    task = await task_contract.owned_task(db, task_id, company_id)
+    await _require_task_role(db, company_id, user, task.scenario_type)
+    return await _task_out(db, task)
+
+
+@router.post("/api/v2/agent-tasks/{task_id}/start", response_model=TaskOut)
+async def start_agent_task(
+    task_id: uuid.UUID,
+    company_id: uuid.UUID,
+    data: TaskRevisionIn | None = Body(default=None),
+    user: CurrentUser = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    task = await task_contract.owned_task(db, task_id, company_id, lock=True)
+    await _require_task_role(db, company_id, user, task.scenario_type)
+    task_contract.start_task(task, data.expected_revision if data else None)
+    await db.commit()
+    return await _task_out(db, task)
+
+
+@router.post("/api/v2/agent-tasks/{task_id}/input", response_model=TaskOut)
+async def submit_agent_task_input(
+    task_id: uuid.UUID,
+    company_id: uuid.UUID,
+    data: TaskInputIn,
+    user: CurrentUser = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    task = await task_contract.owned_task(db, task_id, company_id, lock=True)
+    await _require_task_role(db, company_id, user, task.scenario_type)
+    task_contract.submit_task_input(task, data.input, data.source_refs, data.expected_revision)
+    await db.commit()
+    return await _task_out(db, task)
+
+
+@router.post("/api/v2/agent-tasks/{task_id}/approve", response_model=TaskOut)
+async def approve_agent_task(
+    task_id: uuid.UUID,
+    company_id: uuid.UUID,
+    data: TaskApproveIn,
+    user: CurrentUser = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    # Единый порядок блокировок: advisory→задача→процесс. Scope фиксируется
+    # отдельным значением до перечитывания: populate_existing обновляет тот же
+    # ORM-объект, поэтому изменившуюся привязку проверяем сравнением значений.
+    probe = await task_contract.owned_task(db, task_id, company_id)
+    scope_run_id = probe.linked_run_id
+    if scope_run_id is not None:
+        await _lock_run_scope(db, scope_run_id)
+    task = await task_contract.owned_task(db, task_id, company_id, lock=True)
+    if task.linked_run_id != scope_run_id:
+        raise HTTPException(409, "Привязка изменилась во время согласования; подтвердите актуальные условия")
+    await _require_task_role(db, company_id, user, task.scenario_type)
+    approval = {**data.approval, "by_user_id": str(user.id)}
+    await task_contract.approve_task(
+        db, task, approval=approval, result_artifact=data.result_artifact,
+        expected_revision=data.expected_revision,
+    )
+    await db.commit()
+    return await _task_out(db, task)
+
+
+@router.post("/api/v2/agent-tasks/{task_id}/resume", response_model=TaskOut)
+async def resume_agent_task(
+    task_id: uuid.UUID,
+    company_id: uuid.UUID,
+    data: TaskRevisionIn,
+    user: CurrentUser = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    task = await task_contract.owned_task(db, task_id, company_id, lock=True)
+    await _require_task_role(db, company_id, user, task.scenario_type)
+    task_contract.resume_task(task, data.expected_revision)
+    await db.commit()
+    return await _task_out(db, task)
+
+
+@router.post("/api/v2/agent-tasks/{task_id}/fail", response_model=TaskOut)
+async def fail_agent_task(
+    task_id: uuid.UUID,
+    company_id: uuid.UUID,
+    data: TaskFailIn,
+    user: CurrentUser = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    task = await task_contract.owned_task(db, task_id, company_id, lock=True)
+    await _require_task_role(db, company_id, user, task.scenario_type)
+    if data.expected_revision != task.input_revision:
+        raise HTTPException(409, "Входная версия устарела")
+    task_contract.fail_task(task, data.error)
+    await db.commit()
+    return await _task_out(db, task)
+
+
+@router.post("/api/v2/agent-tasks/{task_id}/cancel", response_model=TaskOut)
+async def cancel_agent_task(
+    task_id: uuid.UUID,
+    company_id: uuid.UUID,
+    data: TaskCancelIn,
+    user: CurrentUser = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    task = await task_contract.owned_task(db, task_id, company_id, lock=True)
+    await _require_task_role(db, company_id, user, task.scenario_type)
+    if data.expected_revision != task.input_revision:
+        raise HTTPException(409, "Входная версия устарела")
+    task_contract.cancel_task(task, data.reason)
+    await db.commit()
+    return await _task_out(db, task)
+
+
+@router.post("/api/v2/agent-tasks/{task_id}/heartbeat", response_model=TaskOut)
+async def heartbeat_agent_task(
+    task_id: uuid.UUID,
+    company_id: uuid.UUID,
+    user: CurrentUser = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    task = await task_contract.owned_task(db, task_id, company_id, lock=True)
+    await _require_task_role(db, company_id, user, task.scenario_type)
+    task_contract.heartbeat_task(task)
+    await db.commit()
+    return await _task_out(db, task)
+
+
+@router.post("/api/v2/agent-tasks/{task_id}/attach-run", response_model=TaskOut)
+async def attach_run_to_task(
+    task_id: uuid.UUID,
+    company_id: uuid.UUID,
+    data: TaskAttachIn,
+    user: CurrentUser = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    await _lock_run_scope(db, data.run_id)
+    task = await task_contract.owned_task(db, task_id, company_id, lock=True)
+    await _require_task_role(db, company_id, user, task.scenario_type)
+    run = await owned_run_for_task(db, data.run_id, user, task.scenario_type, lock=True)
+    await task_contract.attach_run(db, task, run)
+    await db.commit()
+    return await _task_out(db, task)

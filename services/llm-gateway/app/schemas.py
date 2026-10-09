@@ -119,6 +119,7 @@ class ToolCallOut(BaseModel):
 
     id: uuid.UUID
     tool_name: str
+    executor: str | None = None
     status: str
     input_summary: str
     output_summary: str
@@ -134,6 +135,9 @@ class AgentRunOut(BaseModel):
     state: str
     requested_route: str
     used_route: str | None
+    model_version: str | None = None
+    prompt_version: str | None = None
+    provider_kind: str | None = None
     result: dict[str, Any]
     error: str | None
     duration_ms: int | None
@@ -157,6 +161,8 @@ class SellerExplainIn(BaseModel):
 
 
 class SellerExplainOut(BaseModel):
+    run_id: uuid.UUID
+    revision: int = 1
     eligible: bool
     reasons: list[str]
     explanation: str
@@ -180,3 +186,95 @@ class PlatformAssistantIn(BaseModel):
 class PlatformAssistantOut(BaseModel):
     answer: str = Field(min_length=1, max_length=2000)
     links: list[str] = Field(default_factory=list, max_length=3)
+
+
+class RolePassportOut(BaseModel):
+    id: str
+    title: str
+    purpose: str
+    inputs: str
+    outputs: str
+    sources: str
+    tools: list[str]
+    company_scope: str
+    prompt_version: str
+    model: str
+    schema_version: str
+    implemented_by: str
+    time_limits: str
+    resource_limits: str
+    stop_conditions: str
+    result: str
+    decision_by: str
+
+
+class TaskCreateIn(BaseModel):
+    company_id: uuid.UUID
+    scenario_type: str = Field(min_length=1, max_length=64)
+    input: dict[str, Any] = Field(default_factory=dict)
+    source_refs: list[dict[str, Any]] = Field(default_factory=list)
+    idempotency_key: str = Field(min_length=1, max_length=160)
+    parent_task_id: uuid.UUID | None = None
+
+
+class TaskRevisionIn(BaseModel):
+    expected_revision: int = Field(gt=0)
+
+
+class TaskInputIn(BaseModel):
+    expected_revision: int = Field(gt=0)
+    input: dict[str, Any] = Field(default_factory=dict)
+    source_refs: list[dict[str, Any]] = Field(default_factory=list)
+
+
+class TaskApproveIn(BaseModel):
+    expected_revision: int = Field(gt=0)
+    approval: dict[str, Any]
+    result_artifact: dict[str, Any]
+
+
+class TaskAttachIn(BaseModel):
+    run_id: uuid.UUID
+
+
+class TaskFailIn(BaseModel):
+    expected_revision: int = Field(gt=0)
+    error: str = Field(min_length=1, max_length=2000)
+
+
+class TaskCancelIn(BaseModel):
+    expected_revision: int = Field(gt=0)
+    reason: str = Field(default="Отменена пользователем", max_length=2000)
+
+
+class TaskOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    task_id: uuid.UUID
+    parent_task_id: uuid.UUID | None
+    company_id: uuid.UUID
+    actor_user_id: uuid.UUID
+    scenario_type: str
+    input_revision: int
+    idempotency_key: str
+    model_version: str | None
+    prompt_version: str | None
+    schema_version: str | None
+    source_refs: list[Any]
+    state: str
+    current_step: str
+    required_response: dict[str, Any] | None
+    result_artifact: dict[str, Any] | None
+    approval: dict[str, Any] | None
+    error: str | None
+    linked_run_id: uuid.UUID | None
+    attempts: int
+    max_attempts: int
+    heartbeat_at: datetime | None
+    approval_requested_at: datetime | None = None
+    created_at: datetime
+    updated_at: datetime
+
+
+class TaskCreateOut(TaskOut):
+    created: bool = True
