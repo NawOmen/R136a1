@@ -26,7 +26,7 @@ from ..matching import ACTIVE_NEED_STATUSES, need_is_current, offer_unit_price, 
 from ..offer_draft import _matches_need, available_capacity_units, build_offer_draft, changed_fields
 from ..schemas import CommercialTerms, DealOut, OfferDraftIn, OfferDraftOut, OfferIn, OfferOut, OfferPatch, OfferSelectIn, OfferSendPreviewOut
 from ..resources import reserve, reservations, free_stock, occupies
-from ..trust import append_audit_event, record_human_approval
+from ..trust import append_audit_event, payload_hash, record_human_approval
 
 from ..requirements import require_current_evidence
 
@@ -578,6 +578,17 @@ async def select_offer(
         raise HTTPException(409, "Условия предложения изменились. Обновите их и подтвердите заново")
     existing_deal = await db.scalar(select(Deal).where(Deal.offer_id == offer.id))
     if existing_deal is not None:
+        if data.request_key is None or existing_deal.request_key is None:
+            if data.request_key is not None and existing_deal.request_key is None:
+                existing_deal.request_key = data.request_key
+                existing_deal.request_hash = payload_hash(
+                    {"offer_id": str(offer.id), "expected_revision": data.expected_revision})
+                await db.commit()
+            return existing_deal
+        if (existing_deal.request_key != data.request_key or existing_deal.request_hash != payload_hash(
+                {"offer_id": str(offer.id), "expected_revision": data.expected_revision})):
+            raise HTTPException(status.HTTP_409_CONFLICT,
+                                detail="Ключ запроса уже использован для других условий")
         return existing_deal
     await require_current_evidence(db, need)
     if need.status not in ACTIVE_NEED_STATUSES or not need_is_current(need):
@@ -652,6 +663,9 @@ async def select_offer(
         unit_price_rub=offer_unit_price(offer, need.volume_units),
         delivery_price_rub=offer.delivery_cost_rub,
         status="created",
+        request_key=data.request_key,
+        request_hash=payload_hash({"offer_id": str(offer.id),
+                                   "expected_revision": data.expected_revision}) if data.request_key else None,
     )
     offer.status = "selected"
     others = await db.execute(select(Offer).where(Offer.need_id == need.id, Offer.id != offer.id))

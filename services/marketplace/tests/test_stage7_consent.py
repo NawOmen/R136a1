@@ -8,7 +8,7 @@
 import asyncio
 import asyncio
 import uuid
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta, timezone
 
 from sqlalchemy import select, text
 
@@ -445,3 +445,140 @@ async def test_plan_confirm_records_thresholds_and_version(client, db_session, m
     assert decided["max_delay_days"] == 2
     assert decided["auto_replace_within_thresholds"] is True
     assert decided["plan_version"] == plan["version"]
+
+
+
+
+async def test_last_consent_rechecks_all_sides_verification(client, db_session, monkeypatch):
+    ctx = await _awaiting_coalition(client, db_session, monkeypatch)
+    buyer_one, token_one, _ = ctx["one"]
+    buyer_two, token_two, _ = ctx["two"]
+    from app.models import Coalition
+    coalition = await db_session.get(Coalition, uuid.UUID(ctx["coalition_id"]))
+    seller_company = coalition.producer_company_id
+    first = await client.post(f"/api/v1/coalitions/{ctx['coalition_id']}/decision",
+                              json={"company_id": str(buyer_one), "decision": "approved",
+                                    "expected_revision": ctx["revision"]},
+                              headers=auth(token_one))
+    assert first.status_code == 200
+    await db_session.execute(text("UPDATE auth.companies SET verification_status = 'rejected' WHERE id = :id"),
+                             {"id": seller_company})
+    await db_session.commit()
+    last = await client.post(f"/api/v1/coalitions/{ctx['coalition_id']}/decision",
+                             json={"company_id": str(buyer_two), "decision": "approved",
+                                   "expected_revision": ctx["revision"]},
+                             headers=auth(token_two))
+    assert last.status_code == 409
+    assert (await db_session.execute(select(ParticipantOrder))).scalars().all() == []
+    await db_session.execute(text("UPDATE auth.companies SET verification_status = 'verified' WHERE id = :id"),
+                             {"id": seller_company})
+    await db_session.commit()
+    await db_session.execute(text("UPDATE auth.companies SET verification_status = 'rejected' WHERE id = :id"),
+                             {"id": buyer_one})
+    await db_session.commit()
+    last_again = await client.post(f"/api/v1/coalitions/{ctx['coalition_id']}/decision",
+                                   json={"company_id": str(buyer_two), "decision": "approved",
+                                         "expected_revision": ctx["revision"]},
+                                   headers=auth(token_two))
+    assert last_again.status_code == 409
+    assert (await db_session.execute(select(ParticipantOrder))).scalars().all() == []
+
+
+async def test_select_and_decision_request_keys(client, db_session):
+    _, seller_company, seller_token = await _seller_company(db_session)
+    await passport(client, seller_token, seller_company, moq=1)
+    await grant_packaging_documents(db_session, seller_company, decision_user_id=None,
+                                    confirms={"material": ["крафт-картон"], "coating": ["PE"]})
+    _, _, buyer_token, need_id = await _buyer_with_published_need(client, db_session, volume=5_000)
+    offer = await _direct_offer(client, seller_token, seller_company, need_id)
+    key = str(uuid.uuid4())
+    first = await client.post(f"/api/v1/offers/{offer['id']}/select",
+                              json={"human_approved": True, "expected_revision": 1, "request_key": key},
+                              headers=_auth(buyer_token))
+    assert first.status_code == 201, first.text
+    replay = await client.post(f"/api/v1/offers/{offer['id']}/select",
+                               json={"human_approved": True, "expected_revision": 1, "request_key": key},
+                               headers=_auth(buyer_token))
+    assert replay.status_code == 201
+    assert replay.json()["id"] == first.json()["id"]
+    changed = await client.post(f"/api/v1/offers/{offer['id']}/select",
+                                json={"human_approved": True, "expected_revision": 2, "request_key": key},
+                                headers=_auth(buyer_token))
+    assert changed.status_code == 409
+
+
+async def test_decision_key_replay_and_conflict(client, db_session, monkeypatch):
+    ctx = await _awaiting_coalition(client, db_session, monkeypatch)
+    buyer_one, token_one, _ = ctx["one"]
+    key = str(uuid.uuid4())
+    first = await client.post(f"/api/v1/coalitions/{ctx['coalition_id']}/decision",
+                              json={"company_id": str(buyer_one), "decision": "approved",
+                                    "expected_revision": ctx["revision"], "request_key": key},
+                              headers=auth(token_one))
+    assert first.status_code == 200, first.text
+    replay = await client.post(f"/api/v1/coalitions/{ctx['coalition_id']}/decision",
+                               json={"company_id": str(buyer_one), "decision": "approved",
+                                     "expected_revision": ctx["revision"], "request_key": key},
+                               headers=auth(token_one))
+    assert replay.status_code == 200
+    assert replay.json()["id"] == first.json()["id"]
+    conflict = await client.post(f"/api/v1/coalitions/{ctx['coalition_id']}/decision",
+                                 json={"company_id": str(buyer_one), "decision": "rejected",
+                                       "expected_revision": ctx["revision"], "request_key": key},
+                                 headers=auth(token_one))
+    assert conflict.status_code == 409
+
+
+async def test_publish_records_seller_approval(client, db_session, monkeypatch):
+    ctx = await _awaiting_coalition(client, db_session, monkeypatch)
+    from app.models import Coalition as CoalitionModel
+    coalition = await db_session.get(CoalitionModel, uuid.UUID(ctx["coalition_id"]))
+    from app.models import GroupOffer as GroupOfferModel
+    offers = (await db_session.execute(select(GroupOfferModel).where(
+        GroupOfferModel.coalition_id == coalition.id))).scalars().all()
+    assert offers
+    seller_approvals = (await db_session.execute(select(HumanApprovalRecord).where(
+        HumanApprovalRecord.action == "seller_group_offer_published",
+        HumanApprovalRecord.entity_id.in_([offer.id for offer in offers])))).scalars().all()
+    assert len(seller_approvals) == 1
+    assert seller_approvals[0].decision == "approved"
+    assert seller_approvals[0].actor_company_id == coalition.producer_company_id
+    assert seller_approvals[0].payload_hash
+
+
+async def test_approve_recovery_checks_shown_version(client, db_session):
+    from app.models import Need, OptimizationVariantRecord, ResiliencePlan, ResilienceScenario
+
+    buyer_user = await make_user(db_session)
+    buyer = await make_company(db_session, buyer_user, can_buy=True, can_sell=False)
+    buyer_token = make_token(buyer_user)
+    need = Need(company_id=buyer, created_by_user_id=buyer_user, category="Упаковка и тара",
+                subcategory="Бумажные стаканы", characteristics={"volume_ml": 400, "unit": "шт"},
+                volume_units=5_000, deadline_date=date.today() + timedelta(days=30),
+                status="open_for_offers", visibility="open_anonymized")
+    db_session.add(need)
+    await db_session.flush()
+    variant = OptimizationVariantRecord(need_id=need.id, kind="reliable", input_hash="s07",
+                                        result={"feasible": True})
+    db_session.add(variant)
+    await db_session.flush()
+    plan = ResiliencePlan(need_id=need.id, buyer_company_id=buyer, baseline_variant_id=variant.id,
+                          baseline_allocations=[], baseline_total_cost_rub=0, baseline_lead_time_days=1,
+                          current_total_cost_rub=0, current_lead_time_days=1, status="active", version=3,
+                          confirmed_at=datetime.now(timezone.utc))
+    db_session.add(plan)
+    await db_session.flush()
+    scenario = ResilienceScenario(plan_id=plan.id, scenario_type="n1", failed_company_ids=[],
+                                  result={"uncovered_units": 0, "unconfirmed_units": 0,
+                                          "replacement_allocations": [], "new_total_cost_rub": 0,
+                                          "new_lead_time_days": 1},
+                                  input_hash="s07", status="proposed")
+    db_session.add(scenario)
+    await db_session.commit()
+    missing = await client.post(f"/api/v1/resilience-scenarios/{scenario.id}/approve",
+                                json={"approved": True}, headers=_auth(buyer_token))
+    assert missing.status_code == 428
+    wrong = await client.post(f"/api/v1/resilience-scenarios/{scenario.id}/approve",
+                              json={"approved": True, "expected_revision": plan.version + 99},
+                              headers=_auth(buyer_token))
+    assert wrong.status_code == 409
