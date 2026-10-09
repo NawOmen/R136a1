@@ -751,6 +751,7 @@ class GroupOfferPublishIn(BaseModel):
     shared_cost_rub: Amount = Field(default=0, ge=0)
     min_total_units: int = Field(gt=0, le=2147483647)
     max_total_units: int = Field(gt=0, le=2147483647)
+    lot_multiple: int = Field(default=1, ge=1, le=2147483647)
     available_capacity_units: int = Field(gt=0, le=2147483647)
     price_tiers: list[PriceTierIn] = Field(min_length=1)
     production_start: date
@@ -801,6 +802,7 @@ class CoalitionOut(BaseModel):
     category: str
     unit: str
     combined_volume_units: int
+    confirmed_volume_units: int = 0
     target_moq_units: int | None
     status: str
     version: int

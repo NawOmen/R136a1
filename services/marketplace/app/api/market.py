@@ -119,6 +119,7 @@ async def _coalition_out(
         category=coalition.category,
         unit=unit,
         combined_volume_units=coalition.combined_volume_units,
+        confirmed_volume_units=sum(item.units for item in members if item.approval_status == "approved"),
         target_moq_units=coalition.target_moq_units,
         status=coalition.status,
         version=coalition.version,
@@ -278,6 +279,22 @@ async def publish_group_offer(
             .order_by(CoalitionMember.id).with_for_update().execution_options(populate_existing=True)
         )
     ).scalars().all()
+    # S08.01/08.02: производство обязано уложиться в окно до раннего дедлайна,
+    # а объёмы — в кратность партии.
+    earliest_deadline = min(need.deadline_date for need in member_needs.values())
+    if data.production_end > earliest_deadline:
+        raise HTTPException(
+            status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="Производство выходит за ранний дедлайн участника. Сократите окно или обновите подбор",
+        )
+    total_units = sum(item.units for item in members)
+    if total_units % data.lot_multiple != 0 or any(
+        member.units % data.lot_multiple != 0 for member in members
+    ):
+        raise HTTPException(
+            status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="Объём группы и каждого участника должен быть кратен партии",
+        )
     # Обязательство производителя по группе: документы проверяются по спецификации
     # каждой потребности, потому что участники заказывают разные изделия.
     if not member_needs or any(
@@ -404,6 +421,7 @@ async def publish_group_offer(
             raise HTTPException(409,'Полная смета превышает бюджет участника')
     group_offer.min_total_units = data.min_total_units
     group_offer.max_total_units = data.max_total_units
+    group_offer.lot_multiple = data.lot_multiple
     group_offer.price_tiers = [item.model_dump() for item in data.price_tiers]
     group_offer.production_start = data.production_start
     group_offer.production_end = data.production_end

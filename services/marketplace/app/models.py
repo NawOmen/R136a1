@@ -552,6 +552,39 @@ class CoalitionMember(Base):
     approval_status: Mapped[str] = mapped_column(String(32), nullable=False, default="pending")
 
 
+class CoalitionChangeRequest(Base):
+    """S08.04: запрос изменения состава подтверждённой группы.
+
+    Старая группа не удаляется; история и действующее обязательство сохраняются
+    до допустимого перехода. Повтор по тому же ключу возвращает тот же запрос.
+    """
+
+    __tablename__ = "coalition_change_requests"
+    __table_args__ = (
+        UniqueConstraint("coalition_id", "idempotency_key", name="uq_coalition_change_request_key"),
+        {"schema": SCHEMA},
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=_uuid)
+    coalition_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey(f"{SCHEMA}.coalitions.id", ondelete="CASCADE"), nullable=False
+    )
+    requested_by_company_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), nullable=False)
+    requested_by_user_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), nullable=True)
+    reason: Mapped[str] = mapped_column(String(1000), nullable=False)
+    proposed_units: Mapped[dict] = mapped_column(ExactJSONB, nullable=False, default=dict)
+    resource_policy: Mapped[str] = mapped_column(String(64), nullable=False, default="release_and_rereserve")
+    status: Mapped[str] = mapped_column(String(32), nullable=False, default="pending")
+    idempotency_key: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), nullable=False)
+    version_from: Mapped[int] = mapped_column(Integer, nullable=False)
+    version_to: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    decisions: Mapped[list] = mapped_column(ExactJSONB, nullable=False, default=list, server_default="[]")
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now())
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=func.now(), onupdate=func.now()
+    )
+
+
 class GroupOffer(Base):
     __tablename__ = "group_offers"
     __table_args__ = {"schema": SCHEMA}
@@ -566,6 +599,7 @@ class GroupOffer(Base):
     )
     min_total_units: Mapped[int | None] = mapped_column(Integer, nullable=True)
     max_total_units: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    lot_multiple: Mapped[int] = mapped_column(Integer, nullable=False, default=1, server_default="1")
     price_tiers: Mapped[list] = mapped_column(ExactJSONB, nullable=False, default=list)
     production_start: Mapped[date | None] = mapped_column(Date, nullable=True)
     production_end: Mapped[date | None] = mapped_column(Date, nullable=True)
