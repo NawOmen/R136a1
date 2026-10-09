@@ -32,7 +32,7 @@ from ..models import (
 )
 from ..optimizer_client import days_until, evaluate_coalition, optimize_allocations
 from ..resources import reserve, release
-from ..trust import append_audit_event
+from ..trust import append_audit_event, record_human_approval
 from ..schemas import (
     CoalitionDecisionIn,
     CoalitionMemberOut,
@@ -533,6 +533,29 @@ async def decide_coalition(
                 or not baseline_comparable(saved,need,member.commercial_estimate)):
                 raise HTTPException(409,'КП для сравнения устарело. Выберите актуальное КП или продолжите без базы экономии')
     member.approval_status = data.decision
+    await record_human_approval(
+        db,
+        action="coalition_member_decision",
+        entity_type="coalition",
+        entity_id=coalition.id,
+        actor_user_id=user.id,
+        actor_company_id=data.company_id,
+        permission="company_admin+buyer+verified",
+        decision=data.decision,
+        payload={
+            "coalition_id": str(coalition.id),
+            "coalition_version": coalition.version,
+            "need_id": str(member.need_id),
+            "units": member.units,
+            "total_cost_rub": str(member.total_cost_rub) if getattr(member, "total_cost_rub", None) is not None else None,
+            "commercial_estimate": member.commercial_estimate,
+        },
+        source_refs=[
+            {"type": "coalition", "id": str(coalition.id)},
+            {"type": "need", "id": str(member.need_id)},
+        ],
+        explanation="Участник коалиции явно принял решение только по собственным условиям.",
+    )
     members = (
         await db.execute(select(CoalitionMember).where(CoalitionMember.coalition_id == coalition.id)
                          .order_by(CoalitionMember.id).with_for_update().execution_options(populate_existing=True))

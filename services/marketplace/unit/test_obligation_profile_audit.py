@@ -63,6 +63,7 @@ class ObligationProfileAuditTests(IsolatedAsyncioTestCase):
             permission_patches(stack, market)
             admission = stack.enter_context(patch.object(market, 'require_admission_for_specifications', AsyncMock(return_value=reports)))
             stack.enter_context(patch.object(market, 'append_audit_event', audit))
+            stack.enter_context(patch.object(market, 'record_human_approval', AsyncMock()))
             stack.enter_context(patch.object(market, '_coalition_out', AsyncMock()))
             stack.enter_context(patch.object(market, '_user_company_ids', AsyncMock(return_value=[])))
             await market.decide_coalition(coalition.id, CoalitionDecisionIn(company_id=members[0].buyer_company_id,

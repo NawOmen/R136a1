@@ -61,6 +61,7 @@ class StaleCapacityProfileTests(IsolatedAsyncioTestCase):
                 else:
                     module = market
                     stack.enter_context(patch.object(module, '_lock_coalition_needs', AsyncMock(return_value={need.id: need})))
+                    stack.enter_context(patch.object(module, 'record_human_approval', AsyncMock()))
                     coalition = NS(id=uuid.uuid4(), version=1, status='awaiting_approvals', producer_company_id=seller,
                                    compatibility_profile_id=uuid.uuid4())
                     members = [NS(id=uuid.uuid4(), need_id=need.id, buyer_company_id=buyer, units=100, approval_status='pending',commercial_estimate={'complete':True})]
