@@ -37,6 +37,8 @@ export default function MarketOpportunitiesPage() {
   const [commercialTerms, setCommercialTerms] = useState<Record<string,CommercialTerms>>({});
   const [sharedCost, setSharedCost] = useState("0");
   const [memberTerms, setMemberTerms] = useState<MemberTerms>({});
+  const [dismissingId, setDismissingId] = useState<string | null>(null);
+  const [dismissReasons, setDismissReasons] = useState<Record<string, string>>({});
 
   async function reload() {
     const token = getToken();
@@ -83,6 +85,26 @@ export default function MarketOpportunitiesPage() {
       }
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "Не удалось подготовить черновик.");
+    } finally {
+      setWorking(false);
+    }
+  }
+
+  async function dismiss(item: MarketOpportunity) {
+    const token = getToken();
+    const reason = (dismissReasons[item.id] ?? "").trim();
+    if (!token || reason.length < 3) {
+      setError("Укажите причину отклонения (минимум 3 символа).");
+      return;
+    }
+    setWorking(true);
+    setError(null);
+    try {
+      await marketplace.dismissOpportunity(token, item.id, reason);
+      setItems((current) => current.filter((entry) => entry.id !== item.id));
+      setDismissingId(null);
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : "Не удалось отклонить рекомендацию.");
     } finally {
       setWorking(false);
     }
@@ -188,6 +210,22 @@ export default function MarketOpportunitiesPage() {
               <button type="button" className="btn btn-primary" disabled={working} onClick={() => void prepare(item)}>
                 Подготовить предложение
               </button>
+              {dismissingId === item.id ? (
+                <div className="field">
+                  <label>Причина отклонения</label>
+                  <input type="text" value={dismissReasons[item.id] ?? ""} maxLength={500}
+                    onChange={(event) => setDismissReasons((current) => ({ ...current, [item.id]: event.target.value }))}
+                    placeholder="Например: нет такой оснастки" />
+                  <div className="actions">
+                    <button type="button" className="btn btn-secondary btn-sm" disabled={working} onClick={() => void dismiss(item)}>Отклонить</button>
+                    <button type="button" className="btn btn-secondary btn-sm" onClick={() => setDismissingId(null)}>Отмена</button>
+                  </div>
+                </div>
+              ) : (
+                <button type="button" className="btn btn-secondary btn-sm" disabled={working} onClick={() => setDismissingId(item.id)}>
+                  Не подходит
+                </button>
+              )}
             </article>
           ))}
         </div>

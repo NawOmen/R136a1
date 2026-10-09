@@ -54,6 +54,7 @@ export default function SellerRequestsPage() {
   const [query, setQuery] = useState("");
   const [draftingId, setDraftingId] = useState<string | null>(null);
   const [drafts, setDrafts] = useState<Record<string, OfferDraft>>({});
+  const [requestKeys, setRequestKeys] = useState<Record<string, string>>({});
 
   useEffect(() => {
     setQuery(new URLSearchParams(window.location.search).get("q") ?? "");
@@ -84,6 +85,7 @@ export default function SellerRequestsPage() {
 
   function toggleForm(needId: string) {
     const draft = drafts[needId];
+    setRequestKeys((current) => current[needId] ? current : { ...current, [needId]: crypto.randomUUID() });
     setResourceKind(draft?.payload.resource_kind ?? "capacity");
     setProductId(draft?.payload.product_id ?? "");
     setCommercialTerms(emptyCommercialTerms);
@@ -102,6 +104,8 @@ export default function SellerRequestsPage() {
     event.preventDefault();
     const token = getToken();
     if (!token || !company) return;
+    const requestKey = requestKeys[need.id] ?? crypto.randomUUID();
+    setRequestKeys((current) => current[need.id] ? current : { ...current, [need.id]: requestKey });
     setSubmitting(true);
     setError(null);
     try {
@@ -114,6 +118,7 @@ export default function SellerRequestsPage() {
         delivery_cost_rub: commercialTerms.delivery_method === "separate" ? (deliveryCost || null) : commercialTerms.delivery_method === "unknown" ? null : "0",
         moq_units: Number(moq || 1),
         draft_id: drafts[need.id]?.id,
+        request_key: requestKey,
         resource_kind: resourceKind,
         product_id: productId || undefined,
         price_tiers: drafts[need.id]?.payload.price_tiers ?? [],
@@ -135,6 +140,7 @@ export default function SellerRequestsPage() {
     try {
       const draft = await marketplace.prepareOfferDraft(token, need.id, company.id);
       setDrafts((current) => ({ ...current, [need.id]: draft }));
+      setRequestKeys((current) => current[need.id] ? current : { ...current, [need.id]: crypto.randomUUID() });
       // Черновик заполняет форму, но человек проверяет и при необходимости правит значения.
       setOpenFormId(need.id);
       setResourceKind(draft.payload.resource_kind);

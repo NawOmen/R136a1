@@ -64,6 +64,9 @@ export interface Product {
   quantity_conversion?: PackagingDefinition | null;
   id: string;
   company_id: string;
+  revision: number;
+  external_id: string | null;
+  sources: ProductSource[];
   name: string;
   category: string;
   subcategory: string | null;
@@ -81,6 +84,7 @@ export interface Product {
 }
 
 export interface ProductImage { id: string; file_name: string; content_type: string; position: number }
+export interface ProductSource { label: string; reference: string }
 export interface ProductPriceTier { min_units: number; unit_price_rub: Money }
 export interface SellerAnalytics { company_id: string; products_total: number; products_published: number; deals_total: number; sold_units: number; revenue_rub: Money | null; available_capacity_units: number; capacity_utilization_pct: number | null }
 export interface DealMessage { id: string; deal_id: string; author_user_id: string; author_company_id: string; message: string; created_at: string }
@@ -298,6 +302,7 @@ export interface Offer {
   commercial_terms?: CommercialTerms | null;
   commercial_quote?: CommercialSnapshot | null;
   revision: number;
+  request_key?: string | null;
   id: string;
   need_id: string;
   company_id: string;
@@ -348,6 +353,7 @@ export interface MarketOpportunity {
   reasons: string[];
   missing_data: string[];
   status: string;
+  dismissal_reason?: string | null;
 }
 
 export interface GroupOffer {
@@ -546,6 +552,23 @@ export interface UpdateProductionProfileInput {
   about: string;
 }
 
+/** Строка предпросмотра импорта: diff со своей карточкой и решение загрузки. */
+export interface ImportPreviewRow {
+  line: number;
+  product: CreateProductInput;
+  import_status: "new" | "unchanged" | "changed" | "published_skipped";
+  diff: { field: string; was: unknown; now: unknown }[];
+  note: string;
+  product_id: string | null;
+}
+export interface ImportPreview {
+  content_hash: string;
+  rows: ImportPreviewRow[];
+  errors: { line: number; message: string }[];
+  created_ids: string[];
+  updated_ids?: string[];
+  import_id?: string;
+}
 export interface CreateProductInput {
   quantity_conversion_approved?: boolean;
   stock_units?: number | null;
@@ -553,13 +576,15 @@ export interface CreateProductInput {
   category: string;
   subcategory?: string | null;
   characteristics: Record<string, unknown>;
+  sources?: ProductSource[];
+  external_id?: string | null;
   price_rub: Money;
   price_tiers: ProductPriceTier[];
   moq_units: number;
   lead_time_days: number;
 }
 
-export type UpdateProductInput = Partial<CreateProductInput>;
+export type UpdateProductInput = Partial<CreateProductInput> & { expected_revision?: number };
 
 export interface CreateNeedInput {
   agent_run_id?: string;
@@ -592,6 +617,8 @@ export interface CreateOfferInput {
   valid_until?: string;
   /** Черновик агента, из которого подготовлено предложение. */
   draft_id?: string;
+  /** Ключ идемпотентности повторной отправки: повтор возвращает то же КП. */
+  request_key?: string;
 }
 
 /** Поле черновика КП: значение и источник, чтобы человек видел основание. */
@@ -1038,7 +1065,7 @@ export const marketplace = {
     return marketplaceFetch(`/api/v1/price-index/${encodeURIComponent(category)}?product_id=${encodeURIComponent(productId)}`);
   },
 
-  importCatalog(token: string, companyId: string, file: File, confirmation?: { hash: string; requestKey: string }): Promise<{ content_hash: string; rows: { line: number; product: CreateProductInput }[]; errors: { line: number; message: string }[]; created_ids: string[] }> {
+  importCatalog(token: string, companyId: string, file: File, confirmation?: { hash: string; requestKey: string }): Promise<ImportPreview> {
     const body = new FormData(); body.set("file", file);
     if (confirmation) { body.set("commit", "true"); body.set("human_approved", "true"); body.set("expected_hash", confirmation.hash); body.set("request_key", confirmation.requestKey); }
     return marketplaceFetch(`/api/v1/companies/${companyId}/catalog-import`, { method: "POST", token, body });
@@ -1309,8 +1336,11 @@ export const marketplace = {
     );
   },
 
-  getNeedsFeed(token: string, sellerCompanyId: string): Promise<NeedFeedItem[]> {
-    return marketplaceFetch(`/api/v1/needs?seller_company_id=${sellerCompanyId}`, { token }).then((body) =>
+  getNeedsFeed(token: string, sellerCompanyId: string, filters?: { subcategory?: string; unit?: string }): Promise<NeedFeedItem[]> {
+    const params = new URLSearchParams({ seller_company_id: sellerCompanyId });
+    if (filters?.subcategory) params.set("subcategory", filters.subcategory);
+    if (filters?.unit) params.set("unit", filters.unit);
+    return marketplaceFetch(`/api/v1/needs?${params}`, { token }).then((body) =>
       unwrapList<NeedFeedItem>(body, ["needs", "items"]),
     );
   },
@@ -1476,6 +1506,18 @@ export const marketplace = {
     return marketplaceFetch(`/api/v1/opportunities/${opportunityId}/prepare-offer`, {
       method: "POST",
       token,
+    });
+  },
+
+  dismissOpportunity(token: string, opportunityId: string, reason: string): Promise<MarketOpportunity> {
+    return marketplaceFetch(`/api/v1/opportunities/${opportunityId}/dismiss`, {
+      method: "POST", token, body: JSON.stringify({ reason }),
+    });
+  },
+
+  rollbackCatalogImport(token: string, companyId: string, importId: string): Promise<{ import_id: string; deleted_ids: string[]; skipped_published_ids: string[] }> {
+    return marketplaceFetch(`/api/v1/companies/${companyId}/catalog-imports/${importId}/rollback`, {
+      method: "POST", token,
     });
   },
 

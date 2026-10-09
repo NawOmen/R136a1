@@ -3,7 +3,7 @@ from ..money import decimal
 import uuid
 from datetime import date, datetime, timezone
 
-from fastapi import APIRouter, Body, Depends, HTTPException, status
+from fastapi import APIRouter, Body, Depends, HTTPException, Response, status
 from pydantic import ValidationError
 from sqlalchemy import select, text
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -31,6 +31,36 @@ from ..trust import append_audit_event, record_human_approval
 from ..requirements import require_current_evidence
 
 router = APIRouter(tags=["offers"])
+
+
+def _same_offer_terms(previous: Offer, data: OfferIn) -> bool:
+    """Повтор с тем же ключом идемпотентности возвращает то же КП,
+    если существенные условия совпадают; иначе это конфликт, а не повтор."""
+    try:
+        same_tiers = [
+            {"min_units": int(tier.get("min_units")), "unit_price_rub": str(decimal(tier.get("unit_price_rub")))}
+            for tier in (previous.price_tiers or [])
+        ] == [
+            {"min_units": tier.min_units, "unit_price_rub": str(decimal(tier.unit_price_rub))}
+            for tier in (data.price_tiers or [])
+        ]
+        same_delivery = (
+            (previous.delivery_cost_rub is None and data.delivery_cost_rub is None)
+            or (previous.delivery_cost_rub is not None and data.delivery_cost_rub is not None
+                and decimal(previous.delivery_cost_rub) == decimal(data.delivery_cost_rub))
+        )
+        return (
+            decimal(previous.price_rub) == decimal(data.price_rub)
+            and previous.available_units == data.available_units
+            and previous.moq_units == data.moq_units
+            and previous.lead_time_days == data.lead_time_days
+            and same_delivery
+            and same_tiers
+            and previous.product_id == data.product_id
+            and previous.resource_kind == data.resource_kind
+        )
+    except (TypeError, ValueError, ArithmeticError):
+        return False
 
 
 @router.get("/needs/{need_id}/offers", response_model=list[OfferOut])
@@ -156,6 +186,7 @@ async def prepare_offer_draft(
 async def create_offer(
     need_id: uuid.UUID,
     data: OfferIn,
+    response: Response,
     user: CurrentUser = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
@@ -185,7 +216,16 @@ async def create_offer(
     existing = await db.execute(
         select(Offer).where(Offer.need_id == need.id, Offer.company_id == data.company_id)
     )
-    if existing.scalar_one_or_none() is not None:
+    previous = existing.scalar_one_or_none()
+    if previous is not None:
+        if data.request_key is not None and previous.request_key == data.request_key:
+            if _same_offer_terms(previous, data):
+                response.status_code = status.HTTP_200_OK
+                return previous
+            raise HTTPException(
+                status.HTTP_409_CONFLICT,
+                detail="Повтор с тем же ключом содержит другие условия. Проверьте изменения перед отправкой",
+            )
         raise HTTPException(
             status.HTTP_409_CONFLICT,
             detail="Компания уже отправила предложение по этой потребности",
@@ -226,6 +266,7 @@ async def create_offer(
         need_id=need.id,
         company_id=data.company_id,
         created_by_user_id=user.id,
+        request_key=data.request_key,
         commercial_terms=data.commercial_terms.model_dump() if data.commercial_terms else None,
         price_rub=data.price_rub,
         available_units=data.available_units,

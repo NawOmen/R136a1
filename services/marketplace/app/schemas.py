@@ -70,6 +70,11 @@ class ProductPriceTier(BaseModel):
     unit_price_rub: Money = Field(gt=0)
 
 
+class ProductSource(BaseModel):
+    label: str = Field(min_length=1, max_length=120)
+    reference: str = Field(min_length=1, max_length=300)
+
+
 def validate_order_unit(characteristics: dict[str, Any] | None) -> None:
     if not characteristics:
         return
@@ -112,6 +117,9 @@ class ProductOut(BaseModel):
 
     id: uuid.UUID
     company_id: uuid.UUID
+    revision: int = 1
+    external_id: str | None = None
+    sources: list[ProductSource] = Field(default_factory=list)
     name: str
     category: str
     subcategory: str | None
@@ -132,6 +140,8 @@ class ProductIn(ProductRules):
     category: str = Field(min_length=2, max_length=120)
     subcategory: str | None = Field(default=None, max_length=120)
     characteristics: dict[str, Any] = Field(default_factory=dict)
+    sources: list[ProductSource] = Field(default_factory=list, max_length=10)
+    external_id: str | None = Field(default=None, min_length=1, max_length=64)
     price_rub: Money = Field(gt=0)
     price_tiers: list[ProductPriceTier] = Field(default_factory=list)
     moq_units: int = Field(gt=0, le=2147483647)
@@ -155,6 +165,9 @@ class ProductIn(ProductRules):
 
 
 class ProductPatch(ProductRules):
+    expected_revision: int | None = Field(default=None, gt=0)
+    sources: list[ProductSource] | None = Field(default=None, max_length=10)
+    external_id: str | None = Field(default=None, min_length=1, max_length=64)
     name: str | None = Field(default=None, min_length=2, max_length=255)
     category: str | None = Field(default=None, min_length=2, max_length=120)
     subcategory: str | None = Field(default=None, max_length=120)
@@ -604,6 +617,7 @@ class OfferOut(BaseModel):
     resource_kind: str = "capacity"
     product_id: uuid.UUID | None = None
     revision: int = 1
+    request_key: uuid.UUID | None = None
     model_config = ConfigDict(from_attributes=True)
 
     id: uuid.UUID
@@ -642,6 +656,8 @@ class OfferIn(ProductRules):
     # Черновик агента, из которого подготовлено предложение: нужен для оценки
     # конверсии сценария и числа правок человека.
     draft_id: uuid.UUID | None = None
+    # Ключ идемпотентности повторной отправки: тот же ключ возвращает то же КП.
+    request_key: uuid.UUID | None = None
 
 
 class OfferDraftIn(BaseModel):
@@ -686,6 +702,11 @@ class MarketOpportunityOut(BaseModel):
     reasons: list[str]
     missing_data: list[str]
     status: str
+    dismissal_reason: str | None = None
+
+
+class OpportunityDismissIn(BaseModel):
+    reason: str = Field(min_length=3, max_length=500)
 
 
 class PriceTierIn(BaseModel):

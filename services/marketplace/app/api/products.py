@@ -5,6 +5,7 @@ from urllib.parse import quote
 from fastapi import APIRouter, Depends, File, HTTPException, Response, UploadFile, status
 from pydantic import ValidationError
 from sqlalchemy import delete, select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..database import get_db
@@ -77,11 +78,23 @@ async def create_product(
     await require_company_seller(company_id, user, db)
     await require_company_admin(company_id, user, db)
     payload = data.model_dump()
+    if payload.get("external_id"):
+        clash = await db.scalar(
+            select(Product.id).where(
+                Product.company_id == company_id, Product.external_id == payload["external_id"]
+            )
+        )
+        if clash is not None:
+            raise HTTPException(409, "Такой внешний ID уже используется другой карточкой компании")
     product = Product(company_id=company_id, created_by_user_id=user.id, **payload)
     if payload.get("stock_units") is not None:
         product.stock_updated_at = datetime.now(timezone.utc)
     db.add(product)
-    await db.commit()
+    try:
+        await db.commit()
+    except IntegrityError as exc:
+        await db.rollback()
+        raise HTTPException(409, "Такой внешний ID уже используется другой карточкой компании") from exc
     await db.refresh(product)
     return await _product_out(product, db)
 
@@ -101,6 +114,20 @@ async def update_product(
     await lock_company(db, product.company_id)
     await db.refresh(product)
     patch = data.model_dump(exclude_unset=True)
+    if data.expected_revision is not None and data.expected_revision != product.revision:
+        raise HTTPException(409, "Карточка изменилась. Обновите данные перед сохранением")
+    if patch.get("external_id") is not None and product.external_id is not None and patch["external_id"] != product.external_id:
+        raise HTTPException(409, "Внешний ID карточки стабилен и не меняется после установки")
+    if patch.get("external_id"):
+        clash = await db.scalar(
+            select(Product.id).where(
+                Product.company_id == product.company_id,
+                Product.external_id == patch["external_id"],
+                Product.id != product.id,
+            )
+        )
+        if clash is not None:
+            raise HTTPException(409, "Такой внешний ID уже используется другой карточкой компании")
     if "stock_units" in patch:
         held = sum(row.units for row in await reservations(db, product.company_id) if row.product_id == product.id and occupies(row, stock=True))
         if held and (patch["stock_units"] is None or patch["stock_units"] < held):
@@ -112,6 +139,7 @@ async def update_product(
         "characteristics": product.characteristics, "price_rub": product.price_rub,
         "price_tiers": product.price_tiers, "moq_units": product.moq_units,
         "lead_time_days": product.lead_time_days, "stock_units": product.stock_units,
+        "sources": getattr(product, "sources", None) or [], "external_id": getattr(product, "external_id", None),
     }
     # Повторно проверяем объединённое состояние: частичный PATCH не должен
     # рассинхронизировать МОЗ, базовую цену и ценовые ступени.
@@ -158,6 +186,7 @@ async def update_product(
     )
     for field, value in validated.model_dump().items():
         setattr(product, field, value)
+    product.revision += 1
     if "stock_units" in patch:
         # Остаток влияет на доступный объём предложения, поэтому фиксируем время.
         product.stock_updated_at = datetime.now(timezone.utc)
@@ -165,12 +194,16 @@ async def update_product(
         db.add(ProductPriceObservation(product_id=product.id, category=product.category, unit_price_rub=product.price_rub, specification_hash=product_specification_hash(product)))
     await append_audit_event(db,event_type="product_terms_changed",entity_type="product",entity_id=product.id,
         actor_user_id=user.id,actor_company_id=product.company_id,
-        payload={'before':current,'after':validated.model_dump(),'changed_fields':sorted(patch)},
+        payload={'before':current,'after':validated.model_dump(),'changed_fields':sorted(key for key in patch if key != "expected_revision")},
         explanation="Продавец изменил каталог. Согласованные коммерческие снимки и обязательства сохраняют прежние условия.")
     await run_market_rematch(db, "product_terms_changed", product.id)
     if product.is_published:
         await notify_market_watchers(db, product.category, "supply", exclude_user_id=user.id)
-    await db.commit()
+    try:
+        await db.commit()
+    except IntegrityError as exc:
+        await db.rollback()
+        raise HTTPException(409, "Такой внешний ID уже используется другой карточкой компании") from exc
     await db.refresh(product)
     return await _product_out(product, db)
 

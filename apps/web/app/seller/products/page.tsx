@@ -66,6 +66,8 @@ export default function SellerProductsPage() {
   const [tiers, setTiers] = useState<ProductPriceTier[]>([]);
   const [image, setImage] = useState<File | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [editingRevision, setEditingRevision] = useState<number>(1);
+  const [sources, setSources] = useState<{ label: string; reference: string }[]>([]);
   const [creating, setCreating] = useState(false);
   const [quantityApproved, setQuantityApproved] = useState(false);
   const [publishingId, setPublishingId] = useState<string | null>(null);
@@ -118,18 +120,19 @@ export default function SellerProductsPage() {
     setCreating(true);
     setError(null);
     try {
-      const input = {
-        quantity_conversion_approved: quantityApproved,
-        name: name.trim(),
-        category,
-        subcategory,
-        characteristics,
-        price_rub: String(price),
-        price_tiers: tiers,
-        moq_units: Number(moq),
-        lead_time_days: Number(leadTime),
-        stock_units: stock.trim() === "" ? null : Number(stock),
-      };
+    const input = {
+      quantity_conversion_approved: quantityApproved,
+      name: name.trim(),
+      category,
+      subcategory,
+      characteristics,
+      sources: sources.filter((item) => item.label.trim() && item.reference.trim()),
+      price_rub: String(price),
+      price_tiers: tiers,
+      moq_units: Number(moq),
+      lead_time_days: Number(leadTime),
+      stock_units: stock.trim() === "" ? null : Number(stock),
+    };
       const preview = await marketplace.previewPhysicalQuantity("product", input);
       const validation = await marketplace.validateCharacteristics({ category, subcategory, characteristics: preview.normalized.characteristics as Record<string, unknown>, moq_units: preview.conversion.quantities.moq_units ?? 0 });
       if (!validation.valid) { setError(validation.errors.join(". ")); return; }
@@ -140,13 +143,14 @@ export default function SellerProductsPage() {
         if (changes.length && !window.confirm(`Сохранить новую версию каталога?\n${changes.join("\n")}\nСогласованные сделки сохранят свои цены и условия.`)) return;
       }
       const saved = editingId
-        ? await marketplace.updateProduct(token, editingId, input)
+        ? await marketplace.updateProduct(token, editingId, { ...input, expected_revision: editingRevision })
         : await marketplace.createProduct(token, company.id, input);
       if (image) await marketplace.uploadProductImage(token, saved.id, image);
       const updated = await marketplace.getCompanyProducts(token, company.id);
       setProducts(updated);
       setName("");
       setRows([newRow("unit", "шт"), newRow("материал", "")]);
+      setSources([]);
       setPrice("");
       setMoq("");
       setLeadTime("");
@@ -154,6 +158,8 @@ export default function SellerProductsPage() {
       setTiers([]);
       setImage(null);
       setEditingId(null);
+      setEditingRevision(1);
+      setSources([]);
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "Не удалось создать товар.");
     } finally {
@@ -163,6 +169,8 @@ export default function SellerProductsPage() {
 
   function beginEdit(product: Product) {
     setEditingId(product.id);
+    setEditingRevision(product.revision ?? 1);
+    setSources((product.sources ?? []).map((item) => ({ label: item.label, reference: item.reference })));
     setName(product.name);
     setCategory(product.category);
     setSubcategory(product.subcategory ?? PRODUCT_CATEGORY_TREE[product.category]?.[0] ?? "Другая продукция");
@@ -363,6 +371,24 @@ export default function SellerProductsPage() {
             </button>
           </div>
           <div className="field">
+            <label>Источники данных карточки <span className="opt">необязательно, до 10: прайс, паспорт, замер</span></label>
+            {sources.map((item, index) => (
+              <div className="char-row" key={index}>
+                <input type="text" placeholder="Название источника" aria-label={`Источник ${index + 1}: название`}
+                  value={item.label} maxLength={120}
+                  onChange={(event) => setSources((current) => current.map((entry, i) => i === index ? { ...entry, label: event.target.value } : entry))} />
+                <input type="text" placeholder="Ссылка: прайс-2026-10, паспорт" aria-label={`Источник ${index + 1}: ссылка`}
+                  value={item.reference} maxLength={300}
+                  onChange={(event) => setSources((current) => current.map((entry, i) => i === index ? { ...entry, reference: event.target.value } : entry))} />
+                <button type="button" className="btn btn-secondary btn-sm" onClick={() => setSources((current) => current.filter((_, i) => i !== index))}>Удалить</button>
+              </div>
+            ))}
+            <button type="button" className="btn btn-secondary btn-sm" disabled={sources.length >= 10}
+              onClick={() => setSources((current) => [...current, { label: "", reference: "" }])}>
+              + Добавить источник
+            </button>
+          </div>
+          <div className="field">
             <label htmlFor="product_image">Фото товара <span className="opt">PNG, JPG или WebP, до 8 МБ</span></label>
             <input id="product_image" type="file" accept="image/png,image/jpeg,image/webp" onChange={(event) => setImage(event.target.files?.[0] ?? null)} />
           </div>
@@ -415,7 +441,7 @@ export default function SellerProductsPage() {
             <button type="submit" className="btn btn-primary" disabled={creating}>
               {creating ? "Сохраняем..." : editingId ? "Сохранить изменения" : "Создать товар"}
             </button>
-            {editingId && <button type="button" className="btn btn-secondary" onClick={() => setEditingId(null)}>Отменить</button>}
+            {editingId && <button type="button" className="btn btn-secondary" onClick={() => { setEditingId(null); setEditingRevision(1); setSources([]); }}>Отменить</button>}
           </div>
         </form>
       </section>
@@ -432,7 +458,7 @@ export default function SellerProductsPage() {
               <li key={product.id} className="card">
                 <div className="company-row">
                   <div>
-                    <div className="company-item__name">{product.name}</div>
+                    <div className="company-item__name"><Link href={`/catalog/${product.id}`}>{product.name}</Link></div>
                     <div className="company-meta">
                       {product.category} / {product.subcategory ?? "Без подкатегории"} · {formatRub(product.price_rub, 12)} / {itemUnit(product.characteristics)} · МОЗ{" "}
                       {formatUnits(product.moq_units, itemUnit(product.characteristics))} · {product.lead_time_days} дн.

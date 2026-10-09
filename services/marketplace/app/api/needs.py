@@ -23,7 +23,7 @@ from ..deps import (
     require_verified_company,
 )
 from ..models import DeliveryAddress, Need, NeedFile, Product
-from ..matching import ACTIVE_NEED_STATUSES, need_is_current, run_market_rematch
+from ..matching import ACTIVE_NEED_STATUSES, need_is_current, order_unit, run_market_rematch
 from ..experience import notify_market_watchers
 from ..schemas import NeedFeedOut, NeedFileOut, NeedIn, NeedOut, NeedEditIn
 from ..storage import download_object, upload_object
@@ -78,6 +78,8 @@ def _need_out(need: Need, files: list[NeedFile] | None = None) -> NeedOut:
 @router.get("/needs", response_model=list[NeedFeedOut])
 async def list_needs(
     seller_company_id: uuid.UUID | None = None,
+    subcategory: str | None = None,
+    unit: str | None = None,
     user: CurrentUser = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
@@ -97,6 +99,10 @@ async def list_needs(
             seller_scopes = {catalog_scope(category, subcategory) for category, subcategory in products}
     result = await db.execute(query.order_by(Need.created_at.desc()))
     needs = list(result.scalars().all())
+    if subcategory is not None:
+        needs = [need for need in needs if (need.subcategory or "").strip().lower() == subcategory.strip().lower()]
+    if unit is not None:
+        needs = [need for need in needs if order_unit(need.characteristics) == unit.strip().lower()]
     if seller_scopes is None:
         return needs
     def relevant(need):
