@@ -981,3 +981,51 @@ async def test_concurrent_identical_requests_all_succeed(client, token, db_sessi
         for _ in range(3)
     ])
     assert all(response.status_code == 201 for response in runs)
+
+
+@pytest.mark.asyncio
+async def test_approve_rejects_changed_binding_after_probe(client, token, db_session, user_id, monkeypatch):
+    import asyncio
+
+    import app.tasks as tasks_module
+
+    company_id = await make_company(db_session, user_id)
+    created = await create_task(client, token, company_id)
+    await client.post(TASKS + f"/{created['task_id']}/start", params={"company_id": str(company_id)},
+                      json={"expected_revision": 1}, headers=auth(token))
+    run_a = await make_buyer_run(client, token, company_id)
+    run_b = await make_buyer_run(client, token, company_id, "Нужно 7000 бумажных стаканов в Москву за десять дней")
+    await client.post(TASKS + f"/{created['task_id']}/attach-run", params={"company_id": str(company_id)},
+                      json={"run_id": run_a["id"]}, headers=auth(token))
+
+    armed, gated = True, asyncio.Event()
+    proceed = asyncio.Event()
+    real_owned_task = tasks_module.owned_task
+
+    async def gated_owned_task(db, task_id, cid, lock=False):
+        nonlocal armed
+        result = await real_owned_task(db, task_id, cid, lock=lock)
+        if armed and not lock:
+            armed = False
+            gated.set()
+            await asyncio.wait_for(proceed.wait(), 10)
+        return result
+
+    monkeypatch.setattr(tasks_module, "owned_task", gated_owned_task)
+    approve_task = asyncio.create_task(client.post(
+        TASKS + f"/{created['task_id']}/approve", params={"company_id": str(company_id)},
+        json={"expected_revision": 1, "approval": {"decision": "approved"},
+              "result_artifact": {"type": "agent_run_result", "id": run_b["id"], "revision": run_b["revision"]}},
+        headers=auth(token)))
+    await asyncio.wait_for(gated.wait(), 10)
+    attached = await client.post(TASKS + f"/{created['task_id']}/attach-run", params={"company_id": str(company_id)},
+                                 json={"run_id": run_b["id"]}, headers=auth(token))
+    assert attached.status_code == 200
+    proceed.set()
+    approve_response = await approve_task
+    assert approve_response.status_code == 409
+    body = (await client.get(TASKS + f"/{created['task_id']}", params={"company_id": str(company_id)},
+                             headers=auth(token))).json()
+    assert body["state"] == "awaiting_approval"
+    assert body["linked_run_id"] == run_b["id"]
+    assert body["result_artifact"] is None

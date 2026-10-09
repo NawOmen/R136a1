@@ -878,13 +878,16 @@ async def approve_agent_task(
     user: CurrentUser = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    # Единый порядок блокировок: advisory процесса, затем задача, затем процесс.
-    # Зондирующее чтение без блокировки даёт ID для advisory; авторитетно —
-    # повторное чтение под блокировкой после сериализации.
+    # Единый порядок блокировок: advisory→задача→процесс. Scope фиксируется
+    # отдельным значением до перечитывания: populate_existing обновляет тот же
+    # ORM-объект, поэтому изменившуюся привязку проверяем сравнением значений.
     probe = await task_contract.owned_task(db, task_id, company_id)
-    if probe.linked_run_id is not None:
-        await _lock_run_scope(db, probe.linked_run_id)
+    scope_run_id = probe.linked_run_id
+    if scope_run_id is not None:
+        await _lock_run_scope(db, scope_run_id)
     task = await task_contract.owned_task(db, task_id, company_id, lock=True)
+    if task.linked_run_id != scope_run_id:
+        raise HTTPException(409, "Привязка изменилась во время согласования; подтвердите актуальные условия")
     await _require_task_role(db, company_id, user, task.scenario_type)
     approval = {**data.approval, "by_user_id": str(user.id)}
     await task_contract.approve_task(
