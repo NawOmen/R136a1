@@ -529,6 +529,67 @@ async def test_decision_key_replay_and_conflict(client, db_session, monkeypatch)
     assert conflict.status_code == 409
 
 
+async def test_final_consent_replay_after_commit_and_deadline(client, db_session, monkeypatch):
+    from app.models import GroupOffer, ResourceReservation
+
+    ctx = await _awaiting_coalition(client, db_session, monkeypatch)
+    buyer_one, token_one, _ = ctx["one"]
+    buyer_two, token_two, _ = ctx["two"]
+    url = f"/api/v1/coalitions/{ctx['coalition_id']}/decision"
+    first = await client.post(url, json={"company_id": str(buyer_one), "decision": "approved",
+        "expected_revision": ctx["revision"], "request_key": str(uuid.uuid4())}, headers=auth(token_one))
+    assert first.status_code == 200, first.text
+    payload = {"company_id": str(buyer_two), "decision": "approved",
+        "expected_revision": ctx["revision"], "request_key": str(uuid.uuid4())}
+    final = await client.post(url, json=payload, headers=auth(token_two))
+    assert final.status_code == 200 and final.json()["status"] == "confirmed", final.text
+    coalition_id = uuid.UUID(ctx["coalition_id"])
+
+    async def effects():
+        orders = (await db_session.scalars(select(ParticipantOrder).where(
+            ParticipantOrder.coalition_id == coalition_id))).all()
+        resources = (await db_session.scalars(select(ResourceReservation).where(
+            ResourceReservation.anchor_type == "coalition", ResourceReservation.anchor_id == coalition_id))).all()
+        approvals = (await db_session.scalars(select(HumanApprovalRecord).where(
+            HumanApprovalRecord.action == "coalition_member_decision",
+            HumanApprovalRecord.entity_id == coalition_id))).all()
+        return ({row.id for row in orders}, {(row.id, row.units, row.status) for row in resources},
+                {row.id for row in approvals})
+
+    before = await effects()
+    assert len(before[0]) == 2 and before[1] and len(before[2]) == 2
+    replay = await client.post(url, json=payload, headers=auth(token_two))
+    assert replay.status_code == 200 and replay.json() == final.json(), replay.text
+    group_offer = await db_session.scalar(select(GroupOffer).where(GroupOffer.coalition_id == coalition_id))
+    group_offer.fill_deadline = date.today() - timedelta(days=1)
+    await db_session.commit()
+    after_deadline = await client.post(url, json=payload, headers=auth(token_two))
+    assert after_deadline.status_code == 200 and after_deadline.json()["status"] == "confirmed", after_deadline.text
+    assert (await client.post(url, json={**payload, "decision": "rejected"}, headers=auth(token_two))).status_code == 409
+    assert (await client.post(url, json={**payload, "request_key": str(uuid.uuid4())}, headers=auth(token_two))).status_code == 409
+    await db_session.execute(text("DELETE FROM auth.company_members WHERE company_id = :cid"), {"cid": buyer_two})
+    await db_session.commit()
+    assert (await client.post(url, json=payload, headers=auth(token_two))).status_code in (403, 404)
+    assert await effects() == before
+
+
+async def test_rejected_consent_replay_after_revision_change(client, db_session, monkeypatch):
+    ctx = await _awaiting_coalition(client, db_session, monkeypatch)
+    buyer_one, token_one, _ = ctx["one"]
+    url = f"/api/v1/coalitions/{ctx['coalition_id']}/decision"
+    payload = {"company_id": str(buyer_one), "decision": "rejected",
+        "expected_revision": ctx["revision"], "request_key": str(uuid.uuid4())}
+    first = await client.post(url, json=payload, headers=auth(token_one))
+    assert first.status_code == 200 and first.json()["version"] > ctx["revision"], first.text
+    replay = await client.post(url, json=payload, headers=auth(token_one))
+    assert replay.status_code == 200 and replay.json() == first.json(), replay.text
+    approvals = (await db_session.scalars(select(HumanApprovalRecord).where(
+        HumanApprovalRecord.action == "coalition_member_decision",
+        HumanApprovalRecord.entity_id == uuid.UUID(ctx["coalition_id"])))).all()
+    assert len(approvals) == 1
+    assert (await db_session.scalars(select(ParticipantOrder))).all() == []
+
+
 async def test_publish_records_seller_approval(client, db_session, monkeypatch):
     ctx = await _awaiting_coalition(client, db_session, monkeypatch)
     from app.models import Coalition as CoalitionModel

@@ -520,6 +520,28 @@ async def decide_coalition(
     ).scalar_one_or_none()
     if coalition is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, detail="Коалиция не найдена")
+    member = (
+        await db.execute(
+            select(CoalitionMember).where(
+                CoalitionMember.coalition_id == coalition.id,
+                CoalitionMember.buyer_company_id == data.company_id,
+            )
+            .execution_options(populate_existing=True)
+        )
+    ).scalar_one_or_none()
+    if member is None:
+        raise HTTPException(status.HTTP_403_FORBIDDEN, detail="Компания не является участником коалиции")
+    await require_company_buyer(data.company_id, user, db)
+    await require_company_admin(data.company_id, user, db)
+    await require_verified_company(data.company_id, user, db)
+    decision_hash = payload_hash({"decision": data.decision,
+                                  "expected_revision": data.expected_revision}) if data.request_key else None
+    # A committed decision survives the state/TTL changes it caused. Recheck
+    # access before replaying it, and never apply the saved request a second time.
+    if data.request_key is not None and member.decision_request_key == data.request_key:
+        if member.decision_request_hash != decision_hash:
+            raise HTTPException(409, "Ключ запроса уже использован для других условий")
+        return await _coalition_out(db, coalition, await _user_company_ids(db, user.id))
     if coalition.version != data.expected_revision:
         raise HTTPException(status.HTTP_409_CONFLICT, detail="Условия группы изменились. Обновите страницу и проверьте их заново")
     if coalition.status != "awaiting_approvals":
@@ -536,26 +558,7 @@ async def decide_coalition(
         raise HTTPException(status.HTTP_409_CONFLICT, detail="Нет предварительных условий для подтверждения")
     if group_offer.fill_deadline is None or group_offer.fill_deadline < date.today():
         raise HTTPException(status.HTTP_409_CONFLICT, detail="Срок подтверждения групповых условий истёк")
-    member = (
-        await db.execute(
-            select(CoalitionMember).where(
-                CoalitionMember.coalition_id == coalition.id,
-                CoalitionMember.buyer_company_id == data.company_id,
-            )
-            .execution_options(populate_existing=True)
-        )
-    ).scalar_one_or_none()
-    if member is None:
-        raise HTTPException(status.HTTP_403_FORBIDDEN, detail="Компания не является участником коалиции")
-    await require_company_buyer(data.company_id, user, db)
-    await require_company_admin(data.company_id, user, db)
-    await require_verified_company(data.company_id, user, db)
     if member.approval_status != "pending":
-        decision_hash = payload_hash({"decision": data.decision,
-                                      "expected_revision": data.expected_revision}) if data.request_key else None
-        if (data.request_key is not None and member.decision_request_key == data.request_key
-                and member.decision_request_hash == decision_hash):
-            return await _coalition_out(db, coalition, await _user_company_ids(db, user.id))
         raise HTTPException(status.HTTP_409_CONFLICT, detail="Решение этой компании уже принято")
     if data.decision == "approved":
         require_complete(member.commercial_estimate)
@@ -568,8 +571,7 @@ async def decide_coalition(
                 raise HTTPException(409,'КП для сравнения устарело. Выберите актуальное КП или продолжите без базы экономии')
     member.approval_status = data.decision
     member.decision_request_key = data.request_key
-    member.decision_request_hash = payload_hash({"decision": data.decision,
-                                                 "expected_revision": data.expected_revision}) if data.request_key else None
+    member.decision_request_hash = decision_hash
     await record_human_approval(
         db,
         action="coalition_member_decision",

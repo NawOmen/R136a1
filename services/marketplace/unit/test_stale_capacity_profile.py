@@ -68,7 +68,7 @@ class StaleCapacityProfileTests(IsolatedAsyncioTestCase):
                     group = NS(id=uuid.uuid4(), coalition_id=coalition.id, company_id=seller, status='preliminary',
                                seller_approval_status='approved', fill_deadline=date.today()+timedelta(days=1))
                     if route == 'group_confirm':
-                        db.execute.side_effect = [result(coalition), result(group), result(members[0]), result(members),
+                        db.execute.side_effect = [result(coalition), result(members[0]), result(group), result(members),
                                                   result('verified'),
                                                   result([(member.buyer_company_id, 'verified') for member in members])]
                         db.get.return_value = need
