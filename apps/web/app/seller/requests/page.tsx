@@ -55,6 +55,24 @@ export default function SellerRequestsPage() {
   const [draftingId, setDraftingId] = useState<string | null>(null);
   const [drafts, setDrafts] = useState<Record<string, OfferDraft>>({});
   const [requestKeys, setRequestKeys] = useState<Record<string, string>>({});
+  const [checks, setChecks] = useState<Record<string, { blockers: string[]; warnings: string[]; missing: string[] }>>({});
+  const [confirming, setConfirming] = useState(false);
+
+  function offerInput(need: NeedFeedItem) {
+    return {
+      company_id: company!.id,
+      commercial_terms: commercialTerms,
+      price_rub: price,
+      available_units: Number(units),
+      lead_time_days: Number(leadTime),
+      delivery_cost_rub: commercialTerms.delivery_method === "separate" ? (deliveryCost || null) : commercialTerms.delivery_method === "unknown" ? null : "0",
+      moq_units: Number(moq || 1),
+      draft_id: drafts[need.id]?.id,
+      resource_kind: resourceKind,
+      product_id: productId || undefined,
+      price_tiers: drafts[need.id]?.payload.price_tiers ?? [],
+    };
+  }
 
   useEffect(() => {
     setQuery(new URLSearchParams(window.location.search).get("q") ?? "");
@@ -109,31 +127,39 @@ export default function SellerRequestsPage() {
     setSubmitting(true);
     setError(null);
     try {
-      const sent = await marketplace.createOffer(token, need.id, {
-        company_id: company.id,
-        commercial_terms: commercialTerms,
-        price_rub: price,
-        available_units: Number(units),
-        lead_time_days: Number(leadTime),
-        delivery_cost_rub: commercialTerms.delivery_method === "separate" ? (deliveryCost || null) : commercialTerms.delivery_method === "unknown" ? null : "0",
-        moq_units: Number(moq || 1),
-        draft_id: drafts[need.id]?.id,
-        request_key: requestKey,
-        resource_kind: resourceKind,
-        product_id: productId || undefined,
-        price_tiers: drafts[need.id]?.payload.price_tiers ?? [],
-      });
+      const preview = await marketplace.previewOfferSend(token, need.id, { ...offerInput(need), request_key: requestKey });
+      setChecks((current) => ({ ...current, [need.id]: preview }));
+      if (preview.blockers.length > 0) {
+        setError(`Отправка заблокирована: ${preview.blockers.join("; ")}`);
+      }
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : "Не удалось проверить условия.");
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  async function handleConfirmOffer(need: NeedFeedItem) {
+    const token = getToken();
+    if (!token || !company) return;
+    const requestKey = requestKeys[need.id] ?? crypto.randomUUID();
+    setRequestKeys((current) => current[need.id] ? current : { ...current, [need.id]: requestKey });
+    setConfirming(true);
+    setError(null);
+    try {
+      const sent = await marketplace.createOffer(token, need.id, { ...offerInput(need), request_key: requestKey });
       const warnings = sent.sending_warnings ?? [];
       if (warnings.length > 0) {
         setError(`Предложение отправлено, но проверьте недостающее: ${warnings.join("; ")}. Допуск подтвердят при выборе покупателем.`);
       } else {
         setSubmittedIds((current) => new Set(current).add(need.id));
         setOpenFormId(null);
+        setChecks((current) => { const rest = { ...current }; delete rest[need.id]; return rest; });
       }
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "Не удалось отправить предложение.");
     } finally {
-      setSubmitting(false);
+      setConfirming(false);
     }
   }
 
@@ -385,7 +411,7 @@ export default function SellerRequestsPage() {
                   </div>
                   <div className="actions">
                     <button type="submit" className="btn btn-primary" disabled={submitting}>
-                      {submitting ? "Отправляем..." : "Отправить предложение"}
+                      {submitting ? "Проверяем..." : "Проверить условия"}
                     </button>
                     <button
                       type="button"
@@ -395,6 +421,27 @@ export default function SellerRequestsPage() {
                       Отмена
                     </button>
                   </div>
+                  {checks[need.id] && (
+                    <div className="card">
+                      <h3>Проверка перед отправкой</h3>
+                      {checks[need.id].missing.length > 0 && <>
+                        <p className="hint">Не заполнено в черновике:</p>
+                        <ul>{checks[need.id].missing.map((item) => <li key={item}>{item}</li>)}</ul>
+                      </>}
+                      {checks[need.id].warnings.length > 0 && <>
+                        <p className="hint">Предупреждения (не блокируют, допуск проверят при выборе):</p>
+                        <ul>{checks[need.id].warnings.map((item) => <li key={item}>{item}</li>)}</ul>
+                      </>}
+                      {checks[need.id].blockers.length === 0 ? (
+                        <button type="button" className="btn btn-success" disabled={confirming}
+                          onClick={() => void handleConfirmOffer(need)}>
+                          {confirming ? "Отправляем..." : "Подтвердить отправку КП"}
+                        </button>
+                      ) : (
+                        <div className="alert alert-error">Отправка заблокирована, исправьте условия выше.</div>
+                      )}
+                    </div>
+                  )}
                 </form>
               ) : (
                 <div className="demand-actions">

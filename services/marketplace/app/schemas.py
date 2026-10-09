@@ -679,6 +679,13 @@ class OfferDraftIn(BaseModel):
     company_id: uuid.UUID
 
 
+class OfferSendPreviewOut(BaseModel):
+    blockers: list[str] = Field(default_factory=list)
+    warnings: list[str] = Field(default_factory=list)
+    missing: list[str] = Field(default_factory=list)
+    can_send: bool = False
+
+
 class OfferPatch(ProductRules):
     commercial_terms: CommercialTerms | None = None
     model_config = ConfigDict(allow_inf_nan=False)

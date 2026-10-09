@@ -1397,6 +1397,12 @@ export const marketplace = {
     );
   },
 
+  previewOfferSend(token: string, needId: string, input: CreateOfferInput): Promise<{ blockers: string[]; warnings: string[]; missing: string[]; can_send: boolean }> {
+    return marketplaceFetch(`/api/v1/needs/${needId}/offers/preview`, {
+      method: "POST", token, body: JSON.stringify(input),
+    });
+  },
+
   createOffer(token: string, needId: string, input: CreateOfferInput): Promise<Offer> {
     return marketplaceFetch(`/api/v1/needs/${needId}/offers`, {
       method: "POST",
@@ -1518,7 +1524,7 @@ export const marketplace = {
     });
   },
 
-  rollbackCatalogImport(token: string, companyId: string, importId: string): Promise<{ import_id: string; deleted_ids: string[]; skipped_published_ids: string[] }> {
+  rollbackCatalogImport(token: string, companyId: string, importId: string): Promise<{ import_id: string; deleted_ids: string[]; restored_ids: string[]; skipped_published_ids: string[] }> {
     return marketplaceFetch(`/api/v1/companies/${companyId}/catalog-imports/${importId}/rollback`, {
       method: "POST", token,
     });

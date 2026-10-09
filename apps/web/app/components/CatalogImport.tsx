@@ -51,12 +51,12 @@ export default function CatalogImport({ companyId, onImported }: { companyId: st
   async function rollback() {
     const token = getToken();
     if (!token || busy || !lastImportId) return;
-    if (!window.confirm("Удалить черновики этого импорта? Опубликованные карточки не тронутся.")) return;
+    if (!window.confirm("Удалить черновики этого импорта и восстановить обновлённые карточки? Опубликованные карточки не тронутся.")) return;
     setBusy(true); setError(""); setMessage("");
     try {
       const result = await marketplace.rollbackCatalogImport(token, companyId, lastImportId);
       if (!alive.current) return;
-      setMessage(`Удалено черновиков: ${result.deleted_ids.length}, пропущено опубликованных: ${result.skipped_published_ids.length}.`);
+      setMessage(`Удалено черновиков: ${result.deleted_ids.length}, восстановлено карточек: ${result.restored_ids.length}, пропущено опубликованных: ${result.skipped_published_ids.length}.`);
       setLastImportId(null);
       const products = await marketplace.getCompanyProducts(token, companyId);
       if (alive.current) onImported(products);

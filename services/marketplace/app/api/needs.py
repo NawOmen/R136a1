@@ -115,9 +115,10 @@ async def list_needs(
             seller_scopes = {catalog_scope(category, subcategory) for category, subcategory in products}
     result = await db.execute(query.order_by(Need.created_at.desc()))
     needs = list(result.scalars().all())
-    if seller_company_id is not None and seller_scopes is None:
-        # Без карточек подбор идёт по паспорту возможностей: категория,
-        # материалы, объём и регион проверяются автоматически.
+    if seller_company_id is not None:
+        # Паспорт ограничивает и совпадения каталога: карточка даёт готовое
+        # предложение сейчас, но за пределы возможностей паспорта подбор не идёт.
+        # Без карточек производство без готовой позиции сохраняется через паспорт.
         passport = await db.get(CapabilityPassport, seller_company_id)
         if passport is not None:
             address_rows = await db.execute(select(DeliveryAddress).where(
@@ -134,16 +135,16 @@ async def list_needs(
                     continue
                 compatible.append(need)
             needs = compatible
+        elif seller_scopes is not None:
+            def relevant(need):
+                parent, child = catalog_scope(need.category, need.subcategory)
+                return any(parent == p and (child is None or child == c) for p, c in seller_scopes)
+            needs = [need for need in needs if relevant(need)]
     if subcategory is not None:
         needs = [need for need in needs if (need.subcategory or "").strip().lower() == subcategory.strip().lower()]
     if unit is not None:
         needs = [need for need in needs if order_unit(need.characteristics) == unit.strip().lower()]
-    if seller_scopes is None:
-        return needs
-    def relevant(need):
-        parent, child = catalog_scope(need.category, need.subcategory)
-        return any(parent == p and (child is None or child == c) for p, c in seller_scopes)
-    return [need for need in needs if relevant(need)]
+    return needs
 
 
 @router.get("/needs/mine", response_model=list[NeedOut])

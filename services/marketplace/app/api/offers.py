@@ -24,7 +24,7 @@ from ..deps import (
 from ..models import CapacityEntry, CapabilityPassport, Deal, Need, Offer, OfferDraft, Product
 from ..matching import ACTIVE_NEED_STATUSES, need_is_current, offer_unit_price, order_unit, run_market_rematch
 from ..offer_draft import _matches_need, available_capacity_units, build_offer_draft, changed_fields
-from ..schemas import CommercialTerms, DealOut, OfferDraftIn, OfferDraftOut, OfferIn, OfferOut, OfferPatch, OfferSelectIn
+from ..schemas import CommercialTerms, DealOut, OfferDraftIn, OfferDraftOut, OfferIn, OfferOut, OfferPatch, OfferSelectIn, OfferSendPreviewOut
 from ..resources import reserve, reservations, free_stock, occupies
 from ..trust import append_audit_event, record_human_approval
 
@@ -52,9 +52,49 @@ async def _sending_warnings(db: AsyncSession, company_id: uuid.UUID, need: Need,
     return []
 
 
-def _same_offer_terms(previous: Offer, data: OfferIn) -> bool:
+async def _send_blockers(db: AsyncSession, *, need: Need, company_id: uuid.UUID, moq_units: int,
+                         available_units: int, lead_time_days: int, resource_kind: str,
+                         product_id) -> tuple[list[str], list[str]]:
+    """Проверка отправки до создания КП: срок, свободный ресурс, допуск.
+    Возвращает (блокеры, предупреждения); записи не создаёт."""
+    warnings = await _sending_warnings(db, company_id, need, moq_units, available_units, product_id)
+    blockers: list[str] = []
+    days_left = (need.deadline_date - date.today()).days
+    if lead_time_days > max(0, days_left):
+        blockers.append("Срок производства не укладывается в срок потребности")
+    held = await reservations(db, company_id)
+    if resource_kind == "stock":
+        product = await db.get(Product, product_id) if product_id else None
+        if product is not None and product.stock_units is not None:
+            if available_units > await free_stock(db, product, held):
+                blockers.append("Доступный объём превышает свободный остаток склада")
+            if product.stock_updated_at is None or product.stock_updated_at < datetime.now(timezone.utc) - timedelta(days=7):
+                warnings.append("Остаток склада не подтверждён за последние 7 дней: обновите наличие")
+    else:
+        from ..resource_scopes import conversion_for, occupied_units
+        unit = order_unit(need.characteristics)
+        entries = (await db.execute(select(CapacityEntry).where(CapacityEntry.company_id == company_id))).scalars().all()
+        free_capacity, has_entries = 0, False
+        for entry in entries:
+            if not date.today() <= entry.date <= need.deadline_date:
+                continue
+            conversion = conversion_for(entry, need.category, need.subcategory, unit)
+            if conversion is None:
+                continue
+            has_entries = True
+            coefficient = conversion["resource_units_per_order_unit"]
+            occupied = sum(occupied_units(row) for row in held
+                           if row.capacity_entry_id == entry.id and occupies(row))
+            free_capacity += max(0, entry.available_units - occupied) // coefficient
+        if has_entries and available_units > free_capacity:
+            blockers.append("Доступный объём превышает подтверждённую свободную мощность")
+    return blockers, warnings
+
+
+def _same_offer_terms(previous: Offer, data: OfferIn, *, product_id, resource_kind) -> bool:
     """Повтор с тем же ключом идемпотентности возвращает то же КП,
-    если существенные условия совпадают; иначе это конфликт, а не повтор."""
+    если существенные условия совпадают; иначе это конфликт, а не повтор.
+    Сравниваются итоговые значения после разрешения черновика."""
     try:
         same_tiers = [
             {"min_units": int(tier.get("min_units")), "unit_price_rub": str(decimal(tier.get("unit_price_rub")))}
@@ -88,8 +128,8 @@ def _same_offer_terms(previous: Offer, data: OfferIn) -> bool:
             and previous.lead_time_days == data.lead_time_days
             and same_delivery
             and same_tiers
-            and previous.product_id == data.product_id
-            and previous.resource_kind == data.resource_kind
+            and previous.product_id == product_id
+            and previous.resource_kind == resource_kind
             and previous_terms == requested_terms
             and previous.valid_until == data.valid_until
         )
@@ -216,6 +256,62 @@ async def prepare_offer_draft(
     return draft
 
 
+@router.post("/needs/{need_id}/offers/preview", response_model=OfferSendPreviewOut)
+async def preview_offer_send(
+    need_id: uuid.UUID,
+    data: OfferIn,
+    user: CurrentUser = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Предварительная проверка КП до создания: блокеры, предупреждения
+    и недостающие данные. Записи не создаёт; отправка идёт отдельно."""
+    need = await db.scalar(select(Need).where(Need.id == need_id))
+    if need is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, detail="Потребность не найдена")
+    await require_company_seller(data.company_id, user, db)
+    await require_verified_company(data.company_id, user, db)
+    blockers: list[str] = []
+    if need.company_id == data.company_id:
+        blockers.append("Нельзя отправить предложение на потребность своей компании")
+    if need.status not in ACTIVE_NEED_STATUSES or not need_is_current(need):
+        blockers.append("Потребность закрыта или срок её актуальности истёк")
+    if data.moq_units > data.available_units:
+        blockers.append("MOQ превышает доступный объём")
+    if data.valid_until is not None and data.valid_until < date.today():
+        blockers.append("Срок действия предложения не может быть в прошлом")
+    draft: OfferDraft | None = None
+    if data.draft_id is not None:
+        draft = await db.get(OfferDraft, data.draft_id)
+        if draft is None or draft.company_id != data.company_id or draft.need_id != need.id:
+            blockers.append("Черновик предложения не найден")
+            draft = None
+    resource_kind = data.resource_kind
+    product_id = data.product_id
+    if draft is not None:
+        resource_kind = draft.payload.get("resource_kind", "capacity")
+        product_id = uuid.UUID(draft.payload["product_id"]) if draft.payload.get("product_id") else None
+    if resource_kind == "stock" and product_id is None:
+        blockers.append("Для складского предложения укажите товар")
+    if product_id:
+        product = await db.get(Product, product_id)
+        if not product or product.company_id != data.company_id:
+            blockers.append("Товар не принадлежит компании продавца")
+        else:
+            compatible, reason = _matches_need(product, need)
+            if not compatible:
+                blockers.append(f"Товар не соответствует потребности: {reason}")
+    check_blockers, warnings = await _send_blockers(
+        db, need=need, company_id=data.company_id, moq_units=data.moq_units,
+        available_units=data.available_units, lead_time_days=data.lead_time_days,
+        resource_kind=resource_kind, product_id=product_id)
+    blockers.extend(check_blockers)
+    missing = list((draft.payload.get("missing") if draft and isinstance(draft.payload, dict) else None) or [])
+    if draft is not None and draft.status != "draft":
+        blockers.append("Черновик уже использован")
+    return OfferSendPreviewOut(blockers=blockers, warnings=warnings, missing=missing,
+                               can_send=not blockers)
+
+
 @router.post("/needs/{need_id}/offers", response_model=OfferOut, status_code=status.HTTP_201_CREATED)
 async def create_offer(
     need_id: uuid.UUID,
@@ -247,13 +343,23 @@ async def create_offer(
             status.HTTP_422_UNPROCESSABLE_ENTITY,
             detail="Срок действия предложения не может быть в прошлом",
         )
+    draft: OfferDraft | None = None
+    if data.draft_id is not None:
+        draft = await db.get(OfferDraft, data.draft_id)
+        if draft is None or draft.company_id != data.company_id or draft.need_id != need.id:
+            raise HTTPException(status.HTTP_404_NOT_FOUND, detail="Черновик предложения не найден")
+    resource_kind = data.resource_kind
+    product_id = data.product_id
+    if draft is not None:
+        resource_kind = draft.payload.get("resource_kind", "capacity")
+        product_id = uuid.UUID(draft.payload["product_id"]) if draft.payload.get("product_id") else None
     existing = await db.execute(
         select(Offer).where(Offer.need_id == need.id, Offer.company_id == data.company_id)
     )
     previous = existing.scalar_one_or_none()
     if previous is not None:
         if data.request_key is not None and previous.request_key == data.request_key:
-            if _same_offer_terms(previous, data):
+            if _same_offer_terms(previous, data, product_id=product_id, resource_kind=resource_kind):
                 previous.sending_warnings = await _sending_warnings(
                     db, data.company_id, need, data.moq_units, data.available_units, previous.product_id)
                 response.status_code = status.HTTP_200_OK
@@ -266,12 +372,7 @@ async def create_offer(
             status.HTTP_409_CONFLICT,
             detail="Компания уже отправила предложение по этой потребности",
         )
-
-    draft: OfferDraft | None = None
-    if data.draft_id is not None:
-        draft = await db.get(OfferDraft, data.draft_id)
-        if draft is None or draft.company_id != data.company_id or draft.need_id != need.id:
-            raise HTTPException(status.HTTP_404_NOT_FOUND, detail="Черновик предложения не найден")
+    if draft is not None:
         if draft.status != "draft":
             raise HTTPException(status.HTTP_409_CONFLICT, detail="Черновик уже использован")
         if draft.payload.get("need_revision", 1) != need.revision:
@@ -282,11 +383,6 @@ async def create_offer(
             if not source or source.updated_at.isoformat() != draft.payload.get("source_updated_at"):
                 raise HTTPException(409, "Товар или остаток изменился. Обновите черновик перед отправкой")
 
-    resource_kind = data.resource_kind
-    product_id = data.product_id
-    if draft is not None:
-        resource_kind = draft.payload.get("resource_kind", "capacity")
-        product_id = uuid.UUID(draft.payload["product_id"]) if draft.payload.get("product_id") else None
     if resource_kind == "stock" and product_id is None:
         raise HTTPException(422, "Для складского предложения укажите товар")
     if product_id:
@@ -297,31 +393,12 @@ async def create_offer(
         if not compatible:
             raise HTTPException(409, f"Товар не соответствует потребности: {reason}")
     # Повторная проверка перед отправкой: документы, цена, ресурс, срок, ревизия.
-    # Допуск здесь не блокирует (его проверяют публикация, выбор и сделка),
-    # но продавец видит недостающие данные до отправки.
-    sending_warnings = await _sending_warnings(db, data.company_id, need, data.moq_units,
-                                               data.available_units, product_id)
-    days_left = (need.deadline_date - date.today()).days
-    if data.lead_time_days > max(0, days_left):
-        raise HTTPException(409, "Срок производства не укладывается в срок потребности")
-    held = await reservations(db, data.company_id)
-    if data.resource_kind == "stock":
-        if product_id is None:
-            raise HTTPException(422, "Для складского предложения укажите товар")
-        product = await db.get(Product, product_id)
-        if product is not None and product.stock_units is not None:
-            free = await free_stock(db, product, held)
-            if data.available_units > free:
-                raise HTTPException(409, "Доступный объём превышает свободный остаток склада")
-            if product.stock_updated_at is None or product.stock_updated_at < datetime.now(timezone.utc) - timedelta(days=7):
-                sending_warnings.append("Остаток склада не подтверждён за последние 7 дней: обновите наличие")
-    else:
-        from ..offer_draft import available_capacity_units
-        entries = (await db.execute(select(CapacityEntry).where(CapacityEntry.company_id == data.company_id))).scalars().all()
-        if entries:
-            free_capacity = available_capacity_units(entries, need)
-            if data.available_units > free_capacity:
-                raise HTTPException(409, "Доступный объём превышает подтверждённую свободную мощность")
+    blockers, sending_warnings = await _send_blockers(
+        db, need=need, company_id=data.company_id, moq_units=data.moq_units,
+        available_units=data.available_units, lead_time_days=data.lead_time_days,
+        resource_kind=resource_kind, product_id=product_id)
+    if blockers:
+        raise HTTPException(409, "; ".join(blockers))
     offer = Offer(
         resource_kind=resource_kind,
         product_id=product_id,

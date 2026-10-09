@@ -460,6 +460,13 @@ async def test_passport_only_feed_filters_compatibility(client, db_session):
         characteristics={"volume_ml": 600, "coating": "PLA", "material": "крафт-картон"})
     feed_again = await client.get(f"/api/v1/needs?seller_company_id={company}", headers=_auth(token))
     assert len(feed_again.json()) == 1
+    await _product(client, token, company, **{
+        "name": "Стакан 400 мл", "category": "Упаковка и тара", "subcategory": "Бумажные стаканы",
+        "characteristics": {"volume_ml": 400, "coating": "PE", "material": "крафт-картон", "unit": "шт"},
+        "price_rub": 12, "moq_units": 1000,
+        "price_tiers": [{"min_units": 1000, "unit_price_rub": 12}]})
+    feed_with_card = await client.get(f"/api/v1/needs?seller_company_id={company}", headers=_auth(token))
+    assert len(feed_with_card.json()) == 1
 
 
 async def test_offer_send_rechecks_term_and_warns_admission(client, db_session):

@@ -39,6 +39,13 @@ export function requiredCharacteristicKeys(category: string, subcategory: string
     keys.add(normalize(name));
     for (const alias of fields[name]?.aliases ?? []) keys.add(normalize(alias));
   }
+  const identification = (profile as unknown as { passport?: { identification?: { required_when?: { required?: string[] }[] } } })?.passport?.identification;
+  for (const rule of identification?.required_when ?? []) {
+    for (const name of rule.required ?? []) {
+      keys.add(normalize(name));
+      for (const alias of fields[name]?.aliases ?? []) keys.add(normalize(alias));
+    }
+  }
   return keys;
 }
 
