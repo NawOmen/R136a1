@@ -37,7 +37,7 @@ TERMINAL_STATES = frozenset({"completed", "cancelled"})
 TRANSITIONS: dict[str, frozenset[str]] = {
     "queued": frozenset({"running", "cancelled"}),
     "running": frozenset({"needs_input", "awaiting_approval", "completed", "failed", "cancelled"}),
-    "needs_input": frozenset({"running", "failed", "cancelled"}),
+    "needs_input": frozenset({"running", "awaiting_approval", "failed", "cancelled"}),
     "awaiting_approval": frozenset({"completed", "running", "needs_input", "failed", "cancelled"}),
     "failed": frozenset({"running", "cancelled"}),
     "completed": frozenset(),

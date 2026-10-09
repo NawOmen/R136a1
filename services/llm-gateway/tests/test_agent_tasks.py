@@ -764,3 +764,95 @@ async def test_step_follows_run_after_invalidate_then_attach(client, token, db_s
     assert body["state"] == "needs_input"
     assert body["required_response"]["run_revision"] == run["revision"] + 1
     assert body["required_response"]["questions"]
+
+
+@pytest.mark.asyncio
+async def test_concurrent_approve_and_invalidate_never_deadlocks(client, token, db_session, user_id):
+    import asyncio
+
+    import app.api as gateway_api
+
+    company_id = await make_company(db_session, user_id)
+    created = await create_task(client, token, company_id)
+    await client.post(TASKS + f"/{created['task_id']}/start", params={"company_id": str(company_id)},
+                      json={"expected_revision": 1}, headers=auth(token))
+    run = await make_buyer_run(client, token, company_id)
+    await client.post(TASKS + f"/{created['task_id']}/attach-run", params={"company_id": str(company_id)},
+                      json={"run_id": run["id"]}, headers=auth(token))
+
+    entered = asyncio.Event()
+    real_owned_run = gateway_api.owned_run
+
+    async def gated_owned_run(db, run_id, user, lock=False):
+        entered.set()
+        return await real_owned_run(db, run_id, user, lock=lock)
+
+    gateway_api.owned_run = gated_owned_run
+    try:
+        approve_payload = {"expected_revision": 1, "approval": {"decision": "approved"},
+                           "result_artifact": {"type": "agent_run_result", "id": run["id"],
+                                               "revision": run["revision"]}}
+        invalidate_task = asyncio.create_task(client.post(
+            f"/api/v2/agent-runs/{run['id']}/sources/request_text/invalidate",
+            json={"expected_revision": run["revision"]}, headers=auth(token)))
+        await asyncio.wait_for(entered.wait(), 10)
+        approve_response = await client.post(TASKS + f"/{created['task_id']}/approve",
+                                             params={"company_id": str(company_id)},
+                                             json=approve_payload, headers=auth(token))
+        invalidate_response = await invalidate_task
+    finally:
+        gateway_api.owned_run = real_owned_run
+
+    assert invalidate_response.status_code == 200
+    assert approve_response.status_code in (200, 409)
+    final_task = (await client.get(TASKS + f"/{created['task_id']}", params={"company_id": str(company_id)},
+                                   headers=auth(token))).json()
+    final_run = (await client.get(f"/api/v2/agent-runs/{run['id']}", headers=auth(token))).json()
+    if approve_response.status_code == 200:
+        assert final_task["state"] == "completed"
+        assert final_task["result_artifact"]["revision"] == 1
+    else:
+        assert final_task["state"] == "needs_input"
+        assert final_task["required_response"]["run_revision"] == final_run["revision"] == 2
+
+
+@pytest.mark.asyncio
+async def test_dialog_needs_input_clarify_awaiting_approval(client, token, db_session, user_id, fake_provider):
+    from app.schemas import RawExtraction, RawFact
+
+    company_id = await make_company(db_session, user_id)
+    created = await create_task(client, token, company_id)
+    await client.post(TASKS + f"/{created['task_id']}/start", params={"company_id": str(company_id)},
+                      json={"expected_revision": 1}, headers=auth(token))
+    fake_provider.extraction = RawExtraction(
+        category="бумажные стаканы",
+        facts=[RawFact(key="quantity_units", value=5000, source_id="request_text",
+                       confidence=0.95, evidence="нужно 5000")],
+    )
+    run = await make_buyer_run(client, token, company_id)
+    assert run["state"] == "needs_clarification"
+    attached = await client.post(TASKS + f"/{created['task_id']}/attach-run", params={"company_id": str(company_id)},
+                                 json={"run_id": run["id"]}, headers=auth(token))
+    assert attached.json()["state"] == "needs_input"
+
+    clarified = await client.post(
+        f"/api/v1/agent-runs/{run['id']}/clarify",
+        json={"answers": {"lead_time_days": 10, "delivery_city": "Москва"}}, headers=auth(token),
+    )
+    assert clarified.status_code == 200, clarified.text
+    assert clarified.json()["state"] == "ready_for_review"
+    body = (await client.get(TASKS + f"/{created['task_id']}", params={"company_id": str(company_id)},
+                             headers=auth(token))).json()
+    assert body["state"] == "awaiting_approval"
+    assert body["required_response"]["run_revision"] == clarified.json()["revision"]
+    assert body["required_response"]["summary"]
+
+    approved = await client.post(
+        TASKS + f"/{created['task_id']}/approve", params={"company_id": str(company_id)},
+        json={"expected_revision": 1, "approval": {"decision": "approved"},
+              "result_artifact": {"type": "agent_run_result", "id": run["id"],
+                                  "revision": clarified.json()["revision"]}},
+        headers=auth(token),
+    )
+    assert approved.status_code == 200, approved.text
+    assert approved.json()["state"] == "completed"

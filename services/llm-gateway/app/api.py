@@ -851,13 +851,17 @@ async def approve_agent_task(
     user: CurrentUser = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    task = await task_contract.owned_task(db, task_id, company_id, lock=True)
-    await _require_task_role(db, company_id, user, task.scenario_type)
-    for raw_id in {task.linked_run_id, data.result_artifact.get("id")}:
+    # Единый порядок блокировок: advisory процесса, затем задача, затем процесс.
+    # Зондирующее чтение без блокировки даёт ID для advisory; авторитетно —
+    # повторное чтение под блокировкой после сериализации.
+    probe = await task_contract.owned_task(db, task_id, company_id)
+    for raw_id in {probe.linked_run_id, data.result_artifact.get("id")}:
         try:
             await _lock_run_scope(db, uuid.UUID(str(raw_id)))
         except (ValueError, AttributeError, TypeError):
             pass
+    task = await task_contract.owned_task(db, task_id, company_id, lock=True)
+    await _require_task_role(db, company_id, user, task.scenario_type)
     approval = {**data.approval, "by_user_id": str(user.id)}
     await task_contract.approve_task(
         db, task, approval=approval, result_artifact=data.result_artifact,
