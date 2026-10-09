@@ -295,7 +295,16 @@ float разряды не восстанавливаются. Неконечны
 ### Мощности
 
 - `GET /companies/{company_id}/capacity?from=...&to=...` — записи календаря (seller).
-- `PUT /companies/{company_id}/capacity` — body `{entries: [{date, available_units}]}` — перезаписать (seller + admin).
+- `PUT /companies/{company_id}/capacity` — body `{entries: [{date, available_units}]}` — перезаписать (seller + admin). Общая запись дня и предметные записи не должны пересекаться: одна линия не учитывается дважды (`422`).
+
+### Сверка ресурсов (S06)
+
+- `GET /companies/{company_id}/resources/reconciliation` — занято/свободно по складу и мощности, свежесть остатков, расхождения (`orphan_anchor`, `stale_obligation`, `duplicate_anchor`, `expired_hold`, отрицательные остатки) и перечень обязательств с основанием, версией и статусом (seller).
+- `POST /companies/{company_id}/resources/repair` — только контролируемое освобождение просроченных удержаний, идемпотентно; пишет Human Approval `resource_repair` (seller + admin).
+
+### Возврат на склад (S06)
+
+- `POST /deals/{deal_id}/execution/{event_id}/decision` — поле `restock_accepted: true` при подтверждённом возврате принимает товар на склад после проверки качества. Без него остаток не увеличивается. Повтор решения по тому же событию не начисляет остаток дважды.
 
 ### Документы
 

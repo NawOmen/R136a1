@@ -23,7 +23,7 @@ from app.resources import (
     return_stock,
     sweep_expired_holds,
 )
-from conftest import make_company, make_token, make_user
+from conftest import grant_capacity, make_company, make_token, make_user
 
 
 @pytest.fixture
@@ -132,3 +132,232 @@ async def test_consume_does_not_double_spend(warehouse, db_session):
     await consume(db_session, company_id=company, anchor_type="deal", anchor_id=anchor)
     product = await db_session.get(Product, product_id)
     assert product.stock_units == 4
+
+
+@pytest.mark.asyncio
+async def test_stale_stock_read_cannot_oversell(warehouse, db_session, session_factory):
+    """P1: предчтение остатка → чужая отгрузка → новое обязательство даёт 409."""
+    _, company, product_id = warehouse
+    stale = await db_session.get(Product, product_id)
+    assert stale.stock_units == 10
+    stranger = uuid.uuid4()
+    async with session_factory() as other:
+        await reserve(other, company_id=company, anchor_type="deal", anchor_id=stranger,
+                      units=7, deadline=date.today(), resource_kind="stock", product_id=product_id)
+        await consume(other, company_id=company, anchor_type="deal", anchor_id=stranger)
+        await other.commit()
+    with pytest.raises(HTTPException) as exc:
+        await reserve(db_session, company_id=company, anchor_type="deal", anchor_id=uuid.uuid4(),
+                      units=7, deadline=date.today(), resource_kind="stock", product_id=product_id)
+    assert exc.value.status_code == 409
+    await db_session.rollback()
+
+
+@pytest.mark.asyncio
+async def test_multiday_allocation_is_not_duplicate(warehouse, db_session):
+    """P2: заказ 5+5 по двум дням — нормальное распределение, не дубль."""
+    _, company, _ = warehouse
+    day1 = date.today() + timedelta(days=1)
+    day2 = date.today() + timedelta(days=2)
+    await grant_capacity(db_session, company, 5, day1)
+    await grant_capacity(db_session, company, 5, day2)
+    await reserve(db_session, company_id=company, anchor_type="deal", anchor_id=uuid.uuid4(),
+                  units=10, deadline=day2, category="Упаковка и тара", subcategory="Бумажные стаканы")
+    await db_session.commit()
+    report = await reconcile_company(db_session, company_id=company)
+    assert not any(issue["code"] == "duplicate_anchor" for issue in report["issues"])
+
+
+@pytest.mark.asyncio
+async def test_same_resource_twice_is_rejected(warehouse, db_session):
+    """Дубль одного ресурса под одним основанием запрещён уже ограничением БД."""
+    from sqlalchemy.exc import IntegrityError
+    _, company, product_id = warehouse
+    anchor = uuid.uuid4()
+    await reserve(db_session, company_id=company, anchor_type="deal", anchor_id=anchor,
+                  units=2, deadline=date.today(), resource_kind="stock", product_id=product_id)
+    await db_session.commit()
+    db_session.add(ResourceReservation(company_id=company, product_id=product_id,
+                                       anchor_type="deal", anchor_id=anchor, units=2, status="committed"))
+    with pytest.raises(IntegrityError):
+        await db_session.commit()
+    await db_session.rollback()
+    report = await reconcile_company(db_session, company_id=company)
+    assert not any(issue["code"] == "duplicate_anchor" for issue in report["issues"])
+
+
+@pytest.mark.asyncio
+async def test_orphan_business_anchor_per_type(warehouse, db_session):
+    """P2: активные записи без сущности deal/coalition/reserve/resilience_primary выявляются."""
+    _, company, product_id = warehouse
+    for anchor_type in ("deal", "coalition", "reserve", "resilience_primary"):
+        await reserve(db_session, company_id=company, anchor_type=anchor_type, anchor_id=uuid.uuid4(),
+                      units=1, deadline=date.today(), resource_kind="stock", product_id=product_id)
+    await db_session.commit()
+    report = await reconcile_company(db_session, company_id=company)
+    orphans = [issue for issue in report["issues"] if issue["code"] == "orphan_anchor"]
+    assert {issue["anchor_type"] for issue in orphans} == {"deal", "coalition", "reserve", "resilience_primary"}
+    assert all(obligation["business_exists"] is False for obligation in report["obligations"])
+
+
+@pytest.mark.asyncio
+async def test_cancelled_deal_is_stale_obligation(db_session):
+    """Отменённая сделка с активными удержаниями — stale, а не молча занятый ресурс."""
+    from app.models import Deal, DeliveryAddress, Need, Offer
+    buyer = await make_user(db_session)
+    seller = await make_user(db_session)
+    bc = await make_company(db_session, buyer, can_sell=False)
+    sc = await make_company(db_session, seller, can_buy=False)
+    address = DeliveryAddress(company_id=bc, address="г. Москва, ул. Синтетическая, д. 1", city="Москва", region="Москва")
+    db_session.add(address)
+    await db_session.flush()
+    product = Product(company_id=sc, name="Стол", category="Мебель", characteristics={}, price_rub=1000,
+                      price_tiers=[], moq_units=1, lead_time_days=1, stock_units=10,
+                      stock_updated_at=datetime.now(timezone.utc))
+    db_session.add(product)
+    await db_session.flush()
+    need = Need(company_id=bc, created_by_user_id=buyer, category="Мебель", characteristics={}, volume_units=5,
+                budget_rub=20000, deadline_date=date.today() + timedelta(days=20),
+                delivery_address_id=address.id, visibility="public", status="matched")
+    db_session.add(need)
+    await db_session.flush()
+    offer = Offer(need_id=need.id, company_id=sc, created_by_user_id=seller, price_rub=1000,
+                  available_units=5, lead_time_days=2, delivery_cost_rub=0, moq_units=1,
+                  price_tiers=[], status="selected", product_id=product.id)
+    db_session.add(offer)
+    await db_session.flush()
+    deal = Deal(offer_id=offer.id, need_id=need.id, buyer_company_id=bc, seller_company_id=sc,
+                units=5, total_price_rub=5000, status="cancelled")
+    db_session.add(deal)
+    await db_session.flush()
+    await reserve(db_session, company_id=sc, anchor_type="deal", anchor_id=deal.id,
+                  units=5, deadline=date.today(), resource_kind="stock", product_id=product.id)
+    await db_session.commit()
+    report = await reconcile_company(db_session, company_id=sc)
+    assert any(issue["code"] == "stale_obligation" for issue in report["issues"])
+    obligation = next(item for item in report["obligations"] if item["anchor_type"] == "deal")
+    assert obligation["business_exists"] is True
+    assert obligation["business_status"] == "cancelled"
+
+
+@pytest.mark.asyncio
+async def test_partial_consume_stock_and_capacity(warehouse, db_session):
+    _, company, product_id = warehouse
+    anchor = uuid.uuid4()
+    await reserve(db_session, company_id=company, anchor_type="deal", anchor_id=anchor,
+                  units=10, deadline=date.today(), resource_kind="stock", product_id=product_id)
+    await db_session.commit()
+    assert await consume(db_session, company_id=company, anchor_type="deal", anchor_id=anchor, units=4) == 4
+    await db_session.commit()
+    product = await db_session.get(Product, product_id)
+    assert product.stock_units == 6
+    with pytest.raises(HTTPException):
+        await consume(db_session, company_id=company, anchor_type="deal", anchor_id=anchor, units=7)
+    assert await consume(db_session, company_id=company, anchor_type="deal", anchor_id=anchor) == 6
+    await db_session.commit()
+    product = await db_session.get(Product, product_id)
+    assert product.stock_units == 0
+
+    day = date.today() + timedelta(days=3)
+    await grant_capacity(db_session, company, 10, day)
+    await db_session.commit()
+    cap_anchor = uuid.uuid4()
+    await reserve(db_session, company_id=company, anchor_type="coalition", anchor_id=cap_anchor,
+                  units=10, deadline=day, category="Упаковка и тара", subcategory="Бумажные стаканы")
+    assert await consume(db_session, company_id=company, anchor_type="coalition", anchor_id=cap_anchor, units=4) == 4
+    from app.models import CapacityEntry
+    from app.resources import free_capacity_for_entry
+    entry = (await db_session.scalars(select(CapacityEntry).where(CapacityEntry.company_id == company))).first()
+    assert entry.available_units == 6
+    assert await free_capacity_for_entry(db_session, entry) == 0
+
+
+@pytest.mark.asyncio
+async def test_capacity_overlap_guard_rejects_double_counting(warehouse, client):
+    user, company, _ = warehouse
+    headers = {"Authorization": f"Bearer {make_token(user)}"}
+    day = str(date.today() + timedelta(days=4))
+    response = await client.put(f"/api/v1/companies/{company}/capacity", headers=headers, json={"entries": [
+        {"date": day, "available_units": 5},
+        {"date": day, "category": "business-supplies.furniture", "unit": "шт", "available_units": 5},
+    ]})
+    assert response.status_code == 422, response.text
+
+
+@pytest.mark.asyncio
+async def test_return_restock_requires_confirmed_event_and_is_idempotent(client, db_session):
+    """S06.03: возврат на склад — только по подтверждённому событию, повтор не начисляет."""
+    from decimal import Decimal
+    from app.models import Deal, DealCheckpoint, DeliveryAddress, Need, Offer
+    buyer = await make_user(db_session)
+    seller = await make_user(db_session)
+    bc = await make_company(db_session, buyer, can_sell=False)
+    sc = await make_company(db_session, seller, can_buy=False)
+    address = DeliveryAddress(company_id=bc, address="г. Москва, ул. Синтетическая, д. 1", city="Москва", region="Москва")
+    db_session.add(address)
+    await db_session.flush()
+    product = Product(company_id=sc, name="Стол", category="Мебель", characteristics={}, price_rub=1000,
+                      price_tiers=[], moq_units=1, lead_time_days=1, stock_units=10,
+                      stock_updated_at=datetime.now(timezone.utc))
+    db_session.add(product)
+    await db_session.flush()
+    need = Need(company_id=bc, created_by_user_id=buyer, category="Мебель", characteristics={}, volume_units=10,
+                budget_rub=20000, deadline_date=date.today() + timedelta(days=20),
+                delivery_address_id=address.id, visibility="public", status="matched")
+    db_session.add(need)
+    await db_session.flush()
+    offer = Offer(need_id=need.id, company_id=sc, created_by_user_id=seller, price_rub=1000,
+                  available_units=10, lead_time_days=2, delivery_cost_rub=0, moq_units=1,
+                  price_tiers=[], status="selected", product_id=product.id)
+    db_session.add(offer)
+    await db_session.flush()
+    deal = Deal(offer_id=offer.id, need_id=need.id, buyer_company_id=bc, seller_company_id=sc,
+                units=10, total_price_rub=10000, unit_price_rub=Decimal("1000"),
+                delivery_price_rub=0, status="shipped")
+    db_session.add(deal)
+    await db_session.flush()
+    for kind in ("production", "shipment"):
+        db_session.add(DealCheckpoint(deal_id=deal.id, kind=kind, status="completed"))
+    await db_session.commit()
+    await reserve(db_session, company_id=sc, anchor_type="deal", anchor_id=deal.id,
+                  units=10, deadline=date.today(), resource_kind="stock", product_id=product.id)
+    await consume(db_session, company_id=sc, anchor_type="deal", anchor_id=deal.id)
+    await db_session.commit()
+    assert (await db_session.get(Product, product.id)).stock_units == 0
+
+    buyer_headers = {"Authorization": f"Bearer {make_token(buyer)}"}
+    seller_headers = {"Authorization": f"Bearer {make_token(seller)}"}
+    accepted = await client.post(f"/api/v1/deals/{deal.id}/execution", headers=buyer_headers, json={
+        "company_id": str(bc), "kind": "acceptance", "units": 10, "note": "Принято по акту",
+        "human_approved": True, "idempotency_key": str(uuid.uuid4()),
+    })
+    assert accepted.status_code == 201, accepted.text
+    created = await client.post(f"/api/v1/deals/{deal.id}/execution", headers=buyer_headers, json={
+        "company_id": str(bc), "kind": "return", "units": 3, "note": "Бой при перевозке",
+        "human_approved": True, "idempotency_key": str(uuid.uuid4()),
+    })
+    assert created.status_code == 201, created.text
+    event_id = created.json()["id"]
+    restock = await client.post(f"/api/v1/deals/{deal.id}/execution/{event_id}/decision", headers=seller_headers,
+                                json={"company_id": str(sc), "approved": True, "human_approved": True,
+                                      "restock_accepted": True})
+    assert restock.status_code == 200, restock.text
+    await db_session.refresh(product)
+    assert product.stock_units == 3
+    repeat = await client.post(f"/api/v1/deals/{deal.id}/execution/{event_id}/decision", headers=seller_headers,
+                               json={"company_id": str(sc), "approved": True, "human_approved": True,
+                                     "restock_accepted": True})
+    assert repeat.status_code == 200, repeat.text
+    await db_session.refresh(product)
+    assert product.stock_units == 3
+    second = await client.post(f"/api/v1/deals/{deal.id}/execution", headers=buyer_headers, json={
+        "company_id": str(bc), "kind": "return", "units": 2, "note": "Царапины на корпусе",
+        "human_approved": True, "idempotency_key": str(uuid.uuid4()),
+    })
+    assert second.status_code == 201, second.text
+    written_off = await client.post(f"/api/v1/deals/{deal.id}/execution/{second.json()['id']}/decision",
+                                    headers=seller_headers,
+                                    json={"company_id": str(sc), "approved": True, "human_approved": True})
+    assert written_off.status_code == 200, written_off.text
+    await db_session.refresh(product)
+    assert product.stock_units == 3

@@ -54,6 +54,27 @@ async def put_capacity(
         raise HTTPException(422, "Ресурс одной категории и единицы не должен повторяться в одном дне")
     dates = [e.date for e in data.entries]
     await lock_company(db, company_id)
+    declared_by_date: dict[date, list[tuple[str, str]]] = {}
+    for entry in data.entries:
+        try:
+            conversions = prepare_conversions([value.model_dump() for value in entry.category_conversions], entry.conversions_approved)
+        except ValueError as exc:
+            raise HTTPException(422, str(exc)) from None
+        if conversions:
+            declared = [(item["category_id"], item["order_unit"]) for item in conversions]
+        elif entry.category:
+            declared = [(entry.category, entry.unit)]
+        else:
+            declared = [("", entry.unit)]
+        day_declared = declared_by_date.setdefault(entry.date, [])
+        combined = day_declared + declared
+        generic = [key for key in combined if key[0] == ""]
+        scoped = [key for key in combined if key[0] != ""]
+        if generic and scoped:
+            raise HTTPException(422, "Общая запись дня пересекается с предметными: одна линия не учитывается дважды")
+        if len(set(scoped)) != len(scoped):
+            raise HTTPException(422, "Предметные записи дня пересекаются: одна линия не учитывается дважды")
+        day_declared.extend(declared)
     existing = {(row.date, row.category, row.unit): row for row in (await db.scalars(select(CapacityEntry).where(CapacityEntry.company_id == company_id, CapacityEntry.date.in_(dates)))).all()}
     held = await reservations(db, company_id)
     saved_entries = []

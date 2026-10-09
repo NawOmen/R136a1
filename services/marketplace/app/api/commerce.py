@@ -33,6 +33,7 @@ class DecisionIn(BaseModel):
     company_id: uuid.UUID
     approved: bool
     human_approved: Literal[True]
+    restock_accepted: bool = False
 
 
 class CostsIn(BaseModel):
@@ -167,6 +168,14 @@ async def decide_event(deal_id: uuid.UUID, event_id: uuid.UUID, data: DecisionIn
         await release(db, company_id=deal.seller_company_id, anchor_type="deal", anchor_id=deal.id, units=event.units)
     event.status = requested
     event.decided_by_user_id, event.decided_at = user.id, datetime.now(timezone.utc)
+    if data.approved and event.kind == "return" and data.restock_accepted:
+        from ..resources import return_stock
+        offer = await db.get(Offer, deal.offer_id)
+        if offer is None or offer.product_id is None:
+            raise HTTPException(409, "Возврат на склад неприменим: сделка выполнена мощностью без складского товара")
+        await return_stock(db, company_id=deal.seller_company_id, product_id=offer.product_id,
+                           units=event.units, quality_accepted=True,
+                           return_event_id=event.id, actor_user_id=user.id)
     sync_status(deal, events)
     await audit(db, deal, data.company_id, user, "decide_execution", {"event_id": str(event.id), "kind": event.kind, "units": event.units}, data.approved)
     await db.commit()

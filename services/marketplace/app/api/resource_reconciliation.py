@@ -48,10 +48,23 @@ class CapacityLine(BaseModel):
     free: int
 
 
+class ObligationOut(BaseModel):
+    model_config = ConfigDict(extra="allow")
+
+    anchor_type: str
+    anchor_id: str
+    units: int
+    business_exists: bool
+    business_status: str | None
+    business_version: int | None = None
+    resources: list[str]
+
+
 class ReconciliationOut(BaseModel):
     stock: list[StockLine]
     capacity: list[CapacityLine]
     issues: list[ReconciliationIssue]
+    obligations: list[ObligationOut] = []
 
 
 class RepairOut(BaseModel):

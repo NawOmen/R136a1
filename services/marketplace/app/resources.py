@@ -5,6 +5,7 @@ consumes physical stock once. Capacity includes consumed work and cannot be sold
 again. A return never silently restocks goods of unknown quality.
 """
 from datetime import date, datetime, timedelta, timezone
+import uuid
 
 from fastapi import HTTPException
 from sqlalchemy import or_, select
@@ -25,7 +26,8 @@ def occupies(row, *, stock=False):
 
 
 async def reservations(db, company_id):
-    return list((await db.scalars(select(ResourceReservation).where(ResourceReservation.company_id == company_id))).all())
+    stmt = select(ResourceReservation).where(ResourceReservation.company_id == company_id)
+    return list((await db.scalars(stmt.execution_options(populate_existing=True))).all())
 
 
 async def free_stock(db, product, rows=None):
@@ -50,6 +52,11 @@ async def reserve(db, *, company_id, anchor_type, anchor_id, units, deadline, re
     if resource_kind == "stock":
         product = await db.get(Product, product_id) if product_id else None
         if not product or product.company_id != company_id:
+            raise HTTPException(409, "Для складского предложения выберите товар своей компании")
+        # Блокировка не обновляет identity map: товар могли отгрузить после
+        # его чтения вызывающей стороной. Перечитываем под блокировкой.
+        await db.refresh(product)
+        if product.company_id != company_id:
             raise HTTPException(409, "Для складского предложения выберите товар своей компании")
         if product.stock_updated_at is None or product.stock_updated_at < datetime.now(timezone.utc) - timedelta(days=7):
             raise HTTPException(409, "Остаток склада не подтверждён за последние 7 дней. Продавцу нужно обновить наличие")
@@ -101,21 +108,55 @@ async def release(db, *, company_id, anchor_type, anchor_id, units=None):
     return released
 
 
-async def consume(db, *, company_id, anchor_type, anchor_id):
+async def consume(db, *, company_id, anchor_type, anchor_id, units=None):
+    """Отгрузка по обязательству: весь объём либо указанная часть.
+
+    Полный вызов сохраняет прежнее поведение (строки переходят в consumed).
+    Частичное исполнение уменьшает закреплённый остаток inplace — новые строки
+    не создаются, ограничения уникальности anchor/ресурс не нарушаются.
+    Использованная мощность списывается из доступности записи дня, поэтому
+    выполненная работа не продаётся повторно. Повтор сверх остатка отклоняется.
+    """
+    if units is not None and units <= 0:
+        raise HTTPException(422, "Количество отгрузки должно быть положительным")
     await lock_company(db, company_id)
-    for row in await reservations(db, company_id):
-        if row.anchor_type != anchor_type or row.anchor_id != anchor_id or row.status != "committed":
-            continue
+    rows = [r for r in await reservations(db, company_id)
+            if r.anchor_type == anchor_type and r.anchor_id == anchor_id and r.status == "committed"]
+    if units is not None and sum(r.units for r in rows) < units:
+        raise HTTPException(409, "Объём отгрузки превышает закреплённое обязательство")
+    remaining = units if units is not None else sum(r.units for r in rows)
+    consumed = 0
+    for row in rows:
+        take = min(remaining, row.units)
+        if not take:
+            break
         if row.product_id:
             product = await db.get(Product, row.product_id)
-            if product.stock_units is None or product.stock_units < row.units:
+            await db.refresh(product)
+            if product.stock_units is None or product.stock_units < take:
                 raise HTTPException(409, "Складской остаток требует сверки перед отгрузкой")
-            product.stock_units -= row.units
+            product.stock_units -= take
             product.stock_updated_at = datetime.now(timezone.utc)
             if hasattr(product, "revision"):
                 product.revision += 1
-        row.status = "consumed"
+        else:
+            entry = await db.get(CapacityEntry, row.capacity_entry_id)
+            if entry is not None:
+                await db.refresh(entry)
+                entry.available_units -= take
+        if units is None or take == row.units:
+            row.status = "consumed"
+        else:
+            row.units -= take
+            if row.resource_units is not None:
+                coefficient = row.resource_units / (row.units + take)
+                row.resource_units -= int(take * coefficient)
+        consumed += take
+        remaining -= take
+        if not remaining:
+            break
     await db.flush()
+    return consumed
 
 
 async def activate_hold(db, *, company_id, anchor_id, units):
@@ -160,25 +201,53 @@ async def sweep_expired_holds(db, *, company_id):
     return swept
 
 
-async def return_stock(db, *, company_id, product_id, units, quality_accepted):
+async def return_stock(db, *, company_id, product_id, units, quality_accepted,
+                     return_event_id=None, actor_user_id=None):
     """Возврат на склад только по явному решению о качестве.
 
-    Без подтверждённого качества остаток не увеличивается: требуется отдельное
-    решение ответственного. Повторный вызов с тем же смыслом выполняется
-    вызывающей стороной отдельным согласованным действием, а не автоматически.
+    Без подтверждённого качества остаток не увеличивается. Привязка к событию
+    возврата (DealExecutionEvent kind=return, status=confirmed) делает повтор
+    идемпотентным: второе применение того же события возвращает текущий остаток
+    без повторного начисления, а факт фиксируется записью Human Approval.
+    Использованный ресурс при этом сохраняется в истории, а не стирается.
     """
     if units <= 0:
         raise HTTPException(422, "Количество возврата должно быть положительным")
     if not quality_accepted:
         raise HTTPException(409, "Возврат не увеличивает доступный склад без проверки качества и явного решения")
     await lock_company(db, company_id)
+    if return_event_id is not None:
+        from .models import DealExecutionEvent, HumanApprovalRecord
+        event = await db.get(DealExecutionEvent, return_event_id)
+        if event is None or event.kind != "return" or event.status != "confirmed":
+            raise HTTPException(409, "Возврат на склад возможен только по подтверждённому решению о возврате")
+        if event.units < units:
+            raise HTTPException(409, "Количество возврата превышает подтверждённое событие")
+        applied = await db.scalar(select(HumanApprovalRecord).where(
+            HumanApprovalRecord.action == "stock_return",
+            HumanApprovalRecord.entity_type == "deal_execution_event",
+            HumanApprovalRecord.entity_id == return_event_id,
+        ))
+        if applied is not None:
+            product = await db.get(Product, product_id)
+            return product.stock_units if product else 0
     product = await db.get(Product, product_id)
     if not product or product.company_id != company_id:
         raise HTTPException(409, "Возврат возможен только на склад своей компании")
+    await db.refresh(product)
     product.stock_units = (product.stock_units or 0) + units
     product.stock_updated_at = datetime.now(timezone.utc)
     if hasattr(product, "revision"):
         product.revision += 1
+    if return_event_id is not None:
+        from .trust import record_human_approval
+        await record_human_approval(
+            db, action="stock_return", entity_type="deal_execution_event", entity_id=return_event_id,
+            actor_user_id=actor_user_id, actor_company_id=company_id, permission="company_admin",
+            decision="approved", payload={"product_id": str(product_id), "units": units},
+            source_refs=[{"type": "deal_execution_event", "id": str(return_event_id)}],
+            explanation="Возврат принят на склад после проверки качества; повтор события не начисляет остаток.",
+        )
     await db.flush()
     return product.stock_units
 
@@ -236,8 +305,9 @@ async def reconcile_company(db, *, company_id):
         })
     product_ids = {p.id for p in products}
     entry_ids = {e.id for e in entries}
-    active_by_anchor: dict[tuple, int] = {}
-    for row in rows:
+    active = [row for row in rows if row.status in {"held", "committed"}]
+    seen_resource: dict[tuple, int] = {}
+    for row in active:
         if row.product_id is not None and (row.product_id not in product_ids or row.company_id != company_id):
             issues.append({
                 "code": "orphan_reservation",
@@ -256,15 +326,104 @@ async def reconcile_company(db, *, company_id):
                 "message": "Просроченное удержание ещё числится held; требуется контролируемое освобождение",
                 "reservation_id": str(row.id),
             })
-        if row.status in {"held", "committed"}:
-            key = (row.anchor_type, str(row.anchor_id))
-            active_by_anchor[key] = active_by_anchor.get(key, 0) + 1
-    for (anchor_type, anchor_id), count in active_by_anchor.items():
-        if count > 1 and anchor_type == "deal":
+        # Распределение одного заказа по нескольким дням — норма: дублем
+        # считается только повтор одного и того же ресурса под одним основанием.
+        resource_key = (row.anchor_type, str(row.anchor_id), str(row.product_id), str(row.capacity_entry_id))
+        seen_resource[resource_key] = seen_resource.get(resource_key, 0) + 1
+    for (anchor_type, anchor_id, _product, _entry), count in seen_resource.items():
+        if count > 1:
             issues.append({
                 "code": "duplicate_anchor",
-                "message": "По одному обязательству числится несколько активных удержаний",
+                "message": "Одно основание дважды занимает один и тот же ресурс",
                 "anchor_type": anchor_type,
                 "anchor_id": anchor_id,
             })
-    return {"stock": stock, "capacity": capacity, "issues": issues}
+    obligations = await _anchor_obligations(db, active, products, entries)
+    issues.extend(obligation["issue"] for obligation in obligations if obligation["issue"] is not None)
+    return {
+        "stock": stock,
+        "capacity": capacity,
+        "issues": issues,
+        "obligations": [
+            {key: value for key, value in obligation.items() if key != "issue"}
+            for obligation in obligations
+        ],
+    }
+
+
+async def _anchor_obligations(db, active, products, entries):
+    """Основание каждой активной записи: сущность, версия, статус и ресурс.
+
+    Возвращает список обязательств с возможным issue: отсутствующая
+    бизнес-сущность (orphan_anchor) либо устаревшее основание
+    (stale_obligation) при отменённом обязательстве.
+    """
+    from .models import Coalition, Deal, ReserveCommitment, ResiliencePlan
+    product_names = {p.id: p.name for p in products}
+    entry_dates = {e.id: e.date.isoformat() for e in entries}
+    grouped: dict[tuple, list] = {}
+    for row in active:
+        grouped.setdefault((row.anchor_type, str(row.anchor_id)), []).append(row)
+    obligations = []
+    for (anchor_type, anchor_id), anchor_rows in grouped.items():
+        entity = None
+        business_status = None
+        version = None
+        try:
+            entity_id = uuid.UUID(anchor_id)
+        except (TypeError, ValueError):
+            entity_id = None
+        if anchor_type == "deal" and entity_id is not None:
+            entity = await db.get(Deal, entity_id)
+            business_status = entity.status if entity else None
+        elif anchor_type == "coalition" and entity_id is not None:
+            entity = await db.get(Coalition, entity_id)
+            business_status = entity.status if entity else None
+            version = entity.version if entity else None
+        elif anchor_type == "resilience_primary" and entity_id is not None:
+            entity = await db.get(ResiliencePlan, entity_id)
+            business_status = entity.status if entity else None
+        elif anchor_type == "reserve" and entity_id is not None:
+            entity = await db.get(ReserveCommitment, entity_id)
+            business_status = entity.confirmation_status if entity else None
+        else:
+            business_status = "unknown_anchor_type"
+        issue = None
+        if business_status == "unknown_anchor_type":
+            issue = {
+                "code": "unknown_anchor_type",
+                "message": f"Неизвестный тип основания {anchor_type}: связь с обязательством не проверена",
+                "anchor_type": anchor_type,
+                "anchor_id": anchor_id,
+            }
+        elif entity is None:
+            issue = {
+                "code": "orphan_anchor",
+                "message": "Ресурс закреплён за отсутствующим обязательством",
+                "anchor_type": anchor_type,
+                "anchor_id": anchor_id,
+            }
+        elif business_status in {"cancelled", "expired", "rejected", "stale"}:
+            issue = {
+                "code": "stale_obligation",
+                "message": f"Основание {business_status}: активные удержания требуют освобождения или нового решения",
+                "anchor_type": anchor_type,
+                "anchor_id": anchor_id,
+            }
+        resources = []
+        for row in anchor_rows:
+            if row.product_id is not None:
+                resources.append(f"склад «{product_names.get(row.product_id, '?')}»: {row.units} шт., {row.status}")
+            else:
+                resources.append(f"мощность {entry_dates.get(row.capacity_entry_id, '?')}: {row.units} ед., {row.status}")
+        obligations.append({
+            "anchor_type": anchor_type,
+            "anchor_id": anchor_id,
+            "units": sum(row.units for row in anchor_rows),
+            "business_exists": entity is not None,
+            "business_status": business_status,
+            "business_version": version,
+            "resources": resources,
+            "issue": issue,
+        })
+    return obligations
