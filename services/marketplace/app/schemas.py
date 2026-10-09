@@ -813,6 +813,7 @@ class CoalitionDecisionIn(BaseModel):
     company_id: uuid.UUID
     decision: Literal["approved", "rejected"]
     expected_revision: int = Field(ge=1)
+    request_key: uuid.UUID | None = None
 
 
 # ---------- Устойчивость, N-1 / N-2 и резерв ----------
@@ -1159,3 +1160,4 @@ class BuyerSavingsOut(BaseModel):
 class OfferSelectIn(BaseModel):
     expected_revision: int = Field(gt=0)
     human_approved: Literal[True]
+    request_key: uuid.UUID | None = None

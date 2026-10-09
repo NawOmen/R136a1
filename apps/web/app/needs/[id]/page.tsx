@@ -86,8 +86,16 @@ export default function NeedDetailPage() {
     }
     setSelectingId(offer.id);
     setError(null);
+    // Стабильный ключ на ревизию КП: повтор после потерянного ответа
+    // возвращает ту же сделку, а не новую.
+    const storageKey = `offer-select-${offer.id}-v${offer.revision}`;
+    let requestKey = window.sessionStorage.getItem(storageKey);
+    if (!requestKey) {
+      requestKey = crypto.randomUUID();
+      window.sessionStorage.setItem(storageKey, requestKey);
+    }
     try {
-      const created = await marketplace.selectOffer(token, offer.id, offer.revision);
+      const created = await marketplace.selectOffer(token, offer.id, offer.revision, requestKey);
       setDeal(created);
       const [needData, offersData] = await Promise.all([
         marketplace.getNeed(token, need.id),

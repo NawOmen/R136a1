@@ -60,8 +60,16 @@ export default function CoalitionsPage() {
     if (!window.confirm(message)) return;
     setWorkingId(coalition.id);
     setError(null);
+    // Стабильный ключ на версию условий: повтор после потерянного ответа
+    // возвращает сохранённое решение, а не новое.
+    const storageKey = `coalition-decision-${coalition.id}-${companyId}-v${coalition.version}`;
+    let requestKey = window.sessionStorage.getItem(storageKey);
+    if (!requestKey) {
+      requestKey = crypto.randomUUID();
+      window.sessionStorage.setItem(storageKey, requestKey);
+    }
     try {
-      const updated = await marketplace.decideCoalition(token, coalition.id, companyId, decision, coalition.version);
+      const updated = await marketplace.decideCoalition(token, coalition.id, companyId, decision, coalition.version, requestKey);
       setItems((current) => current.map((item) => (item.id === updated.id ? updated : item)));
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "Не удалось сохранить решение.");
@@ -103,7 +111,7 @@ export default function CoalitionsPage() {
                   </span>
                 </div>
                 <p>
-                  Общая партия: {formatUnits(coalition.combined_volume_units, coalition.unit)} · MOQ: {coalition.target_moq_units ? formatUnits(coalition.target_moq_units, coalition.unit) : "—"}
+                  Общая партия: {formatUnits(coalition.combined_volume_units, coalition.unit)} · MOQ: {coalition.target_moq_units ? formatUnits(coalition.target_moq_units, coalition.unit) : "—"} · Версия условий: {coalition.version}
                 </p>
                 <ul>{coalition.explanation.map((reason) => <li key={reason}>{reason}</li>)}</ul>
                 {ownMember && (
@@ -117,6 +125,12 @@ export default function CoalitionsPage() {
                       Итого: {formatRub(ownMember.total_cost_rub)} · Эффект относительно альтернативы: {ownMember.benefit_rub === null ? "база сравнения отсутствует" : formatRub(ownMember.benefit_rub)}
                     </p>
                     <p className="hint">Решение вашей компании: {ownMember.approval_status}</p>
+                    {coalition.group_offer && (
+                      <p>
+                        Производство: {coalition.group_offer.production_start ?? "—"} — {coalition.group_offer.production_end ?? "—"} ·
+                        Подтвердить до: {coalition.group_offer.fill_deadline ?? "—"}
+                      </p>
+                    )}
                     {coalition.status === "awaiting_approvals" && ownMember.approval_status === "pending" && (
                       <div className="actions">
                         <CommercialEstimate value={ownMember.commercial_estimate} />

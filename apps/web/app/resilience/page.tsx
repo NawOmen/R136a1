@@ -49,9 +49,9 @@ export default function ResiliencePage() {
 
   async function approveRecovery(plan: ResiliencePlan, scenarioId: string) {
     const token = getToken();
-    if (!token || !window.confirm("Активировать рассчитанную замену производителя?")) return;
+    if (!token || !window.confirm(`Активировать рассчитанную замену производителя по версии ${plan.version}?`)) return;
     setWorking(plan.id);
-    try { await marketplace.approveRecovery(token, scenarioId); await reload(); }
+    try { await marketplace.approveRecovery(token, scenarioId, plan.version); await reload(); }
     catch (err) { setError(err instanceof ApiError ? err.message : "Не удалось активировать замену."); }
     finally { setWorking(null); }
   }

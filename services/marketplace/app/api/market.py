@@ -32,7 +32,7 @@ from ..models import (
 )
 from ..optimizer_client import days_until, evaluate_coalition, optimize_allocations
 from ..resources import reserve, release
-from ..trust import append_audit_event
+from ..trust import append_audit_event, payload_hash, record_human_approval
 from ..schemas import (
     CoalitionDecisionIn,
     CoalitionMemberOut,
@@ -414,6 +414,35 @@ async def publish_group_offer(
     coalition.status = "awaiting_approvals"
     coalition.version += 1
     coalition.explanation = result["reasons"]
+    await record_human_approval(
+        db,
+        action="seller_group_offer_published",
+        entity_type="group_offer",
+        entity_id=group_offer.id,
+        actor_user_id=user.id,
+        actor_company_id=group_offer.company_id,
+        permission="company_admin+seller+verified",
+        decision="approved",
+        payload={
+            "coalition_id": str(coalition.id),
+            "coalition_version": coalition.version,
+            "min_total_units": data.min_total_units,
+            "max_total_units": data.max_total_units,
+            "available_capacity_units": data.available_capacity_units,
+            "price_tiers": [item.model_dump(mode="json") for item in data.price_tiers],
+            "production_start": str(data.production_start),
+            "production_end": str(data.production_end),
+            "fill_deadline": str(data.fill_deadline),
+            "non_fill_rule": data.non_fill_rule,
+            "participant_terms": [item.model_dump(mode="json") for item in data.participant_terms],
+            "shared_cost_rub": str(data.shared_cost_rub) if data.shared_cost_rub is not None else None,
+        },
+        source_refs=[
+            {"type": "coalition", "id": str(coalition.id)},
+            {"type": "group_offer", "id": str(group_offer.id)},
+        ],
+        explanation="Производитель явно подтвердил опубликованную версию групповых условий.",
+    )
     await run_market_rematch(db, "group_offer_published", group_offer.id)
     await db.commit()
     return await _coalition_out(db, coalition, await _user_company_ids(db, user.id))
@@ -491,6 +520,28 @@ async def decide_coalition(
     ).scalar_one_or_none()
     if coalition is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, detail="Коалиция не найдена")
+    member = (
+        await db.execute(
+            select(CoalitionMember).where(
+                CoalitionMember.coalition_id == coalition.id,
+                CoalitionMember.buyer_company_id == data.company_id,
+            )
+            .execution_options(populate_existing=True)
+        )
+    ).scalar_one_or_none()
+    if member is None:
+        raise HTTPException(status.HTTP_403_FORBIDDEN, detail="Компания не является участником коалиции")
+    await require_company_buyer(data.company_id, user, db)
+    await require_company_admin(data.company_id, user, db)
+    await require_verified_company(data.company_id, user, db)
+    decision_hash = payload_hash({"decision": data.decision,
+                                  "expected_revision": data.expected_revision}) if data.request_key else None
+    # A committed decision survives the state/TTL changes it caused. Recheck
+    # access before replaying it, and never apply the saved request a second time.
+    if data.request_key is not None and member.decision_request_key == data.request_key:
+        if member.decision_request_hash != decision_hash:
+            raise HTTPException(409, "Ключ запроса уже использован для других условий")
+        return await _coalition_out(db, coalition, await _user_company_ids(db, user.id))
     if coalition.version != data.expected_revision:
         raise HTTPException(status.HTTP_409_CONFLICT, detail="Условия группы изменились. Обновите страницу и проверьте их заново")
     if coalition.status != "awaiting_approvals":
@@ -507,20 +558,6 @@ async def decide_coalition(
         raise HTTPException(status.HTTP_409_CONFLICT, detail="Нет предварительных условий для подтверждения")
     if group_offer.fill_deadline is None or group_offer.fill_deadline < date.today():
         raise HTTPException(status.HTTP_409_CONFLICT, detail="Срок подтверждения групповых условий истёк")
-    member = (
-        await db.execute(
-            select(CoalitionMember).where(
-                CoalitionMember.coalition_id == coalition.id,
-                CoalitionMember.buyer_company_id == data.company_id,
-            )
-            .execution_options(populate_existing=True)
-        )
-    ).scalar_one_or_none()
-    if member is None:
-        raise HTTPException(status.HTTP_403_FORBIDDEN, detail="Компания не является участником коалиции")
-    await require_company_buyer(data.company_id, user, db)
-    await require_company_admin(data.company_id, user, db)
-    await require_verified_company(data.company_id, user, db)
     if member.approval_status != "pending":
         raise HTTPException(status.HTTP_409_CONFLICT, detail="Решение этой компании уже принято")
     if data.decision == "approved":
@@ -533,6 +570,32 @@ async def decide_coalition(
                 or not baseline_comparable(saved,need,member.commercial_estimate)):
                 raise HTTPException(409,'КП для сравнения устарело. Выберите актуальное КП или продолжите без базы экономии')
     member.approval_status = data.decision
+    member.decision_request_key = data.request_key
+    member.decision_request_hash = decision_hash
+    await record_human_approval(
+        db,
+        action="coalition_member_decision",
+        entity_type="coalition",
+        entity_id=coalition.id,
+        actor_user_id=user.id,
+        actor_company_id=data.company_id,
+        permission="company_admin+buyer+verified",
+        decision=data.decision,
+        payload={
+            "coalition_id": str(coalition.id),
+            "coalition_version": coalition.version,
+            "need_id": str(member.need_id),
+            "units": member.units,
+            "total_cost_rub": str(member.total_cost_rub) if getattr(member, "total_cost_rub", None) is not None else None,
+            "commercial_estimate": member.commercial_estimate,
+            "request_key": str(data.request_key) if data.request_key else None,
+        },
+        source_refs=[
+            {"type": "coalition", "id": str(coalition.id)},
+            {"type": "need", "id": str(member.need_id)},
+        ],
+        explanation="Участник коалиции явно принял решение только по собственным условиям.",
+    )
     members = (
         await db.execute(select(CoalitionMember).where(CoalitionMember.coalition_id == coalition.id)
                          .order_by(CoalitionMember.id).with_for_update().execution_options(populate_existing=True))
@@ -566,6 +629,26 @@ async def decide_coalition(
     elif all(item.approval_status == "approved" for item in members):
         if group_offer.seller_approval_status != "approved":
             raise HTTPException(status.HTTP_409_CONFLICT, detail="Производитель ещё не подтвердил условия")
+        # Последняя фиксация проверяет допуск всех сторон заново: отзыв
+        # проверки у продавца или любого покупателя блокирует обязательства.
+        producer = (await db.execute(
+            text("SELECT verification_status FROM auth.companies WHERE id = :id"),
+            {"id": coalition.producer_company_id},
+        )).scalar_one_or_none()
+        if producer != "verified":
+            raise HTTPException(status.HTTP_409_CONFLICT,
+                                detail="Допуск производителя отозван. Обязательства не созданы")
+        buyer_states = (
+            await db.execute(
+                text("SELECT id, verification_status FROM auth.companies WHERE id = ANY(:ids)"),
+                {"ids": [item.buyer_company_id for item in members]},
+            )
+        ).all()
+        buyer_verified = {row[0]: row[1] for row in buyer_states}
+        for item in members:
+            if buyer_verified.get(item.buyer_company_id) != "verified":
+                raise HTTPException(status.HTTP_409_CONFLICT,
+                                    detail="Допуск покупателя отозван. Обязательства не созданы")
         for current_need in member_needs.values():
             await require_current_evidence(db, current_need)
         # Обязательства создаются сейчас: допуск производителя проверяется заново,

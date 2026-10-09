@@ -1145,11 +1145,15 @@ async def approve_recovery(
     scenario = await db.get(ResilienceScenario, scenario_id)
     if scenario is None or scenario.status != "proposed":
         raise HTTPException(status.HTTP_404_NOT_FOUND, detail="Предложение восстановления не найдено")
+    if data.expected_revision is None:
+        raise HTTPException(428, "Подтвердите показанную версию конфигурации замены")
     await _lock_plan_need(db, scenario.plan_id)
     plan = await db.scalar(select(ResiliencePlan).where(ResiliencePlan.id == scenario.plan_id).with_for_update())
     await db.refresh(scenario)
     if scenario.status != "proposed" or set(scenario.failed_company_ids) != set(plan.failed_company_ids):
         raise HTTPException(409, "Предложение восстановления устарело")
+    if data.expected_revision != plan.version:
+        raise HTTPException(409, "Конфигурация замены изменилась. Обновите её перед подтверждением")
     await require_company_buyer(plan.buyer_company_id, user, db)
     await require_company_admin(plan.buyer_company_id, user, db)
     await require_verified_company(plan.buyer_company_id, user, db)

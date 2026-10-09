@@ -54,7 +54,8 @@ class ObligationProfileAuditTests(IsolatedAsyncioTestCase):
         offer = SimpleNamespace(id=uuid.uuid4(), status='preliminary', seller_approval_status='approved',
             company_id=seller, price_tiers=[], fill_deadline=date.today()+timedelta(days=2), production_start=date.today(),
             production_end=date.today()+timedelta(days=5))
-        db = SimpleNamespace(execute=AsyncMock(side_effect=[result(coalition), result(offer), result(members[0]), result(members)]),
+        db = SimpleNamespace(execute=AsyncMock(side_effect=[result(coalition), result(members[0]), result(offer), result(members),
+            result('verified'), result([(member.buyer_company_id, 'verified') for member in members])]),
             get=AsyncMock(side_effect=lambda model, key: next(item for item in needs if item.id == key)),
             add=Mock(), commit=AsyncMock())
         reports = [report('rules-one'), report('rules-two')]
@@ -63,6 +64,7 @@ class ObligationProfileAuditTests(IsolatedAsyncioTestCase):
             permission_patches(stack, market)
             admission = stack.enter_context(patch.object(market, 'require_admission_for_specifications', AsyncMock(return_value=reports)))
             stack.enter_context(patch.object(market, 'append_audit_event', audit))
+            stack.enter_context(patch.object(market, 'record_human_approval', AsyncMock()))
             stack.enter_context(patch.object(market, '_coalition_out', AsyncMock()))
             stack.enter_context(patch.object(market, '_user_company_ids', AsyncMock(return_value=[])))
             await market.decide_coalition(coalition.id, CoalitionDecisionIn(company_id=members[0].buyer_company_id,

@@ -304,6 +304,8 @@ class Deal(Base):
     delivery_price_rub: Mapped[Decimal | None] = mapped_column(ExactNumeric(), nullable=True)
     total_price_rub: Mapped[Decimal] = mapped_column(ExactNumeric(), nullable=False)
     status: Mapped[str] = mapped_column(String(32), nullable=False, default="created")
+    request_key: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), nullable=True)
+    request_hash: Mapped[str | None] = mapped_column(String(64), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now())
 
 
@@ -550,6 +552,8 @@ class CoalitionMember(Base):
     baseline_cost_rub: Mapped[Decimal | None] = mapped_column(ExactNumeric(), nullable=True)
     benefit_rub: Mapped[Decimal | None] = mapped_column(ExactNumeric(), nullable=True)
     approval_status: Mapped[str] = mapped_column(String(32), nullable=False, default="pending")
+    decision_request_key: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), nullable=True)
+    decision_request_hash: Mapped[str | None] = mapped_column(String(64), nullable=True)
 
 
 class GroupOffer(Base):
