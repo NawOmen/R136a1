@@ -19,6 +19,7 @@ from .api import (
     products,
     production,
     resilience,
+    resource_reconciliation,
     stage8,
     stage9,
     trust,
@@ -48,6 +49,7 @@ app.include_router(offers.router, prefix="/api/v1")
 app.include_router(notifications.router, prefix="/api/v1")
 app.include_router(market.router, prefix="/api/v1")
 app.include_router(resilience.router, prefix="/api/v1")
+app.include_router(resource_reconciliation.router, prefix="/api/v1")
 app.include_router(trust.router, prefix="/api/v1")
 app.include_router(stage8.router, prefix="/api/v1")
 app.include_router(stage9.router, prefix="/api/v1")
@@ -71,7 +73,7 @@ from fastapi.encoders import ENCODERS_BY_TYPE
 ENCODERS_BY_TYPE[Decimal] = wire
 app.add_middleware(MoneyWireMiddleware)
 for exact_router in (addresses, production, products, catalog_import, capacity, documents, needs, offers,
-                     notifications, market, resilience, trust, stage8, stage9, agent_scorecard, commerce,
+                     notifications, market, resilience, resource_reconciliation, trust, stage8, stage9, agent_scorecard, commerce,
                      category_profiles, category_editor, packaging_conversion):
     app.include_router(exact_router.router, prefix='/api/v3')
 app.include_router(physical_quantities.router, prefix='/api/v3/physical')

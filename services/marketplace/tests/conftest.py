@@ -1,6 +1,6 @@
 import os
 import uuid
-from datetime import datetime, timedelta, timezone
+from datetime import date, datetime, timedelta, timezone
 
 import jwt
 import pytest
@@ -254,7 +254,7 @@ async def grant_capacity(db_session, company_id, units, day=None, *, category_id
     from app.models import CapacityEntry
     from app.resource_scopes import prepare_conversions
     conversions=prepare_conversions([{"category_id":category_id,"order_unit":unit,"resource_units_per_order_unit":1}],True)
-    db_session.add(CapacityEntry(company_id=company_id, date=day or datetime.now(timezone.utc).date(), unit=unit,
+    db_session.add(CapacityEntry(company_id=company_id, date=day or date.today(), unit=unit,
                                  category_conversions=conversions,available_units=units))
     await db_session.commit()
 
