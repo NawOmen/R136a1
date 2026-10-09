@@ -6,7 +6,17 @@ from typing import Any, Literal
 from pydantic import BaseModel, ConfigDict, Field, PrivateAttr, JsonValue, field_validator, model_validator
 
 from .commercial import CommercialTerms
-from .category_characteristics import validate_profile_values
+from .category_characteristics import (
+    count_user_characteristics,
+    required_characteristic_keys,
+    validate_profile_values,
+)
+
+def check_user_characteristics_limit(value: dict[str, Any] | None, category: str | None,
+                                     subcategory: str | None) -> str | None:
+    if value is not None and count_user_characteristics(value, category, subcategory) > 25:
+        return "Можно добавить не более 25 пользовательских характеристик сверх системных и обязательных"
+    return None
 
 
 # ---------- Адреса доставки ----------
@@ -70,6 +80,11 @@ class ProductPriceTier(BaseModel):
     unit_price_rub: Money = Field(gt=0)
 
 
+class ProductSource(BaseModel):
+    label: str = Field(min_length=1, max_length=120)
+    reference: str = Field(min_length=1, max_length=300)
+
+
 def validate_order_unit(characteristics: dict[str, Any] | None) -> None:
     if not characteristics:
         return
@@ -85,8 +100,8 @@ class ProductRules(BaseModel):
     @field_validator("characteristics", check_fields=False)
     @classmethod
     def validate_characteristics(cls, value: dict[str, Any] | None):
-        if value is not None and len(value) > 25:
-            raise ValueError("Можно добавить не более 25 характеристик")
+        # Лимит 25 применяется в model-валидаторах с учётом категории:
+        # системные и обязательные свойства не входят в счёт.
         validate_order_unit(value)
         return value
 
@@ -112,6 +127,9 @@ class ProductOut(BaseModel):
 
     id: uuid.UUID
     company_id: uuid.UUID
+    revision: int = 1
+    external_id: str | None = None
+    sources: list[ProductSource] = Field(default_factory=list)
     name: str
     category: str
     subcategory: str | None
@@ -132,6 +150,8 @@ class ProductIn(ProductRules):
     category: str = Field(min_length=2, max_length=120)
     subcategory: str | None = Field(default=None, max_length=120)
     characteristics: dict[str, Any] = Field(default_factory=dict)
+    sources: list[ProductSource] = Field(default_factory=list, max_length=10)
+    external_id: str | None = Field(default=None, min_length=1, max_length=64)
     price_rub: Money = Field(gt=0)
     price_tiers: list[ProductPriceTier] = Field(default_factory=list)
     moq_units: int = Field(gt=0, le=2147483647)
@@ -143,6 +163,9 @@ class ProductIn(ProductRules):
         errors = validate_profile_values(self.category, self.subcategory, self.characteristics)
         if errors:
             raise ValueError("; ".join(errors))
+        limit = check_user_characteristics_limit(self.characteristics, self.category, self.subcategory)
+        if limit:
+            raise ValueError(limit)
         return self
 
     @model_validator(mode="after")
@@ -155,6 +178,9 @@ class ProductIn(ProductRules):
 
 
 class ProductPatch(ProductRules):
+    expected_revision: int | None = Field(default=None, gt=0)
+    sources: list[ProductSource] | None = Field(default=None, max_length=10)
+    external_id: str | None = Field(default=None, min_length=1, max_length=64)
     name: str | None = Field(default=None, min_length=2, max_length=255)
     category: str | None = Field(default=None, min_length=2, max_length=120)
     subcategory: str | None = Field(default=None, max_length=120)
@@ -578,8 +604,6 @@ class NeedIn(BaseModel):
     @field_validator("characteristics")
     @classmethod
     def validate_unit(cls, value: dict[str, Any]):
-        if len(value) > 25:
-            raise ValueError("Можно добавить не более 25 характеристик")
         validate_order_unit(value)
         return value
 
@@ -588,6 +612,9 @@ class NeedIn(BaseModel):
         errors = validate_profile_values(self.category, self.subcategory, self.characteristics)
         if errors:
             raise ValueError("; ".join(errors))
+        limit = check_user_characteristics_limit(self.characteristics, self.category, self.subcategory)
+        if limit:
+            raise ValueError(limit)
         return self
 
 
@@ -604,6 +631,8 @@ class OfferOut(BaseModel):
     resource_kind: str = "capacity"
     product_id: uuid.UUID | None = None
     revision: int = 1
+    request_key: uuid.UUID | None = None
+    sending_warnings: list[str] = Field(default_factory=list)
     model_config = ConfigDict(from_attributes=True)
 
     id: uuid.UUID
@@ -642,10 +671,20 @@ class OfferIn(ProductRules):
     # Черновик агента, из которого подготовлено предложение: нужен для оценки
     # конверсии сценария и числа правок человека.
     draft_id: uuid.UUID | None = None
+    # Ключ идемпотентности повторной отправки: тот же ключ возвращает то же КП.
+    request_key: uuid.UUID | None = None
 
 
 class OfferDraftIn(BaseModel):
     company_id: uuid.UUID
+
+
+class OfferSendPreviewOut(BaseModel):
+    blockers: list[str] = Field(default_factory=list)
+    warnings: list[str] = Field(default_factory=list)
+    missing: list[str] = Field(default_factory=list)
+    can_send: bool = False
+    existing_offer_id: uuid.UUID | None = None
 
 
 class OfferPatch(ProductRules):
@@ -686,6 +725,11 @@ class MarketOpportunityOut(BaseModel):
     reasons: list[str]
     missing_data: list[str]
     status: str
+    dismissal_reason: str | None = None
+
+
+class OpportunityDismissIn(BaseModel):
+    reason: str = Field(min_length=3, max_length=500)
 
 
 class PriceTierIn(BaseModel):

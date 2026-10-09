@@ -106,6 +106,7 @@ async def consume(db, *, company_id, anchor_type, anchor_id):
                 raise HTTPException(409, "Складской остаток требует сверки перед отгрузкой")
             product.stock_units -= row.units
             product.stock_updated_at = datetime.now(timezone.utc)
+            product.revision += 1
         row.status = "consumed"
     await db.flush()
 

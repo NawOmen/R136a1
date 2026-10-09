@@ -100,7 +100,7 @@ class PublicationGuardTests(unittest.IsolatedAsyncioTestCase):
     async def test_direct_publish_cannot_bypass_required_technical_fields(self):
         from app.api import products
         product = SimpleNamespace(company_id=uuid.uuid4(),category='Упаковка и тара',subcategory='Бумажные стаканы',characteristics={},moq_units=1)
-        db=SimpleNamespace(get=AsyncMock(return_value=product),commit=AsyncMock())
+        db=SimpleNamespace(get=AsyncMock(return_value=product),commit=AsyncMock(),execute=AsyncMock(),refresh=AsyncMock())
         with patch.object(products,'require_company_seller',AsyncMock()), patch.object(products,'require_company_admin',AsyncMock()), patch.object(products,'require_verified_company',AsyncMock()):
             with self.assertRaises(HTTPException) as caught:
                 await products.publish_product(uuid.uuid4(),PublishIn(published=True),SimpleNamespace(id=uuid.uuid4()),db)
