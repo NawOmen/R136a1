@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { marketplace, EditorRegistry } from "../lib/marketplace";
+import { countUserCharacteristics } from "../lib/categoryProfiles";
 
 export default function CharacteristicSuggestions({ category, subcategory, keys, onAdd, disabled = false, product = false }: {
   category: string; subcategory: string; keys: string[]; onAdd: (key: string) => void; disabled?: boolean; product?: boolean;
@@ -24,7 +25,7 @@ export default function CharacteristicSuggestions({ category, subcategory, keys,
   if (!suggestions.length) return null;
   return (
     <>
-      <select aria-label="Добавить характеристику категории" value="" disabled={disabled || keys.length >= 25}
+      <select aria-label="Добавить характеристику категории" value="" disabled={disabled || countUserCharacteristics(keys.map((key) => ({ key })), category, subcategory) >= 25}
         onChange={(event) => { if (event.target.value) onAdd(event.target.value); }}>
         <option value="">Добавить поле для этой категории</option>
         {suggestions.map((field) => <option key={field.key} value={field.key}>

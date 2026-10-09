@@ -31,7 +31,7 @@ export default function CatalogImport({ companyId, onImported }: { companyId: st
     setBusy(true); setError(""); setMessage("");
     try {
       const expectedRevisions = Object.fromEntries(
-        (preview?.rows ?? []).filter((row) => row.product_id).map((row) => [row.product_id as string, row.product_revision ?? 1]),
+        (preview?.rows ?? []).filter((row) => row.product_id).map((row) => [row.product_id as string, { revision: row.product_revision ?? 1, status: row.import_status }]),
       );
       const result = await marketplace.importCatalog(token, companyId, file, commit ? { hash: preview!.content_hash, requestKey: key.current, expectedRevisions } : undefined);
       if (!alive.current) return;

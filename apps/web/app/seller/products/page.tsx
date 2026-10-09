@@ -11,6 +11,7 @@ import CatalogImport from "../../components/CatalogImport";
 import PackagingConversionPanel from "../../components/PackagingConversionPanel";
 import CharacteristicSuggestions from "../../components/CharacteristicSuggestions";
 import { characteristicField } from "../../lib/categoryProfiles";
+import { countUserCharacteristics } from "../../lib/categoryProfiles";
 import { FormEvent, useEffect, useState } from "react";
 import { getToken } from "../../lib/api";
 import {
@@ -36,9 +37,8 @@ function newRow(key = "", value = ""): CharacteristicRow {
   return { key, value };
 }
 
-const SYSTEM_CHARACTERISTIC_KEYS = new Set(["unit", "единица измерения"]);
-function userRowCount(rows: CharacteristicRow[]): number {
-  return rows.filter((row) => !SYSTEM_CHARACTERISTIC_KEYS.has(row.key.trim().toLowerCase())).length;
+function userRowCount(rows: CharacteristicRow[], category: string, subcategory: string): number {
+  return countUserCharacteristics(rows, category, subcategory);
 }
 
 export default function SellerProductsPage() {
@@ -319,7 +319,7 @@ export default function SellerProductsPage() {
               Характеристики
             </label>
             <CharacteristicSuggestions category={category} subcategory={subcategory} keys={rows.map((row) => row.key)}
-              disabled={creating} product onAdd={(key) => setRows((current) => userRowCount(current) < 25 ? [...current, newRow(key)] : current)} />
+              disabled={creating} product onAdd={(key) => setRows((current) => userRowCount(current, category, subcategory) < 25 ? [...current, newRow(key)] : current)} />
             {rows.map((row, index) => (
               <div key={index} className="char-row">
                 <input
@@ -349,10 +349,10 @@ export default function SellerProductsPage() {
             <button
               type="button"
               className="btn btn-secondary btn-sm"
-              disabled={userRowCount(rows) >= 25}
-              onClick={() => setRows((current) => userRowCount(current) < 25 ? [...current, newRow()] : current)}
+              disabled={userRowCount(rows, category, subcategory) >= 25}
+              onClick={() => setRows((current) => userRowCount(current, category, subcategory) < 25 ? [...current, newRow()] : current)}
             >
-              + Добавить характеристику ({userRowCount(rows)}/25 сверх системных)
+              + Добавить характеристику ({userRowCount(rows, category, subcategory)}/25 сверх системных и обязательных)
             </button>
           </div>
           <div className="field">

@@ -483,3 +483,157 @@ async def test_offer_send_rechecks_term_and_warns_admission(client, db_session):
 def json_dumps(value) -> str:
     import json as _json
     return _json.dumps(value)
+
+
+async def test_rollback_refuses_reserved_stock_restore(client, db_session):
+    from app.resources import reserve
+    from datetime import date as _date
+    from datetime import timedelta as _td
+
+    user, company, token = await _seller_company(db_session)
+    headers = _auth(token)
+    path = f"/api/v1/companies/{company}/catalog-import"
+    csv_text = ("Название;Категория;Цена;Минимум;Срок;Остаток;Внешний ID\n"
+                "Болт М8;Строительство;12;100;2;1000;rb-stock\n").encode()
+    preview = await client.post(path, files={"file": ("c.csv", csv_text, "text/csv")}, headers=headers)
+    consent = {"commit": "true", "human_approved": "true", "request_key": str(uuid.uuid4()),
+               "expected_hash": preview.json()["content_hash"], "expected_revisions": "{}"}
+    created = await client.post(path, files={"file": ("c.csv", csv_text, "text/csv")},
+                                data=consent, headers=headers)
+    product_id = created.json()["created_ids"][0]
+    changed_csv = ("Название;Категория;Цена;Минимум;Срок;Остаток;Внешний ID\n"
+                   "Болт М8;Строительство;12;100;2;5000;rb-stock\n").encode()
+    second_preview = await client.post(path, files={"file": ("c2.csv", changed_csv, "text/csv")}, headers=headers)
+    second_consent = {"commit": "true", "human_approved": "true", "request_key": str(uuid.uuid4()),
+                      "expected_hash": second_preview.json()["content_hash"],
+                      "expected_revisions": json_dumps({product_id: 1})}
+    second = await client.post(path, files={"file": ("c2.csv", changed_csv, "text/csv")},
+                               data=second_consent, headers=headers)
+    assert second.json()["updated_ids"] == [product_id]
+    await reserve(db_session, company_id=company, anchor_type="test-hold", anchor_id=uuid.uuid4(),
+                  units=4000, deadline=_date.today() + _td(days=30),
+                  resource_kind="stock", product_id=uuid.UUID(product_id))
+    await db_session.commit()
+    refused = await client.post(f"/api/v1/companies/{company}/catalog-imports/{second.json()['import_id']}/rollback",
+                                headers=headers)
+    assert refused.status_code == 409
+
+
+async def test_commit_requires_shown_published_decision(client, db_session):
+    user, company, token = await _seller_company(db_session)
+    headers = _auth(token)
+    created = await _product(client, token, company, **{"external_id": "pub-bind"})
+    await db_session.execute(
+        text("UPDATE marketplace.products SET is_published = true WHERE id = :id"),
+        {"id": uuid.UUID(created["id"])},
+    )
+    await db_session.commit()
+    path = f"/api/v1/companies/{company}/catalog-import"
+    csv_text = ("Название;Категория;Цена;Минимум;Срок;Внешний ID\n"
+                "Болт М8;Строительство;15;100;2;pub-bind\n").encode()
+    preview = await client.post(path, files={"file": ("c.csv", csv_text, "text/csv")}, headers=headers)
+    assert preview.json()["rows"][0]["import_status"] == "published_skipped", preview.text
+    shown = {created["id"]: {"revision": 1, "status": "published_skipped"}}
+    unpublished = await client.post(f"/api/v1/products/{created['id']}/publish", json={"published": False},
+                                    headers=headers)
+    assert unpublished.status_code == 200
+    consent = {"commit": "true", "human_approved": "true", "request_key": str(uuid.uuid4()),
+               "expected_hash": preview.json()["content_hash"],
+               "expected_revisions": json_dumps(shown)}
+    conflicted = await client.post(path, files={"file": ("c.csv", csv_text, "text/csv")},
+                                   data=consent, headers=headers)
+    assert conflicted.status_code == 409
+
+
+async def test_import_category_change_refreshes_profile(client, db_session):
+    user, company, token = await _seller_company(db_session)
+    headers = _auth(token)
+    created = await _product(client, token, company, **{"external_id": "cat-change"})
+    old_profile = dict(created["category_profile"] or {})
+    path = f"/api/v1/companies/{company}/catalog-import"
+    csv_text = ("Название;Категория;Подкатегория;Цена;Минимум;Срок;Внешний ID;Характеристика: material\n"
+                "Стол;Товары для бизнеса;Мебель;7900;5;10;cat-change;ЛДСП\n").encode()
+    preview = await client.post(path, files={"file": ("c.csv", csv_text, "text/csv")}, headers=headers)
+    assert preview.json()["rows"][0]["import_status"] == "changed", preview.text
+    consent = {"commit": "true", "human_approved": "true", "request_key": str(uuid.uuid4()),
+               "expected_hash": preview.json()["content_hash"],
+               "expected_revisions": json_dumps({created["id"]: 1})}
+    committed = await client.post(path, files={"file": ("c.csv", csv_text, "text/csv")},
+                                  data=consent, headers=headers)
+    assert committed.status_code == 200, committed.text
+    product = await db_session.get(Product, uuid.UUID(created["id"]))
+    assert product.category == "Товары для бизнеса"
+    assert (product.category_profile or {}) != old_profile
+    assert product.quantity_conversion is None
+
+
+async def test_offer_resource_kind_capacity_and_freshness(client, db_session):
+    from datetime import date as _date
+    from datetime import timedelta as _td
+
+    from conftest import grant_capacity
+
+    user, company, token = await _seller_company(db_session)
+    base = {"commercial_terms": confirmed_quote_terms(), "company_id": str(company),
+            "price_rub": 11.5, "available_units": 6, "moq_units": 1,
+            "delivery_cost_rub": 100, "lead_time_days": 9, "resource_kind": "capacity"}
+    await grant_capacity(db_session, company, 10)
+    _, _, _, need_fit = await _buyer_with_published_need(client, db_session, volume=5_000)
+    fits_ten = await client.post(f"/api/v1/needs/{need_fit}/offers", json=base, headers=_auth(token))
+    assert fits_ten.status_code == 201, fits_ten.text
+    _, _, _, need_over = await _buyer_with_published_need(client, db_session, volume=5_000)
+    over = await client.post(f"/api/v1/needs/{need_over}/offers",
+                             json={**base, "available_units": 11}, headers=_auth(token))
+    assert over.status_code == 409
+    assert "мощность" in over.text
+    await db_session.execute(text("DELETE FROM marketplace.capacity_entries"))
+    await db_session.commit()
+    from app.models import CapacityEntry
+    from app.resource_scopes import prepare_conversions
+
+    conversions = prepare_conversions([{"category_id": "packaging.paper-cups", "order_unit": "шт",
+                                        "resource_units_per_order_unit": 2}], True)
+    db_session.add(CapacityEntry(company_id=company, date=date.today(), unit="шт",
+                                 category_conversions=conversions, available_units=10))
+    await db_session.commit()
+    _, _, _, need_coeff = await _buyer_with_published_need(client, db_session, volume=5_000)
+    over_coeff = await client.post(f"/api/v1/needs/{need_coeff}/offers", json=base, headers=_auth(token))
+    assert over_coeff.status_code == 409
+    _, _, _, need_exact = await _buyer_with_published_need(client, db_session, volume=5_000)
+    fits = await client.post(f"/api/v1/needs/{need_exact}/offers",
+                             json={**base, "available_units": 5}, headers=_auth(token))
+    assert fits.status_code == 201, fits.text
+
+
+async def test_stale_stock_warns_but_does_not_block(client, db_session):
+    from datetime import datetime as _datetime
+    from datetime import timezone as _tz
+
+    user, company, token = await _seller_company(db_session)
+    _, _, _, need_id = await _buyer_with_published_need(client, db_session, volume=5_000)
+    created = await _product(client, token, company, **{
+        "name": "Стакан 400 мл", "category": "Упаковка и тара", "subcategory": "Бумажные стаканы",
+        "characteristics": {"volume_ml": 400, "coating": "PE", "material": "крафт-картон", "unit": "шт"},
+        "price_rub": 12, "moq_units": 100})
+    await db_session.execute(
+        text("UPDATE marketplace.products SET stock_updated_at = now() - interval '8 days' WHERE id = :id"),
+        {"id": uuid.UUID(created["id"])},
+    )
+    await db_session.commit()
+    sent = await client.post(f"/api/v1/needs/{need_id}/offers",
+                             json={"commercial_terms": confirmed_quote_terms(), "company_id": str(company),
+                                   "price_rub": 11.5, "available_units": 100, "moq_units": 100,
+                                   "delivery_cost_rub": 100, "lead_time_days": 2,
+                                   "resource_kind": "stock", "product_id": created["id"]},
+                             headers=_auth(token))
+    assert sent.status_code == 201, sent.text
+    assert any("7 дней" in warning for warning in sent.json()["sending_warnings"])
+
+
+async def test_required_subject_fields_outside_user_limit(client, db_session):
+    user, company, token = await _seller_company(db_session)
+    created = await _product(client, token, company, **{
+        "category": "Строительство", "subcategory": "Крепёж",
+        "characteristics": {f"поле-{i}": i for i in range(25)} | {
+            "unit": "шт", "material": "сталь", "product_kind": "болт"}})
+    assert created["revision"] == 1

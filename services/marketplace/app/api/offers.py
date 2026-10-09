@@ -1,7 +1,7 @@
 from ..commercial import offer_quote, require_complete
 from ..money import decimal
 import uuid
-from datetime import date, datetime, timezone
+from datetime import date, datetime, timedelta, timezone
 
 from fastapi import APIRouter, Body, Depends, HTTPException, Response, status
 from pydantic import ValidationError
@@ -305,28 +305,23 @@ async def create_offer(
     if data.lead_time_days > max(0, days_left):
         raise HTTPException(409, "Срок производства не укладывается в срок потребности")
     held = await reservations(db, data.company_id)
-    if product_id:
+    if data.resource_kind == "stock":
+        if product_id is None:
+            raise HTTPException(422, "Для складского предложения укажите товар")
         product = await db.get(Product, product_id)
         if product is not None and product.stock_units is not None:
             free = await free_stock(db, product, held)
             if data.available_units > free:
                 raise HTTPException(409, "Доступный объём превышает свободный остаток склада")
+            if product.stock_updated_at is None or product.stock_updated_at < datetime.now(timezone.utc) - timedelta(days=7):
+                sending_warnings.append("Остаток склада не подтверждён за последние 7 дней: обновите наличие")
     else:
-        from ..resource_scopes import conversion_for, occupied_units
-        unit = order_unit(need.characteristics)
-        free_capacity, has_entries = 0, False
+        from ..offer_draft import available_capacity_units
         entries = (await db.execute(select(CapacityEntry).where(CapacityEntry.company_id == data.company_id))).scalars().all()
-        for entry in entries:
-            if not date.today() <= entry.date <= need.deadline_date:
-                continue
-            conversion = conversion_for(entry, need.category, need.subcategory, unit)
-            if conversion is None:
-                continue
-            has_entries = True
-            free_capacity += max(0, entry.available_units - sum(
-                occupied_units(r) for r in held if r.capacity_entry_id == entry.id and occupies(r)))
-        if has_entries and data.available_units > free_capacity:
-            raise HTTPException(409, "Доступный объём превышает подтверждённую свободную мощность")
+        if entries:
+            free_capacity = available_capacity_units(entries, need)
+            if data.available_units > free_capacity:
+                raise HTTPException(409, "Доступный объём превышает подтверждённую свободную мощность")
     offer = Offer(
         resource_kind=resource_kind,
         product_id=product_id,

@@ -24,6 +24,39 @@ def characteristic_profile(category: str, subcategory: str | None) -> dict | Non
     return leaf["technical_profile"] if leaf else None
 
 
+SYSTEM_CHARACTERISTIC_KEYS = {"unit", "единица измерения"}
+
+
+def required_characteristic_keys(category: str | None, subcategory: str | None) -> set[str]:
+    """Нормализованные ключи обязательных свойств категории (включая алиасы).
+    Вместе с системными не входят в лимит 25 пользовательских характеристик."""
+    if not category:
+        return set()
+    profile = characteristic_profile(category, subcategory)
+    if profile is None:
+        return set()
+    keys: set[str] = set()
+    for required in list(profile.get("required_for_product", [])):
+        keys.add(normalize_label(required))
+        field = _FIELDS.get(required, {})
+        for alias in field.get("aliases", []):
+            keys.add(normalize_label(alias))
+    for rule in profile.get("passport", {}).get("identification", {}).get("required_when", []):
+        for required in rule.get("required", []):
+            keys.add(normalize_label(required))
+            field = _FIELDS.get(required, {})
+            for alias in field.get("aliases", []):
+                keys.add(normalize_label(alias))
+    return keys
+
+
+def count_user_characteristics(value: dict | None, category: str | None = None,
+                               subcategory: str | None = None) -> int:
+    """Число пользовательских характеристик без системных и обязательных свойств."""
+    skip = {normalize_label(key) for key in SYSTEM_CHARACTERISTIC_KEYS} | required_characteristic_keys(category, subcategory)
+    return sum(1 for key in (value or {}) if normalize_label(str(key)) not in skip)
+
+
 def validate_profile_values(
     category: str, subcategory: str | None, characteristics: dict,
     *, require_product_fields: bool = False,

@@ -109,7 +109,7 @@ export default function SellerRequestsPage() {
     setSubmitting(true);
     setError(null);
     try {
-      await marketplace.createOffer(token, need.id, {
+      const sent = await marketplace.createOffer(token, need.id, {
         company_id: company.id,
         commercial_terms: commercialTerms,
         price_rub: price,
@@ -123,8 +123,13 @@ export default function SellerRequestsPage() {
         product_id: productId || undefined,
         price_tiers: drafts[need.id]?.payload.price_tiers ?? [],
       });
-      setSubmittedIds((current) => new Set(current).add(need.id));
-      setOpenFormId(null);
+      const warnings = sent.sending_warnings ?? [];
+      if (warnings.length > 0) {
+        setError(`Предложение отправлено, но проверьте недостающее: ${warnings.join("; ")}. Допуск подтвердят при выборе покупателем.`);
+      } else {
+        setSubmittedIds((current) => new Set(current).add(need.id));
+        setOpenFormId(null);
+      }
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "Не удалось отправить предложение.");
     } finally {

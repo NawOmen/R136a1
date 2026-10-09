@@ -6,16 +6,17 @@ from typing import Any, Literal
 from pydantic import BaseModel, ConfigDict, Field, PrivateAttr, JsonValue, field_validator, model_validator
 
 from .commercial import CommercialTerms
-from .category_characteristics import validate_profile_values
+from .category_characteristics import (
+    count_user_characteristics,
+    required_characteristic_keys,
+    validate_profile_values,
+)
 
-SYSTEM_CHARACTERISTIC_KEYS = {"unit", "единица измерения"}
-
-
-def user_characteristics(value: dict[str, Any] | None) -> dict[str, Any]:
-    """Пользовательские характеристики без системных свойств (единица заказа).
-    Лимит 25 применяется только к ним."""
-    return {key: item for key, item in (value or {}).items()
-            if key.strip().lower() not in SYSTEM_CHARACTERISTIC_KEYS}
+def check_user_characteristics_limit(value: dict[str, Any] | None, category: str | None,
+                                     subcategory: str | None) -> str | None:
+    if value is not None and count_user_characteristics(value, category, subcategory) > 25:
+        return "Можно добавить не более 25 пользовательских характеристик сверх системных и обязательных"
+    return None
 
 
 # ---------- Адреса доставки ----------
@@ -99,8 +100,8 @@ class ProductRules(BaseModel):
     @field_validator("characteristics", check_fields=False)
     @classmethod
     def validate_characteristics(cls, value: dict[str, Any] | None):
-        if value is not None and len(user_characteristics(value)) > 25:
-            raise ValueError("Можно добавить не более 25 пользовательских характеристик сверх системных")
+        # Лимит 25 применяется в model-валидаторах с учётом категории:
+        # системные и обязательные свойства не входят в счёт.
         validate_order_unit(value)
         return value
 
@@ -162,6 +163,9 @@ class ProductIn(ProductRules):
         errors = validate_profile_values(self.category, self.subcategory, self.characteristics)
         if errors:
             raise ValueError("; ".join(errors))
+        limit = check_user_characteristics_limit(self.characteristics, self.category, self.subcategory)
+        if limit:
+            raise ValueError(limit)
         return self
 
     @model_validator(mode="after")
@@ -600,8 +604,6 @@ class NeedIn(BaseModel):
     @field_validator("characteristics")
     @classmethod
     def validate_unit(cls, value: dict[str, Any]):
-        if len(user_characteristics(value)) > 25:
-            raise ValueError("Можно добавить не более 25 пользовательских характеристик сверх системных")
         validate_order_unit(value)
         return value
 
@@ -610,6 +612,9 @@ class NeedIn(BaseModel):
         errors = validate_profile_values(self.category, self.subcategory, self.characteristics)
         if errors:
             raise ValueError("; ".join(errors))
+        limit = check_user_characteristics_limit(self.characteristics, self.category, self.subcategory)
+        if limit:
+            raise ValueError(limit)
         return self
 
 
