@@ -19,7 +19,14 @@ from .database import get_db
 from .extractors import LocalTranscriber, UnreadableMaterial, material_to_text
 from .models import AgentRun, AgentSource, AgentTask, ToolCall
 from .providers import ModelUnavailable, RoutedProvider
-from .role_passports import PROMPT_VERSION, ROLE_PASSPORTS, SCENARIO_PERMISSIONS, SELLER_PROMPT_VERSION
+from .role_passports import (
+    PROMPT_VERSION,
+    ROLE_PASSPORTS,
+    RUN_TYPE_PERMISSIONS,
+    SCENARIO_PERMISSIONS,
+    SCENARIO_RUN_TYPES,
+    SELLER_PROMPT_VERSION,
+)
 from . import tasks as task_contract
 from .schemas import (
     AgentRunOut,
@@ -76,15 +83,29 @@ def _model_version(used_route: str) -> str:
 
 async def owned_run(db, run_id, user, *, lock=False):
     query = select(AgentRun).where(AgentRun.id == run_id, AgentRun.user_id == user.id)
+    if lock:
+        query = query.execution_options(populate_existing=True)
     run = await db.scalar(query.with_for_update() if lock else query)
     if run is None:
         raise HTTPException(404, "Агентный процесс не найден")
-    if run.company_id is not None:
-        allowed = await db.scalar(text("SELECT can_buy FROM auth.company_members WHERE company_id=:cid AND user_id=:uid"),
-            {"cid": run.company_id, "uid": user.id})
-        if not allowed:
-            raise HTTPException(403, "Нет прав покупателя выбранной компании")
+    await _require_run_role(db, run, user)
     return run
+
+
+async def _require_run_role(db, run: AgentRun, user) -> None:
+    """Актуальное право по типу самого процесса, а не вызывающего сценария."""
+    permission = RUN_TYPE_PERMISSIONS.get(run.agent_type)
+    if permission is None:
+        raise HTTPException(422, f"Неизвестный тип процесса: {run.agent_type}")
+    if run.company_id is not None:
+        flags = (
+            await db.execute(
+                text("SELECT can_buy, can_sell FROM auth.company_members WHERE company_id=:cid AND user_id=:uid"),
+                {"cid": run.company_id, "uid": user.id},
+            )
+        ).mappings().first()
+        if not flags or not flags[permission]:
+            raise HTTPException(status.HTTP_403_FORBIDDEN, detail="Нет актуального права роли компании процесса")
 
 
 def check_run_revision(run, expected, request):
@@ -422,6 +443,8 @@ async def clarify_agent_run(
 ):
     await _lock_run_scope(db, run_id)
     run = await owned_run(db, run_id, user, lock=True)
+    if run.agent_type != "buyer_agent":
+        raise HTTPException(409, "Операция доступна только для buyer-процессов")
     check_run_revision(run, data.expected_revision, request)
     if run.state not in {"needs_clarification", "ready_for_review"}:
         raise HTTPException(status.HTTP_409_CONFLICT, detail="Процесс нельзя уточнить в этом состоянии")
@@ -523,6 +546,8 @@ async def confirm_agent_run(
 ):
     await _lock_run_scope(db, run_id)
     run = await owned_run(db, run_id, user, lock=True)
+    if run.agent_type != "buyer_agent":
+        raise HTTPException(409, "Операция доступна только для buyer-процессов")
     check_run_revision(run, data.expected_revision if data else None, request)
     if run.state == "confirmed_by_user":
         return await _run_out(db, run)
@@ -581,6 +606,8 @@ async def invalidate_source(run_id: uuid.UUID, source_id: str, data: RunRevision
     # advisory lock; промежуточных commit нет — вся операция в одной транзакции.
     await _lock_run_scope(db, run_id)
     run = await owned_run(db, run_id, user, lock=True)
+    if run.agent_type != "buyer_agent":
+        raise HTTPException(409, "Операция доступна только для buyer-процессов")
     check_run_revision(run, data.expected_revision, request)
     source = await db.get(AgentSource, (run_id, source_id))
     if source is None:
@@ -686,12 +713,15 @@ async def explain_seller_match(
     run.model_version = _model_version(used_route)
     run.state = "completed_with_fallback" if failure else "completed"
     run.error = failure
-    run.result = {"eligible": eligible, "reasons": reasons}
+    run.result = {"eligible": eligible, "reasons": reasons, "explanation": explanation}
     if used_route in {"local", "local_qwen"}:
         run.estimated_cost_rub = (Decimal(run.duration_ms)/Decimal(60_000)*settings.local_inference_cost_rub_per_minute).quantize(Decimal("0.0001"),rounding=ROUND_HALF_UP)
         run.cost_basis = "Оценка локального выполнения, не подтверждённый биллинг"
     await db.commit()
+    await db.refresh(run)
     return SellerExplainOut(
+        run_id=run.id,
+        revision=run.revision,
         eligible=eligible,
         reasons=reasons,
         explanation=explanation,
@@ -728,24 +758,20 @@ async def _require_task_role(db: AsyncSession, company_id: uuid.UUID, user, scen
 
 
 async def owned_run_for_task(db: AsyncSession, run_id: uuid.UUID, user, scenario_type: str, *, lock=False) -> AgentRun:
-    """Доступ к процессу с учётом сценария задачи: seller-процесс требует
-    can_sell компании процесса, остальные — can_buy."""
+    """Доступ к процессу для задачи: право по типу самого процесса и
+    разрешённое соответствие сценария задачи типу процесса."""
     query = select(AgentRun).where(AgentRun.id == run_id, AgentRun.user_id == user.id)
+    if lock:
+        query = query.execution_options(populate_existing=True)
     run = await db.scalar(query.with_for_update() if lock else query)
     if run is None:
         raise HTTPException(404, "Агентный процесс не найден")
-    permission = "can_sell" if run.agent_type == "seller_agent" else SCENARIO_PERMISSIONS.get(scenario_type)
-    if permission is None:
+    await _require_run_role(db, run, user)
+    allowed_types = SCENARIO_RUN_TYPES.get(scenario_type)
+    if allowed_types is None:
         raise HTTPException(422, f"Неизвестный тип сценария: {scenario_type}")
-    if run.company_id is not None:
-        flags = (
-            await db.execute(
-                text("SELECT can_buy, can_sell FROM auth.company_members WHERE company_id=:cid AND user_id=:uid"),
-                {"cid": run.company_id, "uid": user.id},
-            )
-        ).mappings().first()
-        if not flags or not flags[permission]:
-            raise HTTPException(status.HTTP_403_FORBIDDEN, detail="Нет актуального права роли компании процесса")
+    if run.agent_type not in allowed_types:
+        raise HTTPException(409, f"Процесс типа {run.agent_type} недопустим для сценария {scenario_type}")
     return run
 
 
@@ -796,6 +822,7 @@ async def create_agent_task(
         parent_task_id=data.parent_task_id,
         prompt_version=PROMPT_VERSION,
     )
+    await _require_task_role(db, data.company_id, user, task.scenario_type)
     out = await _task_out(db, task)
     return TaskCreateOut(**out.model_dump(), created=created)
 
@@ -855,11 +882,8 @@ async def approve_agent_task(
     # Зондирующее чтение без блокировки даёт ID для advisory; авторитетно —
     # повторное чтение под блокировкой после сериализации.
     probe = await task_contract.owned_task(db, task_id, company_id)
-    for raw_id in {probe.linked_run_id, data.result_artifact.get("id")}:
-        try:
-            await _lock_run_scope(db, uuid.UUID(str(raw_id)))
-        except (ValueError, AttributeError, TypeError):
-            pass
+    if probe.linked_run_id is not None:
+        await _lock_run_scope(db, probe.linked_run_id)
     task = await task_contract.owned_task(db, task_id, company_id, lock=True)
     await _require_task_role(db, company_id, user, task.scenario_type)
     approval = {**data.approval, "by_user_id": str(user.id)}

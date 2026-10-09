@@ -161,6 +161,8 @@ class SellerExplainIn(BaseModel):
 
 
 class SellerExplainOut(BaseModel):
+    run_id: uuid.UUID
+    revision: int = 1
     eligible: bool
     reasons: list[str]
     explanation: str

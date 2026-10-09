@@ -629,24 +629,24 @@ async def test_seller_task_full_lifecycle_without_buyer_right(client, token, db_
         headers=auth(token),
     )
     assert explained.status_code == 200
+    assert explained.json()["explanation"]
+    run_id = explained.json()["run_id"]
+    run_revision = explained.json()["revision"]
+    saved_run = await client.get(f"/api/v1/agent-runs/{run_id}", headers=auth(token))
+    assert saved_run.status_code == 200
+    assert saved_run.json()["result"]["explanation"] == explained.json()["explanation"]
     params = {"company_id": str(seller_company)}
     created = await create_task(client, token, seller_company, key="seller-life", scenario="seller_explain")
     await client.post(TASKS + f"/{created['task_id']}/start", params=params,
                       json={"expected_revision": 1}, headers=auth(token))
-    run_row = (await db_session.execute(
-        text("SELECT id, revision, state FROM agents.agent_runs WHERE company_id = :cid ORDER BY created_at DESC LIMIT 1"),
-        {"cid": seller_company},
-    )).mappings().first()
-    assert run_row["state"] == "completed"
     attached = await client.post(TASKS + f"/{created['task_id']}/attach-run", params=params,
-                                 json={"run_id": str(run_row["id"])}, headers=auth(token))
+                                 json={"run_id": run_id}, headers=auth(token))
     assert attached.status_code == 200, attached.text
     assert attached.json()["state"] == "awaiting_approval"
     approved = await client.post(
         TASKS + f"/{created['task_id']}/approve", params=params,
         json={"expected_revision": 1, "approval": {"decision": "approved"},
-              "result_artifact": {"type": "agent_run_result", "id": str(run_row["id"]),
-                                  "revision": run_row["revision"]}},
+              "result_artifact": {"type": "agent_run_result", "id": run_id, "revision": run_revision}},
         headers=auth(token),
     )
     assert approved.status_code == 200, approved.text
@@ -856,3 +856,128 @@ async def test_dialog_needs_input_clarify_awaiting_approval(client, token, db_se
     )
     assert approved.status_code == 200, approved.text
     assert approved.json()["state"] == "completed"
+
+
+@pytest.mark.asyncio
+async def test_locked_reread_sees_concurrent_cancel(db_session, user_id, session_factory):
+    from sqlalchemy.ext.asyncio import AsyncSession
+
+    from app.tasks import cancel_task, owned_task
+
+    company_id = await make_company(db_session, user_id)
+    task, created = await __import__("app.tasks", fromlist=["create_task"]).create_task(
+        db_session, company_id=company_id, actor_user_id=user_id, scenario_type="buyer_investigation",
+        input_payload={}, source_refs=[], idempotency_key="probe-key",
+    )
+    assert created is True
+    probe = await owned_task(db_session, task.task_id, company_id)
+    assert probe.state == "queued"
+    async with session_factory() as other:
+        assert isinstance(other, AsyncSession)
+        other_task = await owned_task(other, task.task_id, company_id, lock=True)
+        cancel_task(other_task, "отмена")
+        await other.commit()
+    locked = await owned_task(db_session, task.task_id, company_id, lock=True)
+    assert locked.state == "cancelled"
+
+
+@pytest.mark.asyncio
+async def test_key_reuse_checks_stored_scenario_and_role(client, token, db_session, user_id):
+    company_id = await make_company(db_session, user_id)
+    await db_session.execute(
+        text("UPDATE auth.company_members SET can_sell = true WHERE company_id = :cid AND user_id = :uid"),
+        {"cid": company_id, "uid": user_id},
+    )
+    await db_session.commit()
+    created = await create_task(client, token, company_id, key="shared")
+    mismatch = await client.post(
+        TASKS,
+        json={"company_id": str(company_id), "scenario_type": "seller_explain",
+              "input": {}, "source_refs": [], "idempotency_key": "shared"},
+        headers=auth(token),
+    )
+    assert mismatch.status_code == 409
+    await db_session.execute(
+        text("UPDATE auth.company_members SET can_buy = false WHERE company_id = :cid AND user_id = :uid"),
+        {"cid": company_id, "uid": user_id},
+    )
+    await db_session.commit()
+    repeat = await client.post(
+        TASKS,
+        json={"company_id": str(company_id), "scenario_type": "buyer_investigation",
+              "input": {"need": "5000 стаканов"}, "source_refs": [], "idempotency_key": "shared"},
+        headers=auth(token),
+    )
+    assert repeat.status_code == 403
+    gone = await client.get(TASKS + f"/{created['task_id']}", params={"company_id": str(company_id)},
+                            headers=auth(token))
+    assert gone.status_code == 403
+
+
+@pytest.mark.asyncio
+async def test_seller_task_rejects_buyer_run_after_revoke(client, token, db_session, user_id):
+    company_id = await make_company(db_session, user_id)
+    run = await make_buyer_run(client, token, company_id)
+    await db_session.execute(
+        text("UPDATE auth.company_members SET can_buy = false, can_sell = true "
+             "WHERE company_id = :cid AND user_id = :uid"),
+        {"cid": company_id, "uid": user_id},
+    )
+    await db_session.commit()
+    direct = await client.get(f"/api/v1/agent-runs/{run['id']}", headers=auth(token))
+    assert direct.status_code == 403
+    created = await create_task(client, token, company_id, key="seller-after-revoke", scenario="seller_explain")
+    await client.post(TASKS + f"/{created['task_id']}/start", params={"company_id": str(company_id)},
+                      json={"expected_revision": 1}, headers=auth(token))
+    attached = await client.post(TASKS + f"/{created['task_id']}/attach-run", params={"company_id": str(company_id)},
+                                 json={"run_id": run["id"]}, headers=auth(token))
+    assert attached.status_code == 403
+    await db_session.execute(
+        text("UPDATE auth.company_members SET can_buy = true WHERE company_id = :cid AND user_id = :uid"),
+        {"cid": company_id, "uid": user_id},
+    )
+    await db_session.commit()
+    mismatched = await client.post(TASKS + f"/{created['task_id']}/attach-run",
+                                   params={"company_id": str(company_id)},
+                                   json={"run_id": run["id"]}, headers=auth(token))
+    assert mismatched.status_code == 409
+
+
+@pytest.mark.asyncio
+async def test_cache_conflict_is_atomic(db_session, user_id):
+    from app.tasks import cache_lookup, cache_store
+
+    company_id = await make_company(db_session, user_id)
+    binding = {"cache_key": "extraction:buyer_investigation:m:p:s", "input_hash": "h", "source_versions_hash": "s"}
+    await cache_store(db_session, company_id=company_id, run_id=None, source_ids=[], payload={"n": 1}, **binding)
+    await cache_store(db_session, company_id=company_id, run_id=None, source_ids=[], payload={"n": 2}, **binding)
+    cached = await cache_lookup(db_session, company_id=company_id, **binding)
+    assert cached == {"n": 2}
+
+
+@pytest.mark.asyncio
+async def test_concurrent_identical_requests_all_succeed(client, token, db_session, user_id):
+    import asyncio
+
+    company_id = await make_company(db_session, user_id)
+    text_value = "Нужно 5000 бумажных стаканов в Москву за десять дней"
+
+    async def create_once(key):
+        return await client.post(
+            TASKS,
+            json={"company_id": str(company_id), "scenario_type": "buyer_investigation",
+                  "input": {"need": text_value}, "source_refs": [], "idempotency_key": key},
+            headers=auth(token),
+        )
+
+    keyed = await asyncio.gather(*[create_once("race-key") for _ in range(3)])
+    assert all(response.status_code == 201 for response in keyed)
+    assert {response.json()["task_id"] for response in keyed} == {keyed[0].json()["task_id"]}
+
+    runs = await asyncio.gather(*[
+        client.post("/api/v1/buyer-agent/runs",
+                    data={"request_text": text_value, "route": "local", "company_id": str(company_id)},
+                    headers=auth(token))
+        for _ in range(3)
+    ])
+    assert all(response.status_code == 201 for response in runs)

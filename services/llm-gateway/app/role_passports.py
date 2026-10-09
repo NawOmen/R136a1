@@ -186,6 +186,19 @@ SCENARIO_PERMISSIONS: dict[str, str] = {
     "resilience_plan": "can_buy",
 }
 
+RUN_TYPE_PERMISSIONS: dict[str, str] = {
+    "buyer_agent": "can_buy",
+    "seller_agent": "can_sell",
+}
+
+SCENARIO_RUN_TYPES: dict[str, frozenset[str]] = {
+    "buyer_investigation": frozenset({"buyer_agent"}),
+    "seller_explain": frozenset({"seller_agent"}),
+    "marketplace_match": frozenset({"buyer_agent"}),
+    "coalition_build": frozenset({"buyer_agent"}),
+    "resilience_plan": frozenset({"buyer_agent"}),
+}
+
 
 def check_tool_call(tool_name: str, actor: ToolActor) -> Executor:
     """Серверная проверка каждого вызова независимо от текста модели.

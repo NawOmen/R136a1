@@ -14,11 +14,12 @@ from datetime import datetime, timedelta, timezone
 
 from fastapi import HTTPException
 from sqlalchemy import select
+from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from .models import AgentRun, AgentSource, AgentTask, AgentTaskCache, ToolCall
-from .role_passports import SCHEMA_VERSION, TASK_CONTRACT_VERSION
+from .role_passports import SCHEMA_VERSION, SCENARIO_RUN_TYPES, TASK_CONTRACT_VERSION
 
 SCENARIO_TYPES = frozenset({
     "buyer_investigation",
@@ -116,6 +117,10 @@ def _touch(task: AgentTask, state: str) -> None:
 
 async def owned_task(db: AsyncSession, task_id: uuid.UUID, company_id: uuid.UUID, *, lock=False) -> AgentTask:
     query = select(AgentTask).where(AgentTask.task_id == task_id, AgentTask.company_id == company_id)
+    if lock:
+        # populate_existing: повторный SELECT ... FOR UPDATE в той же сессии
+        # обязан вернуть свежие поля, а не закэшированный зондирующий снимок.
+        query = query.execution_options(populate_existing=True)
     task = await db.scalar(query.with_for_update() if lock else query)
     if task is None:
         raise HTTPException(404, "Задача не найдена в этой компании")
@@ -152,6 +157,8 @@ async def create_task(
         )
     )
     if existing is not None:
+        if existing.scenario_type != scenario_type:
+            raise HTTPException(409, "Ключ занят задачей другого сценария")
         return existing, False
     task = AgentTask(
         company_id=company_id,
@@ -181,6 +188,8 @@ async def create_task(
         )
         if existing is None:
             raise
+        if existing.scenario_type != scenario_type:
+            raise HTTPException(409, "Ключ занят задачей другого сценария")
         return existing, False
     await db.refresh(task)
     return task, True
@@ -228,6 +237,9 @@ async def verify_run_artifact(db: AsyncSession, task: AgentTask, artifact: dict)
         raise HTTPException(409, "Связанный процесс не найден; завершение без сохранённого результата запрещено")
     if run.company_id != task.company_id:
         raise HTTPException(403, "Процесс принадлежит другой компании")
+    allowed_types = SCENARIO_RUN_TYPES.get(task.scenario_type, frozenset())
+    if run.agent_type not in allowed_types:
+        raise HTTPException(409, f"Процесс типа {run.agent_type} недопустим для сценария {task.scenario_type}")
     shown_revision = (task.required_response or {}).get("run_revision")
     if artifact.get("revision") != run.revision or shown_revision != run.revision:
         raise HTTPException(409, "Ревизия процесса изменилась; согласие на старых условиях недействительно")
@@ -416,24 +428,20 @@ async def cache_store(
     input_hash: str, source_versions_hash: str, run_id: uuid.UUID | None,
     source_ids: list, payload: dict,
 ) -> None:
-    row = await db.scalar(
-        select(AgentTaskCache).where(
-            AgentTaskCache.company_id == company_id,
-            AgentTaskCache.cache_key == cache_key,
-            AgentTaskCache.input_hash == input_hash,
-            AgentTaskCache.source_versions_hash == source_versions_hash,
-        )
-    )
-    if row is None:
-        db.add(AgentTaskCache(
+    """Атомарная запись: проигрыш в гонке за уникальный ключ не превращает
+    успешный анализ в ошибку запроса."""
+    await db.execute(
+        pg_insert(AgentTaskCache)
+        .values(
             company_id=company_id, cache_key=cache_key, input_hash=input_hash,
             source_versions_hash=source_versions_hash, run_id=run_id,
             source_ids=source_ids, payload=payload,
-        ))
-    else:
-        row.run_id = run_id
-        row.source_ids = source_ids
-        row.payload = payload
+        )
+        .on_conflict_do_update(
+            constraint="uq_agent_task_cache_binding",
+            set_={"run_id": run_id, "source_ids": source_ids, "payload": payload},
+        )
+    )
     await db.commit()
 
 

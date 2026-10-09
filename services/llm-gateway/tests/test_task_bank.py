@@ -85,6 +85,7 @@ async def test_bank_correct_and_conflicting_tasks(client, token, fake_provider):
             assert body["result"]["can_confirm"] is False, task["id"]
         else:
             assert not body["result"]["conflicts"], task["id"]
+        assert bool(body["result"]["questions"]) == task["questions_expected"], task["id"]
         for forbidden in task.get("forbidden_values") or []:
             assert all(prop["value"] != forbidden for prop in body["result"]["properties"]), (task["id"], forbidden)
         assert all(prop["status"] == "needs_clarification"
@@ -102,17 +103,22 @@ async def test_bank_correct_and_conflicting_tasks(client, token, fake_provider):
     reason="Требуется локальная Ollama и RUN_OLLAMA_SMOKE=1",
 )
 async def test_bank_live_sample_checks_critical_fields():
-    """Одна версия банка имеет воспроизводимую выборку: критичные поля живого прогона."""
+    """Одна версия банка имеет воспроизводимую выборку: рабочий промпт
+    и маршрут приложения, все критичные поля эталона."""
+    from app.agents import SYSTEM_PROMPT, build_extraction_prompt
+    from app.schemas import SourceDescriptor
+
     bank = json.loads(BANK_PATH.read_text(encoding="utf-8"))
     sample = next(task for task in bank["tasks"] if task["id"] == "bank-001")
+    sources = [SourceDescriptor(id="request_text", kind="text", name="Описание покупателя",
+                                text=sample["input_text"], content_hash="bank-001")]
     try:
         result = await OllamaProvider().structured(
-            "Извлеки требования. Не выдумывай отсутствующие значения.",
-            sample["input_text"],
-            RawExtraction,
+            SYSTEM_PROMPT, build_extraction_prompt(sources), RawExtraction
         )
     except ModelUnavailable:
         pytest.skip("Локальная модель недоступна")
     assert result.category == sample["expected_category"]
     facts = {(fact.key, str(fact.value)) for fact in result.facts}
-    assert ("quantity_units", "5000") in facts
+    for key, expected in sample["critical_fields"].items():
+        assert (key, str(expected)) in facts, (key, expected)
