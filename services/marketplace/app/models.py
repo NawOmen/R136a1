@@ -57,11 +57,17 @@ class ProductionProfile(Base):
 
 class Product(Base):
     __tablename__ = "products"
-    __table_args__ = {"schema": SCHEMA}
+    __table_args__ = (
+        UniqueConstraint("company_id", "external_id", name="uq_product_company_external"),
+        {"schema": SCHEMA},
+    )
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=_uuid)
     company_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), nullable=False)
     created_by_user_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), nullable=True)
+    revision: Mapped[int] = mapped_column(Integer, nullable=False, default=1, server_default="1")
+    external_id: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    sources: Mapped[list] = mapped_column(ExactJSONB, nullable=False, default=list, server_default="[]")
     name: Mapped[str] = mapped_column(String(255), nullable=False)
     category: Mapped[str] = mapped_column(String(120), nullable=False, index=True)
     subcategory: Mapped[str | None] = mapped_column(String(120), nullable=True)
@@ -234,6 +240,7 @@ class Offer(Base):
     need_id: Mapped[uuid.UUID] = mapped_column(ForeignKey(f"{SCHEMA}.needs.id", ondelete="CASCADE"), nullable=False)
     company_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), nullable=False)
     created_by_user_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), nullable=True)
+    request_key: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), nullable=True)
     price_rub: Mapped[Decimal] = mapped_column(ExactNumeric(), nullable=False)
     available_units: Mapped[int] = mapped_column(Integer, nullable=False)
     lead_time_days: Mapped[int] = mapped_column(Integer, nullable=False)
@@ -478,6 +485,7 @@ class MarketOpportunity(Base):
     reasons: Mapped[list] = mapped_column(ExactJSONB, nullable=False, default=list)
     missing_data: Mapped[list] = mapped_column(ExactJSONB, nullable=False, default=list)
     status: Mapped[str] = mapped_column(String(32), nullable=False, default="active")
+    dismissal_reason: Mapped[str | None] = mapped_column(String(500), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, server_default=func.now(), onupdate=func.now()
@@ -810,6 +818,8 @@ class CatalogImport(Base):
     request_key: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True))
     content_hash: Mapped[str] = mapped_column(String(64))
     product_ids: Mapped[list] = mapped_column(ExactJSONB)
+    updated_ids: Mapped[list] = mapped_column(ExactJSONB, nullable=False, default=list, server_default="[]")
+    updated_snapshots: Mapped[list] = mapped_column(ExactJSONB, nullable=False, default=list, server_default="[]")
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
 

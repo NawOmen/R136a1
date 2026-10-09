@@ -368,6 +368,10 @@ async def _rebuild_opportunities(db: AsyncSession, needs: list[Need]) -> None:
                     competition_level="нет", saturation_risk="низкий", unmet_volume_units=0,
                     buyers_count=0, need_ids=[], reasons=[], missing_data=[])
                 db.add(opportunity)
+            elif (opportunity.status == "dismissed"
+                    and set(opportunity.need_ids or []) == {str(item.id) for item in category_needs}):
+                # Отклонение действует, пока состав спроса не изменился.
+                continue
             if unmet == 0:
                 opportunity.status = "saturated"
                 opportunity.score = 0

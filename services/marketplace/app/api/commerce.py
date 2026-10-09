@@ -13,7 +13,7 @@ from ..commerce import execution_totals, financials
 from ..database import get_db
 from ..deps import CurrentUser, get_current_user, require_company_admin, require_company_buyer, require_company_seller, require_membership
 from ..matching import order_unit
-from ..models import Deal, DealCheckpoint, DealCostSnapshot, DealExecutionEvent, Need, Offer, ParticipantOrder
+from ..models import Deal, DealCheckpoint, DealCostSnapshot, DealExecutionEvent, HumanApprovalRecord, Need, Offer, ParticipantOrder, ResourceReservation
 from ..resources import release
 from ..trust import record_human_approval
 
@@ -160,6 +160,14 @@ async def decide_event(deal_id: uuid.UUID, event_id: uuid.UUID, data: DecisionIn
     requested = "confirmed" if data.approved else "rejected"
     if event.status != "pending":
         if event.status == requested:
+            if event.kind == "return" and data.approved:
+                restocked = await db.scalar(select(HumanApprovalRecord.id).where(
+                    HumanApprovalRecord.action == "stock_return",
+                    HumanApprovalRecord.entity_type == "deal_execution_event",
+                    HumanApprovalRecord.entity_id == event.id,
+                ))
+                if bool(restocked) != data.restock_accepted:
+                    raise HTTPException(409, "Решение о качестве возврата уже принято с другими условиями")
             return event
         raise HTTPException(409, "По запросу уже принято другое решение")
     if data.approved:
@@ -170,14 +178,19 @@ async def decide_event(deal_id: uuid.UUID, event_id: uuid.UUID, data: DecisionIn
     event.decided_by_user_id, event.decided_at = user.id, datetime.now(timezone.utc)
     if data.approved and event.kind == "return" and data.restock_accepted:
         from ..resources import return_stock
-        offer = await db.get(Offer, deal.offer_id)
-        if offer is None or offer.product_id is None:
+        product_id = await db.scalar(select(ResourceReservation.product_id).where(
+            ResourceReservation.company_id == deal.seller_company_id,
+            ResourceReservation.anchor_type == "deal",
+            ResourceReservation.anchor_id == deal.id,
+            ResourceReservation.product_id.is_not(None),
+        ))
+        if product_id is None:
             raise HTTPException(409, "Возврат на склад неприменим: сделка выполнена мощностью без складского товара")
-        await return_stock(db, company_id=deal.seller_company_id, product_id=offer.product_id,
+        await return_stock(db, company_id=deal.seller_company_id, product_id=product_id,
                            units=event.units, quality_accepted=True,
                            return_event_id=event.id, actor_user_id=user.id)
     sync_status(deal, events)
-    await audit(db, deal, data.company_id, user, "decide_execution", {"event_id": str(event.id), "kind": event.kind, "units": event.units}, data.approved)
+    await audit(db, deal, data.company_id, user, "decide_execution", {"event_id": str(event.id), "kind": event.kind, "units": event.units, "restock_accepted": data.restock_accepted}, data.approved)
     await db.commit()
     return event
 

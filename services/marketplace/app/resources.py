@@ -68,7 +68,7 @@ async def reserve(db, *, company_id, anchor_type, anchor_id, units, deadline, re
             CapacityEntry.company_id == company_id,
             CapacityEntry.date >= max(date.today(), start or date.today()),
             CapacityEntry.date <= deadline,
-        ).order_by(CapacityEntry.date, CapacityEntry.category.desc()))).all())
+        ).order_by(CapacityEntry.date, CapacityEntry.category.desc()).execution_options(populate_existing=True))).all())
         remaining = units
         for entry in entries:
             conversion = conversion_for(entry,category,subcategory,unit)
@@ -114,8 +114,9 @@ async def consume(db, *, company_id, anchor_type, anchor_id, units=None):
     Полный вызов сохраняет прежнее поведение (строки переходят в consumed).
     Частичное исполнение уменьшает закреплённый остаток inplace — новые строки
     не создаются, ограничения уникальности anchor/ресурс не нарушаются.
-    Использованная мощность списывается из доступности записи дня, поэтому
-    выполненная работа не продаётся повторно. Повтор сверх остатка отклоняется.
+    При частичной отгрузке использованная мощность вычитается из доступности
+    в единицах ресурса. Полностью consumed-строка сама занимает мощность,
+    поэтому дополнительно вычитать её из доступности нельзя.
     """
     if units is not None and units <= 0:
         raise HTTPException(422, "Количество отгрузки должно быть положительным")
@@ -130,6 +131,8 @@ async def consume(db, *, company_id, anchor_type, anchor_id, units=None):
         take = min(remaining, row.units)
         if not take:
             break
+        coefficient = (row.resource_conversion or {}).get("resource_units_per_order_unit", 1)
+        resource_taken = take * coefficient
         if row.product_id:
             product = await db.get(Product, row.product_id)
             await db.refresh(product)
@@ -137,20 +140,29 @@ async def consume(db, *, company_id, anchor_type, anchor_id, units=None):
                 raise HTTPException(409, "Складской остаток требует сверки перед отгрузкой")
             product.stock_units -= take
             product.stock_updated_at = datetime.now(timezone.utc)
-            if hasattr(product, "revision"):
-                product.revision += 1
-        else:
+            product.revision += 1
+        elif take < row.units:
             entry = await db.get(CapacityEntry, row.capacity_entry_id)
-            if entry is not None:
-                await db.refresh(entry)
-                entry.available_units -= take
-        if units is None or take == row.units:
+            if entry is None:
+                raise HTTPException(409, "Запись мощности требует сверки перед отгрузкой")
+            await db.refresh(entry)
+            if entry.available_units < resource_taken:
+                raise HTTPException(409, "Доступная мощность требует сверки перед отгрузкой")
+            entry.available_units -= resource_taken
+        if take == row.units:
             row.status = "consumed"
         else:
-            row.units -= take
-            if row.resource_units is not None:
-                coefficient = row.resource_units / (row.units + take)
-                row.resource_units -= int(take * coefficient)
+            resize_reservation(row, row.units - take)
+        from .trust import append_audit_event
+        await append_audit_event(
+            db, event_type="resource_consumed", entity_type="resource_reservation", entity_id=row.id,
+            actor_company_id=company_id, source_refs=[{"type": anchor_type, "id": str(anchor_id)}],
+            explanation="Зафиксирован фактически использованный ресурс без освобождения исполненного объёма.",
+            payload={"anchor_type": anchor_type, "anchor_id": str(anchor_id), "units": take,
+                     "resource_units": resource_taken,
+                     "product_id": str(row.product_id) if row.product_id else None,
+                     "capacity_entry_id": str(row.capacity_entry_id) if row.capacity_entry_id else None},
+        )
         consumed += take
         remaining -= take
         if not remaining:
@@ -216,25 +228,50 @@ async def return_stock(db, *, company_id, product_id, units, quality_accepted,
     if not quality_accepted:
         raise HTTPException(409, "Возврат не увеличивает доступный склад без проверки качества и явного решения")
     await lock_company(db, company_id)
-    if return_event_id is not None:
-        from .models import DealExecutionEvent, HumanApprovalRecord
-        event = await db.get(DealExecutionEvent, return_event_id)
-        if event is None or event.kind != "return" or event.status != "confirmed":
-            raise HTTPException(409, "Возврат на склад возможен только по подтверждённому решению о возврате")
-        if event.units < units:
-            raise HTTPException(409, "Количество возврата превышает подтверждённое событие")
-        applied = await db.scalar(select(HumanApprovalRecord).where(
-            HumanApprovalRecord.action == "stock_return",
-            HumanApprovalRecord.entity_type == "deal_execution_event",
-            HumanApprovalRecord.entity_id == return_event_id,
-        ))
-        if applied is not None:
-            product = await db.get(Product, product_id)
-            return product.stock_units if product else 0
+    from .models import Deal, DealExecutionEvent, HumanApprovalRecord, Need, TrustAuditEvent
+    event = await db.get(DealExecutionEvent, return_event_id) if return_event_id else None
+    if event is None or event.kind != "return" or event.status != "confirmed":
+        raise HTTPException(409, "Возврат на склад возможен только по подтверждённому решению о возврате")
+    deal = await db.get(Deal, event.deal_id)
+    if deal is None or deal.seller_company_id != company_id or event.units != units:
+        raise HTTPException(409, "Событие возврата не соответствует компании или количеству")
+    shipment_events = list((await db.scalars(select(TrustAuditEvent).where(
+        TrustAuditEvent.event_type == "resource_consumed",
+        TrustAuditEvent.actor_company_id == company_id,
+        TrustAuditEvent.payload["anchor_type"].astext == "deal",
+        TrustAuditEvent.payload["anchor_id"].astext == str(deal.id),
+        TrustAuditEvent.payload["product_id"].astext == str(product_id),
+    ))).all())
+    if shipment_events:
+        shipped_units = sum(item.payload["units"] for item in shipment_events)
+    else:
+        # До появления событий ресурсного исполнения полный consumed-объём
+        # известен по ledger; неизвестную частичную историю не выдумываем.
+        shipped_units = sum(row.units for row in await reservations(db, company_id)
+                            if row.anchor_type == "deal" and row.anchor_id == deal.id
+                            and row.product_id == product_id and row.status == "consumed")
+    if shipped_units < units:
+        raise HTTPException(409, "Товар возврата не соответствует отгруженному складскому ресурсу")
+    applied = await db.scalar(select(HumanApprovalRecord).where(
+        HumanApprovalRecord.action == "stock_return",
+        HumanApprovalRecord.entity_type == "deal_execution_event",
+        HumanApprovalRecord.entity_id == return_event_id,
+    ))
     product = await db.get(Product, product_id)
     if not product or product.company_id != company_id:
         raise HTTPException(409, "Возврат возможен только на склад своей компании")
     await db.refresh(product)
+    if applied is not None:
+        return product.stock_units
+    from .category_units import canonical_unit
+    from .matching import order_unit
+    historical = (deal.commercial_snapshot or {}).get("need", {}).get("characteristics")
+    if historical is None:
+        need = await db.get(Need, deal.need_id)
+        historical = need.characteristics if need else {}
+    if canonical_unit(order_unit(historical)) != canonical_unit(order_unit(product.characteristics)):
+        raise HTTPException(409, "Единица складского товара изменилась после сделки: возврат требует сверки")
+    before = product.stock_units
     product.stock_units = (product.stock_units or 0) + units
     product.stock_updated_at = datetime.now(timezone.utc)
     if hasattr(product, "revision"):
@@ -244,7 +281,7 @@ async def return_stock(db, *, company_id, product_id, units, quality_accepted,
         await record_human_approval(
             db, action="stock_return", entity_type="deal_execution_event", entity_id=return_event_id,
             actor_user_id=actor_user_id, actor_company_id=company_id, permission="company_admin",
-            decision="approved", payload={"product_id": str(product_id), "units": units},
+            decision="approved", payload={"product_id": str(product_id), "units": units, "before": before, "after": product.stock_units},
             source_refs=[{"type": "deal_execution_event", "id": str(return_event_id)}],
             explanation="Возврат принят на склад после проверки качества; повтор события не начисляет остаток.",
         )
@@ -338,7 +375,7 @@ async def reconcile_company(db, *, company_id):
                 "anchor_type": anchor_type,
                 "anchor_id": anchor_id,
             })
-    obligations = await _anchor_obligations(db, active, products, entries)
+    obligations = await _anchor_obligations(db, active, products, entries, company_id=company_id)
     issues.extend(obligation["issue"] for obligation in obligations if obligation["issue"] is not None)
     return {
         "stock": stock,
@@ -351,7 +388,7 @@ async def reconcile_company(db, *, company_id):
     }
 
 
-async def _anchor_obligations(db, active, products, entries):
+async def _anchor_obligations(db, active, products, entries, *, company_id):
     """Основание каждой активной записи: сущность, версия, статус и ресурс.
 
     Возвращает список обязательств с возможным issue: отсутствующая
@@ -369,6 +406,7 @@ async def _anchor_obligations(db, active, products, entries):
         entity = None
         business_status = None
         version = None
+        owner_matches = False
         try:
             entity_id = uuid.UUID(anchor_id)
         except (TypeError, ValueError):
@@ -376,16 +414,23 @@ async def _anchor_obligations(db, active, products, entries):
         if anchor_type == "deal" and entity_id is not None:
             entity = await db.get(Deal, entity_id)
             business_status = entity.status if entity else None
+            owner_matches = entity is not None and entity.seller_company_id == company_id
         elif anchor_type == "coalition" and entity_id is not None:
             entity = await db.get(Coalition, entity_id)
             business_status = entity.status if entity else None
             version = entity.version if entity else None
+            owner_matches = entity is not None and entity.producer_company_id == company_id
         elif anchor_type == "resilience_primary" and entity_id is not None:
             entity = await db.get(ResiliencePlan, entity_id)
             business_status = entity.status if entity else None
+            version = entity.version if entity else None
+            owner_matches = entity is not None and any(
+                str(item.get("company_id")) == str(company_id) for item in entity.baseline_allocations
+            )
         elif anchor_type == "reserve" and entity_id is not None:
             entity = await db.get(ReserveCommitment, entity_id)
             business_status = entity.confirmation_status if entity else None
+            owner_matches = entity is not None and entity.company_id == company_id
         else:
             business_status = "unknown_anchor_type"
         issue = None
@@ -403,6 +448,14 @@ async def _anchor_obligations(db, active, products, entries):
                 "anchor_type": anchor_type,
                 "anchor_id": anchor_id,
             }
+        elif not owner_matches:
+            issue = {
+                "code": "foreign_anchor",
+                "message": "Основание не соответствует компании, которой принадлежит ресурс",
+                "anchor_type": anchor_type,
+                "anchor_id": anchor_id,
+            }
+            entity, business_status, version = None, None, None
         elif business_status in {"cancelled", "expired", "rejected", "stale"}:
             issue = {
                 "code": "stale_obligation",

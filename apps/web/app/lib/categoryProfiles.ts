@@ -28,3 +28,28 @@ export function characteristicSuggestions(category: string, subcategory: string,
 export function registryCharacteristicLabel(key: string): string | undefined {
   return Object.entries(fields).find(([name, field]) => [name, ...field.aliases].some((alias) => normalize(alias) === normalize(key)))?.[1].label;
 }
+
+const SYSTEM_KEYS = new Set(["unit", "единица измерения"]);
+
+/** Нормализованные ключи системных и обязательных свойств: вне лимита 25 пользовательских. */
+export function requiredCharacteristicKeys(category: string, subcategory: string): Set<string> {
+  const profile = categoryProfile(category, subcategory);
+  const keys = new Set(SYSTEM_KEYS);
+  for (const name of profile?.required_for_product ?? []) {
+    keys.add(normalize(name));
+    for (const alias of fields[name]?.aliases ?? []) keys.add(normalize(alias));
+  }
+  const identification = (profile as unknown as { passport?: { identification?: { required_when?: { required?: string[] }[] } } })?.passport?.identification;
+  for (const rule of identification?.required_when ?? []) {
+    for (const name of rule.required ?? []) {
+      keys.add(normalize(name));
+      for (const alias of fields[name]?.aliases ?? []) keys.add(normalize(alias));
+    }
+  }
+  return keys;
+}
+
+export function countUserCharacteristics(rows: { key: string }[], category: string, subcategory: string): number {
+  const skip = requiredCharacteristicKeys(category, subcategory);
+  return rows.filter((row) => !skip.has(normalize(row.key))).length;
+}

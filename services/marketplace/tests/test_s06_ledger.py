@@ -12,7 +12,9 @@ import pytest
 from fastapi import HTTPException
 from sqlalchemy import select
 
-from app.models import Product, ResourceReservation
+from app.models import CapacityEntry, Deal, Offer, Product, ResourceReservation
+from app.resource_scopes import prepare_conversions
+from test_commerce import order
 from app.resources import (
     activate_hold,
     consume,
@@ -77,7 +79,10 @@ async def test_return_requires_quality_decision(warehouse, db_session):
     assert exc.value.status_code == 409
     product = await db_session.get(Product, product_id)
     assert product.stock_units == 10
-    assert await return_stock(db_session, company_id=company, product_id=product_id, units=3, quality_accepted=True) == 13
+    with pytest.raises(HTTPException) as exc:
+        await return_stock(db_session, company_id=company, product_id=product_id, units=3, quality_accepted=True)
+    assert exc.value.status_code == 409
+    assert product.stock_units == 10
     with pytest.raises(HTTPException):
         await return_stock(db_session, company_id=company, product_id=product_id, units=0, quality_accepted=True)
 
@@ -361,3 +366,195 @@ async def test_return_restock_requires_confirmed_event_and_is_idempotent(client,
     assert written_off.status_code == 200, written_off.text
     await db_session.refresh(product)
     assert product.stock_units == 3
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("path", ["full", "partial_then_full", "partial_then_cancel"])
+async def test_capacity_consumption_preserves_resource_units(warehouse, db_session, path):
+    from app.resources import free_capacity_for_entry
+    _, company, _ = warehouse
+    day = date.today() + timedelta(days=1)
+    entry = CapacityEntry(company_id=company, date=day, unit="мин", available_units=20,
+                          category_conversions=prepare_conversions([{
+                              "category_id": "business-supplies.furniture", "order_unit": "шт",
+                              "resource_units_per_order_unit": 3,
+                          }], True))
+    db_session.add(entry)
+    await db_session.commit()
+    anchor = uuid.uuid4()
+    await reserve(db_session, company_id=company, anchor_type="deal", anchor_id=anchor,
+                  units=4, deadline=day, category="Мебель")
+    if path == "full":
+        assert await consume(db_session, company_id=company, anchor_type="deal", anchor_id=anchor) == 4
+        assert entry.available_units == 20
+    else:
+        assert await consume(db_session, company_id=company, anchor_type="deal", anchor_id=anchor, units=1) == 1
+        assert entry.available_units == 17
+        assert await free_capacity_for_entry(db_session, entry) == 8
+        if path == "partial_then_full":
+            assert await consume(db_session, company_id=company, anchor_type="deal", anchor_id=anchor) == 3
+        else:
+            assert await release(db_session, company_id=company, anchor_type="deal", anchor_id=anchor) == 3
+    await db_session.commit()
+    expected_free = 17 if path == "partial_then_cancel" else 8
+    assert await free_capacity_for_entry(db_session, entry) == expected_free
+    assert not any(issue["code"] == "negative_capacity" for issue in (await reconcile_company(db_session, company_id=company))["issues"])
+    assert await consume(db_session, company_id=company, anchor_type="deal", anchor_id=anchor) == 0
+    assert await free_capacity_for_entry(db_session, entry) == expected_free
+    with pytest.raises(HTTPException) as exc:
+        await reserve(db_session, company_id=company, anchor_type="reserve", anchor_id=uuid.uuid4(),
+                      units=expected_free // 3 + 1, deadline=day, category="Мебель")
+    assert exc.value.status_code == 409
+
+
+@pytest.mark.asyncio
+async def test_capacity_is_reloaded_after_calendar_change(warehouse, db_session, session_factory):
+    from app.resources import lock_company
+    _, company, _ = warehouse
+    day = date.today() + timedelta(days=1)
+    await grant_capacity(db_session, company, 10, day)
+    entry = (await db_session.scalars(select(CapacityEntry).where(CapacityEntry.company_id == company))).one()
+    async with session_factory() as other:
+        await lock_company(other, company)
+        current = await other.get(CapacityEntry, entry.id)
+        current.available_units = 3
+        await other.commit()
+    with pytest.raises(HTTPException) as exc:
+        await reserve(db_session, company_id=company, anchor_type="deal", anchor_id=uuid.uuid4(),
+                      units=7, deadline=day, category="Упаковка и тара", subcategory="Бумажные стаканы")
+    assert exc.value.status_code == 409
+
+
+@pytest.mark.asyncio
+async def test_overlap_is_checked_against_saved_calendar(warehouse, client):
+    user, company, _ = warehouse
+    headers = {"Authorization": f"Bearer {make_token(user)}"}
+    day = str(date.today() + timedelta(days=1))
+    shared = {"date": day, "unit": "мин", "available_units": 10, "conversions_approved": True,
+              "category_conversions": [{"category_id": "business-supplies.furniture",
+                                        "order_unit": "шт", "resource_units_per_order_unit": 3}]}
+    endpoint = f"/api/v1/companies/{company}/capacity"
+    assert (await client.put(endpoint, headers=headers, json={"entries": [shared]})).status_code == 200
+    response = await client.put(endpoint, headers=headers, json={"entries": [
+        {"date": day, "category": "business-supplies.furniture", "unit": "шт", "available_units": 5},
+    ]})
+    assert response.status_code == 422, response.text
+    shared["available_units"] = 12
+    assert (await client.put(endpoint, headers=headers, json={"entries": [shared]})).status_code == 200
+    rows = (await client.get(endpoint, headers=headers)).json()
+    assert len(rows) == 1 and rows[0]["available_units"] == 12
+
+
+@pytest.fixture
+async def shipped_stock_return(order, client, db_session, request):
+    deal_id, buyer, seller, buyer_headers, seller_headers = order
+    product = Product(company_id=seller, name="Стол", category="Мебель", characteristics={},
+                      price_rub=1000, price_tiers=[], moq_units=1, lead_time_days=1,
+                      stock_units=10, stock_updated_at=datetime.now(timezone.utc))
+    db_session.add(product)
+    await db_session.flush()
+    deal = await db_session.get(Deal, deal_id)
+    offer = await db_session.get(Offer, deal.offer_id)
+    offer.product_id, offer.resource_kind = product.id, "stock"
+    await reserve(db_session, company_id=seller, anchor_type="deal", anchor_id=deal_id,
+                  units=10, deadline=date.today(), resource_kind="stock", product_id=product.id)
+    partial = getattr(request, "param", False)
+    if partial:
+        await consume(db_session, company_id=seller, anchor_type="deal", anchor_id=deal_id, units=4)
+    await consume(db_session, company_id=seller, anchor_type="deal", anchor_id=deal_id)
+    await db_session.commit()
+    endpoint = f"/api/v1/deals/{deal_id}/execution"
+    payload = {"company_id": str(buyer), "kind": "acceptance", "units": 10,
+               "note": "Принято по акту", "human_approved": True, "idempotency_key": str(uuid.uuid4())}
+    assert (await client.post(endpoint, headers=buyer_headers, json=payload)).status_code == 201
+    payload.update(kind="return", units=10 if partial else 3, idempotency_key=str(uuid.uuid4()))
+    response = await client.post(endpoint, headers=buyer_headers, json=payload)
+    assert response.status_code == 201, response.text
+    return deal, offer, product, uuid.UUID(response.json()["id"]), seller_headers
+
+
+@pytest.mark.asyncio
+async def test_return_uses_shipped_product_and_preserves_quality_decision(shipped_stock_return, client, db_session):
+    deal, offer, original, event_id, headers = shipped_stock_return
+    changed = Product(company_id=deal.seller_company_id, name="Другой стол", category="Мебель",
+                      characteristics={}, price_rub=1000, price_tiers=[], moq_units=1, lead_time_days=1, stock_units=20)
+    db_session.add(changed)
+    await db_session.flush()
+    offer.product_id = changed.id
+    await db_session.commit()
+    endpoint = f"/api/v1/deals/{deal.id}/execution/{event_id}/decision"
+    payload = {"company_id": str(deal.seller_company_id), "approved": True,
+               "human_approved": True, "restock_accepted": True}
+    response = await client.post(endpoint, headers=headers, json=payload)
+    assert response.status_code == 200, response.text
+    assert (await client.post(endpoint, headers=headers, json=payload)).status_code == 200
+    payload["restock_accepted"] = False
+    assert (await client.post(endpoint, headers=headers, json=payload)).status_code == 409
+    await db_session.refresh(original)
+    await db_session.refresh(changed)
+    assert original.stock_units == 3 and changed.stock_units == 20
+
+
+@pytest.mark.asyncio
+async def test_return_event_cannot_credit_other_company(shipped_stock_return, warehouse, client, db_session):
+    deal, _, _, event_id, headers = shipped_stock_return
+    _, company, product_id = warehouse
+    endpoint = f"/api/v1/deals/{deal.id}/execution/{event_id}/decision"
+    response = await client.post(endpoint, headers=headers, json={
+        "company_id": str(deal.seller_company_id), "approved": True, "human_approved": True,
+    })
+    assert response.status_code == 200, response.text
+    with pytest.raises(HTTPException) as exc:
+        await return_stock(db_session, company_id=company, product_id=product_id,
+                           units=3, quality_accepted=True, return_event_id=event_id)
+    assert exc.value.status_code == 409
+    product = await db_session.get(Product, product_id)
+    assert product.stock_units == 10
+
+
+@pytest.mark.asyncio
+async def test_reconciliation_hides_foreign_business_anchor(warehouse, order, db_session):
+    _, company, product_id = warehouse
+    deal_id, _, _, _, _ = order
+    await reserve(db_session, company_id=company, anchor_type="deal", anchor_id=deal_id,
+                  units=1, deadline=date.today(), resource_kind="stock", product_id=product_id)
+    await db_session.commit()
+    report = await reconcile_company(db_session, company_id=company)
+    assert any(issue["code"] == "foreign_anchor" for issue in report["issues"])
+    obligation = report["obligations"][0]
+    assert obligation["business_status"] is None and obligation["business_version"] is None
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("shipped_stock_return", [True], indirect=True)
+async def test_return_keeps_entire_partial_shipment_history(shipped_stock_return, client, db_session):
+    from app.models import TrustAuditEvent
+    deal, _, product, event_id, headers = shipped_stock_return
+    response = await client.post(f"/api/v1/deals/{deal.id}/execution/{event_id}/decision", headers=headers, json={
+        "company_id": str(deal.seller_company_id), "approved": True,
+        "human_approved": True, "restock_accepted": True,
+    })
+    assert response.status_code == 200, response.text
+    await db_session.refresh(product)
+    assert product.stock_units == 10
+    events = (await db_session.scalars(select(TrustAuditEvent).where(
+        TrustAuditEvent.event_type == "resource_consumed",
+        TrustAuditEvent.payload["anchor_id"].astext == str(deal.id),
+    ))).all()
+    assert sorted(event.payload["units"] for event in events) == [4, 6]
+
+
+@pytest.mark.asyncio
+async def test_return_rejects_changed_stock_unit(shipped_stock_return, client, db_session):
+    deal, _, product, event_id, headers = shipped_stock_return
+    deal.commercial_snapshot = {"need": {"characteristics": {"unit": "шт"}}}
+    product.characteristics = {"unit": "кг"}
+    product.stock_units = 5
+    await db_session.commit()
+    response = await client.post(f"/api/v1/deals/{deal.id}/execution/{event_id}/decision", headers=headers, json={
+        "company_id": str(deal.seller_company_id), "approved": True,
+        "human_approved": True, "restock_accepted": True,
+    })
+    assert response.status_code == 409, response.text
+    await db_session.refresh(product)
+    assert product.stock_units == 5

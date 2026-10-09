@@ -41,6 +41,7 @@ from ..schemas import (
     GroupOfferPublishIn,
     MarketOpportunityOut,
     OptimizationVariantOut,
+    OpportunityDismissIn,
 )
 
 from ..requirements import require_current_evidence
@@ -70,6 +71,7 @@ def _opportunity_out(item: MarketOpportunity) -> MarketOpportunityOut:
         reasons=item.reasons,
         missing_data=item.missing_data,
         status=item.status,
+        dismissal_reason=item.dismissal_reason,
     )
 
 
@@ -154,6 +156,26 @@ async def list_market_opportunities(
         .order_by(MarketOpportunity.score.desc(), MarketOpportunity.category)
     )
     return [_opportunity_out(item) for item in result.scalars().all()]
+
+
+@router.post("/opportunities/{opportunity_id}/dismiss", response_model=MarketOpportunityOut)
+async def dismiss_opportunity(
+    opportunity_id: uuid.UUID,
+    data: OpportunityDismissIn,
+    user: CurrentUser = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Продавец отклоняет рекомендацию с причиной: она пропадает из ленты,
+    пока состав спроса не изменится."""
+    opportunity = await db.get(MarketOpportunity, opportunity_id)
+    if opportunity is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, detail="Рыночная возможность не найдена")
+    await require_company_seller(opportunity.company_id, user, db)
+    opportunity.status = "dismissed"
+    opportunity.dismissal_reason = data.reason.strip()
+    await db.commit()
+    await db.refresh(opportunity)
+    return _opportunity_out(opportunity)
 
 
 @router.post("/opportunities/{opportunity_id}/prepare-offer", response_model=GroupOfferOut, status_code=201)
