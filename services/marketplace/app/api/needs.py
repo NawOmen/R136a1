@@ -22,8 +22,9 @@ from ..deps import (
     require_company_seller,
     require_verified_company,
 )
-from ..models import DeliveryAddress, Need, NeedFile, Product
+from ..models import CapabilityPassport, DeliveryAddress, Need, NeedFile, Product
 from ..matching import ACTIVE_NEED_STATUSES, need_is_current, order_unit, run_market_rematch
+from ..matching import _need_parts, _passport_matches
 from ..experience import notify_market_watchers
 from ..schemas import NeedFeedOut, NeedFileOut, NeedIn, NeedOut, NeedEditIn
 from ..storage import download_object, upload_object
@@ -75,6 +76,21 @@ def _need_out(need: Need, files: list[NeedFile] | None = None) -> NeedOut:
     )
 
 
+def _normalize_region(value: str) -> str:
+    return value.strip().lower().replace("г.", "").replace("город", "").strip(" .")
+
+
+async def _region_allowed(db: AsyncSession, passport: CapabilityPassport, need: Need,
+                          addresses: dict) -> bool:
+    regions = [_normalize_region(str(item)) for item in (passport.delivery_regions or []) if str(item).strip()]
+    if not regions or not need.delivery_address_id:
+        return True
+    address = addresses.get(need.delivery_address_id)
+    if address is None or not address.region:
+        return True
+    return _normalize_region(address.region) in regions
+
+
 @router.get("/needs", response_model=list[NeedFeedOut])
 async def list_needs(
     seller_company_id: uuid.UUID | None = None,
@@ -99,6 +115,25 @@ async def list_needs(
             seller_scopes = {catalog_scope(category, subcategory) for category, subcategory in products}
     result = await db.execute(query.order_by(Need.created_at.desc()))
     needs = list(result.scalars().all())
+    if seller_company_id is not None and seller_scopes is None:
+        # Без карточек подбор идёт по паспорту возможностей: категория,
+        # материалы, объём и регион проверяются автоматически.
+        passport = await db.get(CapabilityPassport, seller_company_id)
+        if passport is not None:
+            address_rows = await db.execute(select(DeliveryAddress).where(
+                DeliveryAddress.id.in_([need.delivery_address_id for need in needs if need.delivery_address_id])))
+            addresses = {address.id: address for address in address_rows.scalars().all()}
+            compatible = []
+            for need in needs:
+                parts = _need_parts(need)
+                if not _passport_matches(passport, need.category, {**parts[0], **parts[1]},
+                                         need.subcategory, need.volume_units,
+                                         category_profile=need.category_profile):
+                    continue
+                if not await _region_allowed(db, passport, need, addresses):
+                    continue
+                compatible.append(need)
+            needs = compatible
     if subcategory is not None:
         needs = [need for need in needs if (need.subcategory or "").strip().lower() == subcategory.strip().lower()]
     if unit is not None:

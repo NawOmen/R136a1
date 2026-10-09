@@ -36,6 +36,11 @@ function newRow(key = "", value = ""): CharacteristicRow {
   return { key, value };
 }
 
+const SYSTEM_CHARACTERISTIC_KEYS = new Set(["unit", "единица измерения"]);
+function userRowCount(rows: CharacteristicRow[]): number {
+  return rows.filter((row) => !SYSTEM_CHARACTERISTIC_KEYS.has(row.key.trim().toLowerCase())).length;
+}
+
 export default function SellerProductsPage() {
   const {
     loading,
@@ -145,7 +150,19 @@ export default function SellerProductsPage() {
       const saved = editingId
         ? await marketplace.updateProduct(token, editingId, { ...input, expected_revision: editingRevision })
         : await marketplace.createProduct(token, company.id, input);
-      if (image) await marketplace.uploadProductImage(token, saved.id, image);
+      // Сразу принимаем ревизию сохранённой карточки: повторная отправка
+      // старого снимка после упавшей загрузки фото даёт 409, а не перезапись.
+      setEditingRevision(saved.revision ?? editingRevision);
+      setProducts((current) => current.some((item) => item.id === saved.id)
+        ? current.map((item) => (item.id === saved.id ? saved : item))
+        : [...current, saved]);
+      if (image) {
+        try {
+          await marketplace.uploadProductImage(token, saved.id, image);
+        } catch (uploadError) {
+          setError(uploadError instanceof ApiError ? uploadError.message : "Карточка сохранена, но фото не загрузилось. Повторите загрузку отдельно.");
+        }
+      }
       const updated = await marketplace.getCompanyProducts(token, company.id);
       setProducts(updated);
       setName("");
@@ -302,7 +319,7 @@ export default function SellerProductsPage() {
               Характеристики
             </label>
             <CharacteristicSuggestions category={category} subcategory={subcategory} keys={rows.map((row) => row.key)}
-              disabled={creating} product onAdd={(key) => setRows((current) => current.length < 25 ? [...current, newRow(key)] : current)} />
+              disabled={creating} product onAdd={(key) => setRows((current) => userRowCount(current) < 25 ? [...current, newRow(key)] : current)} />
             {rows.map((row, index) => (
               <div key={index} className="char-row">
                 <input
@@ -332,10 +349,10 @@ export default function SellerProductsPage() {
             <button
               type="button"
               className="btn btn-secondary btn-sm"
-              disabled={rows.length >= 25}
-              onClick={() => setRows((current) => current.length < 25 ? [...current, newRow()] : current)}
+              disabled={userRowCount(rows) >= 25}
+              onClick={() => setRows((current) => userRowCount(current) < 25 ? [...current, newRow()] : current)}
             >
-              + Добавить характеристику ({rows.length}/25)
+              + Добавить характеристику ({userRowCount(rows)}/25 сверх системных)
             </button>
           </div>
           <div className="field">
@@ -458,7 +475,7 @@ export default function SellerProductsPage() {
               <li key={product.id} className="card">
                 <div className="company-row">
                   <div>
-                    <div className="company-item__name"><Link href={`/catalog/${product.id}`}>{product.name}</Link></div>
+                    <div className="company-item__name">{product.is_published ? <Link href={`/catalog/${product.id}`}>{product.name}</Link> : <>{product.name} <span className="company-meta">(черновик — только здесь)</span></>}</div>
                     <div className="company-meta">
                       {product.category} / {product.subcategory ?? "Без подкатегории"} · {formatRub(product.price_rub, 12)} / {itemUnit(product.characteristics)} · МОЗ{" "}
                       {formatUnits(product.moq_units, itemUnit(product.characteristics))} · {product.lead_time_days} дн.

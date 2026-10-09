@@ -818,6 +818,8 @@ class CatalogImport(Base):
     request_key: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True))
     content_hash: Mapped[str] = mapped_column(String(64))
     product_ids: Mapped[list] = mapped_column(ExactJSONB)
+    updated_ids: Mapped[list] = mapped_column(ExactJSONB, nullable=False, default=list, server_default="[]")
+    updated_snapshots: Mapped[list] = mapped_column(ExactJSONB, nullable=False, default=list, server_default="[]")
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
 

@@ -21,9 +21,13 @@ def upgrade():
     )
     op.execute("ALTER TABLE marketplace.offers ADD COLUMN IF NOT EXISTS request_key UUID")
     op.execute("ALTER TABLE marketplace.market_opportunities ADD COLUMN IF NOT EXISTS dismissal_reason VARCHAR(500)")
+    op.execute("ALTER TABLE marketplace.catalog_imports ADD COLUMN IF NOT EXISTS updated_ids JSONB NOT NULL DEFAULT '[]'")
+    op.execute("ALTER TABLE marketplace.catalog_imports ADD COLUMN IF NOT EXISTS updated_snapshots JSONB NOT NULL DEFAULT '[]'")
 
 
 def downgrade():
+    op.drop_column("catalog_imports", "updated_snapshots", schema="marketplace")
+    op.drop_column("catalog_imports", "updated_ids", schema="marketplace")
     op.drop_column("market_opportunities", "dismissal_reason", schema="marketplace")
     op.drop_column("offers", "request_key", schema="marketplace")
     op.execute("ALTER TABLE marketplace.products DROP CONSTRAINT IF EXISTS uq_product_company_external")

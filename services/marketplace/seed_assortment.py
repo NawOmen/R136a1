@@ -13,7 +13,7 @@ from sqlalchemy import select, text
 
 from app.assortment import ASSORTMENT
 from app.category_admission import evaluate_admission
-from app.models import CapabilityPassport, Deal, Need, Offer, Product, ProductImage, ProductPriceObservation
+from app.models import CapabilityPassport, Deal, DealExecutionEvent, Need, Offer, Product, ProductImage, ProductPriceObservation
 from app.commerce import product_specification_hash
 
 NAMESPACE = uuid.UUID("76fba05a-d0fb-4eeb-9b0f-90afeb845a32")
@@ -208,4 +208,18 @@ async def seed_seller_stories(db):
                         performed_by_user_id=buyer_user_id, units=units, unit_price_rub=unit_price,
                         delivery_price_rub=Decimal("500"),
                         total_price_rub=unit_price * units + Decimal("500"), status=deal_status))
+            await db.flush()
+        # События исполнения: аналитика считает суммы из них, а не из статуса.
+        event_kind, event_note = (("acceptance", "Покупатель принял поставку полностью")
+                                  if deal_status == "fulfilled"
+                                  else ("cancellation", "Покупатель отменил заказ до отгрузки"))
+        event_id = uuid.uuid5(NAMESPACE, f"{key}-execution")
+        if await db.get(DealExecutionEvent, event_id) is None:
+            db.add(DealExecutionEvent(id=event_id, deal_id=deal_id, actor_company_id=buyer_id,
+                                      actor_user_id=buyer_user_id,
+                                      idempotency_key=uuid.uuid5(NAMESPACE, f"{key}-execution-key"),
+                                      kind=event_kind, units=units,
+                                      note=event_note, status="confirmed",
+                                      decided_by_user_id=buyer_user_id,
+                                      decided_at=datetime.now(timezone.utc)))
             await db.flush()

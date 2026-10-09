@@ -8,7 +8,7 @@ from pydantic import ValidationError
 from sqlalchemy import select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from ..admission import (SpecificationCheck, admission_audit_payload, require_company_admission)
+from ..admission import (SpecificationCheck, admission_audit_payload, require_admission_for_specifications, require_company_admission)
 from ..database import get_db
 from ..deps import (
     CurrentUser,
@@ -24,13 +24,32 @@ from ..deps import (
 from ..models import CapacityEntry, CapabilityPassport, Deal, Need, Offer, OfferDraft, Product
 from ..matching import ACTIVE_NEED_STATUSES, need_is_current, offer_unit_price, order_unit, run_market_rematch
 from ..offer_draft import _matches_need, available_capacity_units, build_offer_draft, changed_fields
-from ..schemas import DealOut, OfferDraftIn, OfferDraftOut, OfferIn, OfferOut, OfferPatch, OfferSelectIn
+from ..schemas import CommercialTerms, DealOut, OfferDraftIn, OfferDraftOut, OfferIn, OfferOut, OfferPatch, OfferSelectIn
 from ..resources import reserve, reservations, free_stock, occupies
 from ..trust import append_audit_event, record_human_approval
 
 from ..requirements import require_current_evidence
 
 router = APIRouter(tags=["offers"])
+
+
+async def _sending_warnings(db: AsyncSession, company_id: uuid.UUID, need: Need,
+                            moq_units: int, available_units: int, product_id) -> list[str]:
+    """Недостающие данные допуска перед отправкой: показывает, но не блокирует.
+    Блокируют публикация, выбор покупателя и сделка (тест cups-deal-without-documents)."""
+    try:
+        await require_admission_for_specifications(
+            db,
+            company_id,
+            [SpecificationCheck(category=need.category, subcategory=need.subcategory,
+                                characteristics=need.characteristics, category_profile=need.category_profile,
+                                moq_units=moq_units, volume_units=available_units,
+                                product_id=product_id, label=f"потребность {need.id}")],
+            context="Предложение не отправлено",
+        )
+    except HTTPException as exc:
+        return [exc.detail if isinstance(exc.detail, str) else "Допуск не подтверждён"]
+    return []
 
 
 def _same_offer_terms(previous: Offer, data: OfferIn) -> bool:
@@ -44,11 +63,24 @@ def _same_offer_terms(previous: Offer, data: OfferIn) -> bool:
             {"min_units": tier.min_units, "unit_price_rub": str(decimal(tier.unit_price_rub))}
             for tier in (data.price_tiers or [])
         ]
+        previous_delivery = previous.delivery_cost_rub
+        requested_delivery = data.delivery_cost_rub
+        if data.commercial_terms and data.commercial_terms.delivery_method in {"included", "self_pickup"}:
+            # Включённая доставка и самовывоз хранятся нулём: null запроса равен 0.
+            requested_delivery = requested_delivery if requested_delivery is not None else 0
         same_delivery = (
-            (previous.delivery_cost_rub is None and data.delivery_cost_rub is None)
-            or (previous.delivery_cost_rub is not None and data.delivery_cost_rub is not None
-                and decimal(previous.delivery_cost_rub) == decimal(data.delivery_cost_rub))
+            (previous_delivery is None and requested_delivery is None)
+            or (previous_delivery is not None and requested_delivery is not None
+                and decimal(previous_delivery) == decimal(requested_delivery))
         )
+        previous_terms = previous.commercial_terms or {}
+        requested_terms = data.commercial_terms.model_dump(mode="json") if data.commercial_terms else {}
+        if bool(previous_terms) != bool(requested_terms):
+            return False
+        if requested_terms and (
+            CommercialTerms.model_validate(previous_terms).model_dump(mode="json") != requested_terms
+        ):
+            return False
         return (
             decimal(previous.price_rub) == decimal(data.price_rub)
             and previous.available_units == data.available_units
@@ -58,6 +90,8 @@ def _same_offer_terms(previous: Offer, data: OfferIn) -> bool:
             and same_tiers
             and previous.product_id == data.product_id
             and previous.resource_kind == data.resource_kind
+            and previous_terms == requested_terms
+            and previous.valid_until == data.valid_until
         )
     except (TypeError, ValueError, ArithmeticError):
         return False
@@ -220,6 +254,8 @@ async def create_offer(
     if previous is not None:
         if data.request_key is not None and previous.request_key == data.request_key:
             if _same_offer_terms(previous, data):
+                previous.sending_warnings = await _sending_warnings(
+                    db, data.company_id, need, data.moq_units, data.available_units, previous.product_id)
                 response.status_code = status.HTTP_200_OK
                 return previous
             raise HTTPException(
@@ -260,6 +296,37 @@ async def create_offer(
         compatible, reason = _matches_need(product, need)
         if not compatible:
             raise HTTPException(409, f"Товар не соответствует потребности: {reason}")
+    # Повторная проверка перед отправкой: документы, цена, ресурс, срок, ревизия.
+    # Допуск здесь не блокирует (его проверяют публикация, выбор и сделка),
+    # но продавец видит недостающие данные до отправки.
+    sending_warnings = await _sending_warnings(db, data.company_id, need, data.moq_units,
+                                               data.available_units, product_id)
+    days_left = (need.deadline_date - date.today()).days
+    if data.lead_time_days > max(0, days_left):
+        raise HTTPException(409, "Срок производства не укладывается в срок потребности")
+    held = await reservations(db, data.company_id)
+    if product_id:
+        product = await db.get(Product, product_id)
+        if product is not None and product.stock_units is not None:
+            free = await free_stock(db, product, held)
+            if data.available_units > free:
+                raise HTTPException(409, "Доступный объём превышает свободный остаток склада")
+    else:
+        from ..resource_scopes import conversion_for, occupied_units
+        unit = order_unit(need.characteristics)
+        free_capacity, has_entries = 0, False
+        entries = (await db.execute(select(CapacityEntry).where(CapacityEntry.company_id == data.company_id))).scalars().all()
+        for entry in entries:
+            if not date.today() <= entry.date <= need.deadline_date:
+                continue
+            conversion = conversion_for(entry, need.category, need.subcategory, unit)
+            if conversion is None:
+                continue
+            has_entries = True
+            free_capacity += max(0, entry.available_units - sum(
+                occupied_units(r) for r in held if r.capacity_entry_id == entry.id and occupies(r)))
+        if has_entries and data.available_units > free_capacity:
+            raise HTTPException(409, "Доступный объём превышает подтверждённую свободную мощность")
     offer = Offer(
         resource_kind=resource_kind,
         product_id=product_id,
@@ -319,6 +386,7 @@ async def create_offer(
         await notify(db, need.created_by_user_id, "По вашей потребности поступило новое предложение", "offer_received")
     await db.commit()
     await db.refresh(offer)
+    offer.sending_warnings = sending_warnings
     return offer
 
 

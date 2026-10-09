@@ -29,8 +29,9 @@ def validate_characteristics(
         if subcategory == "Бумажные стаканы":
             errors = ["Для бумажных стаканов укажите объём" if error == "Укажите характеристику «Объём, мл»" else error for error in errors]
     warnings: list[str] = []
-    if len(characteristics) > 25:
-        errors.append("Можно указать не более 25 характеристик")
+    from .schemas import user_characteristics
+    if len(user_characteristics(characteristics)) > 25:
+        errors.append("Можно указать не более 25 пользовательских характеристик сверх системных")
     normalized = {str(key).strip().lower(): value for key, value in characteristics.items()}
     has_profile = characteristic_profile(category, subcategory) is not None
     if category == "Упаковка и тара":

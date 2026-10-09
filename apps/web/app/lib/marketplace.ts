@@ -560,6 +560,7 @@ export interface ImportPreviewRow {
   diff: { field: string; was: unknown; now: unknown }[];
   note: string;
   product_id: string | null;
+  product_revision: number | null;
 }
 export interface ImportPreview {
   content_hash: string;
@@ -1065,9 +1066,9 @@ export const marketplace = {
     return marketplaceFetch(`/api/v1/price-index/${encodeURIComponent(category)}?product_id=${encodeURIComponent(productId)}`);
   },
 
-  importCatalog(token: string, companyId: string, file: File, confirmation?: { hash: string; requestKey: string }): Promise<ImportPreview> {
+  importCatalog(token: string, companyId: string, file: File, confirmation?: { hash: string; requestKey: string; expectedRevisions?: Record<string, number> }): Promise<ImportPreview> {
     const body = new FormData(); body.set("file", file);
-    if (confirmation) { body.set("commit", "true"); body.set("human_approved", "true"); body.set("expected_hash", confirmation.hash); body.set("request_key", confirmation.requestKey); }
+    if (confirmation) { body.set("commit", "true"); body.set("human_approved", "true"); body.set("expected_hash", confirmation.hash); body.set("request_key", confirmation.requestKey); if (confirmation.expectedRevisions) body.set("expected_revisions", JSON.stringify(confirmation.expectedRevisions)); }
     return marketplaceFetch(`/api/v1/companies/${companyId}/catalog-import`, { method: "POST", token, body });
   },
 

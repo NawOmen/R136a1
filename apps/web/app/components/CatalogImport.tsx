@@ -30,7 +30,10 @@ export default function CatalogImport({ companyId, onImported }: { companyId: st
     const token = getToken(); if (!file || !token || busy || (commit && (!approved || !preview))) return;
     setBusy(true); setError(""); setMessage("");
     try {
-      const result = await marketplace.importCatalog(token, companyId, file, commit ? { hash: preview!.content_hash, requestKey: key.current } : undefined);
+      const expectedRevisions = Object.fromEntries(
+        (preview?.rows ?? []).filter((row) => row.product_id).map((row) => [row.product_id as string, row.product_revision ?? 1]),
+      );
+      const result = await marketplace.importCatalog(token, companyId, file, commit ? { hash: preview!.content_hash, requestKey: key.current, expectedRevisions } : undefined);
       if (!alive.current) return;
       setPreview(result);
       if (commit) {

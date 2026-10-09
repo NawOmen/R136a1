@@ -10,14 +10,18 @@ from decimal import Decimal, InvalidOperation
 from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
 from pydantic import ValidationError
 from sqlalchemy import select, text
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from ..category_profile_snapshot import profile_after_specification_change
+from ..category_units import order_unit
 from ..database import get_db
 from ..deps import CurrentUser, get_current_user, require_company_admin, require_company_seller
 from ..models import CatalogImport, Product
 from ..money import decimal
-from ..schemas import ProductIn
-from ..trust import record_human_approval
+from ..resources import lock_company, occupies, reservations
+from ..schemas import ProductIn, user_characteristics
+from ..trust import append_audit_event, record_human_approval
 
 router = APIRouter(tags=["catalog-import"])
 MAX_BYTES = 2 * 1024 * 1024
@@ -106,8 +110,8 @@ def parse_catalog(content: bytes):
                     raise ValueError("Количество значений не соответствует заголовку")
                 attrs = {key.removeprefix("Характеристика: ").strip(): value.strip()
                          for key, value in row.items() if key.startswith("Характеристика: ") and value.strip()}
-                if "" in attrs or len(attrs) > 25:
-                    raise ValueError("Допускается до 25 характеристик с непустыми названиями")
+                if "" in attrs or len(user_characteristics(attrs)) > 25:
+                    raise ValueError("Допускается до 25 пользовательских характеристик сверх системных")
                 price = Decimal(row["Цена"].replace(",", ".").strip())
                 if not price.is_finite() or price.as_tuple().exponent < -2:
                     raise ValueError("Цена должна быть конечной суммой с точностью до копейки")
@@ -144,12 +148,12 @@ async def match_rows(db: AsyncSession, company_id: uuid.UUID, rows: list[dict]) 
     matched = []
     for row in rows:
         external_id = row["product"].get("external_id")
-        status, note, diff, product_id = "new", "", [], None
+        status, note, diff, product_id, product_revision = "new", "", [], None, None
         if external_id:
             saved = await db.scalar(select(Product).where(
                 Product.company_id == company_id, Product.external_id == external_id))
             if saved is not None:
-                product_id = str(saved.id)
+                product_id, product_revision = str(saved.id), saved.revision
                 if saved.is_published:
                     status, note = "published_skipped", "Карточка опубликована вручную и не перезаписывается импортом"
                 else:
@@ -158,13 +162,15 @@ async def match_rows(db: AsyncSession, company_id: uuid.UUID, rows: list[dict]) 
                         status, note = "changed", "Собственный черновик будет обновлён"
                     else:
                         status, note = "unchanged", "Без изменений: повтор не создаёт дубликат"
-        matched.append({**row, "import_status": status, "diff": diff, "note": note, "product_id": product_id})
+        matched.append({**row, "import_status": status, "diff": diff, "note": note,
+                        "product_id": product_id, "product_revision": product_revision})
     return matched
 
 
 @router.post("/companies/{company_id}/catalog-import")
 async def import_catalog(company_id: uuid.UUID, file: UploadFile = File(...),
     commit: bool = Form(False), expected_hash: str | None = Form(None), request_key: uuid.UUID | None = Form(None),
+    expected_revisions: str | None = Form(None),
     human_approved: bool = Form(False), user: CurrentUser = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
     await require_company_seller(company_id, user, db)
     await require_company_admin(company_id, user, db)
@@ -183,45 +189,78 @@ async def import_catalog(company_id: uuid.UUID, file: UploadFile = File(...),
         raise HTTPException(428, "Подтвердите предпросмотр именно этой версии файла")
     if errors:
         raise HTTPException(422, "Исправьте ошибки всех строк перед импортом")
+    await lock_company(db, company_id)
     await db.execute(text("SELECT pg_advisory_xact_lock(hashtextextended(:key, 0))"),
                      {"key": f"catalog-import:{company_id}:{request_key}"})
     previous = await db.scalar(select(CatalogImport).where(CatalogImport.company_id == company_id, CatalogImport.request_key == request_key))
     if previous:
         if previous.content_hash != digest:
             raise HTTPException(409, "Этот запрос уже использован для другого файла")
-        return {"content_hash": digest, "rows": rows, "errors": [], "created_ids": previous.product_ids,
-                "updated_ids": [], "import_id": str(previous.id)}
+        matched = await match_rows(db, company_id, rows)
+        return {"content_hash": digest, "rows": matched, "errors": [], "created_ids": previous.product_ids,
+                "updated_ids": previous.updated_ids or [], "import_id": str(previous.id)}
+    try:
+        revisions = json.loads(expected_revisions) if expected_revisions else {}
+        if not isinstance(revisions, dict):
+            raise ValueError("Ожидались ревизии вида {id: revision}")
+    except (ValueError, TypeError) as exc:
+        raise HTTPException(422, "Некорректные ожидаемые ревизии предпросмотра") from exc
     matched = await match_rows(db, company_id, rows)
-    ids, updated = [], []
-    for row in matched:
-        if row["import_status"] in ("unchanged", "published_skipped"):
-            continue
-        if row["import_status"] == "changed":
-            saved = await db.get(Product, uuid.UUID(row["product_id"]))
-            if saved is None or saved.company_id != company_id or saved.is_published:
+    ids, updated, snapshots = [], [], []
+    try:
+        for row in matched:
+            if row["import_status"] in ("unchanged", "published_skipped"):
                 continue
-            fresh = row["product"]
-            saved.name = fresh["name"]
-            saved.category = fresh["category"]
-            saved.subcategory = fresh.get("subcategory")
-            saved.characteristics = fresh["characteristics"]
-            saved.price_rub = decimal(fresh["price_rub"])
-            saved.price_tiers = fresh.get("price_tiers", [])
-            saved.moq_units = fresh["moq_units"]
-            saved.lead_time_days = fresh["lead_time_days"]
-            saved.stock_units = fresh.get("stock_units")
-            if saved.stock_units is not None:
-                saved.stock_updated_at = datetime.now(timezone.utc)
-            saved.revision += 1
-            updated.append(str(saved.id))
-            continue
-        product = Product(id=uuid.uuid4(), company_id=company_id, created_by_user_id=user.id,
-            is_published=False, **row["product"])
-        if product.stock_units is not None:
-            product.stock_updated_at = datetime.now(timezone.utc)
-        db.add(product)
-        ids.append(str(product.id))
-    record = CatalogImport(company_id=company_id, request_key=request_key, content_hash=digest, product_ids=ids)
+            if row["import_status"] == "changed":
+                saved = await db.get(Product, uuid.UUID(row["product_id"]), with_for_update=True)
+                if saved is None or saved.company_id != company_id or saved.is_published:
+                    continue
+                if revisions.get(str(saved.id)) != saved.revision:
+                    raise HTTPException(409, "Карточка изменилась после предпросмотра. Запросите новый preview")
+                fresh = row["product"]
+                held = sum(item.units for item in await reservations(db, company_id)
+                           if item.product_id == saved.id and occupies(item, stock=True))
+                if held and (fresh.get("stock_units") is None or fresh["stock_units"] < held):
+                    raise HTTPException(409, f"На складе зарезервировано {held} единиц. Сначала согласуйте отмену обязательств")
+                if order_unit(fresh["characteristics"]) != order_unit(saved.characteristics):
+                    if any(item.product_id == saved.id and occupies(item, stock=True)
+                           for item in await reservations(db, company_id)):
+                        raise HTTPException(409, "Нельзя менять единицу товара с действующим резервом")
+                snapshots.append({"product_id": str(saved.id), "revision": saved.revision,
+                                  "fields": {"name": saved.name, "category": saved.category,
+                                             "subcategory": saved.subcategory,
+                                             "characteristics": saved.characteristics,
+                                             "price_rub": str(saved.price_rub), "price_tiers": saved.price_tiers,
+                                             "moq_units": saved.moq_units, "lead_time_days": saved.lead_time_days,
+                                             "stock_units": saved.stock_units}})
+                saved.name = fresh["name"]
+                saved.category = fresh["category"]
+                saved.subcategory = fresh.get("subcategory")
+                saved.characteristics = fresh["characteristics"]
+                saved.price_rub = decimal(fresh["price_rub"])
+                saved.price_tiers = fresh.get("price_tiers", [])
+                saved.moq_units = fresh["moq_units"]
+                saved.lead_time_days = fresh["lead_time_days"]
+                saved.stock_units = fresh.get("stock_units")
+                if saved.stock_units is not None:
+                    saved.stock_updated_at = datetime.now(timezone.utc)
+                saved.category_profile = profile_after_specification_change(
+                    saved, saved.category, saved.subcategory, saved.characteristics)
+                saved.quantity_conversion = None
+                saved.revision += 1
+                updated.append(str(saved.id))
+                continue
+            product = Product(id=uuid.uuid4(), company_id=company_id, created_by_user_id=user.id,
+                is_published=False, **row["product"])
+            if product.stock_units is not None:
+                product.stock_updated_at = datetime.now(timezone.utc)
+            db.add(product)
+            ids.append(str(product.id))
+    except IntegrityError as exc:
+        await db.rollback()
+        raise HTTPException(409, "Карточка с таким внешним ID уже создана параллельным запросом") from exc
+    record = CatalogImport(company_id=company_id, request_key=request_key, content_hash=digest,
+                           product_ids=ids, updated_ids=updated, updated_snapshots=snapshots)
     db.add(record)
     await db.flush()
     await record_human_approval(db, action="catalog_import", entity_type="company", entity_id=company_id,
@@ -236,15 +275,26 @@ async def import_catalog(company_id: uuid.UUID, file: UploadFile = File(...),
 async def rollback_catalog_import(company_id: uuid.UUID, import_id: uuid.UUID,
     user: CurrentUser = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
     """Безопасный откат импорта: удаляет только собственные черновики этого
-    импорта. Опубликованные карточки и чужие данные не трогает."""
+    импорта и восстанавливает обновлённые черновики из снимков. Опубликованные
+    карточки и чужие данные не трогает; при последующих изменениях — 409."""
     await require_company_seller(company_id, user, db)
     await require_company_admin(company_id, user, db)
+    await lock_company(db, company_id)
     record = await db.get(CatalogImport, import_id)
     if record is None or record.company_id != company_id:
         raise HTTPException(404, "Импорт не найден")
-    deleted, skipped_published = [], []
+    conflicted = []
+    for snapshot in record.updated_snapshots or []:
+        product = await db.get(Product, uuid.UUID(str(snapshot["product_id"])), with_for_update=True)
+        if product is None or product.company_id != company_id:
+            continue
+        if product.is_published or product.revision != snapshot["revision"] + 1:
+            conflicted.append(str(snapshot["product_id"]))
+    if conflicted:
+        raise HTTPException(409, f"Карточки изменились после импорта и не могут быть восстановлены: {', '.join(conflicted)}")
+    deleted, skipped_published, restored = [], [], []
     for raw_id in record.product_ids or []:
-        product = await db.get(Product, uuid.UUID(str(raw_id)))
+        product = await db.get(Product, uuid.UUID(str(raw_id)), with_for_update=True)
         if product is None or product.company_id != company_id:
             continue
         if product.is_published:
@@ -252,5 +302,31 @@ async def rollback_catalog_import(company_id: uuid.UUID, import_id: uuid.UUID,
             continue
         await db.delete(product)
         deleted.append(str(product.id))
+    for snapshot in record.updated_snapshots or []:
+        product = await db.get(Product, uuid.UUID(str(snapshot["product_id"])), with_for_update=True)
+        if product is None or product.company_id != company_id or product.is_published:
+            continue
+        fields = snapshot["fields"]
+        product.name = fields["name"]
+        product.category = fields["category"]
+        product.subcategory = fields.get("subcategory")
+        product.characteristics = fields["characteristics"]
+        product.price_rub = decimal(fields["price_rub"])
+        product.price_tiers = fields.get("price_tiers", [])
+        product.moq_units = fields["moq_units"]
+        product.lead_time_days = fields["lead_time_days"]
+        product.stock_units = fields.get("stock_units")
+        if product.stock_units is not None:
+            product.stock_updated_at = datetime.now(timezone.utc)
+        product.category_profile = profile_after_specification_change(
+            product, product.category, product.subcategory, product.characteristics)
+        product.quantity_conversion = None
+        product.revision += 1
+        restored.append(str(product.id))
+    await append_audit_event(db, event_type="catalog_import_rolled_back", entity_type="company", entity_id=company_id,
+        actor_user_id=user.id, actor_company_id=company_id,
+        payload={"import_id": str(record.id), "deleted": deleted, "restored": restored},
+        explanation="Продавец откатил собственный импорт: удалены черновики, обновлённые карточки восстановлены из снимков.")
     await db.commit()
-    return {"import_id": str(record.id), "deleted_ids": deleted, "skipped_published_ids": skipped_published}
+    return {"import_id": str(record.id), "deleted_ids": deleted, "restored_ids": restored,
+            "skipped_published_ids": skipped_published}

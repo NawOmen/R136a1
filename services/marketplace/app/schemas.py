@@ -8,6 +8,15 @@ from pydantic import BaseModel, ConfigDict, Field, PrivateAttr, JsonValue, field
 from .commercial import CommercialTerms
 from .category_characteristics import validate_profile_values
 
+SYSTEM_CHARACTERISTIC_KEYS = {"unit", "единица измерения"}
+
+
+def user_characteristics(value: dict[str, Any] | None) -> dict[str, Any]:
+    """Пользовательские характеристики без системных свойств (единица заказа).
+    Лимит 25 применяется только к ним."""
+    return {key: item for key, item in (value or {}).items()
+            if key.strip().lower() not in SYSTEM_CHARACTERISTIC_KEYS}
+
 
 # ---------- Адреса доставки ----------
 
@@ -90,8 +99,8 @@ class ProductRules(BaseModel):
     @field_validator("characteristics", check_fields=False)
     @classmethod
     def validate_characteristics(cls, value: dict[str, Any] | None):
-        if value is not None and len(value) > 25:
-            raise ValueError("Можно добавить не более 25 характеристик")
+        if value is not None and len(user_characteristics(value)) > 25:
+            raise ValueError("Можно добавить не более 25 пользовательских характеристик сверх системных")
         validate_order_unit(value)
         return value
 
@@ -591,8 +600,8 @@ class NeedIn(BaseModel):
     @field_validator("characteristics")
     @classmethod
     def validate_unit(cls, value: dict[str, Any]):
-        if len(value) > 25:
-            raise ValueError("Можно добавить не более 25 характеристик")
+        if len(user_characteristics(value)) > 25:
+            raise ValueError("Можно добавить не более 25 пользовательских характеристик сверх системных")
         validate_order_unit(value)
         return value
 
@@ -618,6 +627,7 @@ class OfferOut(BaseModel):
     product_id: uuid.UUID | None = None
     revision: int = 1
     request_key: uuid.UUID | None = None
+    sending_warnings: list[str] = Field(default_factory=list)
     model_config = ConfigDict(from_attributes=True)
 
     id: uuid.UUID

@@ -118,6 +118,8 @@ async def update_product(
         raise HTTPException(409, "Карточка изменилась. Обновите данные перед сохранением")
     if patch.get("external_id") is not None and product.external_id is not None and patch["external_id"] != product.external_id:
         raise HTTPException(409, "Внешний ID карточки стабилен и не меняется после установки")
+    if "external_id" in patch and patch["external_id"] is None and product.external_id is not None:
+        raise HTTPException(409, "Внешний ID карточки нельзя очищать после установки")
     if patch.get("external_id"):
         clash = await db.scalar(
             select(Product.id).where(
@@ -220,6 +222,8 @@ async def publish_product(
         raise HTTPException(status.HTTP_404_NOT_FOUND, detail="Товар не найден")
     await require_company_seller(product.company_id, user, db)
     await require_company_admin(product.company_id, user, db)
+    await lock_company(db, product.company_id)
+    await db.refresh(product)
     admission = None
     if data.published:
         await require_verified_company(product.company_id, user, db)
