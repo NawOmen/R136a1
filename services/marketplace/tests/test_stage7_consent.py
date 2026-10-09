@@ -582,3 +582,21 @@ async def test_approve_recovery_checks_shown_version(client, db_session):
                               json={"approved": True, "expected_revision": plan.version + 99},
                               headers=_auth(buyer_token))
     assert wrong.status_code == 409
+
+
+async def test_same_member_concurrent_double_decide_single_record(client, db_session, monkeypatch):
+    ctx = await _awaiting_coalition(client, db_session, monkeypatch)
+    buyer_one, token_one, _ = ctx["one"]
+
+    async def decide():
+        return await client.post(f"/api/v1/coalitions/{ctx['coalition_id']}/decision",
+                                 json={"company_id": str(buyer_one), "decision": "approved",
+                                       "expected_revision": ctx["revision"]},
+                                 headers=auth(token_one))
+
+    first, second = await asyncio.gather(decide(), decide())
+    assert sorted([first.status_code, second.status_code]) == [200, 409]
+    approvals = (await db_session.execute(select(HumanApprovalRecord).where(
+        HumanApprovalRecord.action == "coalition_member_decision",
+        HumanApprovalRecord.actor_company_id == buyer_one))).scalars().all()
+    assert len(approvals) == 1
