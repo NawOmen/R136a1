@@ -11,7 +11,7 @@ import CatalogImport from "../../components/CatalogImport";
 import PackagingConversionPanel from "../../components/PackagingConversionPanel";
 import CharacteristicSuggestions from "../../components/CharacteristicSuggestions";
 import { characteristicField } from "../../lib/categoryProfiles";
-import { countUserCharacteristics } from "../../lib/categoryProfiles";
+import { countUserCharacteristics, requiredCharacteristicKeys } from "../../lib/categoryProfiles";
 import { FormEvent, useEffect, useState } from "react";
 import { getToken } from "../../lib/api";
 import {
@@ -319,7 +319,14 @@ export default function SellerProductsPage() {
               Характеристики
             </label>
             <CharacteristicSuggestions category={category} subcategory={subcategory} keys={rows.map((row) => row.key)}
-              disabled={creating} product onAdd={(key) => setRows((current) => userRowCount(current, category, subcategory) < 25 ? [...current, newRow(key)] : current)} />
+              disabled={creating} product onAdd={(key) => setRows((current) => {
+                const required = requiredCharacteristicKeys(category, subcategory);
+                const normalizeKey = (value: string) => value.trim().toLowerCase().replaceAll("ё", "е");
+                if (userRowCount(current, category, subcategory) < 25 || required.has(normalizeKey(key))) {
+                  return [...current, newRow(key)];
+                }
+                return current;
+              })} />
             {rows.map((row, index) => (
               <div key={index} className="char-row">
                 <input

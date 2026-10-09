@@ -55,7 +55,7 @@ export default function SellerRequestsPage() {
   const [draftingId, setDraftingId] = useState<string | null>(null);
   const [drafts, setDrafts] = useState<Record<string, OfferDraft>>({});
   const [requestKeys, setRequestKeys] = useState<Record<string, string>>({});
-  const [checks, setChecks] = useState<Record<string, { blockers: string[]; warnings: string[]; missing: string[] }>>({});
+  const [checks, setChecks] = useState<Record<string, { inputKey: string; blockers: string[]; warnings: string[]; missing: string[] }>>({});
   const [confirming, setConfirming] = useState(false);
 
   function offerInput(need: NeedFeedItem) {
@@ -118,6 +118,10 @@ export default function SellerRequestsPage() {
     setError(null);
   }
 
+  function inputKey(need: NeedFeedItem): string {
+    return JSON.stringify({ ...offerInput(need), company: company?.id, draft: drafts[need.id]?.id ?? null });
+  }
+
   async function handleOffer(event: FormEvent<HTMLFormElement>, need: NeedFeedItem) {
     event.preventDefault();
     const token = getToken();
@@ -128,7 +132,7 @@ export default function SellerRequestsPage() {
     setError(null);
     try {
       const preview = await marketplace.previewOfferSend(token, need.id, { ...offerInput(need), request_key: requestKey });
-      setChecks((current) => ({ ...current, [need.id]: preview }));
+      setChecks((current) => ({ ...current, [need.id]: { inputKey: inputKey(need), ...preview } }));
       if (preview.blockers.length > 0) {
         setError(`Отправка заблокирована: ${preview.blockers.join("; ")}`);
       }
@@ -432,8 +436,10 @@ export default function SellerRequestsPage() {
                         <p className="hint">Предупреждения (не блокируют, допуск проверят при выборе):</p>
                         <ul>{checks[need.id].warnings.map((item) => <li key={item}>{item}</li>)}</ul>
                       </>}
-                      {checks[need.id].blockers.length === 0 ? (
-                        <button type="button" className="btn btn-success" disabled={confirming}
+                      {checks[need.id].inputKey !== inputKey(need) ? (
+                        <div className="alert alert-error">Условия изменились после проверки. Проверьте условия заново.</div>
+                      ) : checks[need.id].blockers.length === 0 ? (
+                        <button type="button" className="btn btn-success" disabled={confirming || submitting}
                           onClick={() => void handleConfirmOffer(need)}>
                           {confirming ? "Отправляем..." : "Подтвердить отправку КП"}
                         </button>

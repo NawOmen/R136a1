@@ -270,9 +270,11 @@ async def preview_offer_send(
         raise HTTPException(status.HTTP_404_NOT_FOUND, detail="Потребность не найдена")
     await require_company_seller(data.company_id, user, db)
     await require_verified_company(data.company_id, user, db)
-    blockers: list[str] = []
     if need.company_id == data.company_id:
-        blockers.append("Нельзя отправить предложение на потребность своей компании")
+        raise HTTPException(status.HTTP_403_FORBIDDEN, detail="Нельзя отправить предложение на потребность своей компании")
+    if need.visibility != "open_anonymized":
+        raise HTTPException(status.HTTP_403_FORBIDDEN, detail="Потребность недоступна этой компании")
+    blockers: list[str] = []
     if need.status not in ACTIVE_NEED_STATUSES or not need_is_current(need):
         blockers.append("Потребность закрыта или срок её актуальности истёк")
     if data.moq_units > data.available_units:
@@ -290,6 +292,28 @@ async def preview_offer_send(
     if draft is not None:
         resource_kind = draft.payload.get("resource_kind", "capacity")
         product_id = uuid.UUID(draft.payload["product_id"]) if draft.payload.get("product_id") else None
+    if data.request_key:
+        previous = await db.scalar(select(Offer).where(
+            Offer.need_id == need.id, Offer.company_id == data.company_id, Offer.request_key == data.request_key))
+        if previous is not None:
+            if _same_offer_terms(previous, data, product_id=product_id, resource_kind=resource_kind):
+                warnings = await _sending_warnings(db, data.company_id, need, data.moq_units,
+                                                   data.available_units, previous.product_id)
+                return OfferSendPreviewOut(blockers=[], warnings=warnings, missing=[],
+                                           can_send=True, existing_offer_id=previous.id)
+            blockers.append("Повтор с тем же ключом содержит другие условия")
+    elif await db.scalar(select(Offer.id).where(Offer.need_id == need.id, Offer.company_id == data.company_id)):
+        blockers.append("Компания уже отправила предложение по этой потребности")
+    if draft is not None:
+        if draft.status != "draft":
+            blockers.append("Черновик уже использован")
+        if draft.payload.get("need_revision", 1) != need.revision:
+            blockers.append("Спецификация изменилась. Подготовьте новый черновик")
+        source_id = draft.payload.get("product_id")
+        if source_id:
+            source = await db.get(Product, uuid.UUID(source_id))
+            if not source or source.updated_at.isoformat() != draft.payload.get("source_updated_at"):
+                blockers.append("Товар или остаток изменился. Обновите черновик перед отправкой")
     if resource_kind == "stock" and product_id is None:
         blockers.append("Для складского предложения укажите товар")
     if product_id:

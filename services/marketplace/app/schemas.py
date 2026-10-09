@@ -684,6 +684,7 @@ class OfferSendPreviewOut(BaseModel):
     warnings: list[str] = Field(default_factory=list)
     missing: list[str] = Field(default_factory=list)
     can_send: bool = False
+    existing_offer_id: uuid.UUID | None = None
 
 
 class OfferPatch(ProductRules):

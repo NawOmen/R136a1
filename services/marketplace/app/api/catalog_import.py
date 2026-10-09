@@ -18,7 +18,7 @@ from ..category_profile_snapshot import profile_after_specification_change
 from ..category_units import order_unit
 from ..database import get_db
 from ..deps import CurrentUser, get_current_user, require_company_admin, require_company_seller
-from ..models import CatalogImport, Product
+from ..models import CatalogImport, Product, ResourceReservation
 from ..money import decimal
 from ..resources import lock_company, occupies, reservations
 from ..schemas import ProductIn
@@ -142,18 +142,14 @@ def parse_catalog(content: bytes):
 
 
 def _expected_binding(revisions: dict, product_id: str) -> tuple:
-    """Ожидаемое состояние строки из предпросмотра: {id: revision} или
-    {id: {revision, status}}. Возвращает (revision|None, status|None)."""
+    """Ожидаемое состояние строки из предпросмотра: только полная форма
+    {id: {revision, status}}. Неполная привязка отклоняется: иначе показанное
+    решение можно обойти старым форматом."""
     entry = (revisions or {}).get(product_id)
-    if isinstance(entry, dict):
-        revision = entry.get("revision")
-        return (revision if isinstance(revision, int) else None, entry.get("status"))
-    if isinstance(entry, bool) or entry is None:
+    if not isinstance(entry, dict):
         return None, None
-    try:
-        return int(entry), None
-    except (TypeError, ValueError):
-        return None, None
+    revision = entry.get("revision")
+    return (revision if isinstance(revision, int) else None, entry.get("status"))
 
 
 async def match_rows(db: AsyncSession, company_id: uuid.UUID, rows: list[dict]) -> list[dict]:
@@ -322,6 +318,14 @@ async def rollback_catalog_import(company_id: uuid.UUID, import_id: uuid.UUID,
                    if item.product_id == product.id and occupies(item, stock=True))
         if held:
             conflicted.append(str(product.id))
+            continue
+        if str(raw_id) in list(record.product_ids or []):
+            referenced = await db.scalar(select(ResourceReservation.id).where(
+                ResourceReservation.product_id == product.id).limit(1))
+            if referenced is not None:
+                # Исторические ссылки (в т.ч. released) сохраняются: удаление
+                # нарушило бы FK и потеряло историю вместо отката.
+                conflicted.append(str(product.id))
     if conflicted:
         raise HTTPException(409, f"Откат невозможен: действуют обязательства или последующие изменения: {', '.join(sorted(set(conflicted)))}")
     deleted, skipped_published, restored = [], [], []
