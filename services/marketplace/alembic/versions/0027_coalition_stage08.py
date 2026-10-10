@@ -1,8 +1,8 @@
 """Coalition composition changes after confirmation (stage S08)."""
 from alembic import op
 
-revision = "0026"
-down_revision = "0025"
+revision = "0027"
+down_revision = "0026"
 branch_labels = None
 depends_on = None
 
