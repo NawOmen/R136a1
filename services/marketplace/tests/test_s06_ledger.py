@@ -332,6 +332,10 @@ async def test_return_restock_requires_confirmed_event_and_is_idempotent(client,
 
     buyer_headers = {"Authorization": f"Bearer {make_token(buyer)}"}
     seller_headers = {"Authorization": f"Bearer {make_token(seller)}"}
+    arrangement = await client.put(f"/api/v1/deals/{deal.id}/delivery", headers=buyer_headers,
+                                   json={"company_id": str(bc), "weight_kg": 100, "volume_m3": 0.5,
+                                         "method": "self_pickup", "human_approved": True})
+    assert arrangement.status_code == 201 or arrangement.status_code == 200, arrangement.text
     accepted = await client.post(f"/api/v1/deals/{deal.id}/execution", headers=buyer_headers, json={
         "company_id": str(bc), "kind": "acceptance", "units": 10, "note": "Принято по акту",
         "human_approved": True, "idempotency_key": str(uuid.uuid4()),

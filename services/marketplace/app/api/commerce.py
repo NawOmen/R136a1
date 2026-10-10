@@ -13,7 +13,7 @@ from ..commerce import execution_totals, financials
 from ..database import get_db
 from ..deps import CurrentUser, get_current_user, notify, require_company_admin, require_company_buyer, require_company_seller, require_membership
 from ..matching import order_unit
-from ..models import Deal, DealCheckpoint, DealCostSnapshot, DealExecutionEvent, HumanApprovalRecord, Need, Offer, ParticipantOrder, ResourceReservation
+from ..models import Deal, DealCheckpoint, DealCostSnapshot, DealExecutionEvent, DeliveryArrangement, HumanApprovalRecord, Need, Offer, ParticipantOrder, ResourceReservation
 from ..resources import release
 from ..trust import record_human_approval
 
@@ -70,7 +70,22 @@ async def party(db, deal_id, company_id, user, *, lock=False):
 
 async def events_for(db, deal_id):
     return list((await db.scalars(select(DealExecutionEvent).where(DealExecutionEvent.deal_id == deal_id)
-                                 .order_by(DealExecutionEvent.created_at, DealExecutionEvent.id))).all())
+                                  .order_by(DealExecutionEvent.created_at, DealExecutionEvent.id))).all())
+
+
+KIND_RU = {"acceptance": "приёмка", "return": "возврат", "cancellation": "отмена"}
+
+
+async def company_display_name(db, company_id) -> str:
+    name = await db.scalar(text("SELECT display_name FROM auth.companies WHERE id = :id"), {"id": company_id})
+    return name or str(company_id)
+
+
+def execution_unit(need) -> str:
+    try:
+        return order_unit(need.characteristics) if need is not None else "шт"
+    except Exception:
+        return "шт"
 
 
 def validate_quantity(deal, events, kind, units):
@@ -133,6 +148,9 @@ async def create_event(deal_id: uuid.UUID, data: ExecutionIn, user: CurrentUser 
         shipment = await db.scalar(select(DealCheckpoint).where(DealCheckpoint.deal_id == deal.id, DealCheckpoint.kind == "shipment"))
         if not shipment or shipment.status != "completed":
             raise HTTPException(409, "Приёмка доступна после подтверждения отгрузки")
+        arrangement = await db.scalar(select(DeliveryArrangement).where(DeliveryArrangement.deal_id == deal.id))
+        if arrangement is None:
+            raise HTTPException(409, "Приёмка фиксирует получение: сначала выберите способ получения")
     validate_quantity(deal, events, data.kind, data.units)
     event = DealExecutionEvent(deal_id=deal.id, actor_company_id=data.company_id, actor_user_id=user.id,
         idempotency_key=data.idempotency_key, kind=data.kind, units=data.units, note=data.note,
@@ -153,9 +171,12 @@ async def create_event(deal_id: uuid.UUID, data: ExecutionIn, user: CurrentUser 
         other_users = (await db.execute(text(
             "SELECT user_id FROM auth.company_members WHERE company_id = :company_id"
         ), {"company_id": other_company_id})).scalars().all()
+        actor_name = await company_display_name(db, data.company_id)
+        unit = execution_unit(need)
         for other_user_id in set(other_users):
             await notify(db, other_user_id,
-                         f"Запрошено изменение исполнения: {event.kind}, {event.units} шт. Требуется решение",
+                         f"Требуется решение: {KIND_RU.get(event.kind, event.kind)} {event.units} {unit} "
+                         f"по сделке {deal.id} (запрос {event.id} от {actor_name}).",
                          "deal_execution_requested")
     await db.commit()
     return event
@@ -210,9 +231,12 @@ async def decide_event(deal_id: uuid.UUID, event_id: uuid.UUID, data: DecisionIn
     requester_users = (await db.execute(text(
         "SELECT user_id FROM auth.company_members WHERE company_id = :company_id"
     ), {"company_id": event.actor_company_id})).scalars().all()
+    unit = execution_unit(need)
+    verdict = "подтверждено" if data.approved else "отклонено"
     for requester_id in set(requester_users):
         await notify(db, requester_id,
-                     f"Решение по {event.kind} ({event.units} шт.): {'подтверждено' if data.approved else 'отклонено'}",
+                     f"Решение принято: {KIND_RU.get(event.kind, event.kind)} {event.units} {unit} "
+                     f"по сделке {deal.id} (запрос {event.id}) — {verdict}.",
                      "deal_execution_decided")
     await db.commit()
     return event

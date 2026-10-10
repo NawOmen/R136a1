@@ -5,7 +5,7 @@ from decimal import Decimal
 
 import pytest
 from sqlalchemy import select
-from app.models import Deal, DealCheckpoint, DealExecutionEvent, DeliveryAddress, Need, Notification, Offer, Product
+from app.models import Deal, DealCheckpoint, DealExecutionEvent, DeliveryAddress, DeliveryArrangement, Need, Notification, Offer, Product
 from conftest import make_company, make_token, make_user
 
 
@@ -28,6 +28,10 @@ async def order(db_session):
     db_session.add(deal); await db_session.flush()
     for kind in ("production", "shipment"):
         db_session.add(DealCheckpoint(deal_id=deal.id, kind=kind, status="completed"))
+    db_session.add(DeliveryArrangement(deal_id=deal.id, weight_kg=100, volume_m3=0.5,
+                                       cargo_class="small", classification_note="Тестовый способ получения",
+                                       method="self_pickup", buyer_responsible=True,
+                                       confirmed_by_user_id=buyer))
     await db_session.commit()
     return deal.id, bc, sc, {"Authorization": f"Bearer {make_token(buyer)}"}, {"Authorization": f"Bearer {make_token(seller)}"}
 

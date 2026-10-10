@@ -91,7 +91,7 @@ export interface DealMessage { id: string; deal_id: string; author_user_id: stri
 export interface PublicProducer { company_id: string; display_name: string; legal_form: string; region: string | null; about: string | null; production_site_address: string | null; has_photo: boolean; rating: number | null; reviews_count: number; capability_details?: CapabilityDetails | null }
 export interface PublicProductDetail extends Product { producer: PublicProducer }
 export interface DealCheckpoint { id: string; deal_id: string; kind: "production" | "shipment" | "delivery"; status: "pending" | "completed"; note: string | null; completed_at: string | null }
-export interface DeliveryArrangement { id: string; deal_id: string; weight_kg: number; volume_m3: number; cargo_class: "small" | "medium" | "large" | "manual_review"; classification_note: string; method: "buyer_carrier" | "self_pickup" | "seller_delivery"; carrier_name: string | null; tracking_number: string | null; buyer_responsible: boolean }
+export interface DeliveryArrangement { id: string; deal_id: string; weight_kg: number; volume_m3: number; cargo_class: "small" | "medium" | "large" | "manual_review"; classification_note: string; method: "buyer_carrier" | "self_pickup" | "seller_delivery"; carrier_name: string | null; tracking_number: string | null; hazard_class: string | null; buyer_responsible: boolean }
 export interface DealReview { id: string; deal_id: string; reviewer_company_id: string; reviewed_company_id: string; rating: number; comment: string; created_at: string }
 export interface PriceIndexPoint { date: string; average_unit_price_rub: Money; offers_count: number }
 export interface MarketWatch { id: string; category: string; demand_changes: boolean; supply_changes: boolean }
@@ -1199,7 +1199,7 @@ export const marketplace = {
     return marketplaceFetch(`/api/v1/deals/${dealId}/delivery?company_id=${companyId}`, { token });
   },
 
-  saveDelivery(token: string, dealId: string, input: { company_id: string; weight_kg: number; volume_m3: number; method: DeliveryArrangement["method"]; carrier_name?: string; tracking_number?: string }): Promise<DeliveryArrangement> {
+  saveDelivery(token: string, dealId: string, input: { company_id: string; weight_kg: number; volume_m3: number; method: DeliveryArrangement["method"]; carrier_name?: string; tracking_number?: string; hazard_class?: string | null }): Promise<DeliveryArrangement> {
     return marketplaceFetch(`/api/v1/deals/${dealId}/delivery`, { method: "PUT", token, body: JSON.stringify({ ...input, human_approved: true }) });
   },
 

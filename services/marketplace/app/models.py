@@ -390,6 +390,7 @@ class DeliveryArrangement(Base):
     method: Mapped[str] = mapped_column(String(32), nullable=False)
     carrier_name: Mapped[str | None] = mapped_column(String(255), nullable=True)
     tracking_number: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    hazard_class: Mapped[str | None] = mapped_column(String(32), nullable=True)
     buyer_responsible: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True, server_default=text("true"))
     confirmed_by_user_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), nullable=False)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now())

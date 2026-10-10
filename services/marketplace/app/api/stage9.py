@@ -270,18 +270,27 @@ async def save_delivery(deal_id: uuid.UUID, data: DeliveryArrangementIn, user: C
     await require_company_admin(data.company_id, user, db)
     if data.company_id != deal.buyer_company_id:
         raise HTTPException(status.HTTP_403_FORBIDDEN, detail="Организацию получения подтверждает покупатель")
-    cargo_class, note = classify_cargo(data.weight_kg, data.volume_m3, data.hazard_class)
-    item = (await db.execute(select(DeliveryArrangement).where(DeliveryArrangement.deal_id == deal.id))).scalar_one_or_none()
+    # Признак опасного груза сохраняется между изменениями: отсутствие поля
+    # оставляет прежнее ограничение, явный null согласованно снимает его.
+    hazard_class = data.hazard_class
+    stored_hazard = None
+    existing = (await db.execute(select(DeliveryArrangement).where(DeliveryArrangement.deal_id == deal.id))).scalar_one_or_none()
+    if existing is not None:
+        stored_hazard = existing.hazard_class
+    if "hazard_class" not in data.model_fields_set:
+        hazard_class = stored_hazard
+    cargo_class, note = classify_cargo(data.weight_kg, data.volume_m3, hazard_class)
+    item = existing
     values = data.model_dump(exclude={"company_id", "human_approved", "hazard_class"})
     if item is None:
         item = DeliveryArrangement(deal_id=deal.id, cargo_class=cargo_class, classification_note=note,
-            buyer_responsible=True, confirmed_by_user_id=user.id, **values); db.add(item)
+            hazard_class=hazard_class, buyer_responsible=True, confirmed_by_user_id=user.id, **values); db.add(item)
     else:
         for key, value in values.items(): setattr(item, key, value)
-        item.cargo_class, item.classification_note, item.confirmed_by_user_id = cargo_class, note, user.id
+        item.cargo_class, item.classification_note, item.hazard_class, item.confirmed_by_user_id = cargo_class, note, hazard_class, user.id
     await record_human_approval(db, action="confirm_delivery_arrangement", entity_type="deal", entity_id=deal.id,
         actor_user_id=user.id, actor_company_id=data.company_id, permission="company_admin+buyer",
-        decision="approved", payload={**values, "cargo_class": cargo_class},
+        decision="approved", payload={**values, "cargo_class": cargo_class, "hazard_class": hazard_class},
         source_refs=[{"type": "deal", "id": str(deal.id)}], explanation="Покупатель выбрал способ получения; площадка не заключает договор перевозки.")
     await db.commit(); await db.refresh(item); return item
 

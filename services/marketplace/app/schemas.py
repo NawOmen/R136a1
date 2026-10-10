@@ -1111,6 +1111,7 @@ class DeliveryArrangementOut(BaseModel):
     method: str
     carrier_name: str | None
     tracking_number: str | None
+    hazard_class: str | None = None
     buyer_responsible: bool
 
 
