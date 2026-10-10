@@ -22,6 +22,8 @@ from ..deps import (
 from ..matching import _need_parts, _passport_matches, offer_unit_price, order_unit, ACTIVE_NEED_STATUSES
 from ..models import (
     CapabilityPassport,
+    Deal,
+    DealExecutionEvent,
     Need,
     Offer,
     OptimizationVariantRecord,
@@ -429,6 +431,21 @@ async def _calculate_and_store(
                 )
         else:
             await _activate_scenario(db, plan, live, actor_user_id, automatic=True)
+            for allocation in live_result["replacement_allocations"]:
+                await _notify_company_admins(
+                    db,
+                    uuid.UUID(str(allocation["company_id"])),
+                    "Ваша компания назначена заменой: объём перенесён, проверьте новые условия.",
+                    "replacement_activated",
+                )
+            auto_need = await db.get(Need, plan.need_id)
+            if auto_need and auto_need.created_by_user_id:
+                await notify(
+                    db,
+                    auto_need.created_by_user_id,
+                    "Автоматическая замена производителя выполнена в пределах порогов.",
+                    "replacement_activated",
+                )
     else:
         plan.status = "recovery_proposed"
     return result
@@ -908,7 +925,8 @@ async def decide_reserve_commitment(
             raise HTTPException(409,'Уточните стоимость переключения до подтверждения резерва')
         commitment.commercial_terms = data.commercial_terms.model_dump() if data.commercial_terms else None
         commitment.commercial_snapshot = frozen_snapshot(estimate_value=quote,need=plan_need,offer=source_offer,
-            resource={'capacity_units':data.capacity_units,'held_until':str(data.held_until)})
+            resource={'capacity_units':data.capacity_units,'held_until':str(data.held_until),
+                      'switchover_days':data.switchover_days})
         await reserve(db, company_id=data.company_id, anchor_type="reserve", anchor_id=commitment.id,
                       units=data.capacity_units, deadline=plan_need.deadline_date,
                       resource_kind=source_offer.resource_kind if source_offer else "capacity",
@@ -924,6 +942,7 @@ async def decide_reserve_commitment(
         commitment.confirmed_lead_time_days = data.lead_time_days
         commitment.price_tiers = [item.model_dump() for item in data.price_tiers]
         commitment.held_until = data.held_until
+        commitment.switchover_days = data.switchover_days
         commitment.confirmed_by_user_id = user.id
         commitment.confirmed_at = datetime.now(timezone.utc)
         event_type = "reserve_confirmed"
@@ -957,6 +976,7 @@ async def decide_reserve_commitment(
             "delivery_cost_rub": data.delivery_cost_rub,
             "lead_time_days": data.lead_time_days,
             "held_until": data.held_until.isoformat() if data.held_until else None,
+            "switchover_days": data.switchover_days,
             "admission": admission_payload,
         },
         source_refs=[
@@ -1090,6 +1110,7 @@ async def report_producer_failure(
         )
     plan.failed_company_ids = sorted(failed)
     plan.status = "awaiting_reserve_reconfirmation"
+    plan.version += 1
     commitments = (
         await db.execute(
             select(ReserveCommitment).where(
@@ -1116,6 +1137,7 @@ async def report_producer_failure(
                 "reason": data.reason,
                 "failed_company_ids": plan.failed_company_ids,
                 "only_failed_volume_blocked": True,
+                "plan_version": plan.version,
             },
         )
     )
@@ -1143,13 +1165,19 @@ async def approve_recovery(
     db: AsyncSession = Depends(get_db),
 ):
     scenario = await db.get(ResilienceScenario, scenario_id)
-    if scenario is None or scenario.status != "proposed":
+    if scenario is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, detail="Предложение восстановления не найдено")
     if data.expected_revision is None:
         raise HTTPException(428, "Подтвердите показанную версию конфигурации замены")
     await _lock_plan_need(db, scenario.plan_id)
     plan = await db.scalar(select(ResiliencePlan).where(ResiliencePlan.id == scenario.plan_id).with_for_update())
-    await db.refresh(scenario)
+    if plan is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, detail="План устойчивости не найден")
+    scenario = await db.scalar(select(ResilienceScenario).where(ResilienceScenario.id == scenario.id).with_for_update())
+    if scenario is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, detail="Предложение восстановления не найдено")
+    if scenario.status == "activated":
+        return await _plan_out(db, plan)
     if scenario.status != "proposed" or set(scenario.failed_company_ids) != set(plan.failed_company_ids):
         raise HTTPException(409, "Предложение восстановления устарело")
     if data.expected_revision != plan.version:
@@ -1167,6 +1195,33 @@ async def approve_recovery(
             detail="Нельзя активировать неполную или неподтверждённую замену",
         )
     plan_need = await db.get(Need, plan.need_id)
+    # Уже принятая продукция не переносится: принятое засчитывается в счёт
+    # выпавшего объёма в первую очередь; частичное исполнение требует ручного
+    # решения с пересчётом, а не приблизительной математики.
+    accepted_by_seller: dict[str, int] = {}
+    need_deals = (await db.execute(select(Deal).where(Deal.need_id == plan.need_id))).scalars().all()
+    if need_deals:
+        accepted_events = (await db.execute(select(DealExecutionEvent).where(
+            DealExecutionEvent.deal_id.in_([deal.id for deal in need_deals]),
+            DealExecutionEvent.kind == "acceptance",
+            DealExecutionEvent.status == "confirmed"))).scalars().all()
+        deal_seller = {deal.id: str(deal.seller_company_id) for deal in need_deals}
+        for event in accepted_events:
+            seller_id = deal_seller.get(event.deal_id)
+            if seller_id:
+                accepted_by_seller[seller_id] = accepted_by_seller.get(seller_id, 0) + event.units
+    for failed_id in scenario.failed_company_ids:
+        failed_units = next((item["units"] for item in plan.baseline_allocations
+                             if item["company_id"] == failed_id), 0)
+        accepted = accepted_by_seller.get(failed_id, 0)
+        if accepted >= failed_units and failed_units > 0:
+            raise HTTPException(409, "Объём выпавшего производителя уже получен: перенос не требуется")
+        if accepted > 0:
+            raise HTTPException(
+                409,
+                f"Часть объёма ({accepted} из {failed_units}) уже принята: "
+                "требуется ручное решение с пересчётом замены",
+            )
     # Замена поставщика — новое обязательство: допуск проверяется для каждой
     # компании, которая получит заказ.
     replacement_admissions: list[dict] = []
@@ -1226,5 +1281,20 @@ async def approve_recovery(
         explanation="Администратор проверенной компании-покупателя явно подтвердил предложенную конфигурацию восстановления.",
     )
     await _activate_scenario(db, plan, scenario, user.id, automatic=False)
+    for allocation in result["replacement_allocations"]:
+        await _notify_company_admins(
+            db,
+            uuid.UUID(str(allocation["company_id"])),
+            "Ваша компания назначена заменой: объём перенесён, проверьте новые условия.",
+            "replacement_activated",
+        )
+    need = await db.get(Need, plan.need_id)
+    if need and need.created_by_user_id:
+        await notify(
+            db,
+            need.created_by_user_id,
+            "Замена производителя активирована: проверьте обновлённые цену и срок.",
+            "replacement_activated",
+        )
     await db.commit()
     return await _plan_out(db, plan)

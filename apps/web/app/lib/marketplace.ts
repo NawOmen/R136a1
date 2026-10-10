@@ -454,6 +454,7 @@ export interface ReserveCommitment {
   confirmed_delivery_cost_rub: Money | null;
   confirmed_lead_time_days: number | null;
   held_until: string | null;
+  switchover_days: number | null;
 }
 
 export interface ResilienceScenario {
@@ -471,6 +472,7 @@ export interface ResilienceScenario {
     cost_comparison_applicable: boolean;
     delay_days: number;
     auto_eligible: boolean;
+    solver_status?: string;
     explanations: string[];
   };
   status: string;

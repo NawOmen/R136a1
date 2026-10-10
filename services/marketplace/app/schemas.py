@@ -841,6 +841,7 @@ class ReserveDecisionIn(BaseModel):
     lead_time_days: int | None = Field(default=None, gt=0)
     price_tiers: list[PriceTierIn] = Field(default_factory=list)
     held_until: date | None = None
+    switchover_days: int | None = Field(default=None, ge=0, le=365)
 
 
 class FailureSimulationIn(BaseModel):
@@ -877,7 +878,7 @@ class ReserveCommitmentOut(BaseModel):
     confirmed_delivery_cost_rub: Amount | None
     confirmed_lead_time_days: int | None
     held_until: date | None
-
+    switchover_days: int | None = None
 
 class PrimaryObligationOut(BaseModel):
     plan_id: uuid.UUID

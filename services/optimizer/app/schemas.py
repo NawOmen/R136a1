@@ -177,6 +177,7 @@ class ResilienceRequest(BaseModel):
     reserve_options: list[ReserveOptionIn] = Field(default_factory=list, max_length=20)
     max_price_increase_pct: float = Field(default=5, ge=0, le=100)
     max_delay_days: int = Field(default=0, ge=0, le=365)
+    time_limit_seconds: float = Field(default=10, gt=0, le=60)
 
     @model_validator(mode="after")
     def validate_companies(self):
@@ -223,6 +224,7 @@ class FailureScenarioOut(BaseModel):
     auto_eligible: bool
     requires_human_approval: bool
     explanations: list[str]
+    solver_status: str = "optimal"
 
 
 class ResilienceResponse(BaseModel):

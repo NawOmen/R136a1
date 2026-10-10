@@ -3,6 +3,7 @@ from fastapi import HTTPException
 from .money import EXACT_WIRE, MAX_AMOUNT, decimal, amount
 import hashlib
 import json
+import time
 from datetime import date
 from itertools import combinations
 
@@ -315,9 +316,25 @@ def calculate_opportunity_score(data: OpportunityScoreIn) -> OpportunityScoreOut
     return OpportunityScoreOut(score=score, factors=factors)
 
 
+def _solver_status(status, elapsed_seconds: float, time_limit_seconds: float) -> str:
+    """Честное различие исходов: timeout — лимит исчерпан раньше решения,
+    infeasible — допустимого распределения нет, иначе optimal/feasible."""
+    if status == cp_model.INFEASIBLE:
+        return "infeasible"
+    if status in (cp_model.OPTIMAL, cp_model.FEASIBLE):
+        return "optimal" if status == cp_model.OPTIMAL else "feasible"
+    return "timeout" if elapsed_seconds >= time_limit_seconds else "infeasible"
+
+
 def _partial_replacement(
-    demand_units: int, reserves: list[ReserveOptionIn]
-) -> tuple[list[ReplacementAllocation], int, Decimal, int]:
+    demand_units: int, reserves: list[ReserveOptionIn], time_limit_seconds: float = 10
+) -> tuple[list[ReplacementAllocation], int, Decimal, int, str]:
+    """Возвращает (назначения, покрыто, стоимость, срок, статус решателя).
+
+    Статусы различаются честно: optimal/feasible — решение найдено;
+    infeasible — допустимого распределения нет при любых затратах времени;
+    timeout — лимит исчерпан раньше решения (не выдаётся за отсутствие решения).
+    """
     eligible = sorted(
         (
             item
@@ -326,8 +343,10 @@ def _partial_replacement(
         ),
         key=lambda item: str(item.company_id),
     )
-    if demand_units <= 0 or not eligible:
-        return [], 0, 0, 0
+    if demand_units <= 0:
+        return [], 0, 0, 0, "optimal"
+    if not eligible:
+        return [], 0, 0, 0, "infeasible"
 
     _validate_integer_budget(eligible,demand_units)
     model = cp_model.CpModel()
@@ -370,7 +389,7 @@ def _partial_replacement(
         )
 
     if not total_units_terms:
-        return [], 0, 0, 0
+        return [], 0, 0, 0, "infeasible"
     covered = sum(total_units_terms)
     cost = sum(total_cost_terms)
     model.add(covered <= demand_units)
@@ -380,19 +399,25 @@ def _partial_replacement(
     solver = cp_model.CpSolver()
     solver.parameters.num_search_workers = 1
     solver.parameters.random_seed = 0
-    solver.parameters.max_time_in_seconds = 10
+    solver.parameters.max_time_in_seconds = time_limit_seconds
+    started = time.monotonic()
     status = solver.solve(model)
+    elapsed = time.monotonic() - started
+    if status == cp_model.INFEASIBLE:
+        return [], 0, 0, 0, "infeasible"
     if status not in (cp_model.OPTIMAL, cp_model.FEASIBLE):
-        return [], 0, 0, 0
+        return [], 0, 0, 0, _solver_status(status, elapsed, time_limit_seconds)
     max_covered = solver.value(covered)
     if max_covered <= 0:
-        return [], 0, 0, 0
+        return [], 0, 0, 0, "infeasible"
 
     model.add(covered == max_covered)
     model.minimize(cost)
     status = solver.solve(model)
     if status not in (cp_model.OPTIMAL, cp_model.FEASIBLE):
-        return [], 0, 0, 0
+        coverage_status = "feasible"
+    else:
+        coverage_status = "optimal" if status == cp_model.OPTIMAL else "feasible"
 
     allocations = []
     today = date.today()
@@ -431,6 +456,7 @@ def _partial_replacement(
         sum(item.units for item in allocations),
         amount(sum(item.total_cost_rub for item in allocations)),
         max((item.lead_time_days for item in allocations), default=0),
+        coverage_status,
     )
 
 
@@ -464,14 +490,14 @@ def calculate_resilience(request: ResilienceRequest) -> ResilienceResponse:
         failed_ids = [item.company_id for item in failed]
         failed_units = sum(item.units for item in failed)
         failed_cost = sum(item.total_cost_rub for item in failed)
-        confirmed_replacements, confirmed_covered, confirmed_cost, confirmed_lead = _partial_replacement(
-            failed_units, confirmed_reserves
+        confirmed_replacements, confirmed_covered, confirmed_cost, confirmed_lead, confirmed_solver = _partial_replacement(
+            failed_units, confirmed_reserves, request.time_limit_seconds
         )
         unconfirmed_reserves = [
             item for item in request.reserve_options if item not in confirmed_reserves
         ]
-        probable_replacements, probable_covered, probable_cost, probable_lead = _partial_replacement(
-            failed_units - confirmed_covered, unconfirmed_reserves
+        probable_replacements, probable_covered, probable_cost, probable_lead, probable_solver = _partial_replacement(
+            failed_units - confirmed_covered, unconfirmed_reserves, request.time_limit_seconds
         )
         replacements = [*confirmed_replacements, *probable_replacements]
         covered = confirmed_covered + probable_covered
@@ -510,6 +536,19 @@ def calculate_resilience(request: ResilienceRequest) -> ResilienceResponse:
             f"Заблокирован только объём выпавших производителей: {failed_units} шт.",
             f"Подтверждённым горячим резервом покрывается {confirmed_covered} шт.",
         ]
+        if "timeout" in (confirmed_solver, probable_solver):
+            solver_status = "timeout"
+            explanations.append(
+                "Расчёт не уложился в лимит времени: это не отсутствие решения. "
+                "Повторите расчёт позже или упростите условия."
+            )
+        elif uncovered and "infeasible" in (confirmed_solver, probable_solver):
+            solver_status = "infeasible"
+            explanations.append("Допустимого распределения резерва нет: deficit честно показан")
+        elif (confirmed_solver, probable_solver) == ("optimal", "optimal"):
+            solver_status = "optimal"
+        else:
+            solver_status = "feasible"
         if uncovered:
             explanations.append(
                 f"Для {uncovered} шт. не найдено даже вероятной альтернативы"
@@ -552,6 +591,7 @@ def calculate_resilience(request: ResilienceRequest) -> ResilienceResponse:
                 auto_eligible=auto_eligible,
                 requires_human_approval=not auto_eligible,
                 explanations=explanations,
+                solver_status=solver_status,
             )
         )
 
