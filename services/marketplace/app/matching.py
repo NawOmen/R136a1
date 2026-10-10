@@ -222,8 +222,22 @@ async def _build_coalitions(db: AsyncSession, needs: list[Need]) -> None:
     for (_, subtype, common_json, hard_json), members in groups.items():
         distinct_companies = {item.company_id for item in members}
         if len(members) < 2 or len(distinct_companies) < 2:
+            # S08.01: прямой путь с объяснением — коалиции нет, но подбор идёт.
+            for item in members:
+                if item.status == "waiting_for_match" and item.no_match_reason \
+                        and "прямой подбор" not in item.no_match_reason:
+                    item.no_match_reason += (
+                        "; совместимых запросов других компаний пока нет — доступен прямой подбор "
+                        "предложения, коалиция соберётся при появлении спроса"
+                    )
             continue
         members = sorted(members, key=lambda item: str(item.id))
+        # S08.01: у группы должно быть согласуемое окно сроков — производство
+        # обязано завершиться до самого раннего дедлайна участника.
+        latest_start = date.today()
+        earliest_deadline = min(item.deadline_date for item in members)
+        if earliest_deadline < latest_start:
+            continue
         total_units = sum(item.volume_units for item in members)
         compatible_passports = [
             item
@@ -287,6 +301,7 @@ async def _build_coalitions(db: AsyncSession, needs: list[Need]) -> None:
                 explanation=[
                     "Общая производственная основа и жёсткие ограничения совпадают",
                     f"Общий объём {total_units:,} {order_unit(members[0].characteristics)} достигает MOQ {target_moq or 0:,} {order_unit(members[0].characteristics)}".replace(",", " "),
+                    f"Согласуемое окно: производство до {earliest_deadline.isoformat()} (ранний дедлайн участников)",
                     "Индивидуальная печать, упаковка и логистика будут рассчитаны отдельно",
                 ],
             )
