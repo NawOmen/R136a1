@@ -120,7 +120,8 @@ float разряды не восстанавливаются. Неконечны
 
 ## Маршруты этапа 8 (изменение состава группы)
 
-- `POST /group-offers/{id}/publish` — дополнительно: `lot_multiple` (кратность партии, по умолчанию 1; общий объём и каждый участник кратны ей), производство обязано завершиться до раннего дедлайна участников (`422` иначе).
+- `POST /group-offers/{id}/publish` — дополнительно: `lot_multiple` (кратность партии, по умолчанию 1; общий объём и каждый участник кратны ей), производство обязано завершиться до раннего дедлайна участников (`422` иначе). Выдача условий включает `lot_multiple`.
+- `GET /coalitions/mine` — поле `confirmed_volume_units`: объём участников со статусом `approved` отдельно от заявленного `combined_volume_units`. Заказы хранят `coalition_version`; аналитика показывает только действующие (не `superseded`).
 - `GET /coalitions/mine` — поле `confirmed_volume_units`: объём участников со статусом `approved` отдельно от заявленного `combined_volume_units`.
 - `POST /coalitions/{id}/change-requests` — запрос изменения подтверждённой группы: `{company_id, reason, proposed_units {need_id: units}, resource_policy, idempotency_key}`. Повтор по тому же ключу возвращает тот же запрос, другой состав — `409`.
 - `POST /coalition-changes/{id}/decision` — решение производителя `{company_id, approved, expected_revision}`. Выход ниже MOQ аннулирует старые условия (`applied_annulled`, группа `recalculation_required`, удержания освобождены); иначе состав применяется единой записью (`applied`, новая ревизия, согласия сброшены). Старая группа не удаляется.

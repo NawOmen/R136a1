@@ -9,6 +9,20 @@ depends_on = None
 
 def upgrade():
     op.execute("ALTER TABLE marketplace.group_offers ADD COLUMN IF NOT EXISTS lot_multiple INTEGER NOT NULL DEFAULT 1")
+    op.execute("ALTER TABLE marketplace.participant_orders ADD COLUMN IF NOT EXISTS coalition_version INTEGER NOT NULL DEFAULT 1")
+    op.execute(
+        "UPDATE marketplace.participant_orders AS orders SET coalition_version = coalitions.version "
+        "FROM marketplace.coalitions AS coalitions WHERE orders.coalition_id = coalitions.id "
+        "AND orders.coalition_version = 1"
+    )
+    op.execute("ALTER TABLE marketplace.participant_orders DROP CONSTRAINT IF EXISTS uq_participant_order_need")
+    op.execute(
+        "DO $$ BEGIN "
+        "IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'uq_participant_order_need_version') THEN "
+        "ALTER TABLE marketplace.participant_orders ADD CONSTRAINT uq_participant_order_need_version "
+        "UNIQUE (coalition_id, need_id, coalition_version); "
+        "END IF; END $$"
+    )
     op.execute(
         "CREATE TABLE IF NOT EXISTS marketplace.coalition_change_requests ("
         "id UUID PRIMARY KEY, "
@@ -31,6 +45,15 @@ def upgrade():
 
 
 def downgrade():
+    op.execute("ALTER TABLE marketplace.participant_orders DROP CONSTRAINT IF EXISTS uq_participant_order_need_version")
+    op.execute(
+        "DO $$ BEGIN "
+        "IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'uq_participant_order_need') THEN "
+        "ALTER TABLE marketplace.participant_orders ADD CONSTRAINT uq_participant_order_need "
+        "UNIQUE (coalition_id, need_id); "
+        "END IF; END $$"
+    )
+    op.execute("ALTER TABLE marketplace.participant_orders DROP COLUMN IF EXISTS coalition_version")
     op.execute("ALTER TABLE marketplace.coalition_change_requests DROP CONSTRAINT IF EXISTS uq_coalition_change_request_key")
     op.execute("DROP TABLE IF EXISTS marketplace.coalition_change_requests")
     op.execute("ALTER TABLE marketplace.group_offers DROP COLUMN IF EXISTS lot_multiple")

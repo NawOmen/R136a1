@@ -654,6 +654,7 @@ async def decide_coalition(
                     seller_company_id=group_offer.company_id,
                     units=item.units,
                     total_price_rub=item.total_cost_rub,
+                    coalition_version=coalition.version,
                     commercial_snapshot=await group_snapshot(db,item.commercial_estimate,member_needs[item.need_id],resource={'group_offer_id':str(group_offer.id),'coalition_version':coalition.version,'price_tiers':group_offer.price_tiers,'production_start':str(group_offer.production_start),'production_end':str(group_offer.production_end),'fill_deadline':str(group_offer.fill_deadline)}),
                     status="created",
                 )

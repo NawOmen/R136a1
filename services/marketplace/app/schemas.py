@@ -770,6 +770,7 @@ class GroupOfferOut(BaseModel):
     opportunity_id: uuid.UUID | None
     min_total_units: int | None
     max_total_units: int | None
+    lot_multiple: int = 1
     price_tiers: list[dict[str, Any]]
     production_start: date | None
     production_end: date | None

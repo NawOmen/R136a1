@@ -618,7 +618,7 @@ class ParticipantOrder(Base):
     commercial_snapshot: Mapped[dict | None] = mapped_column(ExactJSONB(none_as_null=True), nullable=True)
     __tablename__ = "participant_orders"
     __table_args__ = (
-        UniqueConstraint("coalition_id", "need_id", name="uq_participant_order_need"),
+        UniqueConstraint("coalition_id", "need_id", "coalition_version", name="uq_participant_order_need_version"),
         {"schema": SCHEMA},
     )
 
@@ -635,6 +635,7 @@ class ParticipantOrder(Base):
     units: Mapped[int] = mapped_column(Integer, nullable=False)
     total_price_rub: Mapped[Decimal] = mapped_column(ExactNumeric(), nullable=False)
     status: Mapped[str] = mapped_column(String(32), nullable=False, default="created")
+    coalition_version: Mapped[int] = mapped_column(Integer, nullable=False, default=1, server_default="1")
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now())
 
 

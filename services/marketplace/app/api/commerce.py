@@ -258,7 +258,8 @@ async def analytics(company_id: uuid.UUID, role: Literal["buyer", "seller"], sta
     if category: offer_query = offer_query.where(Need.category == category)
     offers = list((await db.scalars(offer_query)).all())
     group_owner = ParticipantOrder.seller_company_id if role == "seller" else ParticipantOrder.buyer_company_id
-    group_query = select(ParticipantOrder, Need).join(Need, Need.id == ParticipantOrder.need_id).where(group_owner == company_id)
+    group_query = select(ParticipantOrder, Need).join(Need, Need.id == ParticipantOrder.need_id).where(
+        group_owner == company_id, ParticipantOrder.status != "superseded")
     if start: group_query = group_query.where(ParticipantOrder.created_at >= datetime.combine(start, time.min, tzinfo=timezone.utc))
     if end: group_query = group_query.where(ParticipantOrder.created_at <= datetime.combine(end, time.max, tzinfo=timezone.utc))
     if category: group_query = group_query.where(Need.category == category)
