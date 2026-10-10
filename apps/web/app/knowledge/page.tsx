@@ -14,7 +14,24 @@ const FAQ = [
 ];
 
 export default function KnowledgePage() {
-  const [question,setQuestion]=useState(""); const [answer,setAnswer]=useState(""); const [busy,setBusy]=useState(false); const [error,setError]=useState<string|null>(null);
-  async function ask(event:FormEvent){event.preventDefault();const token=getToken();if(!token){setError("Войдите, чтобы задать вопрос ИИ-помощнику.");return;}setBusy(true);setError(null);try{setAnswer((await agents.askPlatform(token,question)).answer);}catch(e){setError(e instanceof Error?e.message:"Помощник недоступен.");}finally{setBusy(false);}}
-  return <div><h1>Помощь и база знаний</h1><p className="subtitle">Ответы о работе ПоРукам и локальный ИИ-помощник</p><div className="knowledge-layout"><section>{FAQ.map(([title,body])=><details className="card faq" key={title}><summary>{title}</summary><p>{body}</p></details>)}</section><aside className="card assistant-card"><h2>Спросить помощника</h2><p className="hint">Помощник отвечает по правилам платформы и не совершает действий.</p><form onSubmit={ask}><div className="field"><label htmlFor="assistant-question">Ваш вопрос</label><textarea id="assistant-question" minLength={3} required value={question} onChange={(e)=>setQuestion(e.target.value)}/></div><button className="btn btn-primary" disabled={busy}>{busy?"Думаю…":"Спросить"}</button></form>{error&&<div className="alert alert-error">{error}</div>}{answer&&<div className="assistant-answer">{answer}</div>}<Link href="/support">Не нашли ответ? Написать в поддержку</Link></aside></div></div>;
+  const [question,setQuestion]=useState("");
+  const [answer,setAnswer]=useState("");
+  const [links,setLinks]=useState<string[]>([]);
+  const [busy,setBusy]=useState(false);
+  const [error,setError]=useState<string|null>(null);
+
+  async function ask(event:FormEvent){
+    event.preventDefault();
+    const token=getToken();
+    if(!token){setError("Войдите, чтобы задать вопрос ИИ-помощнику.");return;}
+    setBusy(true);setError(null);
+    try{
+      const result=await agents.askPlatform(token,question);
+      setAnswer(result.answer);
+      setLinks(result.links ?? []);
+    }catch(e){setError(e instanceof Error?e.message:"Помощник недоступен. Проверьте соединение и повторите.");}
+    finally{setBusy(false);}
+  }
+
+  return <div><h1>Помощь и база знаний</h1><p className="subtitle">Ответы о работе ПоРукам и локальный ИИ-помощник</p><div className="knowledge-layout"><section aria-label="Частые вопросы">{FAQ.map(([title,body])=><details className="card faq" key={title}><summary>{title}</summary><p>{body}</p></details>)}</section><aside className="card assistant-card"><h2>Спросить помощника</h2><p className="hint">Помощник отвечает только по проверенной справке платформы, показывает источник и не принимает финансовых решений. Вопрос считается недоверенными данными.</p><form onSubmit={ask}><div className="field"><label htmlFor="assistant-question">Ваш вопрос</label><textarea id="assistant-question" minLength={3} required value={question} onChange={(e)=>setQuestion(e.target.value)}/></div><button className="btn btn-primary" disabled={busy}>{busy?"Думаю…":"Спросить"}</button></form>{error&&<div className="alert alert-error" role="alert">{error} <button type="button" className="btn btn-secondary btn-sm" onClick={()=>setError(null)}>Понятно</button></div>}{answer&&<div className="assistant-answer" aria-live="polite"><p>{answer}</p><p className="hint">Источник: справка платформы ПоРукам. Финансовые решения помощник не принимает.</p>{links.length>0&&<ul>{links.map((link)=><li key={link}><Link href={link}>{link}</Link></li>)}</ul>}</div>}<Link href="/support">Не нашли ответ? Написать в поддержку</Link></aside></div></div>;
 }

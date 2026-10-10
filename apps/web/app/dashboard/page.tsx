@@ -27,6 +27,7 @@ export default function DashboardPage() {
   const [error, setError] = useState<string | null>(null);
   const [mode, setMode] = useState<Mode>(null);
   const [unreadCount, setUnreadCount] = useState(0);
+  const [nextStep, setNextStep] = useState<{ title: string; description: string; href: string } | null>(null);
 
   useEffect(() => {
     const token = getToken();
@@ -49,6 +50,12 @@ export default function DashboardPage() {
           .catch(() => {
             // счётчик уведомлений не критичен для дашборда
           });
+        marketplace
+          .getNextStep(token)
+          .then(setNextStep)
+          .catch(() => {
+            // персональный шаг не критичен для дашборда
+          });
       })
       .catch((err: unknown) => {
         setError(err instanceof ApiError ? err.message : "Не удалось загрузить данные аккаунта.");
@@ -58,6 +65,7 @@ export default function DashboardPage() {
 
   function handleLogout() {
     clearToken();
+    window.localStorage.removeItem("porukam-work-mode");
     router.push("/login");
   }
 
@@ -90,9 +98,28 @@ export default function DashboardPage() {
   const canSell = companies.some((company) => company.membership?.can_sell);
   const buyerCompany = companies.find((company) => company.membership?.can_buy);
 
+  // При смене компаний сбрасываем чужой режим: нельзя оставаться в режиме без прав.
+  useEffect(() => {
+    if (!user || user.is_marketplace_admin) return;
+    if (mode === "buy" && !canBuy) setMode(canSell ? "sell" : null);
+    if (mode === "sell" && !canSell) setMode(canBuy ? "buy" : null);
+  }, [companies, mode, canBuy, canSell, user]);
+
   return (
     <div className="dashboard-page">
       <OnboardingTour canBuy={canBuy} canSell={canSell} />
+      {nextStep && (
+        <section className="card" aria-live="polite">
+          <span className="eyebrow">Следующий шаг</span>
+          <h2>{nextStep.title}</h2>
+          <p className="subtitle">{nextStep.description}</p>
+          <div className="actions">
+            <Link href={nextStep.href} className="btn btn-primary btn-sm">
+              Перейти
+            </Link>
+          </div>
+        </section>
+      )}
       <div className="dashboard-head">
         <div>
           <span className="eyebrow">Центр управления</span>

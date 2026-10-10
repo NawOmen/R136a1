@@ -1,7 +1,8 @@
 "use client";
 
 // Мои потребности (GET /needs/mine): статус, объём, бюджет, срок,
-// переход к деталям.
+// переход к деталям. Повтор — новый черновик с новыми датами:
+// старые файлы, допуски, резервы и согласия не переносятся.
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
@@ -13,8 +14,15 @@ import {
   marketplace,
   Need,
   NEED_STATUS_LABELS,
+  RepeatPreview,
 } from "../lib/marketplace";
 import { useMe } from "../lib/useMe";
+
+function defaultDeadline(): string {
+  const deadline = new Date();
+  deadline.setDate(deadline.getDate() + 30);
+  return deadline.toISOString().slice(0, 10);
+}
 
 export default function MyNeedsPage() {
   useMe(); // проверка входа и данных аккаунта
@@ -22,34 +30,71 @@ export default function MyNeedsPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [repeatId, setRepeatId] = useState<string | null>(null);
+  const [preview, setPreview] = useState<RepeatPreview | null>(null);
+  const [previewLoading, setPreviewLoading] = useState(false);
+  const [deadline, setDeadline] = useState(defaultDeadline());
+  const [validUntil, setValidUntil] = useState(defaultDeadline());
   const [repeating, setRepeating] = useState(false);
 
-  useEffect(() => {
+  async function load() {
     const token = getToken();
     if (!token) return;
-    marketplace
-      .getMyNeeds(token)
-      .then(setNeeds)
-      .catch((err: unknown) =>
-        setError(err instanceof ApiError ? err.message : "Не удалось загрузить потребности."),
-      )
-      .finally(() => setLoading(false));
+    setLoading(true);
+    setError(null);
+    try {
+      setNeeds(await marketplace.getMyNeeds(token));
+    } catch (err: unknown) {
+      setError(err instanceof ApiError ? err.message : "Не удалось загрузить потребности.");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  useEffect(() => {
+    void load();
   }, []);
 
-  async function repeat(need: Need) {
-    const token = getToken(); if (!token) return;
-    setRepeating(true); setError(null);
+  async function openRepeat(need: Need) {
+    const token = getToken();
+    if (!token) return;
+    setRepeatId(need.id);
+    setPreview(null);
+    setDeadline(defaultDeadline());
+    setValidUntil(defaultDeadline());
+    setError(null);
+    setPreviewLoading(true);
     try {
-      const deadline = new Date(); deadline.setDate(deadline.getDate() + 30);
-      const deadlineDate = deadline.toISOString().slice(0, 10);
-      const storageKey = `porukam:repeat:${need.id}:${deadlineDate}`;
+      setPreview(await marketplace.previewRepeat(token, need.id));
+    } catch (err: unknown) {
+      setError(err instanceof ApiError ? err.message : "Не удалось сравнить условия повтора.");
+    } finally {
+      setPreviewLoading(false);
+    }
+  }
+
+  async function repeat(need: Need) {
+    const token = getToken();
+    if (!token) return;
+    if (!deadline) {
+      setError("Укажите новый срок выполнения.");
+      return;
+    }
+    setRepeating(true);
+    setError(null);
+    try {
+      const storageKey = `porukam:repeat:${need.id}:${deadline}`;
       const requestKey = sessionStorage.getItem(storageKey) ?? crypto.randomUUID();
       sessionStorage.setItem(storageKey, requestKey);
-      const copy = await marketplace.repeatNeed(token, need.id, deadlineDate, requestKey);
+      const copy = await marketplace.repeatNeed(token, need.id, deadline, requestKey, validUntil || undefined);
       sessionStorage.removeItem(storageKey);
-      setNeeds((current) => [copy, ...current]); setRepeatId(null);
-    } catch (err) { setError(err instanceof ApiError ? err.message : "Не удалось повторить потребность."); }
-    finally { setRepeating(false); }
+      setNeeds((current) => [copy, ...current]);
+      setRepeatId(null);
+      setPreview(null);
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : "Не удалось повторить потребность.");
+    } finally {
+      setRepeating(false);
+    }
   }
 
   if (loading) return <p className="hint">Загрузка...</p>;
@@ -64,9 +109,16 @@ export default function MyNeedsPage() {
       </div>
       <p className="subtitle">Потребности, созданные вашими компаниями</p>
 
-      {error && <div className="alert alert-error">{error}</div>}
+      {error && (
+        <div className="alert alert-error" role="alert">
+          {error}{" "}
+          <button type="button" className="btn btn-secondary btn-sm" onClick={() => void load()}>
+            Повторить загрузку
+          </button>
+        </div>
+      )}
 
-      {!error && needs.length === 0 ? (
+      {!loading && !error && needs.length === 0 ? (
         <p className="hint">
           Потребностей пока нет. Создайте первую — производители смогут предложить свои условия.
         </p>
@@ -83,7 +135,81 @@ export default function MyNeedsPage() {
                 </span>
                 <span className={`badge badge-${need.status}`}>{NEED_STATUS_LABELS[need.status]}</span>
               </Link>
-              {repeatId === need.id ? <div className="repeat-confirm"><span>Создать новый черновик со сроком +30 дней? Файлы, цены, допуск поставщика и прежние согласия не переносятся. Перед публикацией проверьте характеристики, адрес и бюджет.</span><button className="btn btn-primary btn-sm" disabled={repeating} onClick={() => void repeat(need)}>Да, создать</button><button className="btn btn-secondary btn-sm" onClick={() => setRepeatId(null)}>Отмена</button></div> : <button className="btn btn-secondary btn-sm" onClick={() => setRepeatId(need.id)}>Повторить заказ</button>}
+              {repeatId === need.id ? (
+                <div className="repeat-confirm">
+                  <strong>Повтор закупки — новый черновик</strong>
+                  {previewLoading ? (
+                    <p className="hint">Сравниваем прошлые и текущие условия...</p>
+                  ) : preview ? (
+                    <>
+                      <ul className="company-list">
+                        {preview.changes.map((change) => (
+                          <li key={change.field} className="company-meta">
+                            {change.field}: было — {change.was ?? "—"}; станет — {change.now ?? "—"}
+                          </li>
+                        ))}
+                      </ul>
+                      <p className="hint">
+                        Не переносится: {preview.not_carried.join("; ")}. Потребуется новое
+                        подтверждение и публикация.
+                      </p>
+                      {preview.warnings.map((warning) => (
+                        <p key={warning} className="alert alert-warning">
+                          {warning}
+                        </p>
+                      ))}
+                    </>
+                  ) : null}
+                  <div className="field">
+                    <label htmlFor={`deadline-${need.id}`}>Новый срок выполнения</label>
+                    <input
+                      id={`deadline-${need.id}`}
+                      type="date"
+                      value={deadline}
+                      onChange={(event) => setDeadline(event.target.value)}
+                      required
+                    />
+                  </div>
+                  <div className="field">
+                    <label htmlFor={`valid-${need.id}`}>Карточка актуальна до</label>
+                    <input
+                      id={`valid-${need.id}`}
+                      type="date"
+                      value={validUntil}
+                      onChange={(event) => setValidUntil(event.target.value)}
+                    />
+                  </div>
+                  <div className="actions">
+                    <button
+                      type="button"
+                      className="btn btn-primary btn-sm"
+                      disabled={repeating || previewLoading}
+                      onClick={() => void repeat(need)}
+                    >
+                      {repeating ? "Создаём..." : "Да, создать черновик"}
+                    </button>
+                    <button
+                      type="button"
+                      className="btn btn-secondary btn-sm"
+                      disabled={repeating}
+                      onClick={() => {
+                        setRepeatId(null);
+                        setPreview(null);
+                      }}
+                    >
+                      Отмена
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <button
+                  type="button"
+                  className="btn btn-secondary btn-sm"
+                  onClick={() => void openRepeat(need)}
+                >
+                  Повторить заказ
+                </button>
+              )}
             </li>
           ))}
         </ul>

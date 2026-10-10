@@ -1051,6 +1051,31 @@ class NeedRepeatIn(BaseModel):
     request_key: uuid.UUID | None = None
 
 
+class RepeatChangeOut(BaseModel):
+    field: str
+    was: str | None = None
+    now: str | None = None
+
+
+class RepeatPreviewOut(BaseModel):
+    """Сравнение прошлой потребности с текущими условиями до повтора.
+
+    Только чтение: повтор выполняется отдельным запросом с новыми датами.
+    """
+
+    changes: list[RepeatChangeOut] = Field(default_factory=list)
+    not_carried: list[str] = Field(default_factory=list)
+    warnings: list[str] = Field(default_factory=list)
+
+
+class NextStepOut(BaseModel):
+    """Персональный следующий шаг: первое невыполненное действие."""
+
+    title: str
+    description: str
+    href: str
+
+
 class CharacteristicValidationIn(BaseModel):
     category: str = Field(min_length=2, max_length=120)
     subcategory: str | None = Field(default=None, max_length=120)

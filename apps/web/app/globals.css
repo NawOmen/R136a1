@@ -963,3 +963,9 @@ h2 {
 }
 
 .draft-panel { display: grid; gap: 8px; margin-top: 14px; padding: 14px; border: 1px solid var(--border); border-radius: 7px; background: var(--bg-accent); }.draft-panel__title { margin: 0; color: var(--primary); font-size: 13px; font-weight: 800; }.draft-fields { display: grid; gap: 6px; margin: 0; padding-left: 0; list-style: none; }.draft-fields li { color: var(--text-muted); font-size: 12px; }.draft-fields b { color: var(--text); }.draft-source { color: var(--text-muted); font-style: italic; }.draft-manual { margin-left: 6px; padding: 1px 6px; border-radius: 4px; color: #7a4b00; background: #ffe6b8; font-size: 10px; font-weight: 800; text-transform: uppercase; }.draft-note { display: block; color: var(--text-muted); }.draft-missing { margin: 0; color: #7a4b00; font-size: 12px; }.draft-warning { margin: 0; color: #8a1f1f; font-size: 12px; }
+
+/* Этап 11: доступность без редизайна — видимый фокус и reduced motion. */
+:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; scroll-behavior: auto !important; }
+}

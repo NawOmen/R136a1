@@ -97,10 +97,11 @@ export default function AdminPage() {
   async function handleApprove(company: Company) {
     const token = getToken();
     if (!token) return;
+    const comment = window.prompt("Комментарий к подтверждению (необязательно):", "") ?? "";
     setBusyId(company.id);
     setActionError(null);
     try {
-      await api.decideCompanyVerification(token, company.id, "approve");
+      await api.decideCompanyVerification(token, company.id, "approve", comment.trim() || undefined);
       await refreshPending(token, statusFilter, search);
     } catch (err) {
       setActionError(err instanceof ApiError ? err.message : "Не удалось подтвердить компанию.");

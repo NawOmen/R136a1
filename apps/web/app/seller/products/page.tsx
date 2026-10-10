@@ -76,6 +76,7 @@ export default function SellerProductsPage() {
   const [creating, setCreating] = useState(false);
   const [quantityApproved, setQuantityApproved] = useState(false);
   const [publishingId, setPublishingId] = useState<string | null>(null);
+  const [duplicatingId, setDuplicatingId] = useState<string | null>(null);
 
   useEffect(() => {
     const token = getToken();
@@ -213,6 +214,22 @@ export default function SellerProductsPage() {
       setError(err instanceof ApiError ? err.message : "Не удалось изменить публикацию.");
     } finally {
       setPublishingId(null);
+    }
+  }
+
+  async function handleDuplicate(product: Product) {
+    const token = getToken();
+    if (!token) return;
+    setDuplicatingId(product.id);
+    setError(null);
+    try {
+      await marketplace.duplicateProduct(token, product.id);
+      const updated = await marketplace.getCompanyProducts(token, companyId);
+      setProducts(updated);
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : "Не удалось создать черновик из шаблона.");
+    } finally {
+      setDuplicatingId(null);
     }
   }
 
@@ -511,6 +528,15 @@ export default function SellerProductsPage() {
                       : product.is_published
                         ? "Снять с публикации"
                         : "Опубликовать"}
+                  </button>
+                  <button
+                    type="button"
+                    className="btn btn-secondary btn-sm"
+                    disabled={duplicatingId === product.id}
+                    title="Создать черновик-копию без публикации"
+                    onClick={() => void handleDuplicate(product)}
+                  >
+                    {duplicatingId === product.id ? "..." : "Дублировать как черновик"}
                   </button>
                 </div>
               </li>
