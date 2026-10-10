@@ -16,7 +16,7 @@ from app.schemas import CoalitionDecisionIn, OfferSelectIn, ReserveDecisionIn, G
 
 def result(value):
     return NS(scalar_one_or_none=lambda: value, scalar_one=lambda: value,
-              scalars=lambda: NS(first=lambda: value, all=lambda: value))
+              scalars=lambda: NS(first=lambda: value, all=lambda: value), all=lambda: value)
 
 
 def setup_revision():
@@ -61,13 +61,16 @@ class StaleCapacityProfileTests(IsolatedAsyncioTestCase):
                 else:
                     module = market
                     stack.enter_context(patch.object(module, '_lock_coalition_needs', AsyncMock(return_value={need.id: need})))
+                    stack.enter_context(patch.object(module, 'record_human_approval', AsyncMock()))
                     coalition = NS(id=uuid.uuid4(), version=1, status='awaiting_approvals', producer_company_id=seller,
                                    compatibility_profile_id=uuid.uuid4())
                     members = [NS(id=uuid.uuid4(), need_id=need.id, buyer_company_id=buyer, units=100, approval_status='pending',commercial_estimate={'complete':True})]
                     group = NS(id=uuid.uuid4(), coalition_id=coalition.id, company_id=seller, status='preliminary',
                                seller_approval_status='approved', fill_deadline=date.today()+timedelta(days=1))
                     if route == 'group_confirm':
-                        db.execute.side_effect = [result(coalition), result(group), result(members[0]), result(members)]
+                        db.execute.side_effect = [result(coalition), result(members[0]), result(group), result(members),
+                                                  result('verified'),
+                                                  result([(member.buyer_company_id, 'verified') for member in members])]
                         db.get.return_value = need
                         action = lambda: market.decide_coalition(coalition.id, CoalitionDecisionIn(company_id=buyer, decision='approved', expected_revision=1), user, db)
                     else:

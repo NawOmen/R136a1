@@ -1471,9 +1471,9 @@ export const marketplace = {
     });
   },
 
-  approveRecovery(token: string, scenarioId: string): Promise<ResiliencePlan> {
+  approveRecovery(token: string, scenarioId: string, expectedRevision: number): Promise<ResiliencePlan> {
     return marketplaceFetch(`/api/v1/resilience-scenarios/${scenarioId}/approve`, {
-      method: "POST", token, body: JSON.stringify({ approved: true }),
+      method: "POST", token, body: JSON.stringify({ approved: true, expected_revision: expectedRevision }),
     });
   },
 
@@ -1550,17 +1550,18 @@ export const marketplace = {
     companyId: string,
     decision: "approved" | "rejected",
     expectedRevision: number,
+    requestKey?: string,
   ): Promise<Coalition> {
     return marketplaceFetch(`/api/v1/coalitions/${coalitionId}/decision`, {
       method: "POST",
       token,
-      body: JSON.stringify({ company_id: companyId, decision, expected_revision: expectedRevision }),
+      body: JSON.stringify({ company_id: companyId, decision, expected_revision: expectedRevision, ...(requestKey ? { request_key: requestKey } : {}) }),
     });
   },
 
   // Сделка (покупатель выбирает предложение)
-  selectOffer(token: string, offerId: string, revision: number): Promise<Deal> {
-    return marketplaceFetch(`/api/v1/offers/${offerId}/select`, { method: "POST", token, body: JSON.stringify({ expected_revision: revision, human_approved: true }) });
+  selectOffer(token: string, offerId: string, revision: number, requestKey?: string): Promise<Deal> {
+    return marketplaceFetch(`/api/v1/offers/${offerId}/select`, { method: "POST", token, body: JSON.stringify({ expected_revision: revision, human_approved: true, ...(requestKey ? { request_key: requestKey } : {}) }) });
   },
 
   // Уведомления
