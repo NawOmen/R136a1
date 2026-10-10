@@ -67,7 +67,10 @@ async def list_messages(deal_id: uuid.UUID, company_id: uuid.UUID, user: Current
 
 @router.post("/deals/{deal_id}/messages", response_model=DealMessageOut, status_code=status.HTTP_201_CREATED)
 async def post_message(deal_id: uuid.UUID, data: DealMessageIn, user: CurrentUser = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
-    deal = await db.get(Deal, deal_id)
+    from .commerce import party
+    from ..fulfillment import require_legacy_execution
+    deal = await party(db, deal_id, data.company_id, user, lock=True)
+    await require_legacy_execution(db, deal.id)
     if deal is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, detail="Сделка не найдена")
     await _deal_party(deal, data.company_id, user, db)

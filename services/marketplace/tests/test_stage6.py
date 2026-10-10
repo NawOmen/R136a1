@@ -235,6 +235,6 @@ async def test_resilience_plan_privacy_confirmation_simulation_and_failure(
         headers=auth(primary_token),
     )
     assert failed.status_code == 200
-    assert failed.json()["status"] == ("recovered" if automatic else "partially_covered")
+    assert failed.json()["status"] == ("recovery_proposed" if automatic else "partially_covered")
     stored = await db_session.get(ResiliencePlan, UUID(plan["id"]))
     assert stored.failed_company_ids == [str(primary)]

@@ -14,6 +14,7 @@ def test_cargo_classification_uses_both_weight_and_volume():
     assert classify_cargo(150, 1)[0] == "small"
     assert classify_cargo(151, 1)[0] == "medium"
     assert classify_cargo(100, 13)[0] == "manual_review"
+    assert classify_cargo(2000, 13)[0] == "manual_review"
     assert classify_cargo(100, 15)[0] == "large"
     assert classify_cargo(1501, 1)[0] == "large"
 

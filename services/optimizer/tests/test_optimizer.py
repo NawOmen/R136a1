@@ -209,7 +209,7 @@ def resilience_payload(*, hot_capacity=50_000, warm_capacity=50_000):
     reserves = [
         {
             **producer(11, 10_000, hot_capacity, lead=10, delivery=6_000),
-            "reserve_tier": "hot",
+            "reserve_tier": "hot", "switchover_days": 0,
             "confirmation_status": "approved",
             "held_until": str(date.today() + timedelta(days=14)),
         },

@@ -289,9 +289,17 @@ class OfferDraft(Base):
 
 
 class Deal(Base):
+    resilience_plan_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey(f"{SCHEMA}.resilience_plans.id", ondelete="RESTRICT"), nullable=True)
+    resilience_scenario_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey(f"{SCHEMA}.resilience_scenarios.id", ondelete="RESTRICT"), nullable=True)
     commercial_snapshot: Mapped[dict | None] = mapped_column(ExactJSONB(none_as_null=True), nullable=True)
     __tablename__ = "deals"
-    __table_args__ = {"schema": SCHEMA}
+    __table_args__ = (
+        Index("uq_resilience_baseline_deal", "resilience_plan_id", "seller_company_id", unique=True,
+              postgresql_where=text("resilience_plan_id IS NOT NULL AND resilience_scenario_id IS NULL")),
+        Index("uq_resilience_recovery_deal", "resilience_scenario_id", "seller_company_id", unique=True,
+              postgresql_where=text("resilience_scenario_id IS NOT NULL")),
+        {"schema": SCHEMA},
+    )
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=_uuid)
     offer_id: Mapped[uuid.UUID] = mapped_column(ForeignKey(f"{SCHEMA}.offers.id", ondelete="CASCADE"), nullable=False)
@@ -304,6 +312,7 @@ class Deal(Base):
     delivery_price_rub: Mapped[Decimal | None] = mapped_column(ExactNumeric(), nullable=True)
     total_price_rub: Mapped[Decimal] = mapped_column(ExactNumeric(), nullable=False)
     status: Mapped[str] = mapped_column(String(32), nullable=False, default="created")
+    execution_contract: Mapped[str] = mapped_column(String(32), nullable=False, default="legacy", server_default="legacy")
     request_key: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), nullable=True)
     request_hash: Mapped[str | None] = mapped_column(String(64), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now())
@@ -390,6 +399,7 @@ class DeliveryArrangement(Base):
     method: Mapped[str] = mapped_column(String(32), nullable=False)
     carrier_name: Mapped[str | None] = mapped_column(String(255), nullable=True)
     tracking_number: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    hazard_class: Mapped[str | None] = mapped_column(String(32), nullable=True)
     buyer_responsible: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True, server_default=text("true"))
     confirmed_by_user_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), nullable=False)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now())
@@ -659,6 +669,7 @@ class OptimizationVariantRecord(Base):
 
 
 class ResiliencePlan(Base):
+    failure_allocations: Mapped[list] = mapped_column(ExactJSONB, nullable=False, default=list, server_default="[]")
     commercial_snapshot: Mapped[dict | None] = mapped_column(ExactJSONB(none_as_null=True),nullable=True)
     __tablename__ = "resilience_plans"
     __table_args__ = (
@@ -728,6 +739,7 @@ class ReserveCommitment(Base):
     confirmed_delivery_cost_rub: Mapped[Decimal | None] = mapped_column(ExactNumeric(), nullable=True)
     confirmed_lead_time_days: Mapped[int | None] = mapped_column(Integer, nullable=True)
     held_until: Mapped[date | None] = mapped_column(Date, nullable=True)
+    switchover_days: Mapped[int | None] = mapped_column(Integer, nullable=True)
     confirmed_by_user_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), nullable=True)
     confirmed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now())
@@ -872,3 +884,25 @@ class CategoryRegistryRevision(Base):
     registry: Mapped[dict] = mapped_column(ExactJSONB, nullable=False)
     published_by_user_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), nullable=False)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now())
+
+
+class DealFulfillment(Base):
+    """Versioned execution metadata; quantities remain in DealExecutionEvent."""
+    __tablename__ = "deal_fulfillments"
+    __table_args__ = {"schema": SCHEMA}
+    deal_id: Mapped[uuid.UUID] = mapped_column(ForeignKey(f"{SCHEMA}.deals.id", ondelete="CASCADE"), primary_key=True)
+    revision: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    data: Mapped[dict] = mapped_column(ExactJSONB(), nullable=False)
+
+
+class DealAttachment(Base):
+    __tablename__ = "deal_attachments"
+    __table_args__ = {"schema": SCHEMA}
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=_uuid)
+    deal_id: Mapped[uuid.UUID] = mapped_column(ForeignKey(f"{SCHEMA}.deals.id", ondelete="CASCADE"), index=True)
+    company_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), nullable=False)
+    terms_version: Mapped[int] = mapped_column(Integer, nullable=False)
+    filename: Mapped[str] = mapped_column(String(255), nullable=False)
+    storage_key: Mapped[str] = mapped_column(String(255), nullable=False)
+    content_type: Mapped[str] = mapped_column(String(80), nullable=False)
+    sha256: Mapped[str] = mapped_column(String(64), nullable=False)
