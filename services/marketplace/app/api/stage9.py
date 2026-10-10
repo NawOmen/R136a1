@@ -1,3 +1,4 @@
+from ..resilience_execution import lock_execution_need, require_shipment_allowed
 from ..money import amount, decimal, PRICE_QUANTUM
 from decimal import ROUND_HALF_UP
 import uuid
@@ -202,7 +203,8 @@ async def deal_timeline(deal_id: uuid.UUID, company_id: uuid.UUID, user: Current
 async def update_checkpoint(deal_id: uuid.UUID, kind: str, data: CheckpointUpdateIn, user: CurrentUser = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
     if kind not in CHECKPOINTS:
         raise HTTPException(status.HTTP_404_NOT_FOUND, detail="Этап сделки не найден")
-    deal = await db.scalar(select(Deal).where(Deal.id == deal_id).with_for_update())
+    await lock_execution_need(db, deal_id)
+    deal = await db.scalar(select(Deal).where(Deal.id == deal_id).with_for_update().execution_options(populate_existing=True))
     if deal is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, detail="Сделка не найдена")
     await _deal_party(deal, data.company_id, user, db)
@@ -226,8 +228,14 @@ async def update_checkpoint(deal_id: uuid.UUID, kind: str, data: CheckpointUpdat
         raise HTTPException(status.HTTP_409_CONFLICT, detail="Сначала отмените последующие этапы")
     if target.status == ("completed" if data.completed else "pending") and target.note == data.note:
         return checkpoints
-    if kind == "shipment" and data.completed:
-        await consume(db, company_id=deal.seller_company_id, anchor_type="deal", anchor_id=deal.id)
+    if kind == "shipment" and data.completed and target.status != "completed":
+        await require_shipment_allowed(db, deal)
+        shipment_events = list((await db.scalars(select(DealExecutionEvent).where(DealExecutionEvent.deal_id == deal.id))).all())
+        shipped = sum(event.units for event in shipment_events if event.kind == "shipment" and event.status == "confirmed")
+        cancelled = sum(event.units for event in shipment_events if event.kind == "cancellation" and event.status == "confirmed")
+        remaining = deal.units - cancelled - shipped
+        await consume(db, company_id=deal.seller_company_id, anchor_type="deal", anchor_id=deal.id,
+                      units=remaining if shipped or deal.resilience_plan_id else None)
     target.status = "completed" if data.completed else "pending"
     target.note = data.note
     target.confirmed_by_user_id = user.id

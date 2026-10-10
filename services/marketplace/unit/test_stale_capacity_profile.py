@@ -51,8 +51,8 @@ class StaleCapacityProfileTests(IsolatedAsyncioTestCase):
                     action = lambda: offers.select_offer(offer.id, OfferSelectIn(expected_revision=1, human_approved=True), user, db)
                 elif route == 'reserve':
                     module = resilience
-                    commitment = NS(id=uuid.uuid4(), company_id=seller, plan_id=uuid.uuid4(), offer_id=None, confirmation_status='pending')
-                    plan = NS(id=commitment.plan_id, need_id=need.id, status='preparing_reserves')
+                    commitment = NS(id=uuid.uuid4(), company_id=seller, plan_id=uuid.uuid4(), offer_id=None, switchover_days=None, confirmation_status='pending')
+                    plan = NS(id=commitment.plan_id, need_id=need.id, status='preparing_reserves', current_allocations=[])
                     db.execute.side_effect = [result(commitment), result(plan)]
                     db.get.return_value = need
                     stack.enter_context(patch.object(module, '_lock_plan_resources', AsyncMock()))

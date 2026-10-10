@@ -844,6 +844,7 @@ class ReserveDecisionIn(BaseModel):
     lead_time_days: int | None = Field(default=None, gt=0)
     price_tiers: list[PriceTierIn] = Field(default_factory=list)
     held_until: date | None = None
+    switchover_days: int | None = Field(default=None, ge=0, le=365)
 
 
 class FailureSimulationIn(BaseModel):
@@ -856,6 +857,9 @@ class ProducerFailureIn(BaseModel):
 
 
 class ReserveCommitmentOut(BaseModel):
+    effective_tier: str = "cold"
+    available_units: int = 0
+    availability_reason: str | None = None
     commercial_snapshot: dict | None = None
     commercial_terms: dict | None = None
     commercial_terms: CommercialTerms | None = None
@@ -880,7 +884,7 @@ class ReserveCommitmentOut(BaseModel):
     confirmed_delivery_cost_rub: Amount | None
     confirmed_lead_time_days: int | None
     held_until: date | None
-
+    switchover_days: int | None = None
 
 class PrimaryObligationOut(BaseModel):
     plan_id: uuid.UUID
@@ -892,6 +896,7 @@ class PrimaryObligationOut(BaseModel):
 
 
 class ResilienceScenarioOut(BaseModel):
+    is_current: bool = True
     model_config = ConfigDict(from_attributes=True)
 
     id: uuid.UUID
@@ -941,6 +946,8 @@ class ResiliencePlanOut(BaseModel):
 # ---------- Сделки ----------
 
 class DealOut(BaseModel):
+    resilience_plan_id: uuid.UUID | None = None
+    resilience_scenario_id: uuid.UUID | None = None
     commercial_snapshot: dict | None = None
     model_config = ConfigDict(from_attributes=True)
 
