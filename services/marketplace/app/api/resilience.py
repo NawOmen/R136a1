@@ -13,6 +13,7 @@ from ..database import get_db
 from ..deps import (
     CurrentUser,
     get_current_user,
+    get_company,
     notify,
     require_company_admin,
     require_company_buyer,
@@ -65,13 +66,12 @@ async def _user_company_ids(db: AsyncSession, user_id: uuid.UUID) -> set[uuid.UU
 async def _notify_company_admins(
     db: AsyncSession, company_id: uuid.UUID, message: str, type_: str, *, buyer: bool = False
 ) -> None:
-    rows = await db.execute(
-        text(
-            "SELECT user_id FROM auth.company_members "
-            f"WHERE company_id = :cid AND {'can_buy' if buyer else 'can_sell'} = true AND is_admin = true"
-        ),
-        {"cid": company_id},
+    query = (
+        "SELECT user_id FROM auth.company_members WHERE company_id = :cid AND can_buy = true AND is_admin = true"
+        if buyer else
+        "SELECT user_id FROM auth.company_members WHERE company_id = :cid AND can_sell = true AND is_admin = true"
     )
+    rows = await db.execute(text(query), {"cid": company_id})
     for user_id in set(rows.scalars().all()):
         await notify(db, user_id, message, type_)
 
@@ -177,7 +177,7 @@ async def _primary_payload(db, plan):
     state = await execution_state(db, plan)
     allocations = plan.failure_allocations or plan.current_allocations or plan.baseline_allocations
     return [{"company_id": item["company_id"], "units": item["units"],
-        "protected_units": protected_units(item, state), "unit_price_rub": item["unit_price_rub"],
+        "protected_units": protected_units(item, state), "frozen_total_cost_rub": item.get("total_cost_rub"), "unit_price_rub": item["unit_price_rub"],
         "additional_cost_rub": item.get("additional_cost_rub", 0),
         "delivery_cost_rub": item.get("delivery_cost_rub", 0), "lead_time_days": item["lead_time_days"]}
         for item in allocations]
@@ -322,6 +322,9 @@ async def _lock_plan_resources(db, plan):
 async def _validate_activation(db, plan, scenario, *, automatic):
     need = await db.get(Need, plan.need_id)
     await require_current_evidence(db, need)
+    buyer = await get_company(db, plan.buyer_company_id)
+    if not buyer or buyer["verification_status"] != "verified":
+        raise HTTPException(409, "Компания покупателя больше не допущена к новым обязательствам")
     if need.status not in {*ACTIVE_NEED_STATUSES, "matched"} or need.deadline_date < date.today():
         raise HTTPException(409, "Потребность закрыта или срок поставки истёк")
     result = scenario.result
@@ -377,7 +380,7 @@ async def _validate_activation(db, plan, scenario, *, automatic):
     original_total = decimal(0)
     lost = decimal(0)
     for row in payload["primary_allocations"]:
-        total = amount(row["units"] * decimal(row["unit_price_rub"]) + decimal(row["delivery_cost_rub"]) + decimal(row.get("additional_cost_rub", 0)))
+        total = decimal(row["frozen_total_cost_rub"]) if row.get("frozen_total_cost_rub") is not None else amount(row["units"] * decimal(row["unit_price_rub"]) + decimal(row["delivery_cost_rub"]) + decimal(row.get("additional_cost_rub", 0)))
         original_total += total
         if row["company_id"] in failed:
             lost += amount((row["units"] - row["protected_units"]) * decimal(row["unit_price_rub"])) if row["protected_units"] else total
@@ -1315,10 +1318,21 @@ async def report_producer_failure(
                 "reason": data.reason,
                 "failed_company_ids": plan.failed_company_ids,
                 "only_failed_volume_blocked": True,
+                "deal_id": allocation.get("deal_id"),
+                "protected_units": allocation["units"] - remaining,
+                "remaining_units": remaining,
                 "plan_version": plan.version,
             },
         )
     )
+    await record_human_approval(db, action="report_producer_failure", entity_type="resilience_plan", entity_id=plan.id,
+        actor_user_id=user.id, actor_company_id=data.company_id, permission="company_admin+seller+verified",
+        decision="approved", payload={"reason": data.reason, "version": plan.version,
+            "deal_id": allocation.get("deal_id"), "remaining_units": remaining,
+            "protected_units": allocation["units"] - remaining},
+        source_refs=[{"type": "resilience_plan", "id": str(plan.id)},
+            *([{"type": "deal", "id": allocation["deal_id"]}] if allocation.get("deal_id") else [])],
+        explanation="Производитель явно сообщил об отказе; заблокирован только неотгруженный остаток своего назначения.")
     await _calculate_and_store(db, plan, user.id)
     await _notify_company_admins(db, plan.buyer_company_id,
         "Производитель сообщил о проблеме. Подготовлен пересчёт неотгруженного остатка с резервом.",

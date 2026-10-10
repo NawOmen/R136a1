@@ -60,14 +60,14 @@ async def covered_resilience(monkeypatch):
         from app.money import decimal, amount
         scenarios = []
         primary = payload["primary_allocations"]
-        baseline = sum(decimal(row["unit_price_rub"]) * row["units"] + decimal(row["delivery_cost_rub"])
-            + decimal(row.get("additional_cost_rub", 0)) for row in primary) + decimal(payload.get("reserve_holding_total_rub", 0))
+        baseline = sum(decimal(row["frozen_total_cost_rub"]) if row.get("frozen_total_cost_rub") is not None else amount(decimal(row["unit_price_rub"]) * row["units"] + decimal(row["delivery_cost_rub"])
+            + decimal(row.get("additional_cost_rub", 0))) for row in primary) + decimal(payload.get("reserve_holding_total_rub", 0))
         for size in (1, 2):
             for group in combinations(primary, size):
                 demand = sum(row["units"] - row.get("protected_units", 0) for row in group)
                 missing = demand
                 allocations = []
-                for option in payload["reserve_options"]:
+                for option in sorted(payload["reserve_options"], key=lambda row: (row["reserve_tier"] != "hot", decimal(row["unit_price_rub"]), row["company_id"])):
                     units = min(missing, option["capacity_units"])
                     if not units or units < option["moq_units"]: continue
                     known = option.get("switchover_days") is not None

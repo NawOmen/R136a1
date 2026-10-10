@@ -126,7 +126,7 @@ async def test_active_reserve_cannot_reject_invitation(client, db_session, monke
     assert after["version"] == plan["version"] + 1 and after["status"] == "recovered"
 
 
-@pytest.mark.parametrize("blocker", ["budget", "deadline", "switching", "unknown_switching"])
+@pytest.mark.parametrize("blocker", ["budget", "deadline", "switching", "unknown_switching", "buyer_revoked"])
 async def test_auto_recovery_obeys_hard_constraints(client, db_session, monkeypatch, blocker):
     companies, plan = await setup_confirmed(client, db_session, monkeypatch, automatic=True)
     primary, primary_token = companies["primary"][1:]
@@ -134,6 +134,8 @@ async def test_auto_recovery_obeys_hard_constraints(client, db_session, monkeypa
     assert response.status_code == 200, response.text
     need = await db_session.get(Need, uuid.UUID(plan["need_id"]))
     if blocker == "budget": need.budget_rub = Decimal(60000)
+    if blocker == "buyer_revoked":
+        await db_session.execute(text("UPDATE auth.companies SET verification_status='draft' WHERE id=:company"), {"company": companies["buyer"][1]})
     if blocker == "deadline": need.deadline_date = date.today()+timedelta(days=2)
     await db_session.commit()
     await confirm_hot_reserve(client, db_session, companies, plan["id"], switchover_days=365 if blocker == "switching" else None if blocker == "unknown_switching" else 2)
@@ -142,7 +144,7 @@ async def test_auto_recovery_obeys_hard_constraints(client, db_session, monkeypa
     assert not (await db_session.scalars(select(Deal).where(Deal.resilience_scenario_id.is_not(None)))).all()
     scenario = next(item for item in after["scenarios"] if item["status"] == "proposed")
     manual = await approve(client, after, scenario, companies["buyer"][2])
-    assert manual.status_code == 409
+    assert manual.status_code in (403, 409)
 
 
 async def test_expired_hold_marks_saved_calculation_stale(client, db_session, monkeypatch):

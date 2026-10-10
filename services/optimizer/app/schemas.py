@@ -150,6 +150,7 @@ class OpportunityScoreOut(BaseModel):
 
 class PrimaryAllocationIn(BaseModel):
     protected_units: int = Field(default=0, ge=0)
+    frozen_total_cost_rub: Amount | None = Field(default=None, ge=0)
     additional_cost_rub: Amount = Field(default=0,ge=0)
 
     company_id: uuid.UUID
@@ -160,7 +161,7 @@ class PrimaryAllocationIn(BaseModel):
 
     @property
     def total_cost_rub(self) -> Decimal:
-        return amount(self.units * self.unit_price_rub + self.delivery_cost_rub + self.additional_cost_rub)
+        return self.frozen_total_cost_rub if self.frozen_total_cost_rub is not None else amount(self.units * self.unit_price_rub + self.delivery_cost_rub + self.additional_cost_rub)
 
 
 class ReserveOptionIn(ProducerOption):
@@ -175,7 +176,7 @@ class ReserveOptionIn(ProducerOption):
 class ResilienceRequest(BaseModel):
     reserve_holding_total_rub: Amount = Field(default=0,ge=0)
 
-    primary_allocations: list[PrimaryAllocationIn] = Field(min_length=1, max_length=6)
+    primary_allocations: list[PrimaryAllocationIn] = Field(min_length=1, max_length=26)
     reserve_options: list[ReserveOptionIn] = Field(default_factory=list, max_length=20)
     max_price_increase_pct: float = Field(default=5, ge=0, le=100)
     max_delay_days: int = Field(default=0, ge=0, le=365)

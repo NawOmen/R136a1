@@ -93,7 +93,8 @@ export default function ResiliencePage() {
         return <section className="card" key={plan.id}>
           <div className="company-row"><h2>План #{plan.id.slice(0, 8)}</h2><span className="badge">{planStatuses[plan.status] ?? "Требуется уточнение"}</span></div>
           {plan.status === "stale" && <p className="alert alert-error">Прежние расчёты сохранены для истории. <Link href={`/needs/${plan.need_id}`}>Получите новые КП и создайте ресурсный план по текущей спецификации.</Link></p>}
-          <p>{formatRub(plan.baseline_total_cost_rub)} · {plan.baseline_lead_time_days} дн. · версия {plan.version}</p>
+          <p>Исходная конфигурация: {formatRub(plan.baseline_total_cost_rub)} · {plan.baseline_lead_time_days} дн. · версия {plan.version}</p>
+          <p>Текущая полная смета: {formatRub(plan.current_total_cost_rub)} · {plan.current_lead_time_days} дн.</p>
           {plan.commercial_snapshot && <p>Уже согласованное удержание резерва: {formatRub(plan.commercial_snapshot.reserve_holding_total_rub)}. Оно остаётся понесённым расходом при отмене и входит в итог; новые удержания согласуются отдельно.</p>}
           {!plan.confirmed_at && plan.commercial_snapshot && <p className="alert alert-error">Смета изменилась. До повторного согласия замена не активируется.</p>}
           <p className="hint">Автозамена: {plan.auto_replace_within_thresholds ? "разрешена" : "требует подтверждения"}; пороги: +{plan.max_price_increase_pct}% и +{plan.max_delay_days} дн.</p>

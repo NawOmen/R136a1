@@ -1,5 +1,6 @@
 """S09.02: решатель различает infeasible и timeout; статусы честно объяснены."""
 from datetime import date, timedelta
+from decimal import Decimal
 import uuid
 
 from ortools.sat.python import cp_model
@@ -96,3 +97,21 @@ def test_partial_execution_only_replaces_remaining_goods():
     assert scenario.failed_units == 60
     assert scenario.confirmed_covered_units == 60
     assert scenario.new_total_cost_rub == 1060
+
+
+def test_retained_zero_kopecks_is_not_repriced_on_next_failure():
+    reserve = _hot_reserve(100, price="0.01")
+    request = _request(reserve_options=[reserve])
+    request.primary_allocations[0].units = 2
+    request.primary_allocations[0].unit_price_rub = Decimal("0.005")
+    request.primary_allocations[0].frozen_total_cost_rub = Decimal("0.01")
+    request.primary_allocations[0].protected_units = 1
+    first = calculate_resilience(request).scenarios[0]
+    assert first.failed_units == 1 and first.new_total_cost_rub == Decimal("0.01")
+    from app.schemas import PrimaryAllocationIn
+    retained = request.primary_allocations[0].model_copy(update={"units": 1, "frozen_total_cost_rub": Decimal("0.00")})
+    replacement = PrimaryAllocationIn(company_id=reserve["company_id"], units=1, unit_price_rub="0.01", lead_time_days=5, frozen_total_cost_rub="0.01")
+    next_request = _request(primary_allocations=[retained, replacement], reserve_options=[_hot_reserve(100, price="0.01")])
+    next_result = calculate_resilience(next_request)
+    repeated = next(row for row in next_result.scenarios if row.scenario_type == "n1" and row.failed_company_ids == [replacement.company_id])
+    assert repeated.baseline_total_cost_rub == repeated.new_total_cost_rub == Decimal("0.01")
