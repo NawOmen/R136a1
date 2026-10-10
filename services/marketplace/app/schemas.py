@@ -1089,6 +1089,7 @@ class DeliveryArrangementIn(BaseModel):
     method: Literal["buyer_carrier", "self_pickup", "seller_delivery"]
     carrier_name: str | None = Field(default=None, max_length=255)
     tracking_number: str | None = Field(default=None, max_length=255)
+    hazard_class: str | None = Field(default=None, max_length=32)
     human_approved: Literal[True]
 
     @model_validator(mode="after")

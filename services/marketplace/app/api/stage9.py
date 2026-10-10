@@ -12,7 +12,7 @@ from sqlalchemy.exc import IntegrityError
 
 from ..admission import publicly_available_products
 from ..database import get_db
-from ..commerce import product_specification_hash
+from ..commerce import execution_totals, product_specification_hash
 from ..deps import CurrentUser, get_current_user, notify, require_company_admin, require_company_buyer, require_company_seller, require_membership
 from ..category_characteristics import validate_profile_values
 from ..experience import classify_cargo, validate_characteristics
@@ -51,6 +51,11 @@ async def _ensure_checkpoints(deal_id: uuid.UUID, db: AsyncSession) -> list[Deal
     rows = (await db.execute(select(DealCheckpoint).where(DealCheckpoint.deal_id == deal_id))).scalars().all()
     by_kind = {row.kind: row for row in rows}
     return [by_kind[kind] for kind in CHECKPOINTS]
+
+
+async def events_for_review(db: AsyncSession, deal_id: uuid.UUID) -> list[DealExecutionEvent]:
+    return list((await db.scalars(select(DealExecutionEvent).where(DealExecutionEvent.deal_id == deal_id)
+                                  .order_by(DealExecutionEvent.created_at, DealExecutionEvent.id))).all())
 
 
 @router.get("/products/{product_id}/detail", response_model=PublicProductDetailOut)
@@ -214,6 +219,10 @@ async def update_checkpoint(deal_id: uuid.UUID, kind: str, data: CheckpointUpdat
         raise HTTPException(status.HTTP_409_CONFLICT, detail="Заказ отменён")
     if kind == "shipment" and not data.completed:
         raise HTTPException(409, "Отгрузку нельзя отменить переключателем. Оформите возврат или отмену остатка")
+    if kind == "delivery" and data.completed:
+        arrangement = await db.scalar(select(DeliveryArrangement).where(DeliveryArrangement.deal_id == deal.id))
+        if arrangement is None:
+            raise HTTPException(409, "Сначала выберите способ получения: самовывоз, перевозчика или доставку продавца")
     if not data.completed:
         recorded = await db.scalar(select(DealExecutionEvent.id).where(DealExecutionEvent.deal_id == deal.id).limit(1))
         if recorded:
@@ -261,9 +270,9 @@ async def save_delivery(deal_id: uuid.UUID, data: DeliveryArrangementIn, user: C
     await require_company_admin(data.company_id, user, db)
     if data.company_id != deal.buyer_company_id:
         raise HTTPException(status.HTTP_403_FORBIDDEN, detail="Организацию получения подтверждает покупатель")
-    cargo_class, note = classify_cargo(data.weight_kg, data.volume_m3)
+    cargo_class, note = classify_cargo(data.weight_kg, data.volume_m3, data.hazard_class)
     item = (await db.execute(select(DeliveryArrangement).where(DeliveryArrangement.deal_id == deal.id))).scalar_one_or_none()
-    values = data.model_dump(exclude={"company_id", "human_approved"})
+    values = data.model_dump(exclude={"company_id", "human_approved", "hazard_class"})
     if item is None:
         item = DeliveryArrangement(deal_id=deal.id, cargo_class=cargo_class, classification_note=note,
             buyer_responsible=True, confirmed_by_user_id=user.id, **values); db.add(item)
@@ -294,6 +303,10 @@ async def create_review(deal_id: uuid.UUID, data: DealReviewIn, user: CurrentUse
     checkpoints = await _ensure_checkpoints(deal.id, db)
     if checkpoints[-1].status != "completed":
         raise HTTPException(status.HTTP_409_CONFLICT, detail="Отзыв доступен только после подтверждённой доставки")
+    performed = execution_totals(deal, await events_for_review(db, deal.id))
+    if performed["accepted_units"] <= 0 or performed["net_units"] <= 0:
+        raise HTTPException(status.HTTP_409_CONFLICT,
+                            detail="Отзыв доступен только после подтверждённого исполнения без полного возврата")
     reviewed = deal.seller_company_id if data.company_id == deal.buyer_company_id else deal.buyer_company_id
     review = DealReview(deal_id=deal.id, reviewer_company_id=data.company_id, reviewed_company_id=reviewed,
         rating=data.rating, comment=data.comment)

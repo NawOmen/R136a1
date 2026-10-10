@@ -6,12 +6,12 @@ from typing import Literal
 
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, ConfigDict, Field
-from sqlalchemy import select
+from sqlalchemy import select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..commerce import execution_totals, financials
 from ..database import get_db
-from ..deps import CurrentUser, get_current_user, require_company_admin, require_company_buyer, require_company_seller, require_membership
+from ..deps import CurrentUser, get_current_user, notify, require_company_admin, require_company_buyer, require_company_seller, require_membership
 from ..matching import order_unit
 from ..models import Deal, DealCheckpoint, DealCostSnapshot, DealExecutionEvent, HumanApprovalRecord, Need, Offer, ParticipantOrder, ResourceReservation
 from ..resources import release
@@ -142,7 +142,21 @@ async def create_event(deal_id: uuid.UUID, data: ExecutionIn, user: CurrentUser 
     db.add(event)
     await db.flush()
     sync_status(deal, [*events, event])
-    await audit(db, deal, data.company_id, user, "record_execution", {"event_id": str(event.id), "kind": event.kind, "units": event.units})
+    need = await db.get(Need, deal.need_id)
+    offer = await db.get(Offer, deal.offer_id)
+    await audit(db, deal, data.company_id, user, "record_execution",
+                {"event_id": str(event.id), "kind": event.kind, "units": event.units,
+                 "need_revision": need.revision if need else None,
+                 "offer_revision": offer.revision if offer else None})
+    if data.kind in {"return", "cancellation"}:
+        other_company_id = deal.seller_company_id if data.company_id == deal.buyer_company_id else deal.buyer_company_id
+        other_users = (await db.execute(text(
+            "SELECT user_id FROM auth.company_members WHERE company_id = :company_id"
+        ), {"company_id": other_company_id})).scalars().all()
+        for other_user_id in set(other_users):
+            await notify(db, other_user_id,
+                         f"Запрошено изменение исполнения: {event.kind}, {event.units} шт. Требуется решение",
+                         "deal_execution_requested")
     await db.commit()
     return event
 
@@ -190,7 +204,16 @@ async def decide_event(deal_id: uuid.UUID, event_id: uuid.UUID, data: DecisionIn
                            units=event.units, quality_accepted=True,
                            return_event_id=event.id, actor_user_id=user.id)
     sync_status(deal, events)
-    await audit(db, deal, data.company_id, user, "decide_execution", {"event_id": str(event.id), "kind": event.kind, "units": event.units, "restock_accepted": data.restock_accepted}, data.approved)
+    need = await db.get(Need, deal.need_id)
+    offer = await db.get(Offer, deal.offer_id)
+    await audit(db, deal, data.company_id, user, "decide_execution", {"event_id": str(event.id), "kind": event.kind, "units": event.units, "restock_accepted": data.restock_accepted, "need_revision": need.revision if need else None, "offer_revision": offer.revision if offer else None}, data.approved)
+    requester_users = (await db.execute(text(
+        "SELECT user_id FROM auth.company_members WHERE company_id = :company_id"
+    ), {"company_id": event.actor_company_id})).scalars().all()
+    for requester_id in set(requester_users):
+        await notify(db, requester_id,
+                     f"Решение по {event.kind} ({event.units} шт.): {'подтверждено' if data.approved else 'отклонено'}",
+                     "deal_execution_decided")
     await db.commit()
     return event
 

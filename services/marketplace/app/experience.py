@@ -8,8 +8,13 @@ from .models import MarketWatch
 from .category_characteristics import validate_profile_values, characteristic_profile
 
 
-def classify_cargo(weight_kg: float, volume_m3: float) -> tuple[str, str]:
+def classify_cargo(weight_kg: float, volume_m3: float, hazard_class: str | None = None) -> tuple[str, str]:
     """Класс задаёт маршрут оформления, но не выбирает перевозчика и не считает тариф."""
+    if hazard_class:
+        return "manual_review", (
+            f"Опасный груз (класс {hazard_class}): класс и условия подтверждаются вручную. "
+            "Площадка не классифицирует опасный груз автоматически и не называет перевозчика."
+        )
     if weight_kg <= 150 and volume_m3 <= 1:
         return "small", "Мелкий опт: до 150 кг и до 1 м³. Покупатель выбирает самовывоз или перевозчика."
     if weight_kg <= 1500 and volume_m3 <= 12:

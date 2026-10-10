@@ -122,9 +122,15 @@ float разряды не восстанавливаются. Неконечны
 
 - `POST /group-offers/{id}/publish` — дополнительно: `lot_multiple` (кратность партии, по умолчанию 1; общий объём и каждый участник кратны ей), производство обязано завершиться до раннего дедлайна участников (`422` иначе). Выдача условий включает `lot_multiple`.
 - `GET /coalitions/mine` — поле `confirmed_volume_units`: объём участников со статусом `approved` отдельно от заявленного `combined_volume_units`. Заказы хранят `coalition_version`; аналитика показывает только действующие (не `superseded`).
-- `GET /coalitions/mine` — поле `confirmed_volume_units`: объём участников со статусом `approved` отдельно от заявленного `combined_volume_units`.
 - `POST /coalitions/{id}/change-requests` — запрос изменения подтверждённой группы: `{company_id, reason, proposed_units {need_id: units}, resource_policy, idempotency_key}`. Повтор по тому же ключу возвращает тот же запрос, другой состав — `409`.
 - `POST /coalition-changes/{id}/decision` — решение производителя `{company_id, approved, expected_revision}`. Выход ниже MOQ аннулирует старые условия (`applied_annulled`, группа `recalculation_required`, удержания освобождены); иначе состав применяется единой записью (`applied`, новая ревизия, согласия сброшены). Старая группа не удаляется.
+
+## Маршруты этапа 10 (исполнение и получение)
+
+- `PATCH /deals/{id}/timeline/delivery` — завершение получения требует выбранного способа (`PUT /deals/{id}/delivery` заранее), иначе `409`.
+- `PUT /deals/{id}/delivery` — поле `hazard_class`: опасный груз всегда `manual_review`, площадка не классифицирует его автоматически и не называет перевозчика. Строгий параметр имеет приоритет.
+- Споры (`return`/`cancellation`) уведомляют вторую сторону и связываются в аудите с ревизиями потребности и КП; спорный объём не считается принятым до решения.
+- `POST /deals/{id}/reviews` — только после подтверждённого исполнения с чистым остатком (есть `acceptance`, `net_units > 0`); повтор по сделке — `409`.
 
 Публикация группового предложения и решение покупателя — Human Approval actions.
 Ни один из этих маршрутов не использует LLM для денежных расчётов.
