@@ -289,9 +289,17 @@ class OfferDraft(Base):
 
 
 class Deal(Base):
+    resilience_plan_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey(f"{SCHEMA}.resilience_plans.id", ondelete="RESTRICT"), nullable=True)
+    resilience_scenario_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey(f"{SCHEMA}.resilience_scenarios.id", ondelete="RESTRICT"), nullable=True)
     commercial_snapshot: Mapped[dict | None] = mapped_column(ExactJSONB(none_as_null=True), nullable=True)
     __tablename__ = "deals"
-    __table_args__ = {"schema": SCHEMA}
+    __table_args__ = (
+        Index("uq_resilience_baseline_deal", "resilience_plan_id", "seller_company_id", unique=True,
+              postgresql_where=text("resilience_plan_id IS NOT NULL AND resilience_scenario_id IS NULL")),
+        Index("uq_resilience_recovery_deal", "resilience_scenario_id", "seller_company_id", unique=True,
+              postgresql_where=text("resilience_scenario_id IS NOT NULL")),
+        {"schema": SCHEMA},
+    )
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=_uuid)
     offer_id: Mapped[uuid.UUID] = mapped_column(ForeignKey(f"{SCHEMA}.offers.id", ondelete="CASCADE"), nullable=False)
@@ -660,6 +668,7 @@ class OptimizationVariantRecord(Base):
 
 
 class ResiliencePlan(Base):
+    failure_allocations: Mapped[list] = mapped_column(ExactJSONB, nullable=False, default=list, server_default="[]")
     commercial_snapshot: Mapped[dict | None] = mapped_column(ExactJSONB(none_as_null=True),nullable=True)
     __tablename__ = "resilience_plans"
     __table_args__ = (
@@ -729,6 +738,7 @@ class ReserveCommitment(Base):
     confirmed_delivery_cost_rub: Mapped[Decimal | None] = mapped_column(ExactNumeric(), nullable=True)
     confirmed_lead_time_days: Mapped[int | None] = mapped_column(Integer, nullable=True)
     held_until: Mapped[date | None] = mapped_column(Date, nullable=True)
+    switchover_days: Mapped[int | None] = mapped_column(Integer, nullable=True)
     confirmed_by_user_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), nullable=True)
     confirmed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now())

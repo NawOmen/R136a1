@@ -33,6 +33,7 @@ export default function SellerReservesPage() {
     const delivery = ["included","self_pickup"].includes(terms.delivery_method) ? "0" : decision === "approved" ? ask("Логистика, ₽:", item.proposed_delivery_cost_rub) : null;
     const lead = decision === "approved" ? ask("Срок, дней:", item.proposed_lead_time_days) : null;
     const heldUntil = decision === "approved" ? window.prompt("Удерживать мощность до (ГГГГ-ММ-ДД):") : null;
+    const switchover = decision === "approved" ? window.prompt("Переключение за, дней (пусто — не указано):", "") : null;
     if (decision === "approved" && [capacity, moq, price, delivery, lead, heldUntil].some((value) => !value)) return;
     const proposed = decision === "approved" ? {
       company_id: companyId, decision,
@@ -40,6 +41,7 @@ export default function SellerReservesPage() {
       capacity_units: Number(capacity), moq_units: Number(moq), unit_price_rub: String(price),
       delivery_cost_rub: String(delivery), lead_time_days: Number(lead),
       held_until: heldUntil,
+      ...(switchover && switchover.trim() ? { switchover_days: Number(switchover) } : {}),
     } : { company_id: companyId, decision };
     if (!window.confirm(decision === "approved" ? "Подтвердить цену и удержание мощности?" : "Отклонить приглашение?")) return;
     setWorking(item.id);

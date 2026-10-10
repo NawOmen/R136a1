@@ -14,7 +14,8 @@ from ..database import get_db
 from ..deps import CurrentUser, get_current_user, notify, require_company_admin, require_company_buyer, require_company_seller, require_membership
 from ..matching import order_unit
 from ..models import Deal, DealCheckpoint, DealCostSnapshot, DealExecutionEvent, DeliveryArrangement, HumanApprovalRecord, Need, Offer, ParticipantOrder, ResourceReservation
-from ..resources import release
+from ..resources import release, consume
+from ..resilience_execution import lock_execution_need, require_shipment_allowed
 from ..trust import record_human_approval
 
 router = APIRouter(tags=["commercial-accounting"])
@@ -22,7 +23,7 @@ router = APIRouter(tags=["commercial-accounting"])
 
 class ExecutionIn(BaseModel):
     company_id: uuid.UUID
-    kind: Literal["acceptance", "return", "cancellation"]
+    kind: Literal["acceptance", "return", "cancellation", "shipment"]
     units: int = Field(gt=0)
     note: str = Field(min_length=3, max_length=1000)
     idempotency_key: uuid.UUID
@@ -60,7 +61,8 @@ class EventOut(BaseModel):
 async def party(db, deal_id, company_id, user, *, lock=False):
     stmt = select(Deal).where(Deal.id == deal_id)
     if lock:
-        stmt = stmt.with_for_update()
+        await lock_execution_need(db, deal_id)
+        stmt = stmt.with_for_update().execution_options(populate_existing=True)
     deal = await db.scalar(stmt)
     if not deal or company_id not in {deal.buyer_company_id, deal.seller_company_id}:
         raise HTTPException(404, "Сделка не найдена")
@@ -104,6 +106,14 @@ def sync_status(deal, events):
         deal.status = "partially_accepted"
 
 
+async def shipping_totals(db, deal, events):
+    totals = execution_totals(deal, events)
+    checkpoint = await db.scalar(select(DealCheckpoint).where(DealCheckpoint.deal_id == deal.id, DealCheckpoint.kind == "shipment"))
+    shipped = deal.units - totals["cancelled_units"] if checkpoint and checkpoint.status == "completed" else sum(
+        event.units for event in events if event.kind == "shipment" and event.status == "confirmed")
+    return {"shipped_units": shipped, "unshipped_units": max(0, deal.units-totals["cancelled_units"]-shipped)}
+
+
 async def audit(db, deal, company_id, user, action, payload, approved=True):
     await record_human_approval(db, action=action, entity_type="deal", entity_id=deal.id,
         actor_user_id=user.id, actor_company_id=company_id, permission="company_admin+deal_party",
@@ -118,7 +128,7 @@ async def execution(deal_id: uuid.UUID, company_id: uuid.UUID, user: CurrentUser
     events = await events_for(db, deal.id)
     totals = execution_totals(deal, events)
     result = {"deal_id": deal.id, "status": deal.status, **totals,
-              "events": [EventOut.model_validate(e) for e in events]}
+              "events": [EventOut.model_validate(e) for e in events], **await shipping_totals(db, deal, events)}
     # Seller costs are private, including cost notes and revisions.
     if company_id == deal.seller_company_id:
         costs = await db.get(DealCostSnapshot, deal.id)
@@ -146,20 +156,43 @@ async def create_event(deal_id: uuid.UUID, data: ExecutionIn, user: CurrentUser 
         raise HTTPException(403, "Приёмку и запрос возврата оформляет покупатель")
     if data.kind == "acceptance":
         shipment = await db.scalar(select(DealCheckpoint).where(DealCheckpoint.deal_id == deal.id, DealCheckpoint.kind == "shipment"))
-        if not shipment or shipment.status != "completed":
-            raise HTTPException(409, "Приёмка доступна после подтверждения отгрузки")
+        shipped = await shipping_totals(db, deal, events)
+        accepted = execution_totals(deal, events)["accepted_units"]
+        if data.units > shipped["shipped_units"] - accepted:
+            raise HTTPException(409, "Приёмка доступна только на фактически отгруженный объём")
         arrangement = await db.scalar(select(DeliveryArrangement).where(DeliveryArrangement.deal_id == deal.id))
         if arrangement is None:
             raise HTTPException(409, "Приёмка фиксирует получение: сначала выберите способ получения")
+    if data.kind == "shipment":
+        if data.company_id != deal.seller_company_id:
+            raise HTTPException(403, "Отгрузку подтверждает производитель")
+        await require_shipment_allowed(db, deal)
+        production = await db.scalar(select(DealCheckpoint).where(DealCheckpoint.deal_id == deal.id, DealCheckpoint.kind == "production"))
+        if not production or production.status != "completed":
+            raise HTTPException(409, "Сначала подтвердите производство")
+        shipping = await shipping_totals(db, deal, events)
+        if data.units > shipping["unshipped_units"]:
+            raise HTTPException(409, "Объём отгрузки превышает неотгруженный остаток")
+        await consume(db, company_id=deal.seller_company_id, anchor_type="deal", anchor_id=deal.id, units=data.units)
+    if data.kind == "cancellation" and deal.resilience_plan_id:
+        shipping = await shipping_totals(db, deal, events)
+        if data.units > shipping["unshipped_units"]:
+            raise HTTPException(409, "Отгруженный объём нельзя перенести или отменить как остаток")
     validate_quantity(deal, events, data.kind, data.units)
     event = DealExecutionEvent(deal_id=deal.id, actor_company_id=data.company_id, actor_user_id=user.id,
         idempotency_key=data.idempotency_key, kind=data.kind, units=data.units, note=data.note,
-        status="confirmed" if data.kind == "acceptance" else "pending")
+        status="confirmed" if data.kind in {"acceptance", "shipment"} else "pending")
     if event.status == "confirmed":
         event.decided_by_user_id, event.decided_at = user.id, datetime.now(timezone.utc)
     db.add(event)
     await db.flush()
     sync_status(deal, [*events, event])
+    if data.kind == "shipment":
+        shipment = await db.scalar(select(DealCheckpoint).where(DealCheckpoint.deal_id == deal.id, DealCheckpoint.kind == "shipment"))
+        shipping = await shipping_totals(db, deal, [*events, event])
+        deal.status = "shipped" if shipping["unshipped_units"] == 0 else "partially_shipped"
+        if shipment and shipping["unshipped_units"] == 0:
+            shipment.status, shipment.completed_at, shipment.confirmed_by_user_id = "completed", datetime.now(timezone.utc), user.id
     need = await db.get(Need, deal.need_id)
     offer = await db.get(Offer, deal.offer_id)
     await audit(db, deal, data.company_id, user, "record_execution",
@@ -190,7 +223,7 @@ async def decide_event(deal_id: uuid.UUID, event_id: uuid.UUID, data: DecisionIn
     event = next((e for e in events if e.id == event_id), None)
     if not event:
         raise HTTPException(404, "Операция не найдена")
-    if event.kind == "acceptance" or event.actor_company_id == data.company_id:
+    if event.kind in {"acceptance", "shipment"} or event.actor_company_id == data.company_id:
         raise HTTPException(403, "Запрос подтверждает другая сторона сделки")
     requested = "confirmed" if data.approved else "rejected"
     if event.status != "pending":
@@ -208,6 +241,8 @@ async def decide_event(deal_id: uuid.UUID, event_id: uuid.UUID, data: DecisionIn
     if data.approved:
         validate_quantity(deal, events, event.kind, event.units)
     if data.approved and event.kind == "cancellation":
+        if deal.resilience_plan_id and event.units > (await shipping_totals(db, deal, events))["unshipped_units"]:
+            raise HTTPException(409, "Отгруженный объём нельзя отменить как остаток")
         await release(db, company_id=deal.seller_company_id, anchor_type="deal", anchor_id=deal.id, units=event.units)
     event.status = requested
     event.decided_by_user_id, event.decided_at = user.id, datetime.now(timezone.utc)
