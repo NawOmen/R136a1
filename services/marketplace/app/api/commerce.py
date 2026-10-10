@@ -108,6 +108,11 @@ def sync_status(deal, events):
 
 async def shipping_totals(db, deal, events):
     totals = execution_totals(deal, events)
+    from ..models import DealFulfillment
+    fulfillment = await db.get(DealFulfillment, deal.id)
+    if fulfillment:
+        from .fulfillment import unshipped
+        return {"shipped_units": sum(b["units"] for b in fulfillment.data["batches"]), "unshipped_units": unshipped(deal, fulfillment.data, totals)}
     checkpoint = await db.scalar(select(DealCheckpoint).where(DealCheckpoint.deal_id == deal.id, DealCheckpoint.kind == "shipment"))
     shipped = deal.units - totals["cancelled_units"] if checkpoint and checkpoint.status == "completed" else sum(
         event.units for event in events if event.kind == "shipment" and event.status == "confirmed")
@@ -146,6 +151,8 @@ async def execution(deal_id: uuid.UUID, company_id: uuid.UUID, user: CurrentUser
 async def create_event(deal_id: uuid.UUID, data: ExecutionIn, user: CurrentUser = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
     deal = await party(db, deal_id, data.company_id, user, lock=True)
     await require_company_admin(data.company_id, user, db)
+    from ..fulfillment import require_legacy_execution
+    await require_legacy_execution(db, deal.id)
     events = await events_for(db, deal.id)
     existing = next((e for e in events if e.actor_company_id == data.company_id and e.idempotency_key == data.idempotency_key), None)
     if existing:
@@ -174,7 +181,7 @@ async def create_event(deal_id: uuid.UUID, data: ExecutionIn, user: CurrentUser 
         if data.units > shipping["unshipped_units"]:
             raise HTTPException(409, "Объём отгрузки превышает неотгруженный остаток")
         await consume(db, company_id=deal.seller_company_id, anchor_type="deal", anchor_id=deal.id, units=data.units)
-    if data.kind == "cancellation" and deal.resilience_plan_id:
+    if data.kind == "cancellation":
         shipping = await shipping_totals(db, deal, events)
         if data.units > shipping["unshipped_units"]:
             raise HTTPException(409, "Отгруженный объём нельзя перенести или отменить как остаток")
@@ -193,6 +200,12 @@ async def create_event(deal_id: uuid.UUID, data: ExecutionIn, user: CurrentUser 
         deal.status = "shipped" if shipping["unshipped_units"] == 0 else "partially_shipped"
         if shipment and shipping["unshipped_units"] == 0:
             shipment.status, shipment.completed_at, shipment.confirmed_by_user_id = "completed", datetime.now(timezone.utc), user.id
+    if data.kind == "acceptance" and execution_totals(deal, [*events, event])["open_units"] == 0:
+        from .stage9 import _ensure_checkpoints
+        checkpoints = await _ensure_checkpoints(deal.id, db)
+        checkpoints[-1].status = "completed"
+        checkpoints[-1].completed_at = datetime.now(timezone.utc)
+        checkpoints[-1].confirmed_by_user_id = user.id
     need = await db.get(Need, deal.need_id)
     offer = await db.get(Offer, deal.offer_id)
     await audit(db, deal, data.company_id, user, "record_execution",
@@ -219,6 +232,8 @@ async def create_event(deal_id: uuid.UUID, data: ExecutionIn, user: CurrentUser 
 async def decide_event(deal_id: uuid.UUID, event_id: uuid.UUID, data: DecisionIn, user: CurrentUser = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
     deal = await party(db, deal_id, data.company_id, user, lock=True)
     await require_company_admin(data.company_id, user, db)
+    from ..fulfillment import require_legacy_execution
+    await require_legacy_execution(db, deal.id)
     events = await events_for(db, deal.id)
     event = next((e for e in events if e.id == event_id), None)
     if not event:
@@ -241,7 +256,7 @@ async def decide_event(deal_id: uuid.UUID, event_id: uuid.UUID, data: DecisionIn
     if data.approved:
         validate_quantity(deal, events, event.kind, event.units)
     if data.approved and event.kind == "cancellation":
-        if deal.resilience_plan_id and event.units > (await shipping_totals(db, deal, events))["unshipped_units"]:
+        if event.units > (await shipping_totals(db, deal, events))["unshipped_units"]:
             raise HTTPException(409, "Отгруженный объём нельзя отменить как остаток")
         await release(db, company_id=deal.seller_company_id, anchor_type="deal", anchor_id=deal.id, units=event.units)
     event.status = requested

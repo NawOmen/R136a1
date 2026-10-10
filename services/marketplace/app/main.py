@@ -79,3 +79,6 @@ for exact_router in (addresses, production, products, catalog_import, capacity, 
                      category_profiles, category_editor, packaging_conversion):
     app.include_router(exact_router.router, prefix='/api/v3')
 app.include_router(physical_quantities.router, prefix='/api/v3/physical')
+
+from .api import fulfillment
+app.include_router(fulfillment.router, prefix="/api/v3")

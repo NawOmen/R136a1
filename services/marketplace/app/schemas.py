@@ -946,6 +946,7 @@ class ResiliencePlanOut(BaseModel):
 # ---------- Сделки ----------
 
 class DealOut(BaseModel):
+    execution_contract: str = "legacy"
     resilience_plan_id: uuid.UUID | None = None
     resilience_scenario_id: uuid.UUID | None = None
     commercial_snapshot: dict | None = None

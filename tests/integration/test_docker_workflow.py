@@ -46,17 +46,32 @@ def test_classified_order_partial_acceptance_return_costs_and_privacy():
     with httpx.Client(base_url="http://marketplace:8002", timeout=15) as market:
         products = rows(ok(market.get(f"/api/v1/companies/{seller}/products", headers=seller_headers)))
         product = next(p for p in products if p["name"] == "Гайка М8 оцинкованная")
+        # Synthetic specification reviewed by the seeded platform editor through the real API.
+        with httpx.Client(base_url="http://gateway-auth:8001", timeout=15) as auth:
+            editor = ok(auth.post("/api/v1/auth/login", json={"email": "admin@demo.ru", "password": os.environ["SEED_ADMIN_PASSWORD"]}))
+        editor_headers = {"Authorization": "Bearer " + editor["access_token"]}
+        document = ok(market.post(f"/api/v1/companies/{seller}/documents", headers=seller_headers,
+            data={"name": "Синтетическое заключение по спецификации крепежа", "document_type": "specification_review",
+                  "scope_category": product["category"], "scope_subcategory": product.get("subcategory") or ""},
+            files={"file": ("synthetic-specification.pdf", b"%PDF-1.7 synthetic specification", "application/pdf")}), 201)
+        ok(market.post(f"/api/v1/documents/{document['id']}/verification", headers=editor_headers, json={
+            "decision": "verified", "scope_category": product["category"], "scope_subcategory": product.get("subcategory"),
+            "valid_until": (date.today()+timedelta(days=60)).isoformat(),
+            "confirms": {key: [str(value)] for key, value in product["characteristics"].items()},
+            "note": "Проверка только синтетического стенда по указанной спецификации"}))
         addresses = rows(ok(market.get(f"/api/v1/companies/{buyer}/addresses", headers=buyer_headers)))
         # API поддерживает точную классификацию. Общая категория формы проверяется
         # отдельно браузерным тестом; её блокировку нельзя скрывать этим сценарием.
         need = ok(market.post("/api/v1/needs", headers=buyer_headers, json={
-            "company_id": buyer, "category": "Крепёж", "characteristics": {"unit": "шт", "thread": "М8"},
+            "company_id": buyer, "category": product["category"], "subcategory": product.get("subcategory"), "characteristics": product["characteristics"],
             "volume_units": 500, "budget_rub": 5000, "deadline_date": (date.today()+timedelta(days=30)).isoformat(),
             "delivery_address_id": addresses[0]["id"], "visibility": "open_anonymized",
         }), 201)
         ok(market.post(f"/api/v1/needs/{need['id']}/publish", headers=buyer_headers))
         offer = ok(market.post(f"/api/v1/needs/{need['id']}/offers", headers=seller_headers, json={
             "company_id": seller, "resource_kind": "stock", "product_id": product["id"],
+            "commercial_terms": {"delivery_method": "separate", "tax_basis": "no_vat", "vat_rate_pct": None,
+                                 "delivery_conditions": "Синтетический адрес получателя, Россия", "expenses": []},
             "price_rub": 5, "available_units": 500, "lead_time_days": 1, "delivery_cost_rub": 0, "moq_units": 500,
         }), 201)
         # Обязательство без согласия не создаётся.
@@ -66,21 +81,34 @@ def test_classified_order_partial_acceptance_return_costs_and_privacy():
             json={"expected_revision": offer["revision"], "human_approved": True}), 201)
         deal_id = deal["id"]
         assert Decimal(str(deal["total_price_rub"])) == Decimal("2500")
-        for stage in ("production", "shipment"):
-            ok(market.patch(f"/api/v1/deals/{deal_id}/timeline/{stage}", headers=seller_headers,
-                json={"company_id": seller, "completed": True, "human_approved": True}))
-        acceptance = {"company_id": buyer, "kind": "acceptance", "units": 300, "note": "Синтетический акт приёмки",
-            "idempotency_key": str(uuid.uuid4()), "human_approved": True}
-        first = ok(market.post(f"/api/v1/deals/{deal_id}/execution", headers=buyer_headers, json=acceptance), 201)
-        repeated = market.post(f"/api/v1/deals/{deal_id}/execution", headers=buyer_headers, json=acceptance)
-        assert repeated.status_code in (200, 201)
-        assert repeated.json()["id"] == first["id"]
-        request = ok(market.post(f"/api/v1/deals/{deal_id}/execution", headers=buyer_headers, json={
-            "company_id": buyer, "kind": "return", "units": 50, "note": "Синтетический возврат части партии",
-            "idempotency_key": str(uuid.uuid4()), "human_approved": True,
-        }), 201)
-        ok(market.post(f"/api/v1/deals/{deal_id}/execution/{request['id']}/decision", headers=seller_headers,
-            json={"company_id": seller, "approved": True, "human_approved": True}))
+        expected = (date.today()+timedelta(days=5)).isoformat()
+        proof = {"note": "Синтетический акт исполнения", "attachments": []}
+        def perform(action, payload, company=buyer, headers=buyer_headers):
+            current = ok(market.get(f"/api/v3/deals/{deal_id}/fulfillment?company_id={company}", headers=headers))
+            command = {"company_id": company, "expected_revision": current["revision"], "terms_version": current["terms_version"],
+                "human_approved": True, "idempotency_key": str(uuid.uuid4()), "action": action, "payload": payload}
+            return ok(market.post(f"/api/v3/deals/{deal_id}/fulfillment", headers=headers, json=command)), command
+        material_bytes = b"%PDF-1.7\nSynthetic fulfillment proof\n"
+        material = ok(market.post(f"/api/v3/deals/{deal_id}/attachments", headers=seller_headers,
+            data={"company_id": seller, "terms_version": "1"},
+            files={"file": ("synthetic-act.pdf", material_bytes, "application/pdf")}), 201)
+        downloaded = market.get(f"/api/v3/deals/{deal_id}/attachments/{material['id']}?company_id={buyer}", headers=buyer_headers)
+        assert downloaded.status_code == 200 and downloaded.content == material_bytes
+        perform("prepare", {**proof, "attachments": [material["id"]], "expected_date": expected, "address": "г. Москва, ул. Синтетическая, 1",
+            "city": "Москва", "region": "Москва", "packaging": "Коробка", "weight_kg": 5, "volume_m3": 0.1, "places": 1}, seller, seller_headers)
+        perform("production", {**proof, "expected_date": expected}, seller, seller_headers)
+        perform("logistics", {**proof, "expected_date": expected, "method": "self_pickup", "cost_rub": "0.00"})
+        shipped, _ = perform("shipment", {**proof, "expected_date": expected, "batch": "Партия крепежа", "units": 500}, seller, seller_headers)
+        batch = shipped["batches"][0]["id"]
+        perform("receipt", {**proof, "expected_date": expected, "batch_id": batch, "line_id": need["id"], "received": 300, "missing": 0})
+        first, acceptance = perform("inspection", {**proof, "expected_date": expected, "batch_id": batch, "line_id": need["id"], "accepted": 300, "rejected": 0})
+        repeated = ok(market.post(f"/api/v3/deals/{deal_id}/fulfillment", headers=buyer_headers, json=acceptance))
+        assert repeated["revision"] == first["revision"] and repeated["totals"]["accepted_units"] == 300
+        pending, _ = perform("request", {**proof, "kind": "return", "units": 50})
+        request = pending["requests"][-1]["id"]
+        agreed, _ = perform("decision", {**proof, "event_id": request, "approved": True}, seller, seller_headers)
+        assert agreed["totals"]["returned_units"] == 0  # approval is not physical completion
+        perform("return_complete", {**proof, "event_id": request, "restock_accepted": False}, seller, seller_headers)
         ok(market.put(f"/api/v1/deals/{deal_id}/costs", headers=seller_headers, json={
             "company_id": seller, "expected_revision": 0, "unit_cost_rub": "3.00", "attributable_expenses_rub": "100.00",
             "note": "Синтетическая смета", "human_approved": True,

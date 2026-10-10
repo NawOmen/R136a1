@@ -312,6 +312,7 @@ class Deal(Base):
     delivery_price_rub: Mapped[Decimal | None] = mapped_column(ExactNumeric(), nullable=True)
     total_price_rub: Mapped[Decimal] = mapped_column(ExactNumeric(), nullable=False)
     status: Mapped[str] = mapped_column(String(32), nullable=False, default="created")
+    execution_contract: Mapped[str] = mapped_column(String(32), nullable=False, default="legacy", server_default="legacy")
     request_key: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), nullable=True)
     request_hash: Mapped[str | None] = mapped_column(String(64), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now())
@@ -883,3 +884,25 @@ class CategoryRegistryRevision(Base):
     registry: Mapped[dict] = mapped_column(ExactJSONB, nullable=False)
     published_by_user_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), nullable=False)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now())
+
+
+class DealFulfillment(Base):
+    """Versioned execution metadata; quantities remain in DealExecutionEvent."""
+    __tablename__ = "deal_fulfillments"
+    __table_args__ = {"schema": SCHEMA}
+    deal_id: Mapped[uuid.UUID] = mapped_column(ForeignKey(f"{SCHEMA}.deals.id", ondelete="CASCADE"), primary_key=True)
+    revision: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    data: Mapped[dict] = mapped_column(ExactJSONB(), nullable=False)
+
+
+class DealAttachment(Base):
+    __tablename__ = "deal_attachments"
+    __table_args__ = {"schema": SCHEMA}
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=_uuid)
+    deal_id: Mapped[uuid.UUID] = mapped_column(ForeignKey(f"{SCHEMA}.deals.id", ondelete="CASCADE"), index=True)
+    company_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), nullable=False)
+    terms_version: Mapped[int] = mapped_column(Integer, nullable=False)
+    filename: Mapped[str] = mapped_column(String(255), nullable=False)
+    storage_key: Mapped[str] = mapped_column(String(255), nullable=False)
+    content_type: Mapped[str] = mapped_column(String(80), nullable=False)
+    sha256: Mapped[str] = mapped_column(String(64), nullable=False)

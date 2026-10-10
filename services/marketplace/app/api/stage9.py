@@ -214,6 +214,8 @@ async def update_checkpoint(deal_id: uuid.UUID, kind: str, data: CheckpointUpdat
         raise HTTPException(status.HTTP_404_NOT_FOUND, detail="Сделка не найдена")
     await _deal_party(deal, data.company_id, user, db)
     await require_company_admin(data.company_id, user, db)
+    from ..fulfillment import require_legacy_execution
+    await require_legacy_execution(db, deal.id)
     expected_company = deal.buyer_company_id if kind == "delivery" else deal.seller_company_id
     if data.company_id != expected_company:
         raise HTTPException(status.HTTP_403_FORBIDDEN, detail="Этот этап подтверждает другая сторона сделки")
@@ -271,11 +273,14 @@ async def update_checkpoint(deal_id: uuid.UUID, kind: str, data: CheckpointUpdat
 
 @router.put("/deals/{deal_id}/delivery", response_model=DeliveryArrangementOut)
 async def save_delivery(deal_id: uuid.UUID, data: DeliveryArrangementIn, user: CurrentUser = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
-    deal = await db.get(Deal, deal_id)
+    await lock_execution_need(db, deal_id)
+    deal = await db.scalar(select(Deal).where(Deal.id == deal_id).with_for_update().execution_options(populate_existing=True))
     if deal is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, detail="Сделка не найдена")
     await _deal_party(deal, data.company_id, user, db)
     await require_company_admin(data.company_id, user, db)
+    from ..fulfillment import require_legacy_execution
+    await require_legacy_execution(db, deal.id)
     if data.company_id != deal.buyer_company_id:
         raise HTTPException(status.HTTP_403_FORBIDDEN, detail="Организацию получения подтверждает покупатель")
     # Признак опасного груза сохраняется между изменениями: отсутствие поля
@@ -313,14 +318,18 @@ async def get_delivery(deal_id: uuid.UUID, company_id: uuid.UUID, user: CurrentU
 
 @router.post("/deals/{deal_id}/reviews", response_model=DealReviewOut, status_code=status.HTTP_201_CREATED)
 async def create_review(deal_id: uuid.UUID, data: DealReviewIn, user: CurrentUser = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
-    deal = await db.get(Deal, deal_id)
+    await lock_execution_need(db, deal_id)
+    deal = await db.scalar(select(Deal).where(Deal.id == deal_id).with_for_update().execution_options(populate_existing=True))
     if deal is None: raise HTTPException(status.HTTP_404_NOT_FOUND, detail="Сделка не найдена")
     await _deal_party(deal, data.company_id, user, db)
     await require_company_admin(data.company_id, user, db)
     checkpoints = await _ensure_checkpoints(deal.id, db)
     if checkpoints[-1].status != "completed":
         raise HTTPException(status.HTTP_409_CONFLICT, detail="Отзыв доступен только после подтверждённой доставки")
-    performed = execution_totals(deal, await events_for_review(db, deal.id))
+    review_events = await events_for_review(db, deal.id)
+    if any(e.kind == "return" and e.status in {"pending", "approved"} for e in review_events):
+        raise HTTPException(409, "Сначала завершите открытый запрос возврата")
+    performed = execution_totals(deal, review_events)
     if performed["accepted_units"] <= 0 or performed["net_units"] <= 0:
         raise HTTPException(status.HTTP_409_CONFLICT,
                             detail="Отзыв доступен только после подтверждённого исполнения без полного возврата")

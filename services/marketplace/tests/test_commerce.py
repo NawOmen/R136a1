@@ -81,6 +81,13 @@ async def test_idempotency_quantity_and_bilateral_decision(client, order, db_ses
     assert first.json()["id"] == again.json()["id"]
     assert (await event(client, order, "acceptance", 7, idempotency_key=key)).status_code == 409
     assert (await event(client, order, "acceptance", 5)).status_code == 409
+    deal, buyer, seller, bh, sh = order
+    # Only six units were physically shipped; the other four may be cancelled.
+    shipment = await db_session.scalar(select(DealCheckpoint).where(DealCheckpoint.deal_id == deal, DealCheckpoint.kind == "shipment"))
+    shipment.status = "pending"
+    db_session.add(DealExecutionEvent(deal_id=deal, actor_company_id=seller, actor_user_id=uuid.uuid4(),
+        idempotency_key=uuid.uuid4(), kind="shipment", units=6, note="Отгружена часть", status="confirmed"))
+    await db_session.commit()
     pending = await event(client, order, "cancellation", 4)
     deal, buyer, seller, bh, sh = order
     own = await client.post(f"/api/v1/deals/{deal}/execution/{pending.json()['id']}/decision", headers=bh,json={"company_id":str(buyer),"approved":True,"human_approved":True})
@@ -92,11 +99,14 @@ async def test_idempotency_quantity_and_bilateral_decision(client, order, db_ses
     state = (await client.get(f"/api/v1/deals/{deal}/execution?company_id={seller}", headers=sh)).json()
     assert state["open_units"] == 0 and state["status"] == "fulfilled"
     assert state["financials"]["gross_profit_rub"] is None
-    assert len((await db_session.scalars(select(DealExecutionEvent))).all()) == 2
+    assert len((await db_session.scalars(select(DealExecutionEvent))).all()) == 3
 
 
 @pytest.mark.asyncio
-async def test_pending_revalidation_and_cost_revision(client, order):
+async def test_pending_revalidation_and_cost_revision(client, order, db_session):
+    shipment = await db_session.scalar(select(DealCheckpoint).where(DealCheckpoint.deal_id == order[0], DealCheckpoint.kind == "shipment"))
+    shipment.status = "pending"
+    await db_session.commit()
     one = await event(client, order, "cancellation", 8)
     two = await event(client, order, "cancellation", 8)
     assert (await decision(client, order, one.json()["id"])).status_code == 200

@@ -4,24 +4,94 @@ import uuid
 from datetime import date, datetime, timedelta, timezone
 from decimal import Decimal
 import pytest
+from httpx import Response
 from sqlalchemy import select, text
 from app.models import Deal, DealCheckpoint, DealExecutionEvent, Need, Notification, ReserveCommitment, ResourceReservation, ResiliencePlan
 from conftest import confirmed_quote_terms, make_user, make_company, make_token
 from test_stage9_resilience import auth, covered_resilience, make_companies, make_ready_plan, confirm_hot_reserve, _live_proposed_scenario
 
 
+@pytest.fixture(autouse=True)
+def fulfillment_context(db_session):
+    # These S09 regressions execute new deals through the mandatory S10 contract.
+    global _execution_db
+    _execution_db = db_session
+
+
+async def command(client, deal, company, token, action, payload, key=None):
+    current = await client.get(f"/api/v3/deals/{deal}/fulfillment?company_id={company}", headers=auth(token))
+    assert current.status_code == 200, current.text
+    value = current.json()
+    return await client.post(f"/api/v3/deals/{deal}/fulfillment", headers=auth(token), json={
+        "company_id": str(company), "expected_revision": value["revision"], "terms_version": value["terms_version"],
+        "idempotency_key": str(key or uuid.uuid4()), "human_approved": True, "action": action, "payload": payload})
+
+
+async def prepare_order(client, deal, company, token):
+    current = (await client.get(f"/api/v3/deals/{deal}/fulfillment?company_id={company}", headers=auth(token))).json()
+    expected = (date.today() + timedelta(days=5)).isoformat()
+    proof = {"note": "Синтетический акт исполнения", "attachments": [], "expected_date": expected}
+    if not current["dispatch"]:
+        prepared = await command(client, deal, company, token, "prepare", {**proof,
+            "address": "г. Москва, ул. Синтетическая, 1", "city": "Москва", "region": "Москва",
+            "packaging": "Синтетические коробки", "places": 20, "weight_kg": 100, "volume_m3": 1})
+        assert prepared.status_code == 200, prepared.text
+    if not current["logistics"]:
+        row = await _execution_db.get(Deal, uuid.UUID(str(deal)))
+        buyer = row.buyer_company_id
+        buyer_user = await _execution_db.scalar(text("SELECT user_id FROM auth.company_members WHERE company_id=:company LIMIT 1"), {"company": buyer})
+        response = await command(client, deal, buyer, make_token(buyer_user), "logistics",
+                                 {**proof, "method": "seller_delivery" if row.delivery_price_rub else "self_pickup", "cost_rub": str(row.delivery_price_rub or 0)})
+        assert response.status_code == 200, response.text
+        if not response.json()["logistics"]["confirmed"]:
+            agreed = await command(client, deal, company, token, "proposal_decision", {
+                "note": "Подтверждена доставка по исходной смете", "attachments": [],
+                "proposal_id": response.json()["proposals"][-1]["id"], "approved": True})
+            assert agreed.status_code == 200, agreed.text
+    return proof
+
+
 async def checkpoint(client, deal, company, token, kind, note=None):
-    response = await client.patch(f"/api/v3/deals/{deal}/timeline/{kind}", headers=auth(token),
-        json={"company_id": str(company), "completed": True, "human_approved": True, "note": note})
+    proof = await prepare_order(client, deal, company, token)
+    current = (await client.get(f"/api/v3/deals/{deal}/fulfillment?company_id={company}", headers=auth(token))).json()
+    if kind == "production":
+        if current["stages"].get("production"):
+            return Response(200, json=current)
+        response = await command(client, deal, company, token, "production", {**proof, "note": note or proof["note"]})
+    else:
+        if not current["totals"]["unshipped_units"]:
+            return Response(200, json=current)
+        response = await command(client, deal, company, token, "shipment", {**proof, "batch": "Синтетическая партия",
+            "units": current["totals"]["unshipped_units"]})
     assert response.status_code == 200, response.text
     return response
 
 
 async def execution(client, deal, company, token, kind, units, key=None):
-    response = await client.post(f"/api/v3/deals/{deal}/execution", headers=auth(token),
-        json={"company_id": str(company), "kind": kind, "units": units, "note": "Синтетический акт исполнения",
-              "human_approved": True, "idempotency_key": str(key or uuid.uuid4())})
-    return response
+    key = key or uuid.uuid4()
+    if kind == "shipment":
+        proof = await prepare_order(client, deal, company, token)
+        return Response(201 if (response := await command(client, deal, company, token, "shipment",
+            {**proof, "batch": "Частичная синтетическая партия", "units": units}, key)).status_code == 200 else response.status_code,
+            json=response.json())
+    existing = await _execution_db.scalar(select(DealExecutionEvent).where(DealExecutionEvent.deal_id == uuid.UUID(str(deal)), DealExecutionEvent.idempotency_key == key))
+    if existing:
+        return Response(201, json={"id": str(existing.id)})
+    current = (await client.get(f"/api/v3/deals/{deal}/fulfillment?company_id={company}", headers=auth(token))).json()
+    batch = next((b for b in current["batches"] if b["units"] - b["inspected"] >= units), None)
+    if not batch:
+        return Response(409, json={"detail": "Нет непроверенного отгруженного объёма"})
+    proof = {"note": "Синтетический акт приёмки", "attachments": [], "expected_date": (date.today() + timedelta(days=5)).isoformat(),
+             "batch_id": batch["id"], "line_id": current["line_id"]}
+    if batch["received"] - batch["inspected"] < units:
+        response = await command(client, deal, company, token, "receipt", {**proof, "received": units, "missing": 0})
+        if response.status_code != 200:
+            return response
+    response = await command(client, deal, company, token, "inspection", {**proof, "accepted": units, "rejected": 0}, key)
+    if response.status_code != 200:
+        return response
+    item = await _execution_db.scalar(select(DealExecutionEvent).where(DealExecutionEvent.deal_id == uuid.UUID(str(deal)), DealExecutionEvent.idempotency_key == key))
+    return Response(201, json={"id": str(item.id)})
 
 
 async def approve(client, plan, scenario, token):

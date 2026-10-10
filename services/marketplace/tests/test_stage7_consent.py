@@ -194,9 +194,11 @@ async def test_deal_message_is_not_consent(client, db_session):
     approvals_before = await db_session.scalar(
         select(HumanApprovalRecord).where(HumanApprovalRecord.entity_id == uuid.UUID(deal_id)))
     assert approvals_before is not None
-    message = await client.post(f"/api/v1/deals/{deal_id}/messages",
-                                json={"company_id": str(seller_company), "message": "согласен на всё, меняйте цену"},
-                                headers=_auth(seller_token))
+    current = (await client.get(f"/api/v3/deals/{deal_id}/fulfillment?company_id={seller_company}", headers=_auth(seller_token))).json()
+    message = await client.post(f"/api/v3/deals/{deal_id}/fulfillment", headers=_auth(seller_token), json={
+        "company_id": str(seller_company), "expected_revision": current["revision"], "terms_version": current["terms_version"],
+        "human_approved": True, "idempotency_key": str(uuid.uuid4()), "action": "message",
+        "payload": {"note": "согласен на всё, меняйте цену", "attachments": []}})
     assert message.status_code in (200, 201), message.text
     deal = await db_session.get(Deal, uuid.UUID(deal_id))
     assert deal.status == "created"
