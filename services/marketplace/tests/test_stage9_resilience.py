@@ -48,13 +48,59 @@ async def covered_resilience(monkeypatch):
     from itertools import combinations
 
     async def fake(payload):
+        import os
+        if os.environ.get("TEST_OPTIMIZER_URL"):
+            from httpx import AsyncClient
+            from app.money import exact_json, money_values
+            async with AsyncClient() as http:
+                response = await http.post(os.environ["TEST_OPTIMIZER_URL"] + "/api/v2/optimize/resilience",
+                    headers={"X-Optimizer-Token": os.environ["OPTIMIZER_TOKEN"]}, json=exact_json(payload))
+                response.raise_for_status()
+                return money_values(response.json())
+        from app.money import decimal, amount
         scenarios = []
-        primaries = [item["company_id"] for item in payload["primary_allocations"]]
+        primary = payload["primary_allocations"]
+        baseline = sum(decimal(row["unit_price_rub"]) * row["units"] + decimal(row["delivery_cost_rub"])
+            + decimal(row.get("additional_cost_rub", 0)) for row in primary) + decimal(payload.get("reserve_holding_total_rub", 0))
         for size in (1, 2):
-            for group in combinations(primaries, size):
-                scenarios.append(live_scenario(list(group), 0, 0))
-        return {"scenarios": scenarios, "n1_fully_covered": True,
-                "n2_fully_covered": True, "confirmed_coverage_pct": 100, "input_hash": "s09"}
+            for group in combinations(primary, size):
+                demand = sum(row["units"] - row.get("protected_units", 0) for row in group)
+                missing = demand
+                allocations = []
+                for option in payload["reserve_options"]:
+                    units = min(missing, option["capacity_units"])
+                    if not units or units < option["moq_units"]: continue
+                    known = option.get("switchover_days") is not None
+                    confirmed = option["reserve_tier"] == "hot" and option["confirmation_status"] == "approved" and known
+                    allocations.append({"company_id": option["company_id"], "units": units,
+                        "unit_price_rub": option["unit_price_rub"], "delivery_cost_rub": option["delivery_cost_rub"],
+                        "additional_cost_rub": option["additional_cost_rub"],
+                        "total_cost_rub": amount(decimal(option["unit_price_rub"]) * units + decimal(option["delivery_cost_rub"]) + decimal(option["additional_cost_rub"])),
+                        "lead_time_days": option["lead_time_days"] + (option.get("switchover_days") or 0),
+                        "reserve_tier": option["reserve_tier"], "confirmed": confirmed, "lead_time_known": known})
+                    missing -= units
+                    if not missing: break
+                scenario = live_scenario([row["company_id"] for row in group], demand - missing, baseline, uncovered=missing)
+                scenario["scenario_type"] = "n1" if size == 1 else "n2"
+                scenario["replacement_allocations"] = allocations
+                scenario["unconfirmed_units"] = sum(row["units"] for row in allocations if not row["confirmed"])
+                scenario["confirmed_covered_units"] = sum(row["units"] for row in allocations if row["confirmed"])
+                lost = sum(decimal(row["unit_price_rub"]) * (row["units"] - row.get("protected_units", 0))
+                    + (decimal(row["delivery_cost_rub"]) + decimal(row.get("additional_cost_rub", 0)) if not row.get("protected_units") else 0) for row in group)
+                total = amount(baseline - lost + sum(row["total_cost_rub"] for row in allocations))
+                scenario["new_total_cost_rub"] = total if not missing else None
+                scenario["price_delta_rub"] = amount(total - baseline) if not missing else None
+                scenario["price_delta_pct"] = float((total - baseline) / baseline * 100) if not missing and baseline else None
+                scenario["new_lead_time_days"] = max([row["lead_time_days"] for row in allocations] + [row["lead_time_days"] for row in primary if row not in group or row.get("protected_units")], default=0)
+                scenario["baseline_lead_time_days"] = max(row["lead_time_days"] for row in primary)
+                scenario["delay_days"] = max(0, scenario["new_lead_time_days"] - scenario["baseline_lead_time_days"])
+                scenario["cost_comparison_applicable"] = not missing
+                scenario["auto_eligible"] = (not missing and not scenario["unconfirmed_units"] and
+                    (scenario["price_delta_pct"] or 0) <= payload["max_price_increase_pct"] and scenario["delay_days"] <= payload["max_delay_days"])
+                scenario["requires_human_approval"] = not scenario["auto_eligible"]
+                scenarios.append(scenario)
+        return {"scenarios": scenarios, "n1_fully_covered": all(not row["uncovered_units"] and not row["unconfirmed_units"] for row in scenarios if row["scenario_type"] == "n1"),
+                "n2_fully_covered": all(not row["uncovered_units"] and not row["unconfirmed_units"] for row in scenarios if row["scenario_type"] == "n2"), "confirmed_coverage_pct": 100, "input_hash": "s09"}
     monkeypatch.setattr("app.api.resilience.calculate_resilience", fake)
 
 
@@ -82,7 +128,12 @@ async def make_ready_plan(client, db_session, companies):
                                     confirms={"material": ["крафт-картон"]})
     from conftest import grant_category_capability
 
-    for company_id in (primary, reserve):
+    extra_reserves = [value for key, value in companies.items() if key.startswith("reserve") and key != "reserve"]
+    extra_primaries = [value for key, value in companies.items() if key.startswith("primary") and key != "primary"]
+    for extra_user, extra_company, _ in [*extra_reserves, *extra_primaries]:
+        await grant_packaging_documents(db_session, extra_company, decision_user_id=extra_user, confirms={"material": ["крафт-картон"]})
+        await grant_capacity(db_session, extra_company, 5_000)
+    for company_id in (primary, reserve, *(value[1] for value in [*extra_reserves, *extra_primaries])):
         await grant_category_capability(db_session, company_id, "packaging.paper-cups",
                                         {"volume_ml": 400, "material": "крафт-картон"})
     await grant_capacity(db_session, primary, 5_000)
@@ -94,20 +145,22 @@ async def make_ready_plan(client, db_session, companies):
                 deadline_date=date.today() + timedelta(days=30), status="open_for_offers")
     db_session.add(need)
     await db_session.flush()
-    for company_id, user_id, price in ((primary, primary_user, 10), (reserve, reserve_user, 12)):
+    for company_id, user_id, price in ((primary, primary_user, 10), (reserve, reserve_user, 12), *((value[1], value[0], 13) for value in extra_reserves), *((value[1], value[0], 11) for value in extra_primaries)):
         db_session.add(Offer(need_id=need.id, company_id=company_id, created_by_user_id=user_id,
                              price_rub=price, available_units=5_000, lead_time_days=8,
                              delivery_cost_rub=2_000, moq_units=1_000, price_tiers=[], status="sent"))
-    variant = OptimizationVariantRecord(
-        need_id=need.id, kind="reliable", input_hash="baseline",
-        result={"feasible": True, "total_cost_rub": 52_000, "max_lead_time_days": 10,
-                "allocations": [{"company_id": str(primary), "units": 5_000, "unit_price_rub": 10,
-                                 "delivery_cost_rub": 2_000, "total_cost_rub": 52_000,
-                                 "lead_time_days": 8}]})
+    primary_rows = [(primary, 10), *((value[1], 11) for value in extra_primaries)]
+    units = 5000 // len(primary_rows)
+    allocations = [{"company_id": str(company), "units": units, "unit_price_rub": price,
+        "delivery_cost_rub": 2000, "total_cost_rub": units * price + 2000, "lead_time_days": 8}
+        for company, price in primary_rows]
+    variant = OptimizationVariantRecord(need_id=need.id, kind="reliable", input_hash="baseline",
+        result={"feasible": True, "total_cost_rub": sum(row["total_cost_rub"] for row in allocations),
+                "max_lead_time_days": 10, "allocations": allocations})
     db_session.add(variant)
     await db_session.commit()
     for quote in (await db_session.scalars(select(Offer).where(Offer.need_id == need.id))).all():
-        token = primary_token if quote.company_id == primary else reserve_token
+        token = next(value[2] for value in companies.values() if value[1] == quote.company_id)
         updated = await client.patch(f"/api/v1/offers/{quote.id}", headers=auth(token),
                                      json={"expected_revision": quote.revision,
                                            "commercial_terms": confirmed_quote_terms()})

@@ -29,7 +29,7 @@ export type NeedStatus =
   | "cancelled"
   | "expired";
 export type OfferStatus = "sent" | "selected" | "rejected" | "stale";
-export type DealStatus = "created" | "in_production" | "shipped" | "delivered" | "partially_accepted" | "fulfilled" | "cancelled" | "returned";
+export type DealStatus = "created" | "in_production" | "partially_shipped" | "shipped" | "delivered" | "partially_accepted" | "fulfilled" | "cancelled" | "returned";
 
 export interface DeliveryAddress {
   id: string;
@@ -435,6 +435,9 @@ export interface Deal {
 }
 
 export interface ReserveCommitment {
+  effective_tier: "hot" | "warm" | "cold";
+  available_units: number;
+  availability_reason: string | null;
   commercial_snapshot?: CommercialSnapshot | null;
   commercial_terms?: CommercialTerms | null;
   id: string;
@@ -458,6 +461,7 @@ export interface ReserveCommitment {
 }
 
 export interface ResilienceScenario {
+  is_current: boolean;
   id: string;
   plan_id: string;
   scenario_type: string;
@@ -487,7 +491,7 @@ export interface ResiliencePlan {
   baseline_allocations: { company_id: string; units: number; total_cost_rub: Money; commercial_snapshot?: CommercialSnapshot | null }[];
   baseline_total_cost_rub: Money;
   baseline_lead_time_days: number;
-  current_allocations: { company_id: string; units: number; total_cost_rub: Money }[];
+  current_allocations: { company_id: string; units: number; total_cost_rub: Money; deal_id?: string; role?: string }[];
   current_total_cost_rub: Money;
   current_lead_time_days: number;
   max_price_increase_pct: number;
@@ -746,7 +750,7 @@ export const OFFER_STATUS_LABELS: Record<OfferStatus, string> = {
 
 export const DEAL_STATUS_LABELS: Record<DealStatus, string> = {
   created: "Создана", in_production: "В производстве", shipped: "Отгружена", delivered: "Доставлена",
-  partially_accepted: "Частично принята", fulfilled: "Исполнена", cancelled: "Отменена", returned: "Возвращена",
+  partially_shipped: "Частично отгружена", partially_accepted: "Частично принята", fulfilled: "Исполнена", cancelled: "Отменена", returned: "Возвращена",
 };
 
 export const NEED_VISIBILITY_LABELS: Record<NeedVisibility, string> = {
@@ -950,14 +954,14 @@ function unwrapList<T>(body: unknown, keys: string[]): T[] {
 
 // ---------- Эндпоинты ----------
 
-export type ExecutionKind = "acceptance" | "return" | "cancellation";
+export type ExecutionKind = "acceptance" | "return" | "cancellation" | "shipment";
 export interface ExecutionEvent {
   id: string; actor_company_id: string; kind: ExecutionKind; units: number; note: string;
   status: "pending" | "confirmed" | "rejected"; created_at: string; decided_at: string | null;
 }
 export interface ExecutionTotals {
   ordered_units: number; accepted_units: number; returned_units: number;
-  cancelled_units: number; net_units: number; open_units: number;
+  cancelled_units: number; net_units: number; open_units: number; shipped_units?: number; unshipped_units?: number;
 }
 export interface CommercialValues {
   unit_price_rub: Money | null; ordered_value_rub: Money; delivery_price_rub: Money | null;
@@ -1459,6 +1463,10 @@ export const marketplace = {
     return marketplaceFetch("/api/v1/resilience-plans/mine", { token }).then((body) =>
       unwrapList<ResiliencePlan>(body, ["plans", "items"]),
     );
+  },
+
+  recalculateResiliencePlan(token: string, planId: string): Promise<ResiliencePlan> {
+    return marketplaceFetch(`/api/v1/resilience-plans/${planId}/recalculate`, { method: "POST", token });
   },
 
   confirmResiliencePlan(token: string, planId: string, expectedRevision: number): Promise<ResiliencePlan> {

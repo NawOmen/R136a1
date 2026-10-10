@@ -857,6 +857,9 @@ class ProducerFailureIn(BaseModel):
 
 
 class ReserveCommitmentOut(BaseModel):
+    effective_tier: str = "cold"
+    available_units: int = 0
+    availability_reason: str | None = None
     commercial_snapshot: dict | None = None
     commercial_terms: dict | None = None
     commercial_terms: CommercialTerms | None = None
@@ -893,6 +896,7 @@ class PrimaryObligationOut(BaseModel):
 
 
 class ResilienceScenarioOut(BaseModel):
+    is_current: bool = True
     model_config = ConfigDict(from_attributes=True)
 
     id: uuid.UUID
@@ -942,6 +946,8 @@ class ResiliencePlanOut(BaseModel):
 # ---------- Сделки ----------
 
 class DealOut(BaseModel):
+    resilience_plan_id: uuid.UUID | None = None
+    resilience_scenario_id: uuid.UUID | None = None
     commercial_snapshot: dict | None = None
     model_config = ConfigDict(from_attributes=True)
 

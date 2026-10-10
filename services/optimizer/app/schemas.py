@@ -149,6 +149,7 @@ class OpportunityScoreOut(BaseModel):
 
 
 class PrimaryAllocationIn(BaseModel):
+    protected_units: int = Field(default=0, ge=0)
     additional_cost_rub: Amount = Field(default=0,ge=0)
 
     company_id: uuid.UUID
@@ -168,6 +169,7 @@ class ReserveOptionIn(ProducerOption):
         "approved", "pending", "reconfirmation_requested"
     ] = "pending"
     held_until: date | None = None
+    switchover_days: int | None = Field(default=None, ge=0, le=365)
 
 
 class ResilienceRequest(BaseModel):
@@ -181,6 +183,8 @@ class ResilienceRequest(BaseModel):
 
     @model_validator(mode="after")
     def validate_companies(self):
+        if any(item.protected_units > item.units for item in self.primary_allocations):
+            raise ValueError("Исполненный объём превышает назначение")
         primary_ids = [item.company_id for item in self.primary_allocations]
         reserve_ids = [item.company_id for item in self.reserve_options]
         if len(set(primary_ids)) != len(primary_ids):
@@ -203,6 +207,7 @@ class ReplacementAllocation(BaseModel):
     lead_time_days: int
     reserve_tier: Literal["hot", "warm"]
     confirmed: bool
+    lead_time_known: bool = True
 
 
 class FailureScenarioOut(BaseModel):

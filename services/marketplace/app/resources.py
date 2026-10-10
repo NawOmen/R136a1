@@ -480,3 +480,15 @@ async def _anchor_obligations(db, active, products, entries, *, company_id):
             "issue": issue,
         })
     return obligations
+
+
+async def transfer_to_deal(db, *, company_id, anchor_type, anchor_id, deal_id, units):
+    """Move an existing commitment; never reserve the same order twice."""
+    await lock_company(db, company_id)
+    rows = [row for row in await reservations(db, company_id) if row.anchor_type == anchor_type and row.anchor_id == anchor_id]
+    active = [row for row in rows if row.status == "committed"]
+    if sum(row.units for row in active) != units:
+        raise HTTPException(409, "Ресурсное обязательство изменилось. Пересчитайте назначение")
+    for row in rows:
+        row.anchor_type, row.anchor_id = "deal", deal_id
+    await db.flush()

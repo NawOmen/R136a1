@@ -96,14 +96,14 @@ class ObligationProfileAuditTests(IsolatedAsyncioTestCase):
         allocations = [dict(company_id=seller, units=units, unit_price_rub=12, delivery_cost_rub=0,
                             lead_time_days=1,total_cost_rub=units*12) for seller, units in zip(sellers, [10, 20])]
         plan = SimpleNamespace(id=uuid.uuid4(), need_id=original.id, buyer_company_id=uuid.uuid4(), version=5,
-            status='ready_for_confirmation', baseline_allocations=allocations, baseline_variant_id=uuid.uuid4(),
+            failed_company_ids=[], status='ready_for_confirmation', baseline_allocations=allocations, baseline_variant_id=uuid.uuid4(),
             auto_replace_within_thresholds=False, max_price_increase_pct=5, max_delay_days=2,commercial_snapshot=None)
         offers = [SimpleNamespace(id=uuid.uuid4(), moq_units=1, available_units=50, price_rub=12, price_tiers=[],
             delivery_cost_rub=0, lead_time_days=1, valid_until=None, revision=1, company_id=uuid.UUID(seller),resource_kind='production', product_id=None) for seller in sellers]
         for offer in offers:
             offer.commercial_terms={'delivery_method':'included','tax_basis':'no_vat','delivery_conditions':'Синтетический адрес'}
             offer.commercial_quote=frozen_snapshot(estimate_value=estimate(units=original.volume_units,unit_price=12,delivery=0,terms=offer.commercial_terms,buyer=original.company_id,seller=offer.company_id,source={'type':'offer','id':str(offer.id),'revision':1}),need=original,offer=offer)
-        db = SimpleNamespace(scalar=AsyncMock(side_effect=[plan, original]),
+        db = SimpleNamespace(scalar=AsyncMock(side_effect=[plan, original, None, None]),
                              scalars=AsyncMock(side_effect=[*[result([offer]) for offer in offers],result([])]),
                              add=Mock(), commit=AsyncMock())
         reports = [report('first'), report('second')]
@@ -112,6 +112,7 @@ class ObligationProfileAuditTests(IsolatedAsyncioTestCase):
             permission_patches(stack, resilience)
             admission = stack.enter_context(patch.object(resilience, 'require_company_admission', AsyncMock(side_effect=reports)))
             stack.enter_context(patch.object(resilience, '_lock_plan_resources', AsyncMock()))
+            stack.enter_context(patch.object(resilience, 'bind_execution', AsyncMock(side_effect=lambda *args, **kwargs: kwargs['allocation'])))
             stack.enter_context(patch.object(resilience, 'record_human_approval', approval))
             stack.enter_context(patch.object(resilience, '_plan_out', AsyncMock()))
             await resilience.confirm_resilience_plan(plan.id, ResiliencePlanConfirmIn(approved=True, expected_revision=5),

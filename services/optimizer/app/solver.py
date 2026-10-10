@@ -323,7 +323,7 @@ def _solver_status(status, elapsed_seconds: float, time_limit_seconds: float) ->
         return "infeasible"
     if status in (cp_model.OPTIMAL, cp_model.FEASIBLE):
         return "optimal" if status == cp_model.OPTIMAL else "feasible"
-    return "timeout" if elapsed_seconds >= time_limit_seconds else "infeasible"
+    return "timeout"
 
 
 def _partial_replacement(
@@ -347,6 +347,8 @@ def _partial_replacement(
         return [], 0, 0, 0, "optimal"
     if not eligible:
         return [], 0, 0, 0, "infeasible"
+    if time_limit_seconds <= 0:
+        return [], 0, 0, 0, "timeout"
 
     _validate_integer_budget(eligible,demand_units)
     model = cp_model.CpModel()
@@ -409,34 +411,38 @@ def _partial_replacement(
         return [], 0, 0, 0, _solver_status(status, elapsed, time_limit_seconds)
     max_covered = solver.value(covered)
     if max_covered <= 0:
-        return [], 0, 0, 0, "infeasible"
+        return [], 0, 0, 0, "infeasible" if status == cp_model.OPTIMAL else "timeout"
+    coverage_optimal = status == cp_model.OPTIMAL
 
-    model.add(covered == max_covered)
-    model.minimize(cost)
-    status = solver.solve(model)
-    if status not in (cp_model.OPTIMAL, cp_model.FEASIBLE):
-        coverage_status = "feasible"
-    else:
-        coverage_status = "optimal" if status == cp_model.OPTIMAL else "feasible"
+    def snapshot():
+        return [(producer, solver.value(units), next((price for (_, price), selected in
+            zip(tiers, selected_variables, strict=True) if solver.value(selected)), None))
+            for producer, units, tiers, selected_variables in producer_data]
+
+    solution = snapshot()
+    coverage_status = "feasible"
+    remaining_time = time_limit_seconds - (time.monotonic() - started)
+    if remaining_time > 0:
+        model.add(covered == max_covered)
+        model.minimize(cost)
+        solver.parameters.max_time_in_seconds = remaining_time
+        status = solver.solve(model)
+        if status in (cp_model.OPTIMAL, cp_model.FEASIBLE):
+            solution = snapshot()
+            coverage_status = "optimal" if coverage_optimal and status == cp_model.OPTIMAL else "feasible"
+    # UNKNOWN overwrites the solver response; retain the first valid assignment.
 
     allocations = []
     today = date.today()
-    for producer, units_variable, tiers, selected_variables in producer_data:
-        units = solver.value(units_variable)
+    for producer, units, unit_price in solution:
         if units <= 0:
             continue
-        unit_price = next(
-            price
-            for (_, price), selected in zip(
-                tiers, selected_variables, strict=True
-            )
-            if solver.value(selected)
-        )
         confirmed = (
             producer.reserve_tier == "hot"
             and producer.confirmation_status == "approved"
             and producer.held_until is not None
             and producer.held_until >= today
+            and producer.switchover_days is not None
         )
         allocations.append(
             ReplacementAllocation(
@@ -446,7 +452,8 @@ def _partial_replacement(
                 delivery_cost_rub=producer.delivery_cost_rub,
                 additional_cost_rub=producer.additional_cost_rub,
                 total_cost_rub=amount(units * unit_price + producer.delivery_cost_rub + producer.additional_cost_rub),
-                lead_time_days=producer.lead_time_days,
+                lead_time_days=producer.lead_time_days + (producer.switchover_days or 0),
+                lead_time_known=producer.switchover_days is not None,
                 reserve_tier=producer.reserve_tier,
                 confirmed=confirmed,
             )
@@ -474,6 +481,7 @@ def calculate_resilience(request: ResilienceRequest) -> ResilienceResponse:
         and item.confirmation_status == "approved"
         and item.held_until is not None
         and item.held_until >= today
+        and item.switchover_days is not None
     ]
     failure_sets = [
         ("n1", group)
@@ -486,18 +494,20 @@ def calculate_resilience(request: ResilienceRequest) -> ResilienceResponse:
 
     scenarios = []
     coverage_ratios = []
+    deadline = time.monotonic() + request.time_limit_seconds
     for scenario_type, failed in failure_sets:
         failed_ids = [item.company_id for item in failed]
-        failed_units = sum(item.units for item in failed)
-        failed_cost = sum(item.total_cost_rub for item in failed)
+        failed_units = sum(item.units - item.protected_units for item in failed)
+        failed_cost = sum((amount((item.units-item.protected_units) * item.unit_price_rub)
+            if item.protected_units else item.total_cost_rub) for item in failed)
         confirmed_replacements, confirmed_covered, confirmed_cost, confirmed_lead, confirmed_solver = _partial_replacement(
-            failed_units, confirmed_reserves, request.time_limit_seconds
+            failed_units, confirmed_reserves, max(0, deadline - time.monotonic())
         )
         unconfirmed_reserves = [
             item for item in request.reserve_options if item not in confirmed_reserves
         ]
         probable_replacements, probable_covered, probable_cost, probable_lead, probable_solver = _partial_replacement(
-            failed_units - confirmed_covered, unconfirmed_reserves, request.time_limit_seconds
+            failed_units - confirmed_covered, unconfirmed_reserves, max(0, deadline - time.monotonic())
         )
         replacements = [*confirmed_replacements, *probable_replacements]
         covered = confirmed_covered + probable_covered
@@ -522,7 +532,7 @@ def calculate_resilience(request: ResilienceRequest) -> ResilienceResponse:
         surviving_leads = [
             item.lead_time_days
             for item in request.primary_allocations
-            if item.company_id not in failed_ids
+            if item.company_id not in failed_ids or item.protected_units > 0
         ]
         new_lead = max([*surviving_leads, replacement_lead], default=0)
         delay = max(0, new_lead - baseline_lead)
@@ -531,6 +541,7 @@ def calculate_resilience(request: ResilienceRequest) -> ResilienceResponse:
             and unconfirmed == 0
             and candidate_price_delta_pct <= decimal(request.max_price_increase_pct)
             and delay <= request.max_delay_days
+            and all(item.lead_time_known for item in replacements)
         )
         explanations = [
             f"Заблокирован только объём выпавших производителей: {failed_units} шт.",
@@ -542,7 +553,7 @@ def calculate_resilience(request: ResilienceRequest) -> ResilienceResponse:
                 "Расчёт не уложился в лимит времени: это не отсутствие решения. "
                 "Повторите расчёт позже или упростите условия."
             )
-        elif uncovered and "infeasible" in (confirmed_solver, probable_solver):
+        elif uncovered and all(value in {"optimal", "infeasible"} for value in (confirmed_solver, probable_solver)):
             solver_status = "infeasible"
             explanations.append("Допустимого распределения резерва нет: deficit честно показан")
         elif (confirmed_solver, probable_solver) == ("optimal", "optimal"):
