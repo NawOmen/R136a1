@@ -13,7 +13,7 @@ from sqlalchemy.exc import IntegrityError
 
 from ..admission import publicly_available_products
 from ..database import get_db
-from ..commerce import product_specification_hash
+from ..commerce import execution_totals, product_specification_hash
 from ..deps import CurrentUser, get_current_user, notify, require_company_admin, require_company_buyer, require_company_seller, require_membership
 from ..category_characteristics import validate_profile_values
 from ..experience import classify_cargo, validate_characteristics
@@ -52,6 +52,11 @@ async def _ensure_checkpoints(deal_id: uuid.UUID, db: AsyncSession) -> list[Deal
     rows = (await db.execute(select(DealCheckpoint).where(DealCheckpoint.deal_id == deal_id))).scalars().all()
     by_kind = {row.kind: row for row in rows}
     return [by_kind[kind] for kind in CHECKPOINTS]
+
+
+async def events_for_review(db: AsyncSession, deal_id: uuid.UUID) -> list[DealExecutionEvent]:
+    return list((await db.scalars(select(DealExecutionEvent).where(DealExecutionEvent.deal_id == deal_id)
+                                  .order_by(DealExecutionEvent.created_at, DealExecutionEvent.id))).all())
 
 
 @router.get("/products/{product_id}/detail", response_model=PublicProductDetailOut)
@@ -209,6 +214,8 @@ async def update_checkpoint(deal_id: uuid.UUID, kind: str, data: CheckpointUpdat
         raise HTTPException(status.HTTP_404_NOT_FOUND, detail="Сделка не найдена")
     await _deal_party(deal, data.company_id, user, db)
     await require_company_admin(data.company_id, user, db)
+    from ..fulfillment import require_legacy_execution
+    await require_legacy_execution(db, deal.id)
     expected_company = deal.buyer_company_id if kind == "delivery" else deal.seller_company_id
     if data.company_id != expected_company:
         raise HTTPException(status.HTTP_403_FORBIDDEN, detail="Этот этап подтверждает другая сторона сделки")
@@ -216,6 +223,10 @@ async def update_checkpoint(deal_id: uuid.UUID, kind: str, data: CheckpointUpdat
         raise HTTPException(status.HTTP_409_CONFLICT, detail="Заказ отменён")
     if kind == "shipment" and not data.completed:
         raise HTTPException(409, "Отгрузку нельзя отменить переключателем. Оформите возврат или отмену остатка")
+    if kind == "delivery" and data.completed:
+        arrangement = await db.scalar(select(DeliveryArrangement).where(DeliveryArrangement.deal_id == deal.id))
+        if arrangement is None:
+            raise HTTPException(409, "Сначала выберите способ получения: самовывоз, перевозчика или доставку продавца")
     if not data.completed:
         recorded = await db.scalar(select(DealExecutionEvent.id).where(DealExecutionEvent.deal_id == deal.id).limit(1))
         if recorded:
@@ -262,25 +273,37 @@ async def update_checkpoint(deal_id: uuid.UUID, kind: str, data: CheckpointUpdat
 
 @router.put("/deals/{deal_id}/delivery", response_model=DeliveryArrangementOut)
 async def save_delivery(deal_id: uuid.UUID, data: DeliveryArrangementIn, user: CurrentUser = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
-    deal = await db.get(Deal, deal_id)
+    await lock_execution_need(db, deal_id)
+    deal = await db.scalar(select(Deal).where(Deal.id == deal_id).with_for_update().execution_options(populate_existing=True))
     if deal is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, detail="Сделка не найдена")
     await _deal_party(deal, data.company_id, user, db)
     await require_company_admin(data.company_id, user, db)
+    from ..fulfillment import require_legacy_execution
+    await require_legacy_execution(db, deal.id)
     if data.company_id != deal.buyer_company_id:
         raise HTTPException(status.HTTP_403_FORBIDDEN, detail="Организацию получения подтверждает покупатель")
-    cargo_class, note = classify_cargo(data.weight_kg, data.volume_m3)
-    item = (await db.execute(select(DeliveryArrangement).where(DeliveryArrangement.deal_id == deal.id))).scalar_one_or_none()
-    values = data.model_dump(exclude={"company_id", "human_approved"})
+    # Признак опасного груза сохраняется между изменениями: отсутствие поля
+    # оставляет прежнее ограничение, явный null согласованно снимает его.
+    hazard_class = data.hazard_class
+    stored_hazard = None
+    existing = (await db.execute(select(DeliveryArrangement).where(DeliveryArrangement.deal_id == deal.id))).scalar_one_or_none()
+    if existing is not None:
+        stored_hazard = existing.hazard_class
+    if "hazard_class" not in data.model_fields_set:
+        hazard_class = stored_hazard
+    cargo_class, note = classify_cargo(data.weight_kg, data.volume_m3, hazard_class)
+    item = existing
+    values = data.model_dump(exclude={"company_id", "human_approved", "hazard_class"})
     if item is None:
         item = DeliveryArrangement(deal_id=deal.id, cargo_class=cargo_class, classification_note=note,
-            buyer_responsible=True, confirmed_by_user_id=user.id, **values); db.add(item)
+            hazard_class=hazard_class, buyer_responsible=True, confirmed_by_user_id=user.id, **values); db.add(item)
     else:
         for key, value in values.items(): setattr(item, key, value)
-        item.cargo_class, item.classification_note, item.confirmed_by_user_id = cargo_class, note, user.id
+        item.cargo_class, item.classification_note, item.hazard_class, item.confirmed_by_user_id = cargo_class, note, hazard_class, user.id
     await record_human_approval(db, action="confirm_delivery_arrangement", entity_type="deal", entity_id=deal.id,
         actor_user_id=user.id, actor_company_id=data.company_id, permission="company_admin+buyer",
-        decision="approved", payload={**values, "cargo_class": cargo_class},
+        decision="approved", payload={**values, "cargo_class": cargo_class, "hazard_class": hazard_class},
         source_refs=[{"type": "deal", "id": str(deal.id)}], explanation="Покупатель выбрал способ получения; площадка не заключает договор перевозки.")
     await db.commit(); await db.refresh(item); return item
 
@@ -295,13 +318,21 @@ async def get_delivery(deal_id: uuid.UUID, company_id: uuid.UUID, user: CurrentU
 
 @router.post("/deals/{deal_id}/reviews", response_model=DealReviewOut, status_code=status.HTTP_201_CREATED)
 async def create_review(deal_id: uuid.UUID, data: DealReviewIn, user: CurrentUser = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
-    deal = await db.get(Deal, deal_id)
+    await lock_execution_need(db, deal_id)
+    deal = await db.scalar(select(Deal).where(Deal.id == deal_id).with_for_update().execution_options(populate_existing=True))
     if deal is None: raise HTTPException(status.HTTP_404_NOT_FOUND, detail="Сделка не найдена")
     await _deal_party(deal, data.company_id, user, db)
     await require_company_admin(data.company_id, user, db)
     checkpoints = await _ensure_checkpoints(deal.id, db)
     if checkpoints[-1].status != "completed":
         raise HTTPException(status.HTTP_409_CONFLICT, detail="Отзыв доступен только после подтверждённой доставки")
+    review_events = await events_for_review(db, deal.id)
+    if any(e.kind == "return" and e.status in {"pending", "approved"} for e in review_events):
+        raise HTTPException(409, "Сначала завершите открытый запрос возврата")
+    performed = execution_totals(deal, review_events)
+    if performed["accepted_units"] <= 0 or performed["net_units"] <= 0:
+        raise HTTPException(status.HTTP_409_CONFLICT,
+                            detail="Отзыв доступен только после подтверждённого исполнения без полного возврата")
     reviewed = deal.seller_company_id if data.company_id == deal.buyer_company_id else deal.buyer_company_id
     review = DealReview(deal_id=deal.id, reviewer_company_id=data.company_id, reviewed_company_id=reviewed,
         rating=data.rating, comment=data.comment)

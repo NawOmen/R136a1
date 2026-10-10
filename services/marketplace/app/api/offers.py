@@ -652,6 +652,7 @@ async def select_offer(
     )
 
     deal = Deal(
+        execution_contract="fulfillment_v3",
         offer_id=offer.id,
         need_id=need.id,
         buyer_company_id=need.company_id,

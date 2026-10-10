@@ -91,7 +91,7 @@ export interface DealMessage { id: string; deal_id: string; author_user_id: stri
 export interface PublicProducer { company_id: string; display_name: string; legal_form: string; region: string | null; about: string | null; production_site_address: string | null; has_photo: boolean; rating: number | null; reviews_count: number; capability_details?: CapabilityDetails | null }
 export interface PublicProductDetail extends Product { producer: PublicProducer }
 export interface DealCheckpoint { id: string; deal_id: string; kind: "production" | "shipment" | "delivery"; status: "pending" | "completed"; note: string | null; completed_at: string | null }
-export interface DeliveryArrangement { id: string; deal_id: string; weight_kg: number; volume_m3: number; cargo_class: "small" | "medium" | "large" | "manual_review"; classification_note: string; method: "buyer_carrier" | "self_pickup" | "seller_delivery"; carrier_name: string | null; tracking_number: string | null; buyer_responsible: boolean }
+export interface DeliveryArrangement { id: string; deal_id: string; weight_kg: number; volume_m3: number; cargo_class: "small" | "medium" | "large" | "manual_review"; classification_note: string; method: "buyer_carrier" | "self_pickup" | "seller_delivery"; carrier_name: string | null; tracking_number: string | null; hazard_class: string | null; buyer_responsible: boolean }
 export interface DealReview { id: string; deal_id: string; reviewer_company_id: string; reviewed_company_id: string; rating: number; comment: string; created_at: string }
 export interface PriceIndexPoint { date: string; average_unit_price_rub: Money; offers_count: number }
 export interface MarketWatch { id: string; category: string; demand_changes: boolean; supply_changes: boolean }
@@ -957,7 +957,7 @@ function unwrapList<T>(body: unknown, keys: string[]): T[] {
 export type ExecutionKind = "acceptance" | "return" | "cancellation" | "shipment";
 export interface ExecutionEvent {
   id: string; actor_company_id: string; kind: ExecutionKind; units: number; note: string;
-  status: "pending" | "confirmed" | "rejected"; created_at: string; decided_at: string | null;
+  status: "pending" | "approved" | "confirmed" | "rejected"; created_at: string; decided_at: string | null;
 }
 export interface ExecutionTotals {
   ordered_units: number; accepted_units: number; returned_units: number;
@@ -1205,7 +1205,7 @@ export const marketplace = {
     return marketplaceFetch(`/api/v1/deals/${dealId}/delivery?company_id=${companyId}`, { token });
   },
 
-  saveDelivery(token: string, dealId: string, input: { company_id: string; weight_kg: number; volume_m3: number; method: DeliveryArrangement["method"]; carrier_name?: string; tracking_number?: string }): Promise<DeliveryArrangement> {
+  saveDelivery(token: string, dealId: string, input: { company_id: string; weight_kg: number; volume_m3: number; method: DeliveryArrangement["method"]; carrier_name?: string; tracking_number?: string; hazard_class?: string | null }): Promise<DeliveryArrangement> {
     return marketplaceFetch(`/api/v1/deals/${dealId}/delivery`, { method: "PUT", token, body: JSON.stringify({ ...input, human_approved: true }) });
   },
 
@@ -1641,3 +1641,47 @@ export interface CommercialTerms {
 }
 export interface CommercialEstimate {schema_version:number;complete:boolean;missing:string[];total_rub:Money|null;known_total_rub:Money;lines:{code:string;title:string;amount_rub:Money|null;conditional:boolean;source:unknown;tax_basis:string}[];terms:CommercialTerms;benefit_rub?:Money|null;baseline_comparable?:boolean}
 export interface CommercialSnapshot {schema_version:number;estimate:CommercialEstimate;need:{id:string;revision:number};offer:{id:string;revision:number}|null}
+
+
+export interface FulfillmentRecord {
+  id: string; company_id: string; terms_version: number; actual_date: string | null;
+  expected_date?: string; note: string; attachments: string[]; action?: string;
+  status?: string; kind?: string; units?: number; batch_id?: string; line_id?: string;
+  resolution?: string; responses?: FulfillmentRecord[]; method?: string; carrier?: string; cost_rub?: string | null;
+}
+export interface FulfillmentBatch extends FulfillmentRecord {
+  batch: string; line_id: string; units: number; received: number; inspected: number;
+  accepted: number; rejected: number; missing: number;
+}
+export interface FulfillmentState {
+  deal_id: string; line_id: string; revision: number; terms_version: number; status: string;
+  totals: { ordered_units: number; shipped_units: number; unshipped_units: number; received_units: number;
+    accepted_units: number; returned_units: number; cancelled_units: number; net_units: number; open_units: number };
+  dispatch: (FulfillmentRecord & { address: string; city: string; region: string; packaging: string;
+    places: number; weight_kg: number; volume_m3: number; hazard_class: string | null; restrictions: string; classification_note?: string }) | null;
+  commercial: { seller_total_rub: string; seller_delivery_rub: string | null; external_carrier_rub: string | null };
+  destination: string | null;
+  logistics: (FulfillmentRecord & { method: string; carrier: string; cost_rub: string | null; confirmed: boolean }) | null;
+  stages: Record<string, FulfillmentRecord>; batches: FulfillmentBatch[];
+  disputes: FulfillmentRecord[]; requests: FulfillmentRecord[]; messages: FulfillmentRecord[];
+  proposals: FulfillmentRecord[]; history: FulfillmentRecord[]; completed: boolean; rating_rule: string;
+}
+export interface FulfillmentCommand {
+  company_id: string; expected_revision: number; terms_version: number;
+  idempotency_key: string; human_approved: true; action: string; payload: Record<string, unknown>;
+}
+export const fulfillmentApi = {
+  get(token: string, deal: string, company: string): Promise<FulfillmentState> {
+    return marketplaceFetch(`/api/v3/deals/${deal}/fulfillment?company_id=${company}`, { token });
+  },
+  act(token: string, deal: string, command: FulfillmentCommand): Promise<FulfillmentState> {
+    return marketplaceFetch(`/api/v3/deals/${deal}/fulfillment`, { token, method: "POST", body: JSON.stringify(command) });
+  },
+  upload(token: string, deal: string, company: string, version: number, file: File): Promise<{id: string; filename: string}> {
+    const body = new FormData(); body.set("company_id", company); body.set("terms_version", String(version)); body.set("file", file);
+    return marketplaceFetch(`/api/v3/deals/${deal}/attachments`, { token, method: "POST", body });
+  },
+  download(token: string, deal: string, company: string, id: string): Promise<Blob> {
+    return marketplaceFetchBlob(`/api/v3/deals/${deal}/attachments/${id}?company_id=${company}`, token);
+  },
+};

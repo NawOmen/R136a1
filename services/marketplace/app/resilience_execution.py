@@ -7,7 +7,7 @@ import uuid
 from datetime import datetime, timezone
 from fastapi import HTTPException
 from sqlalchemy import select
-from .models import Deal, DealCheckpoint, DealExecutionEvent, Need, ResiliencePlan
+from .models import Deal, DealCheckpoint, DealExecutionEvent, DealFulfillment, Need, ResiliencePlan
 from .money import decimal
 from .resources import transfer_to_deal
 
@@ -28,6 +28,11 @@ async def execution_state(db, plan):
         cancelled = sum(e.units for e in events if e.kind == "cancellation" and e.status == "confirmed")
         shipment = await db.scalar(select(DealCheckpoint).where(DealCheckpoint.deal_id == deal.id, DealCheckpoint.kind == "shipment"))
         shipped = deal.units - cancelled if shipment and shipment.status == "completed" else sum(e.units for e in events if e.kind == "shipment" and e.status == "confirmed")
+        fulfillment = await db.get(DealFulfillment, deal.id)
+        if fulfillment:
+            shipped = sum(batch["units"] for batch in fulfillment.data["batches"])
+            credits = sum(d["units"] for d in fulfillment.data["disputes"] if d.get("resolution") == "credit" and d["status"] == "closed")
+            cancelled -= credits  # only the unshipped cancellation reduces recovery obligations
         state[str(deal.id)] = {"company_id": str(deal.seller_company_id), "protected_units": max(accepted, shipped),
             "legacy": deal.resilience_plan_id is None, "accepted_units": accepted, "cancelled_units": cancelled, "units": deal.units}
     return state
@@ -47,7 +52,7 @@ async def create_execution_deal(db, *, plan, need, offer, allocation, snapshot, 
         Deal.seller_company_id == uuid.UUID(allocation["company_id"]), Deal.resilience_scenario_id == scenario_id))
     if deal:
         return deal
-    deal = Deal(id=uuid.uuid4(), resilience_plan_id=plan.id, resilience_scenario_id=scenario_id,
+    deal = Deal(execution_contract="fulfillment_v3", id=uuid.uuid4(), resilience_plan_id=plan.id, resilience_scenario_id=scenario_id,
         offer_id=offer.id, need_id=need.id, buyer_company_id=plan.buyer_company_id,
         seller_company_id=offer.company_id, performed_by_user_id=actor_user_id,
         units=allocation["units"], unit_price_rub=decimal(allocation["unit_price_rub"]),
