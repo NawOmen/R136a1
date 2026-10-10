@@ -50,6 +50,25 @@ async def test_repeat_preview_does_not_create_and_explains_not_carried(client, d
     assert after == before
 
 
+async def test_repeat_preview_shows_free_capacity_when_entries_exist(client, db_session):
+    buyer = await make_user(db_session)
+    company = await make_company(db_session, buyer, can_buy=True, can_sell=False)
+    original = await _make_need(client, buyer, company)
+    await db_session.execute(
+        text(
+            "INSERT INTO marketplace.capacity_entries (id, company_id, date, category, unit, available_units) "
+            "VALUES (gen_random_uuid(), :cid, :day, '', 'шт', 1000)"
+        ),
+        {"cid": company, "day": date.today() + timedelta(days=5)},
+    )
+    await db_session.commit()
+    r = await client.post(f"/api/v1/needs/{original['id']}/repeat-preview", headers=_auth(make_token(buyer)))
+    assert r.status_code == 200, r.text
+    fields = [c["field"] for c in r.json()["changes"]]
+    assert "Свободная мощность" in fields
+    assert "Подтверждённой мощности нет" not in " ".join(r.json()["warnings"])
+
+
 async def test_repeat_with_valid_until_returns_new_draft(client, db_session):
     buyer = await make_user(db_session)
     company = await make_company(db_session, buyer, can_buy=True, can_sell=False)
@@ -115,12 +134,22 @@ async def test_duplicate_product_creates_unpublished_draft(client, db_session):
     )
     assert r.status_code == 201, r.text
     product_id = r.json()["id"]
+    await db_session.execute(
+        text(
+            "INSERT INTO marketplace.product_images (id, product_id, file_name, file_key, content_type, position) "
+            "VALUES (gen_random_uuid(), :pid, 'фото.png', 'products/шаблон', 'image/png', 0)"
+        ),
+        {"pid": product_id},
+    )
+    await db_session.commit()
     r = await client.post(f"/api/v1/products/{product_id}/duplicate", headers=_auth(token))
     assert r.status_code == 201, r.text
     copy = r.json()
     assert copy["id"] != product_id
     assert copy["is_published"] is False
     assert copy["name"].startswith("Копия")
+    assert len(copy["images"]) == 1
+    assert copy["images"][0]["file_name"] == "фото.png"
 
 
 async def test_next_step_ordering(client, db_session):

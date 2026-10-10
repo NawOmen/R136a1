@@ -246,6 +246,23 @@ async def duplicate_product(
     )
     db.add(copy)
     await db.flush()
+    original_images = (
+        await db.execute(
+            select(ProductImage)
+            .where(ProductImage.product_id == original.id)
+            .order_by(ProductImage.position)
+        )
+    ).scalars().all()
+    for image in original_images:
+        db.add(
+            ProductImage(
+                product_id=copy.id,
+                file_name=image.file_name,
+                file_key=image.file_key,
+                content_type=image.content_type,
+                position=image.position,
+            )
+        )
     await append_audit_event(
         db,
         event_type="product_duplicated",
