@@ -26,6 +26,7 @@ from ..schemas import (
     DocumentDecisionIn,
     PendingDocumentOut,
 )
+from ..file_safety import check_upload
 from ..storage import delete_object, upload_object
 from ..trust import append_audit_event, record_human_approval
 
@@ -170,7 +171,6 @@ async def upload_document(
 
     content_type = file.content_type or "application/octet-stream"
     try:
-        from ..file_safety import check_upload
         content_type = check_upload(data, content_type)
     except ValueError as exc:
         raise HTTPException(status.HTTP_415_UNSUPPORTED_MEDIA_TYPE, detail=str(exc)) from None
