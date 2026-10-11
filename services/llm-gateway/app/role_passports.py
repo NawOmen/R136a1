@@ -178,6 +178,34 @@ TOOL_REGISTRY: dict[str, dict] = {
 WRITE_TOOLS = {name for name, spec in TOOL_REGISTRY.items() if spec["kind"] == "write"}
 
 
+ADAPTER_CONTRACT_VERSION = "external-adapter-1"
+
+# S14.04: внешний сценарий не выбран — включённых адаптеров нет. Реестр задаёт
+# границу расширения: версия контракта, разрешённые назначения, бюджет и флаг.
+# Внутренний продукт работает без адаптера; сбой адаптера не пишет в домен.
+EXTERNAL_ADAPTERS: dict[str, dict] = {}
+
+
+def check_external_adapter(name: str, *, contract_version: str, scope: str, budget: float) -> Executor:
+    """Серверная проверка внешнего адаптера: deny-by-default.
+
+    Неизвестный, отключённый, чужой версии, вне назначений или сверх бюджета
+    адаптер отклоняется до вызова будущим исполнителем. Эта проверка
+    не принимает и не фильтрует контекст: перед подключением исполнитель
+    должен отдельно ограничить данные, права и повторные записи.
+    """
+    spec = EXTERNAL_ADAPTERS.get(name)
+    if spec is None or not spec.get("enabled", False):
+        raise ValueError(f"Внешний адаптер «{name}» не зарегистрирован или отключён")
+    if contract_version != ADAPTER_CONTRACT_VERSION or spec.get("contract_version") != ADAPTER_CONTRACT_VERSION:
+        raise ValueError(f"Адаптер «{name}» несовместим с контрактом {ADAPTER_CONTRACT_VERSION}")
+    if scope not in spec.get("scopes", frozenset()):
+        raise ValueError(f"Назначение «{scope}» не разрешено адаптеру «{name}»")
+    if not 0 < budget <= spec.get("max_budget", 0):
+        raise ValueError(f"Бюджет вне лимита адаптера «{name}»")
+    return "system"
+
+
 SCENARIO_PERMISSIONS: dict[str, str] = {
     "buyer_investigation": "can_buy",
     "seller_explain": "can_sell",
