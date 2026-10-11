@@ -116,7 +116,7 @@ async def test_open_states_do_not_become_success_or_evaluated(client,db_session,
 async def test_bank_is_bundled_wrong_numeric_not_correct_and_requires_applicability(client,db_session,agents_ledger):
     from app.agent_quality import bank_tasks
     from pathlib import Path
-    assert json.loads(Path('/workspace/packages/test-fixtures/agent-task-bank/ru_tasks.json').read_text())['tasks']==bank_tasks()
+    assert json.loads((Path(__file__).resolve().parents[3] / 'packages/test-fixtures/agent-task-bank/ru_tasks.json').read_text(encoding='utf-8'))['tasks']==bank_tasks()
     u=await make_user(db_session);c=await make_company(db_session,u);h=_auth(make_token(u))
     result={'category':'бумажные стаканы','properties':[{'key':'quantity_units','value':999999,'status':'confirmed'}],'conflicts':[],'questions':[]}
     rid=await _agent_run(db_session,agents_ledger,u,c,'buyer_agent',result);await initial(db_session,rid,result)

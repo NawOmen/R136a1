@@ -8,7 +8,8 @@ import json
 from pathlib import Path
 from datetime import datetime, timedelta, timezone
 from decimal import Decimal
-from sqlalchemy import select, text
+from sqlalchemy import DateTime, Integer, cast, column, literal, select, table, text
+from sqlalchemy.dialects.postgresql import JSONB, UUID
 from .models import AgentQualityEvaluation
 from .schemas import RoleQualityBenchmarkOut, RoleQualityOut, RoleQualityRoleOut
 
@@ -78,12 +79,21 @@ async def runs_available(db):
 async def run_rows(db, *, since, company_id):
     if not await runs_available(db): return []
     columns = set((await db.execute(text("SELECT column_name FROM information_schema.columns WHERE table_schema='agents' AND table_name='agent_runs'"))).scalars())
-    initial = 'initial_result' if 'initial_result' in columns else 'NULL::jsonb AS initial_result'
-    corrections = 'human_corrections' if 'human_corrections' in columns else 'NULL::integer AS human_corrections'
-    sql = f"SELECT id, company_id, agent_type, state, error, duration_ms, estimated_cost_rub, model_version, prompt_version, used_route, {initial}, {corrections} FROM agents.agent_runs WHERE created_at >= :since"
-    if company_id is not None: sql += ' AND company_id = CAST(:company_id AS uuid)'
-    sql += ' ORDER BY created_at, id'
-    return list((await db.execute(text(sql), {'since': since, 'company_id': company_id})).mappings())
+    names = ('id', 'company_id', 'agent_type', 'state', 'error', 'duration_ms',
+             'estimated_cost_rub', 'model_version', 'prompt_version', 'used_route')
+    optional = [('initial_result', JSONB), ('human_corrections', Integer)]
+    runs = table('agent_runs', *(column(name) for name in names),
+                 column('created_at', DateTime(timezone=True)),
+                 *(column(name, kind) for name, kind in optional if name in columns),
+                 schema='agents')
+    fields = [runs.c[name] for name in names]
+    fields.extend(runs.c[name] if name in columns else cast(literal(None), kind).label(name)
+                  for name, kind in optional)
+    statement = select(*fields).where(runs.c.created_at >= since)
+    if company_id is not None:
+        statement = statement.where(runs.c.company_id == cast(literal(str(company_id)), UUID))
+    statement = statement.order_by(runs.c.created_at, runs.c.id)
+    return list((await db.execute(statement)).mappings())
 
 
 async def role_quality(db, *, scope, company_id, window_days):
