@@ -671,15 +671,16 @@ export interface AgentScorecard {
   window_days: number;
   offer_drafts_total: number;
   offer_drafts_used: number;
-  offer_draft_conversion_pct: number;
+  offer_draft_conversion_pct: number | null;
   average_changed_fields: number;
   offers_total: number;
   offers_from_drafts: number;
+  offer_rejections: number;
   deals_total: number;
   deals_from_drafts: number;
   recommendations_total: number;
   recommendations_converted: number;
-  recommendation_conversion_pct: number;
+  recommendation_conversion_pct: number | null;
   human_approvals: number;
   blocked_actions: number;
   admission_checks: number;
@@ -694,8 +695,25 @@ export interface AgentScorecard {
   agent_costed_runs: number;
   agent_average_duration_ms: number;
   agent_estimated_cost_rub: Money;
+  agent_model_versions: string[];
+  agent_prompt_versions: string[];
   llm_metrics_available: boolean;
   notes: string[];
+}
+
+export interface RoleQualityRole {
+  role: string; passport: string; sample: number; status: "evaluated" | "not_evaluated";
+  completed_runs: number; completed_share_pct: number | null;
+  critical_fields_total: number; critical_fields_confirmed: number; critical_completeness_pct: number | null;
+  conflicts_found: number; clarification_runs: number; human_corrections: number; blocked_actions: number;
+  average_duration_ms: number | null; known_cost_rub: number | null; costed_share_pct: number | null;
+  model_versions: string[]; prompt_versions: string[];
+}
+
+export interface RoleQuality {
+  scope: string; window_days: number; method_version: string; min_observations: number;
+  benchmark: { bank: string; tasks: number; compares: string[]; available: boolean };
+  roles: RoleQualityRole[]; notes: string[];
 }
 
 export interface AuditEvent {
@@ -973,14 +991,25 @@ export interface CommercialValues {
 }
 export interface DealExecution extends ExecutionTotals {
   deal_id: string; status: string; events: ExecutionEvent[]; financials: CommercialValues;
-  cost_revision?: number; unit_cost_rub?: Money | null; cost_note?: string;
+  cost_revision?: number; unit_cost_rub?: Money | null; cost_note?: string; cost_tax_basis?: string;
 }
 export interface CommercialOrder extends ExecutionTotals, CommercialValues {
-  deal_id: string; category: string; unit: string; created_at: string; status: string;
+  deal_id: string; category: string; unit: string; created_at: string; status: string; cost_tax_basis?: string;
+}
+export interface RejectionRate {
+  offers_total: number; rejected: number; selected: number; open: number; stale: number;
+  known_outcomes: number; rate_pct: number | null;
+}
+export interface AveragePrice { unit: string; accepted_units: number; average_unit_price_rub: Money }
+export interface MonthlyPoint {
+  month: string; orders_count: number; accepted_value_rub: Money | null;
+  accepted_units: number | null; unit: string | null;
 }
 export interface CommercialReport {
-  company_id: string; role: "buyer" | "seller"; period_basis: string;
-  orders_count: number; offers_count: number; rejected_offers_count: number;
+  company_id: string; role: "buyer" | "seller"; period_basis: string; built_at: string;
+  filters: { start: string | null; end: string | null; category: string | null; status: string | null; counterparty: string | null; product: string | null; source: string };
+  orders_count: number; offers_count: number; rejected_offers_count: number; rejection_rate: RejectionRate;
+  average_prices: AveragePrice[]; monthly: MonthlyPoint[];
   payments_rub: null; totals: Record<string, number | null>; orders: CommercialOrder[]; explanation: string;
   group_orders_count: number;
   group_orders: { order_id: string; coalition_id: string; category: string; unit: string; created_at: string; status: string; units: number; contract_value_rub: Money; payments_rub: null }[];
@@ -1042,13 +1071,18 @@ export const marketplace = {
   decideExecution(token: string, dealId: string, eventId: string, companyId: string, approved: boolean): Promise<ExecutionEvent> {
     return marketplaceFetch(`/api/v1/deals/${dealId}/execution/${eventId}/decision`, { token, method: "POST", body: JSON.stringify({ company_id: companyId, approved, human_approved: true }) });
   },
-  saveDealCosts(token: string, dealId: string, data: { company_id: string; expected_revision: number; unit_cost_rub: string | null; attributable_expenses_rub: string | null; note: string }): Promise<{ revision: number }> {
+  saveDealCosts(token: string, dealId: string, data: { company_id: string; expected_revision: number; unit_cost_rub: string | null; attributable_expenses_rub: string | null; tax_basis: string; note: string }): Promise<{ revision: number }> {
     return marketplaceFetch(`/api/v1/deals/${dealId}/costs`, { token, method: "PUT", body: JSON.stringify({ ...data, human_approved: true }) });
   },
-  getCommercialReport(token: string, companyId: string, role: "buyer" | "seller", filters: { start?: string; end?: string; category?: string } = {}): Promise<CommercialReport> {
+  getCommercialReport(token: string, companyId: string, role: "buyer" | "seller", filters: { start?: string; end?: string; category?: string; status?: string; counterparty?: string; product?: string; source?: string } = {}): Promise<CommercialReport> {
     const params = new URLSearchParams({ role });
     Object.entries(filters).forEach(([key, value]) => { if (value) params.set(key, value); });
     return marketplaceFetch(`/api/v1/companies/${companyId}/commercial-analytics?${params}`, { token });
+  },
+  downloadCommercialCsv(token: string, companyId: string, role: "buyer" | "seller", filters: { start?: string; end?: string; category?: string; status?: string; counterparty?: string; product?: string; source?: string } = {}): Promise<Blob> {
+    const params = new URLSearchParams({ role });
+    Object.entries(filters).forEach(([key, value]) => { if (value) params.set(key, value); });
+    return marketplaceFetchBlob(`/api/v1/companies/${companyId}/commercial-report.csv?${params}`, token);
   },
   // Публичный каталог (без Bearer)
   getCatalog(): Promise<Product[]> {
@@ -1445,6 +1479,14 @@ export const marketplace = {
 
   getPlatformAgentScorecard(token: string): Promise<AgentScorecard> {
     return marketplaceFetch("/api/v1/platform/agent-scorecard", { token });
+  },
+
+  getRoleQuality(token: string, companyId: string): Promise<RoleQuality> {
+    return marketplaceFetch(`/api/v1/companies/${companyId}/role-quality`, { token });
+  },
+
+  getPlatformRoleQuality(token: string): Promise<RoleQuality> {
+    return marketplaceFetch("/api/v1/platform/role-quality", { token });
   },
 
   optimizeNeed(token: string, needId: string): Promise<OptimizationVariant[]> {

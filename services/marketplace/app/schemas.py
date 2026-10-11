@@ -227,15 +227,16 @@ class AgentScorecardOut(BaseModel):
     window_days: int
     offer_drafts_total: int
     offer_drafts_used: int
-    offer_draft_conversion_pct: float
+    offer_draft_conversion_pct: float | None
     average_changed_fields: float
     offers_total: int
     offers_from_drafts: int
+    offer_rejections: int = 0
     deals_total: int
     deals_from_drafts: int
     recommendations_total: int
     recommendations_converted: int
-    recommendation_conversion_pct: float
+    recommendation_conversion_pct: float | None
     human_approvals: int
     blocked_actions: int
     admission_checks: int
@@ -250,8 +251,55 @@ class AgentScorecardOut(BaseModel):
     agent_costed_runs: int = 0
     agent_average_duration_ms: float
     agent_estimated_cost_rub: Amount
+    agent_model_versions: list[str] = Field(default_factory=list)
+    agent_prompt_versions: list[str] = Field(default_factory=list)
     llm_metrics_available: bool
     notes: list[str]
+
+
+class RoleQualityBenchmarkOut(BaseModel):
+    """Эталон методики: что сравнивается и где лежит."""
+
+    bank: str = "packages/test-fixtures/agent-task-bank/ru_tasks.json"
+    tasks: int = 0
+    compares: list[str] = Field(default_factory=list)
+    available: bool = False
+
+
+class RoleQualityRoleOut(BaseModel):
+    """Качество одной сопоставимой роли. Итогового балла нет осознанно:
+    аспекты не компенсируют друг друга, нарушение прав не покрывается скоростью."""
+
+    role: str
+    passport: str
+    sample: int
+    status: str = Field(pattern="^(evaluated|not_evaluated)$")
+    completed_runs: int = 0
+    completed_share_pct: float | None = None
+    critical_fields_total: int = 0
+    critical_fields_confirmed: int = 0
+    critical_completeness_pct: float | None = None
+    conflicts_found: int = 0
+    clarification_runs: int = 0
+    human_corrections: int = 0
+    blocked_actions: int = 0
+    average_duration_ms: float | None = None
+    known_cost_rub: float | None = None
+    costed_share_pct: float | None = None
+    model_versions: list[str] = Field(default_factory=list)
+    prompt_versions: list[str] = Field(default_factory=list)
+
+
+class RoleQualityOut(BaseModel):
+    """Обоснованная оценка агентных ролей по методике с версией и минимумом наблюдений."""
+
+    scope: str
+    window_days: int
+    method_version: str
+    min_observations: int
+    benchmark: RoleQualityBenchmarkOut
+    roles: list[RoleQualityRoleOut] = Field(default_factory=list)
+    notes: list[str] = Field(default_factory=list)
 
 
 class DealMessageIn(BaseModel):

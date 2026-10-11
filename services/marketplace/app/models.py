@@ -347,6 +347,7 @@ class DealCostSnapshot(Base):
     deal_id: Mapped[uuid.UUID] = mapped_column(ForeignKey(f"{SCHEMA}.deals.id", ondelete="CASCADE"), primary_key=True)
     unit_cost_rub: Mapped[Decimal | None] = mapped_column(ExactNumeric(), nullable=True)
     attributable_expenses_rub: Mapped[Decimal | None] = mapped_column(ExactNumeric(), nullable=True)
+    tax_basis: Mapped[str] = mapped_column(String(16), nullable=False, default="unknown", server_default="unknown")
     revision: Mapped[int] = mapped_column(Integer, default=1)
     note: Mapped[str] = mapped_column(String(1000))
     updated_by_user_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True))

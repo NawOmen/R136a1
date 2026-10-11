@@ -42,6 +42,7 @@ class CostsIn(BaseModel):
     expected_revision: int = Field(ge=0)
     unit_cost_rub: Money | None = Field(default=None, ge=0)
     attributable_expenses_rub: Amount | None = Field(default=None, ge=0)
+    tax_basis: Literal["includes_vat", "no_vat", "unknown"] = "unknown"
     note: str = Field(min_length=3, max_length=1000)
     human_approved: Literal[True]
 
@@ -139,6 +140,7 @@ async def execution(deal_id: uuid.UUID, company_id: uuid.UUID, user: CurrentUser
         costs = await db.get(DealCostSnapshot, deal.id)
         result["financials"] = financials(deal, totals, costs)
         result["cost_revision"] = costs.revision if costs else 0
+        result["cost_tax_basis"] = costs.tax_basis if costs else "unknown"
         result["unit_cost_rub"] = costs.unit_cost_rub if costs else None
         result["cost_note"] = costs.note if costs else ""
     else:
@@ -306,6 +308,7 @@ async def save_costs(deal_id: uuid.UUID, data: CostsIn, user: CurrentUser = Depe
         costs = DealCostSnapshot(deal_id=deal.id)
         db.add(costs)
     costs.unit_cost_rub, costs.attributable_expenses_rub = data.unit_cost_rub, data.attributable_expenses_rub
+    costs.tax_basis = data.tax_basis
     costs.revision, costs.note, costs.updated_by_user_id = revision + 1, data.note, user.id
     # Public deal audit contains only revision, never seller-private amounts.
     await audit(db, deal, data.company_id, user, "update_cost_snapshot", {"cost_revision": costs.revision})
@@ -313,12 +316,20 @@ async def save_costs(deal_id: uuid.UUID, data: CostsIn, user: CurrentUser = Depe
     return {"revision": costs.revision}
 
 
-@router.get("/companies/{company_id}/commercial-analytics")
-async def analytics(company_id: uuid.UUID, role: Literal["buyer", "seller"], start: date | None = None, end: date | None = None,
-                    category: str | None = None, user: CurrentUser = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
-    await (require_company_seller if role == "seller" else require_company_buyer)(company_id, user, db)
+def _csv_cell(value) -> str:
+    text_value = "Нет данных" if value is None else str(value)
+    if text_value[:1] in ("=", "+", "-", "@") or (text_value[:1].isspace() and text_value.lstrip()[:1] in ("=", "+", "-", "@")):
+        text_value = "'" + text_value
+    return '"' + text_value.replace('"', '""') + '"'
+
+
+async def _commercial_report(db, company_id, role, *, start=None, end=None, category=None,
+                             status=None, counterparty=None, product=None, source="all"):
     if start and end and start > end:
         raise HTTPException(422, "Начало периода должно быть не позже окончания")
+    if source not in ("all", "direct", "group"):
+        raise HTTPException(422, "Источник заказа: all, direct или group")
+    built_at = datetime.now(timezone.utc)
     # Explicit order cohort: period filters creation, execution is current for that cohort.
     owner = Deal.seller_company_id if role == "seller" else Deal.buyer_company_id
     query = select(Deal, Need).join(Need, Need.id == Deal.need_id).where(owner == company_id)
@@ -328,7 +339,31 @@ async def analytics(company_id: uuid.UUID, role: Literal["buyer", "seller"], sta
         query = query.where(Deal.created_at <= datetime.combine(end, time.max, tzinfo=timezone.utc))
     if category:
         query = query.where(Need.category == category)
-    pairs = (await db.execute(query.order_by(Deal.created_at.desc()))).all()
+    if status:
+        query = query.where(Deal.status == status)
+    pairs = list((await db.execute(query.order_by(Deal.created_at.desc()))).all())
+    if counterparty:
+        wanted = counterparty.strip().lower()
+        other_ids = list({getattr(d, "buyer_company_id" if role == "seller" else "seller_company_id") for d, _ in pairs})
+        names = dict((await db.execute(text(
+            "SELECT id, display_name FROM auth.companies WHERE id = ANY(:ids)"),
+            {"ids": other_ids})).all()) if other_ids else {}
+        pairs = [(d, n) for d, n in pairs
+                 if wanted in (names.get(getattr(d, "buyer_company_id" if role == "seller" else "seller_company_id")) or "").lower()]
+    if product:
+        offer_ids = [d.offer_id for d, _ in pairs]
+        prod_of_offer = {}
+        titles: dict = {}
+        if offer_ids:
+            prod_of_offer = {o.id: o.product_id for o in (await db.scalars(select(Offer).where(Offer.id.in_(offer_ids)))).all()}
+            product_ids = list({pid for pid in prod_of_offer.values() if pid})
+            if product_ids:
+                titles = dict((await db.execute(text(
+                    "SELECT id, name FROM marketplace.products WHERE id = ANY(:ids)"),
+                    {"ids": product_ids})).all())
+        wanted = product.strip().lower()
+        pairs = [(d, n) for d, n in pairs
+                 if wanted in (titles.get(prod_of_offer.get(d.offer_id)) or "").lower()]
     ids = [deal.id for deal, _ in pairs]
     all_events = list((await db.scalars(select(DealExecutionEvent).where(DealExecutionEvent.deal_id.in_(ids)))).all()) if ids else []
     costs_by_id = {c.deal_id: c for c in (await db.scalars(select(DealCostSnapshot).where(DealCostSnapshot.deal_id.in_(ids)))).all()} if ids and role == "seller" else {}
@@ -338,7 +373,10 @@ async def analytics(company_id: uuid.UUID, role: Literal["buyer", "seller"], sta
     rows = []
     for deal, need in pairs:
         totals = execution_totals(deal, by_deal.get(deal.id, []))
-        values = financials(deal, totals, costs_by_id.get(deal.id))
+        costs = costs_by_id.get(deal.id)
+        values = financials(deal, totals, costs)
+        if role == "seller":
+            values["cost_tax_basis"] = costs.tax_basis if costs else "unknown"
         if role == "buyer":
             values = {key: value for key, value in values.items() if key in {"unit_price_rub", "ordered_value_rub", "delivery_price_rub", "net_goods_revenue_rub", "payments_rub"}}
         rows.append({"deal_id": deal.id, "category": need.category, "unit": order_unit(need.characteristics), "created_at": deal.created_at, "status": deal.status, **totals, **values})
@@ -348,12 +386,50 @@ async def analytics(company_id: uuid.UUID, role: Literal["buyer", "seller"], sta
         known = [row[key] for row in rows if row[key] is not None]
         aggregate[key] = sum(known, Decimal(0)) if len(known) == len(rows) else None
         aggregate[f"{key}_known_orders"] = len(known)
+    # Average price only over comparable executed volume: one line per unit.
+    by_unit: dict = {}
+    for row in rows:
+        if row["accepted_units"] and row["net_goods_revenue_rub"] is not None:
+            slot = by_unit.setdefault(row["unit"], {"value": Decimal(0), "units": 0})
+            slot["value"] += row["net_goods_revenue_rub"]
+            slot["units"] += row["accepted_units"]
+    average_prices = [{"unit": unit, "accepted_units": slot["units"],
+                       "average_unit_price_rub": (slot["value"] / slot["units"]).quantize(Decimal("0.01"))}
+                      for unit, slot in sorted(by_unit.items()) if slot["units"] > 0]
     # Rejections are separate from execution; never fold them into cancellations.
+    # Cohort: offers created in the period. Known outcomes: rejected + selected;
+    # sent is open, anything else expired without a decision.
     offer_query = select(Offer).join(Need, Need.id == Offer.need_id).where((Offer.company_id if role == "seller" else Need.company_id) == company_id)
     if start: offer_query = offer_query.where(Offer.created_at >= datetime.combine(start, time.min, tzinfo=timezone.utc))
     if end: offer_query = offer_query.where(Offer.created_at <= datetime.combine(end, time.max, tzinfo=timezone.utc))
     if category: offer_query = offer_query.where(Need.category == category)
     offers = list((await db.scalars(offer_query)).all())
+    rejected = sum(o.status == "rejected" for o in offers)
+    selected = sum(o.status == "selected" for o in offers)
+    open_offers = sum(o.status == "sent" for o in offers)
+    stale = sum(o.status not in ("rejected", "selected", "sent") for o in offers)
+    known = rejected + selected
+    rejection_rate = {"offers_total": len(offers), "rejected": rejected, "selected": selected,
+                      "open": open_offers, "stale": stale, "known_outcomes": known,
+                      "rate_pct": round(rejected / known * 100, 1) if known else None}
+    monthly_buckets: dict = {}
+    for row in rows:
+        month = row["created_at"].strftime("%Y-%m")
+        slot = monthly_buckets.setdefault(month, {"orders": 0, "value": Decimal(0), "value_known": 0,
+                                                  "units": 0, "unit": row["unit"], "mixed_units": False})
+        slot["orders"] += 1
+        if row["net_goods_revenue_rub"] is not None:
+            slot["value"] += row["net_goods_revenue_rub"]
+            slot["value_known"] += 1
+        if row["unit"] != slot["unit"]:
+            slot["mixed_units"] = True
+        else:
+            slot["units"] += row["accepted_units"] or 0
+    monthly = [{"month": month, "orders_count": slot["orders"],
+                "accepted_value_rub": slot["value"] if slot["value_known"] else None,
+                "accepted_units": None if slot["mixed_units"] else slot["units"],
+                "unit": None if slot["mixed_units"] else slot["unit"]}
+               for month, slot in sorted(monthly_buckets.items())]
     group_owner = ParticipantOrder.seller_company_id if role == "seller" else ParticipantOrder.buyer_company_id
     group_query = select(ParticipantOrder, Need).join(Need, Need.id == ParticipantOrder.need_id).where(
         group_owner == company_id, ParticipantOrder.status != "superseded")
@@ -364,8 +440,77 @@ async def analytics(company_id: uuid.UUID, role: Literal["buyer", "seller"], sta
                      "unit": order_unit(need.characteristics), "created_at": item.created_at, "status": item.status, "units": item.units,
                      "contract_value_rub": Decimal(str(item.total_price_rub)), "payments_rub": None}
                     for item, need in (await db.execute(group_query.order_by(ParticipantOrder.created_at.desc()))).all()]
-    return {"company_id": company_id, "role": role, "period_basis": "order_created_at_utc", "orders_count": len(rows),
-            "offers_count": len(offers), "rejected_offers_count": sum(o.status == "rejected" for o in offers),
+    if source == "direct":
+        group_orders = []
+    if source == "group":
+        rows, average_prices, monthly = [], [], []
+        aggregate = {k: (0 if k.endswith("_known_orders") else None) for k in aggregate}
+    return {"company_id": company_id, "role": role, "period_basis": "order_created_at_utc", "built_at": built_at,
+            "filters": {"start": start.isoformat() if start else None, "end": end.isoformat() if end else None,
+                        "category": category, "status": status, "counterparty": counterparty, "product": product, "source": source},
+            "orders_count": len(rows),
+            "offers_count": len(offers), "rejected_offers_count": rejected, "rejection_rate": rejection_rate,
+            "average_prices": average_prices, "monthly": monthly,
             "payments_rub": None, "totals": aggregate, "orders": rows,
             "group_orders_count": len(group_orders), "group_orders": group_orders,
-            "explanation": "Период — дата создания заказа (UTC); исполнение — текущее состояние этих заказов. Групповые обязательства показаны отдельно: их сумма не включена в выручку до учёта исполнения. Выручка от товаров учитывает приёмку минус подтверждённые возвраты, без доставки. Прибыль рассчитана по указанным продавцом затратам; платежи не подключены. Отказы относятся к предложениям, созданным в выбранный период. Количества сравниваются внутри заказа."}
+            "explanation": "Когорта — заказы, созданные в период (даты UTC включительно: начало 00:00, конец 23:59:59); исполнение — текущее состояние этих заказов на момент построения отчёта. Принятый сегодня заказ прошлого периода остаётся в прошлом периоде. Групповые обязательства показаны отдельно: их сумма не включена в выручку до учёта исполнения, групповой заказ не удваивает оборот. Выручка от товаров учитывает приёмку минус подтверждённые возвраты, без доставки. Себестоимость относится на принятое количество; прочие прямые затраты относятся на заказ целиком. Прибыль — на налоговой базе из карточки затрат продавца (unknown — база не подтверждена, сравнение условно); платежи не подключены, чистая прибыль не выводится. Отказы — когорта предложений, созданных в период: известны решения (отклонено/выбрано), открытые и истекшие показаны отдельно. Количества сравниваются внутри заказа; средние цены — только в одинаковых единицах."}
+
+
+def _report_csv(report: dict) -> str:
+    role = report["role"]
+    header = ["Тип заказа", "Заказ", "Категория", "Единица измерения", "Создан (UTC)", "Статус", "Заказано", "Принято", "Возвращено", "Отменено", "Ожидается", "Цена за единицу, ₽", "Сумма заказа, ₽", "Товары после возвратов, ₽"]
+    if role == "seller":
+        header += ["Себестоимость принятых товаров, ₽", "Валовая прибыль, ₽", "Прочие затраты, ₽", "Результат после затрат, ₽"]
+    lines = [header]
+    for row in report["orders"]:
+        values: list = ["Прямой", row["deal_id"], row["category"], row["unit"], row["created_at"], row["status"],
+                        row["ordered_units"], row["accepted_units"], row["returned_units"], row["cancelled_units"],
+                        row["open_units"], row["unit_price_rub"], row["ordered_value_rub"], row["net_goods_revenue_rub"]]
+        if role == "seller":
+            values += [row.get("cost_of_goods_rub"), row.get("gross_profit_rub"),
+                       row.get("attributable_expenses_rub"), row.get("contribution_rub")]
+        lines.append(values)
+    for row in report["group_orders"]:
+        values = ["Групповой", row["order_id"], row["category"], row["unit"], row["created_at"], row["status"],
+                  row["units"], None, None, None, None, None, row["contract_value_rub"], None]
+        if role == "seller":
+            values += [None, None, None, None]
+        lines.append(values)
+    totals = report["totals"]
+    total_row: list = ["Итого по отчёту", None, None, None, None, None, None, None, None, None, None, None,
+                       totals.get("ordered_value_rub"), totals.get("net_goods_revenue_rub")]
+    if role == "seller":
+        total_row += [totals.get("cost_of_goods_rub"), totals.get("gross_profit_rub"),
+                      totals.get("attributable_expenses_rub"), totals.get("contribution_rub")]
+    lines.append(total_row)
+    filters = report["filters"]
+    lines.append(["Отчёт сформирован (UTC)", report["built_at"]] + [None] * (len(header) - 2))
+    lines.append([f"Период и фильтры: с {filters['start']} по {filters['end']}; категория: {filters['category']}; "
+                  f"статус: {filters['status']}; контрагент: {filters['counterparty']}; товар: {filters['product']}; "
+                  f"источник: {filters['source']}"] + [None] * (len(header) - 1))
+    return "\r\n".join(",".join(_csv_cell(v) for v in row) for row in lines)
+
+
+@router.get("/companies/{company_id}/commercial-analytics")
+async def analytics(company_id: uuid.UUID, role: Literal["buyer", "seller"], start: date | None = None, end: date | None = None,
+                    category: str | None = None, status: str | None = None, counterparty: str | None = None,
+                    product: str | None = None, source: Literal["all", "direct", "group"] = "all",
+                    user: CurrentUser = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
+    await (require_company_seller if role == "seller" else require_company_buyer)(company_id, user, db)
+    return await _commercial_report(db, company_id, role, start=start, end=end, category=category,
+                                    status=status, counterparty=counterparty, product=product, source=source)
+
+
+@router.get("/companies/{company_id}/commercial-report.csv")
+async def analytics_csv(company_id: uuid.UUID, role: Literal["buyer", "seller"], start: date | None = None, end: date | None = None,
+                        category: str | None = None, status: str | None = None, counterparty: str | None = None,
+                        product: str | None = None, source: Literal["all", "direct", "group"] = "all",
+                        user: CurrentUser = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
+    """Выгрузка использует те же данные, фильтры и определения, что экран; права проверяются при каждом запросе."""
+    from fastapi.responses import PlainTextResponse
+    await (require_company_seller if role == "seller" else require_company_buyer)(company_id, user, db)
+    report = await _commercial_report(db, company_id, role, start=start, end=end, category=category,
+                                      status=status, counterparty=counterparty, product=product, source=source)
+    stamp = (report["filters"]["start"] or "all") + "_" + (report["filters"]["end"] or "all")
+    return PlainTextResponse("\ufeff" + _report_csv(report), media_type="text/csv; charset=utf-8",
+                             headers={"Content-Disposition": f"attachment; filename=porukam-{role}-{stamp}.csv"})

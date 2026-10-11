@@ -8,30 +8,15 @@ import { useCompanySelector } from "../lib/useMe";
 
 const amount = (value: string | number | null | undefined) => value == null ? "Нет данных" : formatRub(value);
 const statuses: Record<string, string> = { created: "Оформлен", in_production: "Производство", shipped: "Отгружен", delivered: "Доставлен", partially_accepted: "Частичная приёмка", fulfilled: "Исполнен", cancelled: "Отменён", returned: "Возвращён" };
+const DEAL_STATUSES = ["created", "in_production", "shipped", "partially_accepted", "fulfilled", "cancelled", "returned"];
 
-function csvCell(value: unknown): string {
-  let text = value == null ? "Нет данных" : String(value);
-  if (/^[\s]*[=+\-@]/.test(text)) text = `'${text}`;
-  return `"${text.replaceAll('"', '""')}"`;
-}
-
-function downloadReport(report: CommercialReport) {
-  const header = ["Тип заказа", "Заказ", "Категория", "Единица измерения", "Создан (UTC)", "Статус", "Заказано", "Принято", "Возвращено", "Отменено", "Ожидается", "Цена за единицу, ₽", "Сумма заказа, ₽", "Товары после возвратов, ₽"];
-  if (report.role === "seller") header.push("Себестоимость принятых товаров, ₽", "Валовая прибыль, ₽", "Прочие затраты, ₽", "Результат после затрат, ₽");
-  const rows: unknown[][] = report.orders.map(row => {
-    const values: unknown[] = ["Прямой", row.deal_id, row.category, row.unit, row.created_at, statuses[row.status] ?? row.status, row.ordered_units, row.accepted_units, row.returned_units, row.cancelled_units, row.open_units, row.unit_price_rub, row.ordered_value_rub, row.net_goods_revenue_rub];
-    if (report.role === "seller") values.push(row.cost_of_goods_rub, row.gross_profit_rub, row.attributable_expenses_rub, row.contribution_rub);
-    return values;
-  });
-  for (const row of report.group_orders) {
-    const values: unknown[] = ["Групповой", row.order_id, row.category, row.unit, row.created_at, statuses[row.status] ?? row.status, row.units,
-      null, null, null, null, null, row.contract_value_rub, null];
-    if (report.role === "seller") values.push(null, null, null, null);
-    rows.push(values);
-  }
-  const blob = new Blob(["\ufeff", [header, ...rows].map(row => row.map(csvCell).join(";")).join("\r\n")], { type: "text/csv;charset=utf-8" });
+async function downloadCsv(report: CommercialReport, companyId: string, role: "buyer" | "seller", filters: { start?: string; end?: string; category?: string; status?: string; counterparty?: string; product?: string; source?: string }) {
+  const token = getToken(); if (!token) return;
+  const blob = await marketplace.downloadCommercialCsv(token, companyId, role, filters);
   const url = URL.createObjectURL(blob);
-  const link = document.createElement("a"); link.href = url; link.download = "porukam-orders.csv"; link.click();
+  const link = document.createElement("a"); link.href = url;
+  const stamp = `${filters.start || "all"}_${filters.end || "all"}`;
+  link.download = `porukam-${role}-${stamp}.csv`; link.click();
   setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 
@@ -40,8 +25,11 @@ export default function CommercialAnalytics({ role }: { role: "buyer" | "seller"
   const [report, setReport] = useState<CommercialReport | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
+  const [downloading, setDownloading] = useState(false);
   const [start, setStart] = useState(""); const [end, setEnd] = useState(""); const [category, setCategory] = useState("");
-  const [filters, setFilters] = useState<{ start?: string; end?: string; category?: string }>({});
+  const [status, setStatus] = useState(""); const [counterparty, setCounterparty] = useState(""); const [product, setProduct] = useState("");
+  const [source, setSource] = useState("all");
+  const [filters, setFilters] = useState<{ start?: string; end?: string; category?: string; status?: string; counterparty?: string; product?: string; source?: string }>({});
   const [refresh, setRefresh] = useState(0);
   useEffect(() => {
     let active = true;
@@ -53,16 +41,27 @@ export default function CommercialAnalytics({ role }: { role: "buyer" | "seller"
     return () => { active = false; };
   }, [companyId, role, filters, refresh]);
   const visible = report?.company_id === companyId ? report : null;
+  async function handleDownload() {
+    if (!visible) return;
+    setDownloading(true); setError(null);
+    try { await downloadCsv(visible, companyId, role, filters); }
+    catch (e) { setError(e instanceof Error ? e.message : "Не удалось выгрузить отчёт."); }
+    finally { setDownloading(false); }
+  }
   if (loading) return <p role="status">Загрузка аккаунта…</p>;
   return <div>
     <div className="company-row"><div><h1>{role === "seller" ? "Продажи и статистика" : "Закупки и статистика"}</h1><p className="subtitle">Заказы, исполнение и подтверждённые результаты</p></div><Link className="btn btn-secondary" href="/dashboard">В кабинет</Link></div>
     {(accountError || error) && <div className="alert alert-error" role="alert">{accountError || error}<button type="button" className="btn btn-secondary" onClick={() => setRefresh(n => n + 1)}>Повторить загрузку</button></div>}
     {available.length === 0 ? <p className="card">Нет компании с правом {role === "seller" ? "продажи" : "покупки"}. Добавьте компанию в кабинете.</p> : <>
       <div className="field"><label htmlFor="report-company">Компания</label><select id="report-company" value={companyId} onChange={e => setCompanyId(e.target.value)}>{available.map(c => <option key={c.id} value={c.id}>{c.display_name}</option>)}</select></div>
-      <form className="card form-grid" onSubmit={e => { e.preventDefault(); setFilters({ start, end, category: category.trim() }); }}>
+      <form className="card form-grid" onSubmit={e => { e.preventDefault(); setFilters({ start, end, category: category.trim(), status, counterparty: counterparty.trim(), product: product.trim(), source }); }}>
         <div className="field"><label htmlFor="report-start">Заказы с</label><input id="report-start" type="date" value={start} max={end || undefined} onChange={e => setStart(e.target.value)} /></div>
         <div className="field"><label htmlFor="report-end">Заказы по</label><input id="report-end" type="date" value={end} min={start || undefined} onChange={e => setEnd(e.target.value)} /></div>
         <div className="field"><label htmlFor="report-category">Категория (точное название)</label><input id="report-category" value={category} onChange={e => setCategory(e.target.value)} placeholder="Все категории" /></div>
+        <div className="field"><label htmlFor="report-status">Статус заказа</label><select id="report-status" value={status} onChange={e => setStatus(e.target.value)}><option value="">Все статусы</option>{DEAL_STATUSES.map(s => <option key={s} value={s}>{statuses[s] ?? s}</option>)}</select></div>
+        <div className="field"><label htmlFor="report-counterparty">Контрагент (часть названия)</label><input id="report-counterparty" value={counterparty} onChange={e => setCounterparty(e.target.value)} placeholder="Все контрагенты" /></div>
+        <div className="field"><label htmlFor="report-product">Товар (часть названия)</label><input id="report-product" value={product} onChange={e => setProduct(e.target.value)} placeholder="Все товары" /></div>
+        <div className="field"><label htmlFor="report-source">Источник заказа</label><select id="report-source" value={source} onChange={e => setSource(e.target.value)}><option value="all">Прямые и групповые</option><option value="direct">Только прямые</option><option value="group">Только групповые</option></select></div>
         <button className="btn btn-primary" disabled={pending}>Показать</button>
       </form>
       {pending && <p role="status">Загрузка отчёта…</p>}
@@ -72,11 +71,15 @@ export default function CommercialAnalytics({ role }: { role: "buyer" | "seller"
           <article><b>{amount(visible.totals.ordered_value_rub)}</b><span>сумма заказов с доставкой</span></article>
           <article><b>{amount(visible.totals.net_goods_revenue_rub)}</b><span>{role === "seller" ? "выручка от принятых товаров" : "принятые товары"}, за вычетом возвратов</span></article>
           {role === "seller" && <><article><b>{amount(visible.totals.gross_profit_rub)}</b><span>валовая прибыль · затраты известны для {visible.totals.gross_profit_rub_known_orders} из {visible.orders_count} заказов</span></article><article><b>{amount(visible.totals.contribution_rub)}</b><span>результат после указанных затрат</span></article></>}
-          <article><b>{visible.rejected_offers_count} / {visible.offers_count}</b><span>отклонено предложений</span></article>
+          <article><b>{visible.rejection_rate.rejected} / {visible.rejection_rate.known_outcomes}</b><span>отклонено с известным исходом{visible.rejection_rate.open ? ` · открыто ${visible.rejection_rate.open}` : ""}{visible.rejection_rate.stale ? ` · истекло ${visible.rejection_rate.stale}` : ""}</span></article>
+          <article><b>{visible.rejection_rate.rate_pct == null ? "Нет данных" : `${visible.rejection_rate.rate_pct} %`}</b><span>доля отказов когорты предложений</span></article>
         </div>
+        {visible.average_prices.length > 0 && <section className="card"><h2>Средние цены исполненного</h2><ul className="company-list">{visible.average_prices.map(row => <li key={row.unit} className="company-row"><span>{row.unit}</span><b>{amount(row.average_unit_price_rub)} / ед. · принято {row.accepted_units}</b></li>)}</ul><p className="hint">Среднее — сумма исполненного на принятое количество, только в одинаковых единицах.</p></section>}
+        {visible.monthly.length > 0 && <section className="card"><h2>Динамика по месяцам создания</h2><div style={{ overflowX: "auto" }} tabIndex={0} aria-label="Динамика заказов по месяцам"><table><thead><tr><th>Месяц</th><th>Заказов</th><th>Принято, ₽</th><th>Принято, кол-во</th></tr></thead><tbody>{visible.monthly.map(row => <tr key={row.month}><td>{row.month}</td><td>{row.orders_count}</td><td>{amount(row.accepted_value_rub)}</td><td>{row.accepted_units == null ? "разные единицы" : `${row.accepted_units} ${row.unit}`}</td></tr>)}</tbody></table></div></section>}
         <p className="hint">{visible.explanation}</p>
-        <p className="hint">«Нет данных» означает, что сумма неизвестна. Количество указано в единицах конкретного заказа; объёмы разных товаров не складываются. Платёжные поступления и чистая прибыль не рассчитываются.</p>
-        <section className="card"><div className="company-row"><h2>Подробности заказов</h2><button className="btn btn-secondary" type="button" disabled={!visible.orders.length && !visible.group_orders.length} onClick={() => downloadReport(visible)}>Скачать CSV</button></div>
+        <p className="hint">Отчёт построен {new Date(visible.built_at).toLocaleString("ru-RU")}. «Нет данных» означает, что сумма неизвестна. Количество указано в единицах конкретного заказа; объёмы разных товаров не складываются. Платёжные поступления и чистая прибыль не рассчитываются.</p>
+        <section className="card"><div className="company-row"><h2>Подробности заказов</h2><button className="btn btn-secondary" type="button" disabled={downloading || (!visible.orders.length && !visible.group_orders.length)} onClick={() => void handleDownload()}>{downloading ? "Готовим файл…" : "Скачать CSV"}</button></div>
+          <p className="hint">Выгрузка строится сервером из тех же данных, фильтров и определений; права проверяются при каждом запросе.</p>
           {!visible.orders.length ? <p>{visible.group_orders.length ? "Прямых заказов в выбранном периоде нет. Групповые обязательства показаны ниже." : "В выбранном периоде заказов нет. Измените фильтры или оформите первый заказ."}</p> : <div style={{ overflowX: "auto" }} tabIndex={0} aria-label="Таблица заказов, можно прокручивать по горизонтали"><table><thead><tr><th>Заказ / категория</th><th>Цена за единицу</th><th>Заказано</th><th>Принято</th><th>Возвращено</th><th>Отменено</th><th>Ожидается</th><th>Товары после возвратов</th>{role === "seller" && <><th>Валовая прибыль</th><th>После затрат</th></>}</tr></thead><tbody>{visible.orders.map(row => <tr key={row.deal_id}><td><Link href={`/deals?deal=${row.deal_id}`}>{row.deal_id.slice(0, 8)}</Link><br />{row.category} · {row.unit}<br /><small>{statuses[row.status] ?? row.status}</small></td><td>{amount(row.unit_price_rub)}</td><td>{row.ordered_units}</td><td>{row.accepted_units}</td><td>{row.returned_units}</td><td>{row.cancelled_units}</td><td>{row.open_units}</td><td>{amount(row.net_goods_revenue_rub)}</td>{role === "seller" && <><td>{amount(row.gross_profit_rub)}</td><td>{amount(row.contribution_rub)}</td></>}</tr>)}</tbody></table></div>}
         </section>
         <section className="card"><h2>Групповые обязательства: {visible.group_orders_count}</h2>

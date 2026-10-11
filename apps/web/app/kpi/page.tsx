@@ -4,7 +4,7 @@ import { formatRub } from "../lib/marketplace";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { getToken } from "../lib/api";
-import { AgentScorecard, AuditEvent, AuditVerification, marketplace, TrustKpi } from "../lib/marketplace";
+import { AgentScorecard, AuditEvent, AuditVerification, marketplace, RoleQuality, TrustKpi } from "../lib/marketplace";
 import { useMe } from "../lib/useMe";
 
 function rub(value: string | number) { return formatRub(value); }
@@ -15,6 +15,7 @@ export default function KpiPage() {
   const [initialized, setInitialized] = useState(false);
   const [kpi, setKpi] = useState<TrustKpi | null>(null);
   const [scorecard, setScorecard] = useState<AgentScorecard | null>(null);
+  const [quality, setQuality] = useState<RoleQuality | null>(null);
   const [auditEvents, setAuditEvents] = useState<AuditEvent[]>([]);
   const [auditError, setAuditError] = useState<string | null>(null);
   const [verification, setVerification] = useState<AuditVerification | null>(null);
@@ -29,12 +30,16 @@ export default function KpiPage() {
   useEffect(() => {
     const token = getToken(); if (!initialized || !token || (!companyId && !user?.is_marketplace_admin)) return;
     let active = true;
-    setKpi(null); setScorecard(null); setError(null); setAuditEvents([]); setAuditError(null); setVerification(null);
+    setKpi(null); setScorecard(null); setQuality(null); setError(null); setAuditEvents([]); setAuditError(null); setVerification(null);
     marketplace.getKpi(token, companyId || undefined).then((value) => { if (active) setKpi(value); }).catch(() => { if (active) setError("Не удалось рассчитать показатели."); });
     const scorecardRequest = companyId
       ? marketplace.getAgentScorecard(token, companyId)
       : marketplace.getPlatformAgentScorecard(token);
     scorecardRequest.then((value) => { if (active) setScorecard(value); }).catch(() => { if (active) setScorecard(null); });
+    const qualityRequest = companyId
+      ? marketplace.getRoleQuality(token, companyId)
+      : marketplace.getPlatformRoleQuality(token);
+    qualityRequest.then((value) => { if (active) setQuality(value); }).catch(() => { if (active) setQuality(null); });
     marketplace.getAuditEvents(token, companyId || undefined)
       .then((value) => { if (active) setAuditEvents(value); })
       .catch(() => { if (active) setAuditError("Не удалось загрузить журнал решений."); });
@@ -60,8 +65,9 @@ export default function KpiPage() {
             <h3>Черновики КП</h3>
             <p>Сформировано: {scorecard.offer_drafts_total}</p>
             <p>Отправлено после проверки: {scorecard.offer_drafts_used}</p>
-            <p>Конверсия сценария: {scorecard.offer_draft_conversion_pct} %</p>
+            <p>Конверсия сценария: {scorecard.offer_draft_conversion_pct == null ? "Нет данных" : `${scorecard.offer_draft_conversion_pct} %`}</p>
             <p>Среднее число правок человеком: {scorecard.average_changed_fields}</p>
+            <p>Отклонено предложений: {scorecard.offer_rejections} из {scorecard.offers_total}</p>
             <p>Сделок из черновиков: {scorecard.deals_from_drafts} из {scorecard.deals_total}</p>
           </div>
           <div className="card">
@@ -70,7 +76,7 @@ export default function KpiPage() {
             <p>Заблокированных действий: {scorecard.blocked_actions}</p>
             <p>Проверок допуска: {scorecard.admission_checks}</p>
             <p>Остановлено на допуске: {scorecard.admission_blocked}</p>
-            <p>Рекомендации: {scorecard.recommendations_converted} из {scorecard.recommendations_total} ({scorecard.recommendation_conversion_pct} %)</p>
+            <p>Рекомендации: {scorecard.recommendations_converted} из {scorecard.recommendations_total} ({scorecard.recommendation_conversion_pct == null ? "Нет данных" : `${scorecard.recommendation_conversion_pct} %`})</p>
           </div>
           <div className="card">
             <h3>Модель</h3>
@@ -81,6 +87,8 @@ export default function KpiPage() {
                 <p>Локальный маршрут: {scorecard.agent_runs_local_route}; внешний: {scorecard.agent_runs_external_route}</p>
                 <p>Смешанный маршрут: {scorecard.agent_runs_mixed_route}; по правилам: {scorecard.agent_runs_rules_route}; не определён: {scorecard.agent_runs_unknown_route}</p>
                 <p>Средняя длительность: {scorecard.agent_average_duration_ms} мс</p>
+                <p>Модели: {scorecard.agent_model_versions.length ? scorecard.agent_model_versions.join(", ") : "Нет данных"}</p>
+                <p>Версии промптов: {scorecard.agent_prompt_versions.length ? scorecard.agent_prompt_versions.join(", ") : "Нет данных"}</p>
                 <p>Известные оценки затрат: {scorecard.agent_costed_runs ? rub(scorecard.agent_estimated_cost_rub) : "Нет данных"} ({scorecard.agent_costed_runs} из {scorecard.agent_runs_total} запусков)</p>
               </>
             ) : (
@@ -90,6 +98,38 @@ export default function KpiPage() {
         </div>
         {scorecard.notes.length > 0 && (
           <ul className="company-list">{scorecard.notes.map((note) => <li key={note}><span className="company-meta">{note}</span></li>)}</ul>
+        )}
+      </section>
+    )}
+    {quality && (
+      <section className="card">
+        <h2>Оценка агентных ролей</h2>
+        <p className="hint">
+          Методика {quality.method_version}: минимум {quality.min_observations} наблюдений на роль.
+          Итогового балла нет: аспекты не компенсируют друг друга. Эталон — банк задач
+          ({quality.benchmark.available ? `${quality.benchmark.tasks} задач` : "банк недоступен"}){quality.benchmark.available ? "" : ", точечные проверки выполняются вручную"}.
+        </p>
+        {quality.roles.length === 0 ? <p className="hint">Прогонов за период нет: роли не оценены.</p> : (
+          <div className="form-grid">{quality.roles.map(item => <div className="card" key={item.role}>
+            <h3>{item.role} · {item.status === "evaluated" ? "Оценена" : "Не оценено"}</h3>
+            <p className="hint">{item.passport}</p>
+            <p>Наблюдений: {item.sample}</p>
+            {item.status === "evaluated" ? <>
+              <p>Успешных сценариев: {item.completed_runs} ({item.completed_share_pct} %)</p>
+              <p>Полнота критичных полей: {item.critical_completeness_pct == null ? "Нет данных" : `${item.critical_completeness_pct} % (${item.critical_fields_confirmed} из ${item.critical_fields_total})`}</p>
+              <p>Выявлено конфликтов: {item.conflicts_found}</p>
+              <p>Прогонов с уточнениями: {item.clarification_runs}</p>
+              <p>Исправлений человеком: {item.human_corrections}</p>
+              <p>Заблокированных действий: {item.blocked_actions}</p>
+              <p>Среднее время: {item.average_duration_ms == null ? "Нет данных" : `${item.average_duration_ms} мс`}</p>
+              <p>Известная стоимость: {item.known_cost_rub == null ? "Нет данных" : rub(item.known_cost_rub)} ({item.costed_share_pct} % запусков)</p>
+              <p>Модели: {item.model_versions.length ? item.model_versions.join(", ") : "Нет данных"}</p>
+              <p>Промпты: {item.prompt_versions.length ? item.prompt_versions.join(", ") : "Нет данных"}</p>
+            </> : <p className="hint">Недостаточно наблюдений для оценки.</p>}
+          </div>)}</div>
+        )}
+        {quality.notes.length > 0 && (
+          <ul className="company-list">{quality.notes.map((note) => <li key={note}><span className="company-meta">{note}</span></li>)}</ul>
         )}
       </section>
     )}
