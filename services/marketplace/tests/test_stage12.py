@@ -337,7 +337,8 @@ async def test_role_quality_gates_scoping_and_versions(client, db_session, agent
               "conflicts": [{"key": "material"}]}
     run_id = await _agent_run(db_session, agents_ledger, buyer, bc, "buyer_agent", result)
     await db_session.execute(text(
-        "INSERT INTO agents.tool_calls (id, run_id, tool_name, status) VALUES (gen_random_uuid(), :rid, 'apply_user_clarification', 'success')"),
+        "INSERT INTO agents.tool_calls (id, run_id, tool_name, status, input_summary, output_summary) VALUES "
+        "(gen_random_uuid(), :rid, 'apply_user_clarification', 'success', '', '')"),
         {"rid": run_id})
     await db_session.commit()
     body = (await client.get(f"/api/v1/companies/{bc}/role-quality", headers=_auth(token))).json()
