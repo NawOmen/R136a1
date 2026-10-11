@@ -325,8 +325,9 @@ float разряды не восстанавливаются. Неконечны
 ### Документы
 
 - `GET /companies/{company_id}/documents` — список (seller).
-- `POST /companies/{company_id}/documents` — multipart: `file` + поля `name`, `document_type` (seller + admin). `201`.
-- `DELETE /documents/{document_id}` — удалить (seller + admin своей компании).
+- `GET /companies/{company_id}/documents/expiring?within_days=` — подтверждённые документы со сроком до горизонта, включая истекшие (seller своей компании).
+- `POST /companies/{company_id}/documents` — multipart: `file` + поля `name`, `document_type` (seller + admin). `201`. Байты сверяются с заявленным форматом (PNG/JPEG/WebP/PDF/UTF-8-текст, SVG запрещён), иначе `415`.
+- `DELETE /documents/{document_id}` — удалить (seller + admin своей компании). Удаление подтверждённого документа и отзыв/сутжение области переоценивают опубликованные товары (`document_status_reevaluated` в аудите, уведомления с именами) без автоматического снятия с публикации.
 
 ### Capability Passport
 

@@ -379,6 +379,11 @@ async def upload_product_image(
         raise HTTPException(status.HTTP_400_BAD_REQUEST, detail="Изображение пустое")
     if len(data) > MAX_IMAGE_SIZE:
         raise HTTPException(status.HTTP_413_REQUEST_ENTITY_TOO_LARGE, detail="Изображение больше 8 МБ")
+    try:
+        from ..file_safety import check_upload
+        content_type = check_upload(data, content_type)
+    except ValueError as exc:
+        raise HTTPException(status.HTTP_415_UNSUPPORTED_MEDIA_TYPE, detail=str(exc)) from None
     positions = set((await db.execute(
         select(ProductImage.position).where(ProductImage.product_id == product.id)
     )).scalars().all())
@@ -459,7 +464,8 @@ async def get_product_image(image_id: uuid.UUID, db: AsyncSession = Depends(get_
         raise HTTPException(status.HTTP_404_NOT_FOUND, detail="Изображение не найдено")
     return Response(
         content=download_object(image.file_key), media_type=image.content_type,
-        headers={"Content-Disposition": f"inline; filename*=UTF-8''{quote(image.file_name)}"},
+        headers={"Content-Disposition": f"inline; filename*=UTF-8''{quote(image.file_name)}",
+                 "X-Content-Type-Options": "nosniff"},
     )
 
 

@@ -35,6 +35,7 @@ class Settings(BaseSettings):
     whisper_model: str = "small"
     whisper_device: str = "cpu"
     whisper_compute_type: str = "int8"
+    transcribe_timeout_seconds: float = 180.0
     max_upload_bytes: int = 25 * 1024 * 1024
     max_combined_text_chars: int = 120_000
     cors_origins: str = "http://localhost:3000,http://127.0.0.1:3000"

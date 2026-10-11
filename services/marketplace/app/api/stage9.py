@@ -119,7 +119,8 @@ async def production_photo(company_id: uuid.UUID, db: AsyncSession = Depends(get
     verified = await db.scalar(text("SELECT verification_status = 'verified' FROM auth.companies WHERE id = :id"), {"id": company_id})
     if not verified:
         raise HTTPException(status.HTTP_404_NOT_FOUND, detail="Фотография производства не найдена")
-    return Response(content=download_object(profile.photo_file_key), media_type=profile.photo_content_type)
+    return Response(content=download_object(profile.photo_file_key), media_type=profile.photo_content_type,
+                      headers={"X-Content-Type-Options": "nosniff"})
 
 
 @router.post("/companies/{company_id}/production-photo", status_code=status.HTTP_204_NO_CONTENT)
@@ -132,6 +133,11 @@ async def upload_production_photo(company_id: uuid.UUID, file: UploadFile = File
     data = await file.read()
     if not data or len(data) > 8 * 1024 * 1024:
         raise HTTPException(status.HTTP_413_REQUEST_ENTITY_TOO_LARGE, detail="Фотография должна быть от 1 байта до 8 МБ")
+    try:
+        from ..file_safety import check_upload
+        content_type = check_upload(data, content_type)
+    except ValueError as exc:
+        raise HTTPException(status.HTTP_415_UNSUPPORTED_MEDIA_TYPE, detail=str(exc)) from None
     profile = await db.get(ProductionProfile, company_id)
     if profile is None:
         profile = ProductionProfile(company_id=company_id)

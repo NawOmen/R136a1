@@ -1315,6 +1315,12 @@ export const marketplace = {
     );
   },
 
+  getExpiringDocuments(token: string, companyId: string, withinDays = 30): Promise<Document[]> {
+    return marketplaceFetch(`/api/v1/companies/${companyId}/documents/expiring?within_days=${withinDays}`, { token }).then((body) =>
+      unwrapList<Document>(body, ["documents", "items"]),
+    );
+  },
+
   uploadDocument(
     token: string,
     companyId: string,

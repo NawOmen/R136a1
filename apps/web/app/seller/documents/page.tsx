@@ -33,6 +33,7 @@ export default function SellerDocumentsPage() {
   } = useCompanySelector("can_sell");
 
   const [documents, setDocuments] = useState<Document[]>([]);
+  const [expiring, setExpiring] = useState<Document[]>([]);
   const [loaded, setLoaded] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -74,6 +75,14 @@ export default function SellerDocumentsPage() {
       })
       .finally(() => {
         if (!cancelled) setLoaded(true);
+      });
+    marketplace
+      .getExpiringDocuments(token, companyId)
+      .then((list) => {
+        if (!cancelled) setExpiring(list);
+      })
+      .catch(() => {
+        if (!cancelled) setExpiring([]);
       });
     return () => {
       cancelled = true;
@@ -414,6 +423,24 @@ export default function SellerDocumentsPage() {
           </div>
         </form>
       </section>
+
+      {expiring.length > 0 && (
+        <section className="card" aria-live="polite">
+          <h2>Истекающие подтверждения</h2>
+          <p className="hint">
+            У этих документов скоро закончится срок: продлите их до блокировки новых публикаций и сделок.
+            Действующие договорённости не отменяются автоматически.
+          </p>
+          <ul className="company-list">
+            {expiring.map((document) => (
+              <li key={document.id} className="company-item">
+                <span className="company-item__name">{document.name}</span>
+                <span className="company-meta">Действует до {document.valid_until ?? "—"}</span>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
 
       <section className="card">
         <h2>Список документов</h2>

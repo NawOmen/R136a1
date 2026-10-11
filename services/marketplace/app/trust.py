@@ -17,6 +17,25 @@ def _canonical(value: Any) -> str:
     return json.dumps(value, ensure_ascii=False, sort_keys=True, separators=(",", ":"), default=str)
 
 
+_SECRET_KEY_HINTS = ("password", "passwd", "pwd", "secret", "token", "api_key", "apikey", "authorization")
+
+
+def scrub_secrets(value: Any) -> Any:
+    """Вычистить секреты из журнальных данных: пароли/токены не хранятся в аудите.
+
+    Применяется к payload и source_refs до записи и хеширования: в цепочке лежит
+    уже вычищенный материал, проверка хешей при этом корректна.
+    """
+    if isinstance(value, dict):
+        return {
+            key: ("[скрыто]" if isinstance(key, str) and key.strip().lower() in _SECRET_KEY_HINTS else scrub_secrets(item))
+            for key, item in value.items()
+        }
+    if isinstance(value, list):
+        return [scrub_secrets(item) for item in value]
+    return value
+
+
 def payload_hash(payload: dict) -> str:
     return hashlib.sha256(_canonical(payload).encode("utf-8")).hexdigest()
 
@@ -63,9 +82,9 @@ async def append_audit_event(
         entity_id=entity_id,
         actor_user_id=actor_user_id,
         actor_company_id=actor_company_id,
-        source_refs=source_refs or [],
+        source_refs=scrub_secrets(source_refs or []),
         explanation=explanation,
-        payload=payload or {},
+        payload=scrub_secrets(payload or {}),
         created_at=datetime.now(timezone.utc),
     )
     event.event_hash = payload_hash(_event_material(event))

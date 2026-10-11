@@ -1,3 +1,4 @@
+import asyncio
 import json
 import hashlib
 from datetime import datetime, timezone
@@ -136,6 +137,22 @@ async def health() -> HealthOut:
     )
 
 
+def _audio_signature_ok(data: bytes, content_type: str) -> bool:
+    """Сигнатура аудиоконтейнера по заявленному подтипу; неизвестное — отклонить."""
+    subtype = content_type.split(";", 1)[0].strip().lower()
+    if subtype in ("audio/wav", "audio/x-wav"):
+        return data.startswith(b"RIFF") and len(data) >= 12 and data[8:12] == b"WAVE"
+    if subtype == "audio/ogg":
+        return data.startswith(b"OggS")
+    if subtype == "audio/mpeg":
+        return data.startswith(b"ID3") or (len(data) >= 2 and data[0] == 0xFF and data[1] & 0xE0 == 0xE0)
+    if subtype == "audio/webm":
+        return data.startswith(b"\x1a\x45\xdf\xa3")
+    if subtype == "audio/mp4":
+        return len(data) >= 12 and data[4:8] == b"ftyp"
+    return False
+
+
 @router.post("/api/v1/transcribe", response_model=TranscriptionOut)
 async def transcribe_audio(
     file: UploadFile = File(...),
@@ -154,8 +171,13 @@ async def transcribe_audio(
         "audio/webm": ".webm", "audio/ogg": ".ogg", "audio/wav": ".wav",
         "audio/x-wav": ".wav", "audio/mpeg": ".mp3", "audio/mp4": ".m4a",
     }.get(content_type.split(";", 1)[0].lower(), ".audio")
+    if not _audio_signature_ok(data, content_type):
+        raise HTTPException(status.HTTP_415_UNSUPPORTED_MEDIA_TYPE, detail="Содержимое не является аудиозаписью")
     try:
-        text_value = await transcriber.transcribe(data, suffix)
+        text_value = await asyncio.wait_for(
+            transcriber.transcribe(data, suffix), timeout=settings.transcribe_timeout_seconds)
+    except TimeoutError as exc:
+        raise HTTPException(status.HTTP_504_GATEWAY_TIMEOUT, detail="Распознавание речи превысило лимит времени") from exc
     except Exception as exc:
         raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, detail="Не удалось распознать русскую речь") from exc
     if not text_value:

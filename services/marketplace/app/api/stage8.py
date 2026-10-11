@@ -16,7 +16,8 @@ router = APIRouter(tags=["stage8"])
 
 async def _deal_party(deal: Deal, company_id: uuid.UUID, user: CurrentUser, db: AsyncSession) -> None:
     if company_id not in {deal.buyer_company_id, deal.seller_company_id}:
-        raise HTTPException(status.HTTP_403_FORBIDDEN, detail="Компания не участвует в сделке")
+        # Чужая сделка скрывается фактом отсутствия, а не запретом.
+        raise HTTPException(status.HTTP_404_NOT_FOUND, detail="Сделка не найдена")
     await require_membership(company_id, user, db)
 
 
