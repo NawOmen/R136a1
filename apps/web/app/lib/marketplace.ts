@@ -1219,12 +1219,12 @@ export const marketplace = {
     return marketplaceFetch(`/api/v1/needs/${needId}/repeat`, { method: "POST", token, body: JSON.stringify({ deadline_date: deadlineDate, request_key: requestKey, ...(validUntil ? { valid_until: validUntil } : {}) }) });
   },
 
-  previewRepeat(token: string, needId: string): Promise<RepeatPreview> {
-    return marketplaceFetch(`/api/v1/needs/${needId}/repeat-preview`, { method: "POST", token });
+  previewRepeat(token: string, needId: string, deadlineDate?: string, validUntil?: string): Promise<RepeatPreview> {
+    return marketplaceFetch(`/api/v1/needs/${needId}/repeat-preview`, { method: "POST", token, ...(deadlineDate ? { body: JSON.stringify({ deadline_date: deadlineDate, valid_until: validUntil || null }) } : {}) });
   },
 
-  getNextStep(token: string): Promise<NextStep> {
-    return marketplaceFetch("/api/v1/next-step", { token });
+  getNextStep(token: string, companyId?: string, mode?: "buy" | "sell" | null): Promise<NextStep> {
+    return marketplaceFetch(`/api/v1/next-step${companyId ? `?company_id=${encodeURIComponent(companyId)}${mode ? `&mode=${mode}` : ""}` : ""}`, { token });
   },
 
   duplicateProduct(token: string, productId: string): Promise<Product> {
@@ -1298,7 +1298,7 @@ export const marketplace = {
     documentId: string,
     input: DocumentVerificationInput,
   ): Promise<Document> {
-    return marketplaceFetch(`/api/v1/documents/${documentId}/verification`, {
+    return marketplaceFetch(`/api/v3/documents/${documentId}/decision`, {
       method: "POST",
       token,
       body: JSON.stringify(input),
@@ -1605,7 +1605,7 @@ export const marketplace = {
 
   createSupportTicket(
     token: string,
-    input: { company_id?: string; subject: string; message: string },
+    input: { company_id?: string; subject: string; message: string; request_key?: string },
   ): Promise<SupportTicket> {
     return marketplaceFetch("/api/v1/support/tickets", {
       method: "POST", token, body: JSON.stringify(input),

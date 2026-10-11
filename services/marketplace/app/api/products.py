@@ -253,28 +253,38 @@ async def duplicate_product(
             .order_by(ProductImage.position)
         )
     ).scalars().all()
-    for image in original_images:
-        db.add(
-            ProductImage(
-                product_id=copy.id,
-                file_name=image.file_name,
-                file_key=image.file_key,
-                content_type=image.content_type,
-                position=image.position,
+    uploaded: list[str] = []
+    try:
+        for image in original_images:
+            key = f"products/{copy.id}/{uuid.uuid4()}"
+            uploaded.append(key)
+            upload_object(key, download_object(image.file_key), image.content_type)
+            db.add(
+                ProductImage(
+                    product_id=copy.id,
+                    file_name=image.file_name,
+                    file_key=key,
+                    content_type=image.content_type,
+                    position=image.position,
+                )
             )
+        await append_audit_event(
+            db,
+            event_type="product_duplicated",
+            entity_type="product",
+            entity_id=copy.id,
+            actor_user_id=user.id,
+            actor_company_id=original.company_id,
+            source_refs=[{"type": "product", "id": str(original.id)}],
+            explanation="Продавец создал черновик товара из шаблона; публикация не выполнена.",
+            payload={"source_product_id": str(original.id)},
         )
-    await append_audit_event(
-        db,
-        event_type="product_duplicated",
-        entity_type="product",
-        entity_id=copy.id,
-        actor_user_id=user.id,
-        actor_company_id=original.company_id,
-        source_refs=[{"type": "product", "id": str(original.id)}],
-        explanation="Продавец создал черновик товара из шаблона; публикация не выполнена.",
-        payload={"source_product_id": str(original.id)},
-    )
-    await db.commit()
+        await db.commit()
+    except Exception:
+        await db.rollback()
+        for key in uploaded:
+            delete_object(key)
+        raise
     await db.refresh(copy)
     return await _product_out(copy, db)
 
@@ -466,5 +476,6 @@ async def remove_product_image(
     await require_company_admin(product.company_id, user, db)
     await db.execute(delete(ProductImage).where(ProductImage.id == image.id))
     await db.commit()
-    delete_object(image.file_key)
+    if await db.scalar(select(ProductImage.id).where(ProductImage.file_key == image.file_key).limit(1)) is None:
+        delete_object(image.file_key)
     return Response(status_code=status.HTTP_204_NO_CONTENT)

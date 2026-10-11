@@ -4,7 +4,7 @@
 // а также селектор компании по праву «Покупаю» / «Продаю».
 
 import { useRouter } from "next/navigation";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { api, ApiError, Company, getToken, User } from "./api";
 
 export interface MeState {
@@ -21,27 +21,34 @@ export function useMe(): MeState {
   const [companies, setCompanies] = useState<Company[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const generation = useRef(0);
 
   const reload = useCallback(async () => {
+    const current = ++generation.current;
     const token = getToken();
     if (!token) {
+      setUser(null); setCompanies([]); setLoading(false);
       router.replace("/login");
       return;
     }
     try {
       const result = await api.me(token);
+      if (generation.current !== current) return;
       setUser(result.user);
       setCompanies(result.companies);
       setError(null);
     } catch (err) {
+      if (generation.current !== current) return;
+      setUser(null); setCompanies([]);
       setError(err instanceof ApiError ? err.message : "Не удалось загрузить данные аккаунта.");
     } finally {
-      setLoading(false);
+      if (generation.current === current) setLoading(false);
     }
   }, [router]);
 
   useEffect(() => {
     void reload();
+    return () => { generation.current += 1; };
   }, [reload]);
 
   return { user, companies, loading, error, reload };
@@ -67,8 +74,8 @@ export function useCompanySelector(permission: CompanyPermission) {
   const [companyId, setCompanyId] = useState<string>("");
 
   useEffect(() => {
-    if (!me.loading && available.length > 0 && !available.some((company) => company.id === companyId)) {
-      setCompanyId(available[0].id);
+    if (!me.loading && !available.some((company) => company.id === companyId)) {
+      setCompanyId(available[0]?.id ?? "");
     }
   }, [me.loading, available, companyId]);
 

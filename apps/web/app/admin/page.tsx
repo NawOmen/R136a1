@@ -97,7 +97,9 @@ export default function AdminPage() {
   async function handleApprove(company: Company) {
     const token = getToken();
     if (!token) return;
-    const comment = window.prompt("Комментарий к подтверждению (необязательно):", "") ?? "";
+    const comment = window.prompt("Причина подтверждения компании (обязательно):", "");
+    if (comment === null) return;
+    if (!comment.trim()) { setActionError("Укажите причину подтверждения компании."); return; }
     setBusyId(company.id);
     setActionError(null);
     try {
@@ -174,8 +176,8 @@ export default function AdminPage() {
       setActionError("Укажите область действия документа: без неё подтверждение невозможно.");
       return;
     }
-    if (decision === "rejected" && !value.note.trim()) {
-      setActionError("Укажите причину отклонения документа.");
+    if (!value.note.trim()) {
+      setActionError("Укажите причину решения по документу.");
       return;
     }
     setDocBusyId(document.id);

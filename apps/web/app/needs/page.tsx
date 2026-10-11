@@ -5,7 +5,7 @@
 // старые файлы, допуски, резервы и согласия не переносятся.
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { getToken } from "../lib/api";
 import {
   ApiError,
@@ -34,6 +34,9 @@ export default function MyNeedsPage() {
   const [previewLoading, setPreviewLoading] = useState(false);
   const [deadline, setDeadline] = useState(defaultDeadline());
   const [validUntil, setValidUntil] = useState(defaultDeadline());
+  const [previewError, setPreviewError] = useState<string | null>(null);
+  const [previewRetry, setPreviewRetry] = useState(0);
+  const previewGeneration = useRef(0);
   const [repeating, setRepeating] = useState(false);
 
   async function load() {
@@ -54,27 +57,38 @@ export default function MyNeedsPage() {
     void load();
   }, []);
 
-  async function openRepeat(need: Need) {
+  useEffect(() => {
+    const generation = ++previewGeneration.current;
+    setPreview(null); setPreviewError(null);
+    if (!repeatId) { setPreviewLoading(false); return; }
     const token = getToken();
     if (!token) return;
-    setRepeatId(need.id);
-    setPreview(null);
-    setDeadline(defaultDeadline());
-    setValidUntil(defaultDeadline());
-    setError(null);
     setPreviewLoading(true);
-    try {
-      setPreview(await marketplace.previewRepeat(token, need.id));
-    } catch (err: unknown) {
-      setError(err instanceof ApiError ? err.message : "Не удалось сравнить условия повтора.");
-    } finally {
-      setPreviewLoading(false);
-    }
+    marketplace.previewRepeat(token, repeatId, deadline, validUntil).then((result) => {
+      if (previewGeneration.current === generation) setPreview(result);
+    }).catch((err: unknown) => {
+      if (previewGeneration.current === generation) setPreviewError(err instanceof ApiError ? err.message : "Не удалось сравнить условия повтора.");
+    }).finally(() => {
+      if (previewGeneration.current === generation) setPreviewLoading(false);
+    });
+    return () => { previewGeneration.current += 1; };
+  }, [repeatId, deadline, validUntil, previewRetry]);
+
+  function openRepeat(need: Need) {
+    previewGeneration.current += 1;
+    setRepeatId(need.id); setPreview(null); setPreviewError(null); setPreviewLoading(true);
+    setDeadline(defaultDeadline()); setValidUntil(defaultDeadline());
+  }
+
+  function changeDates(value: string, validity = false) {
+    previewGeneration.current += 1; setPreview(null); setPreviewLoading(true);
+    if (validity) setValidUntil(value); else setDeadline(value);
   }
 
   async function repeat(need: Need) {
     const token = getToken();
     if (!token) return;
+    if (!preview || previewLoading || repeating) return;
     if (!deadline) {
       setError("Укажите новый срок выполнения.");
       return;
@@ -82,7 +96,7 @@ export default function MyNeedsPage() {
     setRepeating(true);
     setError(null);
     try {
-      const storageKey = `porukam:repeat:${need.id}:${deadline}`;
+      const storageKey = `porukam:repeat:${need.id}:${deadline}:${validUntil || ""}`;
       const requestKey = sessionStorage.getItem(storageKey) ?? crypto.randomUUID();
       sessionStorage.setItem(storageKey, requestKey);
       const copy = await marketplace.repeatNeed(token, need.id, deadline, requestKey, validUntil || undefined);
@@ -138,6 +152,7 @@ export default function MyNeedsPage() {
               {repeatId === need.id ? (
                 <div className="repeat-confirm">
                   <strong>Повтор закупки — новый черновик</strong>
+                  {previewError && <div className="alert alert-error" role="alert">{previewError} <button type="button" className="btn btn-secondary btn-sm" onClick={() => setPreviewRetry((value) => value + 1)}>Повторить сравнение</button></div>}
                   {previewLoading ? (
                     <p className="hint">Сравниваем прошлые и текущие условия...</p>
                   ) : preview ? (
@@ -166,7 +181,8 @@ export default function MyNeedsPage() {
                       id={`deadline-${need.id}`}
                       type="date"
                       value={deadline}
-                      onChange={(event) => setDeadline(event.target.value)}
+                      disabled={repeating}
+                      onChange={(event) => changeDates(event.target.value)}
                       required
                     />
                   </div>
@@ -176,14 +192,15 @@ export default function MyNeedsPage() {
                       id={`valid-${need.id}`}
                       type="date"
                       value={validUntil}
-                      onChange={(event) => setValidUntil(event.target.value)}
+                      disabled={repeating}
+                      onChange={(event) => changeDates(event.target.value, true)}
                     />
                   </div>
                   <div className="actions">
                     <button
                       type="button"
                       className="btn btn-primary btn-sm"
-                      disabled={repeating || previewLoading}
+                      disabled={repeating || previewLoading || !preview || !!previewError}
                       onClick={() => void repeat(need)}
                     >
                       {repeating ? "Создаём..." : "Да, создать черновик"}
@@ -205,7 +222,8 @@ export default function MyNeedsPage() {
                 <button
                   type="button"
                   className="btn btn-secondary btn-sm"
-                  onClick={() => void openRepeat(need)}
+                  disabled={repeating}
+                  onClick={() => openRepeat(need)}
                 >
                   Повторить заказ
                 </button>

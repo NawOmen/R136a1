@@ -17,6 +17,8 @@ class Settings(BaseSettings):
             raise ValueError("JWT_SECRET должен быть случайным секретом длиной не менее 48 символов")
         return value
 
+    buyer_trial_enabled: bool = True
+
     jwt_algorithm: Literal["HS256"] = "HS256"
 
     ollama_base_url: str = "http://host.docker.internal:11434"

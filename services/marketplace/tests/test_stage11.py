@@ -50,7 +50,7 @@ async def test_repeat_preview_does_not_create_and_explains_not_carried(client, d
     assert after == before
 
 
-async def test_repeat_preview_shows_free_capacity_when_entries_exist(client, db_session):
+async def test_repeat_preview_never_treats_buyer_capacity_as_supplier_resource(client, db_session):
     buyer = await make_user(db_session)
     company = await make_company(db_session, buyer, can_buy=True, can_sell=False)
     original = await _make_need(client, buyer, company)
@@ -65,8 +65,8 @@ async def test_repeat_preview_shows_free_capacity_when_entries_exist(client, db_
     r = await client.post(f"/api/v1/needs/{original['id']}/repeat-preview", headers=_auth(make_token(buyer)))
     assert r.status_code == 200, r.text
     fields = [c["field"] for c in r.json()["changes"]]
-    assert "Свободная мощность" in fields
-    assert "Подтверждённой мощности нет" not in " ".join(r.json()["warnings"])
+    assert "Свободная мощность" not in fields
+    assert not any(c["now"] == "1000" for c in r.json()["changes"])
 
 
 async def test_repeat_with_valid_until_returns_new_draft(client, db_session):
@@ -161,9 +161,9 @@ async def test_next_step_ordering(client, db_session):
     r = await client.get("/api/v1/next-step", headers=_auth(make_token(lonely)))
     assert r.json()["href"] == "/company/new"
     user = await make_user(db_session)
-    await make_company(db_session, user, can_buy=True, can_sell=False, verified=False)
+    pending_company = await make_company(db_session, user, can_buy=True, can_sell=False, verified=False)
     r = await client.get("/api/v1/next-step", headers=_auth(make_token(user)))
-    assert r.json()["href"] == "/company/new"
+    assert r.json()["href"] == f"/company/{pending_company}"
     buyer = await make_user(db_session)
     await make_company(db_session, buyer, can_buy=True, can_sell=False, verified=True)
     r = await client.get("/api/v1/next-step", headers=_auth(make_token(buyer)))

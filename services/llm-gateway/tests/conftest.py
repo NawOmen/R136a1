@@ -206,3 +206,11 @@ class FakeProvider:
 @pytest.fixture
 def fake_provider():
     return FakeProvider()
+
+
+@pytest.fixture(autouse=True)
+def legacy_unlimited_trial(monkeypatch):
+    # Existing contract tests exercise long multi-run histories. Dedicated S11 tests
+    # enable the quota and verify admission, retries, failures and the feature flag.
+    from app.config import settings
+    monkeypatch.setattr(settings, "buyer_trial_enabled", False)

@@ -1,5 +1,7 @@
 from ..money import amount, decimal
 import uuid
+import hashlib
+import json
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy import or_, select, text
@@ -41,7 +43,17 @@ async def create_support_ticket(
 ):
     if data.company_id:
         await require_membership(data.company_id, user, db)
-    ticket = SupportTicket(user_id=user.id, **data.model_dump())
+    request_hash = hashlib.sha256(json.dumps(data.model_dump(mode="json", exclude={"request_key"}), sort_keys=True).encode()).hexdigest()
+    if data.request_key:
+        await db.execute(text("SELECT pg_advisory_xact_lock(hashtextextended(:key, 0))"),
+                         {"key": f"support:{user.id}:{data.request_key}"})
+        existing = await db.scalar(select(SupportTicket).where(
+            SupportTicket.user_id == user.id, SupportTicket.request_key == data.request_key))
+        if existing:
+            if existing.request_hash != request_hash:
+                raise HTTPException(409, "Ключ обращения уже использован с другим содержимым")
+            return existing
+    ticket = SupportTicket(user_id=user.id, request_hash=request_hash, **data.model_dump())
     db.add(ticket)
     await db.flush()
     await append_audit_event(
@@ -94,9 +106,11 @@ async def update_support_ticket_admin(
     db: AsyncSession = Depends(get_db),
 ):
     await _require_marketplace_admin(db, user)
-    ticket = await db.get(SupportTicket, ticket_id)
+    ticket = await db.scalar(select(SupportTicket).where(SupportTicket.id == ticket_id).with_for_update().execution_options(populate_existing=True))
     if ticket is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, detail="Обращение не найдено")
+    if ticket.status == data.status and ticket.admin_response == data.admin_response:
+        return ticket
     previous_status = ticket.status
     ticket.status = data.status
     ticket.admin_response = data.admin_response

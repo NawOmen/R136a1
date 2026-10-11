@@ -72,6 +72,8 @@ export default function NewNeedPage() {
   const [analysisRoute, setAnalysisRoute] = useState<"local" | "complex_auto">("local");
   const [agentRun, setAgentRun] = useState<AgentRun | null>(null);
   const [answers, setAnswers] = useState<Record<string, string>>({});
+  const [trial, setTrial] = useState<{ enabled: boolean; limit: number; used: number; remaining: number | null } | null>(null);
+  const [trialError, setTrialError] = useState<string | null>(null);
   const [analyzing, setAnalyzing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
@@ -233,6 +235,16 @@ export default function NewNeedPage() {
     }
   }
 
+  useEffect(() => {
+    let cancelled = false;
+    const token = getToken();
+    if (!token) return;
+    setTrial(null); setTrialError(null);
+    agents.trial(token).then((value) => { if (!cancelled) { setTrial(value); setTrialError(null); } })
+      .catch((err: unknown) => { if (!cancelled) setTrialError(err instanceof Error ? err.message : "Не удалось проверить пробный доступ."); });
+    return () => { cancelled = true; };
+  }, [user?.id, analyzing]);
+
   function validate(): string | null {
     if (agentRun && agentRun.state !== "confirmed_by_user") return "Разрешите конфликты и подтвердите требования анализа или явно выберите ручное заполнение.";
     if (!PRODUCT_CATEGORY_TREE[category]?.includes(subcategory)) return "Выберите подкатегорию товара для проверки требований.";
@@ -279,6 +291,7 @@ export default function NewNeedPage() {
         files,
         analysisRoute,
         company?.id,
+        creationKey.current,
       );
       if (activeScope.current !== scope) return;
       setAgentRun(run);
@@ -582,6 +595,10 @@ export default function NewNeedPage() {
           >
             {analyzing ? "Разбираю материалы..." : "Разобрать материалы"}
           </button>
+
+          {trial && <p className="hint" role="status">{trial.enabled ? `Пробные сценарии: ${trial.used} из ${trial.limit} использовано, ${trial.remaining} осталось.` : "Лимит пробных сценариев отключён настройкой платформы."}</p>}
+          {trialError && <p className="hint">{trialError}</p>}
+          <p className="hint">Ручное создание бесплатно. При включённом пробном лимите доступны два сценария разбора; повтор запроса и уточнения не расходуют новый сценарий.</p>
 
           {agentRun && (
             <div className="agent-result">
