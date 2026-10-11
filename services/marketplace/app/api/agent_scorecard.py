@@ -285,15 +285,16 @@ async def role_quality(db: AsyncSession, *, scope: str, company_id: uuid.UUID | 
     blocked = await db.scalar(blocked_query, params) or 0
     corrections = 0
     if company_id is not None:
-        corrections = await db.scalar(text(
-            "SELECT COALESCE(SUM(jsonb_array_length(changed_fields)), 0) FROM marketplace.offer_drafts "
-            "WHERE company_id = CAST(:company_id AS uuid) AND status = 'used' AND created_at >= :since"
-        ), params) or 0
+        corrections_query = text(
+            "SELECT COALESCE(SUM(CASE WHEN jsonb_typeof(changed_fields) = 'array' "
+            "THEN jsonb_array_length(changed_fields) ELSE 0 END), 0) FROM marketplace.offer_drafts "
+            "WHERE company_id = CAST(:company_id AS uuid) AND status = 'used' AND created_at >= :since")
     else:
-        corrections = await db.scalar(text(
-            "SELECT COALESCE(SUM(jsonb_array_length(changed_fields)), 0) FROM marketplace.offer_drafts "
-            "WHERE status = 'used' AND created_at >= :since"
-        ), params) or 0
+        corrections_query = text(
+            "SELECT COALESCE(SUM(CASE WHEN jsonb_typeof(changed_fields) = 'array' "
+            "THEN jsonb_array_length(changed_fields) ELSE 0 END), 0) FROM marketplace.offer_drafts "
+            "WHERE status = 'used' AND created_at >= :since")
+    corrections = await db.scalar(corrections_query, params) or 0
     by_role: dict[str, list] = {}
     for row in rows:
         by_role.setdefault(row["agent_type"], []).append(row)
@@ -305,11 +306,17 @@ async def role_quality(db: AsyncSession, *, scope: str, company_id: uuid.UUID | 
         props_total = props_confirmed = conflicts = 0
         for r in sample:
             result = r["result"] or {}
-            for prop in result.get("properties", []) or []:
+            if not isinstance(result, dict):
+                continue
+            properties = result.get("properties", []) or []
+            for prop in properties if isinstance(properties, list) else []:
+                if not isinstance(prop, dict):
+                    continue
                 props_total += 1
                 if prop.get("status") == "confirmed":
                     props_confirmed += 1
-            conflicts += len(result.get("conflicts", []) or [])
+            found = result.get("conflicts", []) or []
+            conflicts += len(found) if isinstance(found, list) else 0
         durations = [r["duration_ms"] for r in sample if r["duration_ms"] is not None]
         costs = [float(r["estimated_cost_rub"]) for r in sample if r["estimated_cost_rub"] is not None]
         role = RoleQualityRoleOut(
