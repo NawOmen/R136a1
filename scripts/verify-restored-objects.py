@@ -32,12 +32,19 @@ async def main():
     engine=create_async_engine(settings.database_url)
     try:
         async with engine.connect() as conn:
-            keys=(await conn.execute(text('SELECT file_key FROM marketplace.documents UNION SELECT file_key FROM marketplace.need_files UNION SELECT storage_key FROM marketplace.deal_attachments'))).scalars().all()
+            references=(await conn.execute(text('''
+                SELECT file_key, NULL::text AS expected_hash FROM marketplace.documents
+                UNION SELECT file_key, content_hash FROM marketplace.need_files
+                UNION SELECT storage_key, sha256 FROM marketplace.deal_attachments
+                UNION SELECT file_key, NULL::text FROM marketplace.product_images
+                UNION SELECT photo_file_key, NULL::text FROM marketplace.production_profiles WHERE photo_file_key IS NOT NULL
+            '''))).all()
     finally:await engine.dispose()
-    missing=sum((settings.minio_bucket,key) not in copies[1] for key in keys)
-    equal=bool(copies[0]) and copies[0]==copies[1] and missing==0
-    print(json.dumps({'equal':equal,'downloaded_objects':len(copies[0]),'linked_objects':len(keys),
-                      'missing_linked_objects':missing},ensure_ascii=False,indent=2))
+    missing=sum((settings.minio_bucket,key) not in copies[1] for key,expected in references)
+    mismatches=sum(expected is not None and copies[1].get((settings.minio_bucket,key))!=expected for key,expected in references)
+    equal=bool(copies[0]) and copies[0]==copies[1] and missing==0 and mismatches==0
+    print(json.dumps({'equal':equal,'downloaded_objects':len(copies[0]),'linked_objects':len(references),
+                      'missing_linked_objects':missing,'stored_hash_mismatches':mismatches},ensure_ascii=False,indent=2))
     return 0 if equal else 1
 
 if __name__=='__main__':raise SystemExit(asyncio.run(main()))
