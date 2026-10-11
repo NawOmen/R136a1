@@ -54,3 +54,58 @@ test("microphone denial keeps the local audio-file path available", async ({ pag
   await page.reload();
   await expect(page.getByText(/синтетическая-запись.wav/)).toBeVisible();
 });
+
+test("S13: expiry warnings follow document deletion and company scope; failures can be retried", async ({ page }) => {
+  const document = { id: "00000000-0000-4000-8000-000000000050", company_id: companies[0].id,
+    name: "Синтетическое подтверждение А", document_type: "certificate", verification_status: "verified",
+    scope_category: "Упаковка и тара", scope_subcategory: "Бумажные стаканы", confirms: {},
+    valid_until: "2026-10-20", created_at: "2026-10-11T00:00:00Z", content_type: "application/pdf" };
+  let deleted = false;
+  let expiryFailed = true;
+  await page.addInitScript(() => localStorage.setItem("token", "synthetic-browser-test"));
+  await page.route("**/api/**", async route => {
+    const path = new URL(route.request().url()).pathname;
+    if (path.endsWith("/auth/me")) return route.fulfill({ json: { user, companies } });
+    if (route.request().method() === "DELETE") { deleted = true; return route.fulfill({ status: 204 }); }
+    if (path.endsWith("/documents/expiring") && path.includes(companies[1].id)) {
+      await new Promise(resolve => setTimeout(resolve, 300));
+      return expiryFailed ? route.fulfill({ status: 503, json: { detail: "Сроки временно не проверяются" } }) : route.fulfill({ json: [] });
+    }
+    if (path.includes("/documents")) return route.fulfill({ json: path.includes(companies[0].id) && !deleted ? [document] : [] });
+    return route.fulfill({ json: [] });
+  });
+  await page.goto("/seller/documents");
+  await expect(page.getByRole("heading", { name: "Истекающие подтверждения" })).toBeVisible();
+  page.on("dialog", dialog => dialog.accept());
+  await page.getByRole("button", { name: "Удалить", exact: true }).click();
+  await expect(page.getByText(document.name, { exact: false })).toHaveCount(0);
+  await page.locator("#seller_company").selectOption(companies[1].id);
+  await expect(page.getByText(document.name, { exact: false })).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "Повторить проверку сроков" })).toBeVisible();
+  await expect(page.getByText("Истекающих подтверждений нет.")).toHaveCount(0);
+  expiryFailed = false;
+  await page.getByRole("button", { name: "Повторить проверку сроков" }).click();
+  await expect(page.getByText("Истекающих подтверждений нет.")).toBeVisible();
+});
+
+test("S13: external counters need an explicit separate choice and a different retry key", async ({ page }) => {
+  await prepare(page);
+  const submitted: string[] = [];
+  await page.route("**/buyer-agent/runs", route => {
+    submitted.push(route.request().postData() ?? "");
+    return route.fulfill({ status: 503, json: { detail: "Синтетический отказ" } });
+  });
+  await page.locator("#request_description").fill("Нужно 5000 стаканов в Москву");
+  await page.locator("#analysis_route").selectOption("complex_auto");
+  const consent = page.getByRole("checkbox", { name: /Разрешаю передать внешней модели DeepSeek/ });
+  await expect(consent).not.toBeChecked();
+  await page.getByRole("button", { name: "Разобрать материалы", exact: true }).click();
+  await expect(page.getByRole("button", { name: "Разобрать материалы", exact: true })).toBeEnabled();
+  await consent.check();
+  await page.getByRole("button", { name: "Разобрать материалы", exact: true }).click();
+  await expect.poll(() => submitted.length).toBe(2);
+  expect(submitted[0]).toMatch(/name="external_context_allowed"\r?\n\r?\nfalse/);
+  expect(submitted[1]).toMatch(/name="external_context_allowed"\r?\n\r?\ntrue/);
+  const key = (body: string) => /name="request_key"\r?\n\r?\n([^\r\n]+)/.exec(body)?.[1];
+  expect(key(submitted[0])).not.toBe(key(submitted[1]));
+});

@@ -41,7 +41,7 @@ class SpecificationCheck:
 
 async def company_documents(db: AsyncSession, company_id: uuid.UUID) -> list[Document]:
     result = await db.execute(
-        select(Document).where(Document.company_id == company_id).order_by(Document.created_at.desc())
+        select(Document).where(Document.company_id == company_id).order_by(Document.created_at.desc()).execution_options(populate_existing=True)
     )
     return list(result.scalars().all())
 
@@ -123,14 +123,16 @@ async def require_company_admission(
     context: str,
 ) -> CategoryAdmissionOut:
     """Проверить допуск компании к обязательству и остановить его при пробелах."""
+    from .resources import lock_company
     from .category_registry import resolve_category
     from .denials import BusinessDenied
     def denied(status_code, detail):
         return BusinessDenied(status_code, detail, company_id=company_id, entity_type="product" if check.product_id else "company", entity_id=check.product_id)
     if check.product_id is not None:
+        await lock_company(db, company_id)
         from .category_compatibility import compare_specifications
         from types import SimpleNamespace
-        product=await db.get(Product,check.product_id)
+        product=await db.scalar(select(Product).where(Product.id == check.product_id).execution_options(populate_existing=True))
         if product is None or product.company_id!=company_id:
             raise denied(409,"Товар обязательства недоступен продавцу")
         requested=SimpleNamespace(category=check.category,subcategory=check.subcategory,characteristics=check.characteristics,
@@ -148,6 +150,8 @@ async def require_company_admission(
             raise denied(409, (context + ': ' if context else '') +
                                 'Сохранённая версия правил потребности не совпадает с актуальной категорией. '
                                 'Владелец должен сравнить изменения и явно принять правила в черновике')
+    # Same transaction lock as document decisions and capacity writers.
+    await lock_company(db, company_id)
     admission = await company_admission(
         db,
         company_id,

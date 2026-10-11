@@ -414,7 +414,7 @@ async def test_external_review_never_receives_original_document_text(
     secret = "ООО «Секретный завод», договор и коммерческая тайна"
     response = await client.post(
         "/api/v1/buyer-agent/runs",
-        data={"request_text": "Нужно 5000 стаканов в Москву за 10 дней", "route": "complex_auto"},
+        data={"request_text": "Нужно 5000 стаканов в Москву за 10 дней", "route": "complex_auto", "external_context_allowed": "true"},
         files=[
             ("files", ("secret-1.txt", secret.encode(), "text/plain")),
             ("files", ("secret-2.txt", "старый заказ 350 мл".encode(), "text/plain")),
@@ -448,7 +448,7 @@ async def test_optional_review_failure_does_not_block_local_result(
     fake_provider.structured = fail_review
     response = await client.post(
         "/api/v1/buyer-agent/runs",
-        data={"request_text": "Нужно 5000 стаканов в Москву за 10 дней", "route": "complex_auto"},
+        data={"request_text": "Нужно 5000 стаканов в Москву за 10 дней", "route": "complex_auto", "external_context_allowed": "true"},
         files=[
             ("files", ("one.txt", b"400 ml", "text/plain")),
             ("files", ("two.txt", b"PE", "text/plain")),

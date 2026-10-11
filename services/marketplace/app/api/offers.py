@@ -162,13 +162,19 @@ async def list_offers(
             )
         ).scalars().all()
         if not seller_companies:
-            return []
+            raise HTTPException(status.HTTP_404_NOT_FOUND, detail="Потребность не найдена")
         result = await db.execute(
             select(Offer).where(
                 Offer.need_id == need.id, Offer.company_id.in_(seller_companies)
             )
         )
-        return result.scalars().all()
+        own = result.scalars().all()
+        if not own and not (
+            need.status in ACTIVE_NEED_STATUSES and need.visibility == "open_anonymized"
+        ):
+            # Чужая закрытая потребность не раскрывается и фактом существования.
+            raise HTTPException(status.HTTP_404_NOT_FOUND, detail="Потребность не найдена")
+        return own
 
     result = await db.execute(query.order_by(Offer.created_at))
     return result.scalars().all()

@@ -27,6 +27,7 @@ from ..matching import ACTIVE_NEED_STATUSES, need_is_current, order_unit, run_ma
 from ..matching import _need_parts, _passport_matches
 from ..experience import notify_market_watchers
 from ..schemas import NeedFeedOut, NeedFileOut, NeedIn, NeedOut, NeedEditIn
+from ..file_safety import validate_upload
 from ..storage import download_object, upload_object
 from ..requirements import evidence_snapshot, evidence_is_current, require_current_evidence, revision_impact, invalidate_dependents, store_revision, lock_specification_edit
 from ..models import NeedRevision
@@ -424,6 +425,10 @@ async def attach_need_file(
             status.HTTP_415_UNSUPPORTED_MEDIA_TYPE,
             detail="Допустимы только изображения, PDF и аудиофайлы",
         )
+    try:
+        content_type = await validate_upload(data, content_type)
+    except ValueError as exc:
+        raise HTTPException(status.HTTP_415_UNSUPPORTED_MEDIA_TYPE, detail=str(exc)) from None
     file_name = file.filename or "file"
     if len(file_name) > 255:
         raise HTTPException(status.HTTP_400_BAD_REQUEST, detail="Имя файла длиннее 255 символов")
@@ -458,7 +463,8 @@ async def download_need_file(
     return Response(
         content=data,
         media_type=need_file.content_type,
-        headers={"Content-Disposition": f"attachment; filename*=UTF-8''{encoded_name}"},
+        headers={"Content-Disposition": f"attachment; filename*=UTF-8''{encoded_name}",
+                 "X-Content-Type-Options": "nosniff"},
     )
 
 

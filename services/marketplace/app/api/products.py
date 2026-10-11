@@ -30,6 +30,7 @@ from ..schemas import (
     ProductPatch,
     PublishIn,
 )
+from ..file_safety import validate_upload
 from ..storage import delete_object, download_object, upload_object
 from ..trust import append_audit_event
 from ..admission import BUYER_CHECKLIST_NOTE, admission_audit_payload, company_admission, publicly_available_products
@@ -374,11 +375,15 @@ async def upload_product_image(
     content_type = file.content_type or ""
     if content_type not in ALLOWED_IMAGE_TYPES:
         raise HTTPException(status.HTTP_415_UNSUPPORTED_MEDIA_TYPE, detail="Допустимы PNG, JPG и WebP")
-    data = await file.read()
+    data = await file.read(MAX_IMAGE_SIZE + 1)
     if not data:
         raise HTTPException(status.HTTP_400_BAD_REQUEST, detail="Изображение пустое")
     if len(data) > MAX_IMAGE_SIZE:
         raise HTTPException(status.HTTP_413_REQUEST_ENTITY_TOO_LARGE, detail="Изображение больше 8 МБ")
+    try:
+        content_type = await validate_upload(data, content_type)
+    except ValueError as exc:
+        raise HTTPException(status.HTTP_415_UNSUPPORTED_MEDIA_TYPE, detail=str(exc)) from None
     positions = set((await db.execute(
         select(ProductImage.position).where(ProductImage.product_id == product.id)
     )).scalars().all())
@@ -459,7 +464,8 @@ async def get_product_image(image_id: uuid.UUID, db: AsyncSession = Depends(get_
         raise HTTPException(status.HTTP_404_NOT_FOUND, detail="Изображение не найдено")
     return Response(
         content=download_object(image.file_key), media_type=image.content_type,
-        headers={"Content-Disposition": f"inline; filename*=UTF-8''{quote(image.file_name)}"},
+        headers={"Content-Disposition": f"inline; filename*=UTF-8''{quote(image.file_name)}",
+                 "X-Content-Type-Options": "nosniff"},
     )
 
 

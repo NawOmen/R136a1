@@ -1,3 +1,5 @@
+from synthetic_files import PDF
+
 """Категорийный допуск: доказательства, применимость и блокировка публикации.
 
 Проверяем, что допуск выдаётся только по документам, которые человек подтвердил
@@ -53,7 +55,7 @@ async def _upload_document(client, token, company, *, document_type="declaration
     response = await client.post(
         f"/api/v1/companies/{company}/documents",
         data=data,
-        files={"file": ("doc.pdf", b"%PDF-1.4 synthetic", "application/pdf")},
+        files={"file": ("doc.pdf", PDF, "application/pdf")},
         headers=_auth(token),
     )
     assert response.status_code == 201, response.text

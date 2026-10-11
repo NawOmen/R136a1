@@ -66,8 +66,15 @@ ollama serve
 ```
 
 Базовый маркетплейс работает и без модели; в этом случае недоступен только
-разбор новых материалов. Первая расшифровка аудио загружает локальную модель
-Whisper `small` в Docker volume. DeepSeek необязателен и включается только через
+разбор новых материалов. Whisper `small` использует кеш в Docker volume.
+Перед первым аудиозапросом подготовьте веса (скачиваются только веса модели,
+пользовательские материалы не передаются):
+
+```bash
+docker compose -f infra/docker-compose.yml exec llm-gateway python -c 'from faster_whisper.utils import download_model; download_model("small")'
+```
+
+Обработчик аудио использует только этот локальный кеш; при отсутствии модели возвращает сообщение о временной недоступности. DeepSeek необязателен и включается только через
 `DEEPSEEK_API_KEY` в локальном `.env`; ключ нельзя добавлять в Git.
 Для Docker адрес Ollama задаётся отдельно как
 `OLLAMA_DOCKER_BASE_URL=http://host.docker.internal:11434`.

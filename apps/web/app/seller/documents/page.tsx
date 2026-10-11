@@ -6,7 +6,7 @@
 // решение принимает проверяющий площадки.
 
 import Link from "next/link";
-import { FormEvent, useEffect, useState } from "react";
+import { FormEvent, useEffect, useRef, useState } from "react";
 import { getToken } from "../../lib/api";
 import {
   ApiError,
@@ -33,6 +33,14 @@ export default function SellerDocumentsPage() {
   } = useCompanySelector("can_sell");
 
   const [documents, setDocuments] = useState<Document[]>([]);
+  const [expiryState, setExpiryState] = useState<{
+    companyId: string | null; status: "loading" | "ready" | "error"; list: Document[]; error: string | null;
+  }>({ companyId: null, status: "loading", list: [], error: null });
+  const [reload, setReload] = useState(0);
+  const activeCompany = useRef(companyId);
+  activeCompany.current = companyId;
+  const expiring = expiryState.companyId === companyId ? expiryState.list : [];
+  const expiryStatus = expiryState.companyId === companyId ? expiryState.status : "loading";
   const [loaded, setLoaded] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -61,6 +69,10 @@ export default function SellerDocumentsPage() {
     if (!token || !companyId) return;
     let cancelled = false;
     setLoaded(false);
+    setDocuments([]);
+    setAdmission(null);
+    setAdmissionError(null);
+    setExpiryState({ companyId, status: "loading", list: [], error: null });
     setError(null);
     marketplace
       .getDocuments(token, companyId)
@@ -75,10 +87,19 @@ export default function SellerDocumentsPage() {
       .finally(() => {
         if (!cancelled) setLoaded(true);
       });
+    marketplace
+      .getExpiringDocuments(token, companyId)
+      .then((list) => {
+        if (!cancelled) setExpiryState({ companyId, status: "ready", list, error: null });
+      })
+      .catch((err: unknown) => {
+        if (!cancelled) setExpiryState({ companyId, status: "error", list: [],
+          error: err instanceof ApiError ? err.message : "Не удалось проверить сроки документов." });
+      });
     return () => {
       cancelled = true;
     };
-  }, [companyId]);
+  }, [companyId, reload]);
 
   async function handleUpload(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -93,7 +114,9 @@ export default function SellerDocumentsPage() {
         validUntil: validUntil || null,
       });
       const updated = await marketplace.getDocuments(token, company.id);
+      if (activeCompany.current !== company.id) return;
       setDocuments(updated);
+      setReload((value) => value + 1);
       setName("");
       setFile(null);
       setValidUntil("");
@@ -112,7 +135,10 @@ export default function SellerDocumentsPage() {
     setError(null);
     try {
       await marketplace.deleteDocument(token, document.id);
+      if (activeCompany.current !== document.company_id) return;
       setDocuments((current) => current.filter((item) => item.id !== document.id));
+      setExpiryState((current) => ({ ...current, list: current.list.filter((item) => item.id !== document.id) }));
+      setAdmission(null);
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "Не удалось удалить документ.");
     } finally {
@@ -132,6 +158,7 @@ export default function SellerDocumentsPage() {
         admissionCategory === OTHER_SCOPE ? "Другое" : admissionCategory,
         admissionSubcategory || null,
       );
+      if (activeCompany.current !== companyId) return;
       setAdmission(report);
     } catch (err) {
       setAdmission(null);
@@ -414,6 +441,32 @@ export default function SellerDocumentsPage() {
           </div>
         </form>
       </section>
+
+      {expiryStatus === "loading" && <p className="hint" role="status">Проверяем сроки документов...</p>}
+      {expiryStatus === "error" && (
+        <div className="alert alert-error" role="alert">
+          <p>{expiryState.error ?? "Не удалось проверить сроки документов."}</p>
+          <button type="button" className="btn btn-secondary" onClick={() => setReload((value) => value + 1)}>Повторить проверку сроков</button>
+        </div>
+      )}
+      {expiryStatus === "ready" && expiring.length === 0 && <p className="hint">Истекающих подтверждений нет.</p>}
+      {expiring.length > 0 && (
+        <section className="card" aria-live="polite">
+          <h2>Истекающие подтверждения</h2>
+          <p className="hint">
+            У этих документов скоро закончится срок: продлите их до блокировки новых публикаций и сделок.
+            Действующие договорённости не отменяются автоматически.
+          </p>
+          <ul className="company-list">
+            {expiring.map((document) => (
+              <li key={document.id} className="company-item">
+                <span className="company-item__name">{document.name}</span>
+                <span className="company-meta">Действует до {document.valid_until ?? "—"}</span>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
 
       <section className="card">
         <h2>Список документов</h2>

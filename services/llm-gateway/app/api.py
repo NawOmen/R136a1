@@ -1,3 +1,4 @@
+import asyncio
 import json
 import hashlib
 from datetime import datetime, timezone
@@ -16,7 +17,7 @@ from .agents import BuyerAgent, SellerAgent, log_tool, merge_facts, search_capab
 from .buyer_comparison import buyer_summary
 from .config import settings
 from .database import get_db
-from .extractors import LocalTranscriber, UnreadableMaterial, material_to_text
+from .extractors import transcribe_material, LocalTranscriber, UnreadableMaterial, material_to_text
 from .models import AgentRun, AgentSource, AgentTask, ToolCall
 from .providers import ModelUnavailable, RoutedProvider
 from .role_passports import (
@@ -136,6 +137,22 @@ async def health() -> HealthOut:
     )
 
 
+def _audio_signature_ok(data: bytes, content_type: str) -> bool:
+    """Сигнатура аудиоконтейнера по заявленному подтипу; неизвестное — отклонить."""
+    subtype = content_type.split(";", 1)[0].strip().lower()
+    if subtype in ("audio/wav", "audio/x-wav"):
+        return data.startswith(b"RIFF") and len(data) >= 12 and data[8:12] == b"WAVE"
+    if subtype == "audio/ogg":
+        return data.startswith(b"OggS")
+    if subtype == "audio/mpeg":
+        return data.startswith(b"ID3") or (len(data) >= 2 and data[0] == 0xFF and data[1] & 0xE0 == 0xE0)
+    if subtype == "audio/webm":
+        return data.startswith(b"\x1a\x45\xdf\xa3")
+    if subtype == "audio/mp4":
+        return len(data) >= 12 and data[4:8] == b"ftyp"
+    return False
+
+
 @router.post("/api/v1/transcribe", response_model=TranscriptionOut)
 async def transcribe_audio(
     file: UploadFile = File(...),
@@ -154,8 +171,14 @@ async def transcribe_audio(
         "audio/webm": ".webm", "audio/ogg": ".ogg", "audio/wav": ".wav",
         "audio/x-wav": ".wav", "audio/mpeg": ".mp3", "audio/mp4": ".m4a",
     }.get(content_type.split(";", 1)[0].lower(), ".audio")
+    if not _audio_signature_ok(data, content_type):
+        raise HTTPException(status.HTTP_415_UNSUPPORTED_MEDIA_TYPE, detail="Содержимое не является аудиозаписью")
     try:
-        text_value = await transcriber.transcribe(data, suffix)
+        text_value = await transcribe_material(data, content_type.split(";", 1)[0].strip().lower(), transcriber)
+    except ModelUnavailable as exc:
+        raise HTTPException(status.HTTP_503_SERVICE_UNAVAILABLE, detail="Локальное распознавание речи временно недоступно") from exc
+    except TimeoutError as exc:
+        raise HTTPException(status.HTTP_504_GATEWAY_TIMEOUT, detail="Распознавание речи превысило лимит времени") from exc
     except Exception as exc:
         raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, detail="Не удалось распознать русскую речь") from exc
     if not text_value:
@@ -206,6 +229,7 @@ async def analyze_buyer_request(
     request: Request,
     request_text: Annotated[str, Form(min_length=3, max_length=20_000)],
     route: Annotated[str, Form(pattern="^(local|complex_auto)$")] = "local",
+    external_context_allowed: Annotated[bool, Form()] = False,
     company_id: Annotated[uuid.UUID | None, Form()] = None,
     request_key: Annotated[uuid.UUID | None, Form()] = None,
     files: list[UploadFile] = File(default=[]),
@@ -229,6 +253,8 @@ async def analyze_buyer_request(
     if request.url.path.startswith("/api/v3/") and request_key is None:
         raise HTTPException(422, "Укажите ключ запуска для безопасного повтора")
     intent = {"text": request_text, "route": route, "company_id": str(company_id), "files": []}
+    if external_context_allowed:
+        intent["external_context_allowed"] = True
     total_size = 0
     for upload in files:
         content = await upload.read(settings.max_upload_bytes + 1)
@@ -317,8 +343,9 @@ async def analyze_buyer_request(
                 f"распознано символов: {len(extracted)}",
                 actor="model",
             )
-        except (UnreadableMaterial, ModelUnavailable) as exc:
-            warning = f"{upload.filename or f'Материал {index}'}: {exc}"
+        except (UnreadableMaterial, ModelUnavailable, ValueError, TimeoutError) as exc:
+            safe_error = str(exc)[:200] if isinstance(exc, UnreadableMaterial) else "Материал не прочитан или превышает предел обработки"
+            warning = f"{upload.filename or f'Материал {index}'}: {safe_error}"
             warnings.append(warning)
             await log_tool(
                 db,
@@ -326,7 +353,7 @@ async def analyze_buyer_request(
                 "extract_material",
                 "failed",
                 upload.filename or f"Материал {index}",
-                str(exc),
+                "Материал не прошёл безопасную обработку",
                 actor="model",
             )
 
@@ -355,7 +382,7 @@ async def analyze_buyer_request(
         cache_binding = {
             "cache_key": task_contract.extraction_cache_key("buyer_investigation", **generation),
             "input_hash": task_contract.canonical_hash(
-                {"request_text": request_text, "route": route, "sources": source_versions}
+                {"request_text": request_text, "route": route, "external_context_allowed": external_context_allowed, "sources": source_versions}
             ),
             "source_versions_hash": task_contract.canonical_hash(source_versions),
         }
@@ -403,7 +430,8 @@ async def analyze_buyer_request(
             )
         else:
             result, used_route, fallback, extraction = await BuyerAgent(provider).run_with_extraction(
-                db, run.id, sources, warnings, route, buyer_company_id=company_id
+                db, run.id, sources, warnings, route, buyer_company_id=company_id,
+                external_context_allowed=external_context_allowed
             )
         if fallback:
             await log_tool(
