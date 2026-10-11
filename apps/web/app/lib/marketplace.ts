@@ -992,6 +992,7 @@ export interface CommercialValues {
 export interface DealExecution extends ExecutionTotals {
   deal_id: string; status: string; events: ExecutionEvent[]; financials: CommercialValues;
   cost_revision?: number; unit_cost_rub?: Money | null; cost_note?: string; cost_tax_basis?: string;
+  cost_updated_at?: string | null;
 }
 export interface CommercialOrder extends ExecutionTotals, CommercialValues {
   deal_id: string; category: string; unit: string; created_at: string; status: string; cost_tax_basis?: string;

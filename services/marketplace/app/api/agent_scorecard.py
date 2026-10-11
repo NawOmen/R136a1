@@ -250,6 +250,7 @@ async def _runs_available(db: AsyncSession) -> bool:
 async def role_quality(db: AsyncSession, *, scope: str, company_id: uuid.UUID | None, window_days: int) -> RoleQualityOut:
     since = datetime.now(timezone.utc) - timedelta(days=window_days)
     notes = [
+        "Человеко-время напрямую не измеряется: прокси — число подтверждений человека и исправлений; это неполная мера, а не учёт часов.",
         "Кодовые роли (подбор, коалиции, устойчивость) оцениваются конверсиями scorecard и проверками допуска, а не этой методикой: сравниваются только сопоставимые модельные роли.",
         "Нарушение полномочий измеряется счётчиком заблокированных действий журнала; у модельных ролей нет инструментов записи, блокировка — это отклонённый вызов.",
         "Доля успешных сценариев: прогон без сбоя и без ошибки. Итоговый балл не вводится: аспекты не компенсируют друг друга.",
@@ -259,19 +260,29 @@ async def role_quality(db: AsyncSession, *, scope: str, company_id: uuid.UUID | 
         return RoleQualityOut(scope=scope, window_days=window_days, method_version=ROLE_QUALITY_METHOD_VERSION,
                               min_observations=ROLE_QUALITY_MIN_OBSERVATIONS, benchmark=_bank_info(), roles=[], notes=notes)
     params: dict = {"since": since, "company_id": company_id}
-    company_filter = "AND (CAST(:company_id AS uuid) IS NULL OR company_id = CAST(:company_id AS uuid))"
-    rows = (await db.execute(text(
-        "SELECT id, agent_type, state, error, duration_ms, estimated_cost_rub, model_version, prompt_version, "
-        "COALESCE(result, '{}') AS result FROM agents.agent_runs WHERE created_at >= :since " + company_filter
-    ), params)).mappings().all()
+    if company_id is not None:
+        runs_query = text(
+            "SELECT id, agent_type, state, error, duration_ms, estimated_cost_rub, model_version, prompt_version, "
+            "COALESCE(result, '{}') AS result FROM agents.agent_runs WHERE created_at >= :since "
+            "AND company_id = CAST(:company_id AS uuid)")
+    else:
+        runs_query = text(
+            "SELECT id, agent_type, state, error, duration_ms, estimated_cost_rub, model_version, prompt_version, "
+            "COALESCE(result, '{}') AS result FROM agents.agent_runs WHERE created_at >= :since")
+    rows = (await db.execute(runs_query, params)).mappings().all()
     clarified = set((await db.execute(text(
         "SELECT DISTINCT run_id FROM agents.tool_calls WHERE tool_name = 'apply_user_clarification' AND status = 'success'"
     ))).scalars().all()) if await db.scalar(text("SELECT to_regclass('agents.tool_calls') IS NOT NULL")) else set()
-    company_predicate = "AND actor_company_id = CAST(:company_id AS uuid)" if company_id is not None else ""
-    blocked = await db.scalar(text(
-        "SELECT COUNT(*) FROM marketplace.trust_audit_events WHERE created_at >= :since " + company_predicate +
-        " AND (event_type LIKE '%blocked%' OR explanation ILIKE '%заблокировано%')"
-    ), params) or 0
+    if company_id is not None:
+        blocked_query = text(
+            "SELECT COUNT(*) FROM marketplace.trust_audit_events WHERE created_at >= :since "
+            "AND actor_company_id = CAST(:company_id AS uuid) "
+            "AND (event_type LIKE '%blocked%' OR explanation ILIKE '%заблокировано%')")
+    else:
+        blocked_query = text(
+            "SELECT COUNT(*) FROM marketplace.trust_audit_events WHERE created_at >= :since "
+            "AND (event_type LIKE '%blocked%' OR explanation ILIKE '%заблокировано%')")
+    blocked = await db.scalar(blocked_query, params) or 0
     corrections = 0
     if company_id is not None:
         corrections = await db.scalar(text(

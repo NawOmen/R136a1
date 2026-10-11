@@ -141,6 +141,7 @@ async def execution(deal_id: uuid.UUID, company_id: uuid.UUID, user: CurrentUser
         result["financials"] = financials(deal, totals, costs)
         result["cost_revision"] = costs.revision if costs else 0
         result["cost_tax_basis"] = costs.tax_basis if costs else "unknown"
+        result["cost_updated_at"] = costs.updated_at if costs else None
         result["unit_cost_rub"] = costs.unit_cost_rub if costs else None
         result["cost_note"] = costs.note if costs else ""
     else:

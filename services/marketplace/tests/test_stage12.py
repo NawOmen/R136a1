@@ -277,37 +277,54 @@ async def test_scorecard_empty_denominator_none_and_buyer_access(client, db_sess
 
 @pytest.fixture
 async def agents_ledger(db_session):
+    # Журнал прогонов принадлежит LLM Gateway: таблица может уже существовать
+    # (миграции сервиса или соседние тесты) в минимальной или полной форме.
+    # Только добавляем недостающие колонки и чистим свои строки; DDL не удаляем.
     await db_session.execute(text("CREATE SCHEMA IF NOT EXISTS agents"))
     await db_session.execute(text(
-        "CREATE TABLE IF NOT EXISTS agents.agent_runs (id UUID PRIMARY KEY, user_id UUID, company_id UUID, "
-        "agent_type VARCHAR(64), state VARCHAR(64), requested_route VARCHAR(32) DEFAULT 'local', "
-        "used_route VARCHAR(32), model_version VARCHAR(120), prompt_version VARCHAR(64), "
-        "result JSONB NOT NULL DEFAULT '{}', error TEXT, duration_ms INTEGER, "
-        "estimated_cost_rub NUMERIC(24,12), created_at TIMESTAMPTZ DEFAULT now())"))
+        "CREATE TABLE IF NOT EXISTS agents.agent_runs (id UUID PRIMARY KEY, revision INTEGER NOT NULL DEFAULT 1, "
+        "state TEXT NOT NULL, result JSONB NOT NULL DEFAULT '{}', user_id UUID NOT NULL, company_id UUID)"))
+    for ddl in (
+        "ALTER TABLE agents.agent_runs ADD COLUMN IF NOT EXISTS agent_type VARCHAR(64)",
+        "ALTER TABLE agents.agent_runs ADD COLUMN IF NOT EXISTS requested_route VARCHAR(32) DEFAULT 'local'",
+        "ALTER TABLE agents.agent_runs ADD COLUMN IF NOT EXISTS used_route VARCHAR(32)",
+        "ALTER TABLE agents.agent_runs ADD COLUMN IF NOT EXISTS model_version VARCHAR(120)",
+        "ALTER TABLE agents.agent_runs ADD COLUMN IF NOT EXISTS prompt_version VARCHAR(64)",
+        "ALTER TABLE agents.agent_runs ADD COLUMN IF NOT EXISTS input_summary TEXT DEFAULT ''",
+        "ALTER TABLE agents.agent_runs ADD COLUMN IF NOT EXISTS error TEXT",
+        "ALTER TABLE agents.agent_runs ADD COLUMN IF NOT EXISTS duration_ms INTEGER",
+        "ALTER TABLE agents.agent_runs ADD COLUMN IF NOT EXISTS estimated_cost_rub NUMERIC(24,12)",
+        "ALTER TABLE agents.agent_runs ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ DEFAULT now()",
+    ):
+        await db_session.execute(text(ddl))
     await db_session.execute(text(
-        "CREATE TABLE IF NOT EXISTS agents.tool_calls (id UUID PRIMARY KEY DEFAULT gen_random_uuid(), "
-        "run_id UUID NOT NULL, tool_name VARCHAR(120), status VARCHAR(32), created_at TIMESTAMPTZ DEFAULT now())"))
-    await db_session.execute(text("DELETE FROM agents.tool_calls"))
-    await db_session.execute(text("DELETE FROM agents.agent_runs"))
+        "CREATE TABLE IF NOT EXISTS agents.tool_calls (id UUID PRIMARY KEY, run_id UUID NOT NULL, "
+        "tool_name VARCHAR(120), status VARCHAR(32), input_summary TEXT DEFAULT '', "
+        "output_summary TEXT DEFAULT '', created_at TIMESTAMPTZ DEFAULT now())"))
     await db_session.commit()
-    yield
-    # Возвращаем базу к исходному состоянию: чужие тесты ожидают отсутствия журнала прогонов.
-    await db_session.execute(text("DROP SCHEMA agents CASCADE"))
-    await db_session.commit()
+    created: list = []
+    yield created
+    if created:
+        await db_session.execute(text("DELETE FROM agents.tool_calls WHERE run_id = ANY(:ids)"), {"ids": created})
+        await db_session.execute(text("DELETE FROM agents.agent_runs WHERE id = ANY(:ids)"), {"ids": created})
+        await db_session.commit()
 
 
-async def _agent_run(db_session, user, company, agent_type, result, **overrides):
+async def _agent_run(db_session, created, user, company, agent_type, result, **overrides):
     values = {"id": uuid.uuid4(), "user_id": user, "company_id": company, "agent_type": agent_type,
-              "state": "confirmed_by_user", "used_route": "local", "model_version": "qwen3.5:9b",
+              "state": "confirmed_by_user", "requested_route": "local", "input_summary": "",
+              "used_route": "local", "model_version": "qwen3.5:9b",
               "prompt_version": "buyer-extraction-1", "result": json.dumps(result, ensure_ascii=False),
               "error": None, "duration_ms": 1200, "estimated_cost_rub": "0.05"}
     values.update(overrides)
     await db_session.execute(text(
-        "INSERT INTO agents.agent_runs (id, user_id, company_id, agent_type, state, used_route, model_version, "
-        "prompt_version, result, error, duration_ms, estimated_cost_rub) VALUES "
-        "(:id, :user_id, :company_id, :agent_type, :state, :used_route, :model_version, :prompt_version, "
-        "CAST(:result AS jsonb), :error, :duration_ms, CAST(:estimated_cost_rub AS numeric))"), values)
+        "INSERT INTO agents.agent_runs (id, revision, user_id, company_id, agent_type, state, requested_route, input_summary, "
+        "used_route, model_version, prompt_version, result, error, duration_ms, estimated_cost_rub) VALUES "
+        "(:id, 1, :user_id, :company_id, :agent_type, :state, :requested_route, :input_summary, :used_route, "
+        ":model_version, :prompt_version, CAST(:result AS jsonb), :error, :duration_ms, "
+        "CAST(:estimated_cost_rub AS numeric))"), values)
     await db_session.commit()
+    created.append(values["id"])
     return values["id"]
 
 
@@ -317,9 +334,9 @@ async def test_role_quality_gates_scoping_and_versions(client, db_session, agent
     token = make_token(buyer)
     result = {"properties": [{"status": "confirmed"}, {"status": "confirmed"}, {"status": "needs_clarification"}],
               "conflicts": [{"key": "material"}]}
-    run_id = await _agent_run(db_session, buyer, bc, "buyer_agent", result)
+    run_id = await _agent_run(db_session, agents_ledger, buyer, bc, "buyer_agent", result)
     await db_session.execute(text(
-        "INSERT INTO agents.tool_calls (run_id, tool_name, status) VALUES (:rid, 'apply_user_clarification', 'success')"),
+        "INSERT INTO agents.tool_calls (id, run_id, tool_name, status) VALUES (gen_random_uuid(), :rid, 'apply_user_clarification', 'success')"),
         {"rid": run_id})
     await db_session.commit()
     body = (await client.get(f"/api/v1/companies/{bc}/role-quality", headers=_auth(token))).json()
@@ -332,7 +349,7 @@ async def test_role_quality_gates_scoping_and_versions(client, db_session, agent
     assert role["critical_completeness_pct"] is None
     assert body["benchmark"]["bank"].endswith("ru_tasks.json")
     for _ in range(4):
-        await _agent_run(db_session, buyer, bc, "buyer_agent", result)
+        await _agent_run(db_session, agents_ledger, buyer, bc, "buyer_agent", result)
     body = (await client.get(f"/api/v1/companies/{bc}/role-quality", headers=_auth(token))).json()
     role = [x for x in body["roles"] if x["role"] == "buyer_agent"][0]
     assert role["status"] == "evaluated"
@@ -358,7 +375,7 @@ async def test_role_quality_gates_scoping_and_versions(client, db_session, agent
 async def test_scorecard_model_versions_and_unknown_cost(client, db_session, agents_ledger):
     seller = await make_user(db_session)
     sc = await make_company(db_session, seller, can_buy=False)
-    await _agent_run(db_session, seller, sc, "seller_agent", {"eligible": True}, prompt_version="seller-explain-1",
+    await _agent_run(db_session, agents_ledger, seller, sc, "seller_agent", {"eligible": True}, prompt_version="seller-explain-1",
                      model_version="qwen3.5:9b", estimated_cost_rub=None)
     body = (await client.get(f"/api/v1/companies/{sc}/agent-scorecard", headers=_auth(make_token(seller)))).json()
     assert body["agent_model_versions"] == ["qwen3.5:9b"]
