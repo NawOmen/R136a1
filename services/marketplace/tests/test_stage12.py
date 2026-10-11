@@ -192,6 +192,7 @@ async def test_csv_matches_screen_injection_safe_and_guarded(client, db_session)
     assert r.status_code == 200, r.text
     assert "attachment" in r.headers["content-disposition"]
     text = r.text
+    assert text.count("Прямой") == screen["orders_count"] == 1
     assert "\"'=ГИПЕРССЫЛКА(1)" in text
     assert "Итого по отчёту" in text
     assert str(ctx["deal"].id) in text
@@ -366,7 +367,11 @@ async def test_role_quality_gates_scoping_and_versions(client, db_session, agent
     assert body["roles"] == []
     admin = await make_marketplace_admin(db_session)
     body = (await client.get("/api/v1/platform/role-quality", headers=_auth(make_token(admin)))).json()
-    assert [x for x in body["roles"] if x["role"] == "buyer_agent"][0]["sample"] == 5
+    # Платформа видит все компании, включая строки соседних тестов той же базы:
+    # проверяем нижнюю границу и наличие наших версий, а не точное равенство.
+    platform_role = [x for x in body["roles"] if x["role"] == "buyer_agent"][0]
+    assert platform_role["sample"] >= 5
+    assert "qwen3.5:9b" in platform_role["model_versions"]
     stranger = await make_user(db_session)
     assert (await client.get(f"/api/v1/companies/{bc}/role-quality",
                              headers=_auth(make_token(stranger)))).status_code in (403, 404)
