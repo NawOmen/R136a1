@@ -129,6 +129,12 @@ def restore(args):
     password = os.environ.get('RESTORE_POSTGRES_PASSWORD')
     if not password:
         raise ValueError('Задайте RESTORE_POSTGRES_PASSWORD вне Git')
+    # Docker container names are an atomic reservation across CLI processes/hosts.
+    # Reserve before creating or writing any volume, so concurrent restores of
+    # the same project cannot both pass the initial existence check.
+    lock = args.project + '-restore-lock'
+    run('docker', 'create', '--name', lock, '--label', f'com.docker.compose.project={args.project}',
+        '--network', 'none', '--entrypoint', 'true', image, stdout=subprocess.DEVNULL)
     for volume in volumes:
         run('docker', 'volume', 'create', '--label', f'com.docker.compose.project={args.project}', volume, stdout=subprocess.DEVNULL)
     run('docker', 'run', '--rm', '--network', 'none', '-v', f'{volumes[1]}:/snapshot',
@@ -153,6 +159,7 @@ def restore(args):
     with (args.directory / 'postgres.dump').open('rb') as stream:
         run('docker', 'exec', '-i', name, 'pg_restore', '--exit-on-error', '--single-transaction',
             '--no-owner', '--no-acl', '-U', 'sborka', '-d', 'sborka', stdin=stream)
+    run('docker', 'rm', lock, stdout=subprocess.DEVNULL)
     print(f'Восстановлено в {args.project}. Проверьте историю и файлы до подключения приложения. Секреты и модели восстанавливаются отдельно.')
 
 def main():
