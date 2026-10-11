@@ -38,4 +38,28 @@ class RestoreSafety(unittest.TestCase):
                 with self.assertRaises(ValueError):ops.restore(argparse.Namespace(directory=path,project='separate'))
                 mutation.assert_not_called()
 
+    def test_existing_volume_never_overwritten(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            path=Path(tmp);(path/'postgres.dump').write_bytes(b'archive')
+            with tarfile.open(path/'minio.tar','w'):pass
+            (path/'manifest.json').write_text(json.dumps({'format':1,'source_project':'source',
+                'files':{name:ops.digest(path/name) for name in ('postgres.dump','minio.tar')}}))
+            with patch.object(ops,'containers',return_value=[]),patch.object(ops,'output',return_value='target_postgres_data'),patch.object(ops,'run') as mutation:
+                with self.assertRaises(ValueError):ops.restore(argparse.Namespace(directory=path,project='target'))
+                mutation.assert_not_called()
+
+    def test_dirty_checkout_cannot_claim_head_version(self):
+        from types import SimpleNamespace
+        with patch.object(ops.subprocess,'run',return_value=SimpleNamespace(returncode=1)),patch.object(ops,'containers') as read,patch.object(ops,'run') as mutation:
+            with self.assertRaises(ValueError):ops.backup(argparse.Namespace(project='source',directory=Path('/tmp/unused')))
+            read.assert_not_called();mutation.assert_not_called()
+
+    def test_bound_source_revision_does_not_relabel_image(self):
+        container={'Config':{'Labels':{'com.docker.compose.service':'marketplace'}},'Image':'sha256:old',
+                   'Mounts':[{'Type':'bind','Destination':'/app','Source':str(ops.ROOT/'services/marketplace')}]}
+        with patch.object(ops,'inspect',return_value={'Config':{'Labels':{'org.opencontainers.image.revision':'old-commit'}}}):
+            version=ops.application_versions([container],'current-commit')['marketplace']
+            self.assertEqual(version,{'image_revision':'old-commit','bound_source_revision':'current-commit'})
+
+
 if __name__=='__main__':unittest.main()
