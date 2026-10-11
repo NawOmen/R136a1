@@ -408,13 +408,15 @@ async def test_invalid_model_response_fails_safely(client, token, fake_provider)
 
 
 @pytest.mark.asyncio
+@pytest.mark.parametrize("external_context_allowed", [False, True])
 async def test_external_review_never_receives_original_document_text(
-    client, token, fake_provider
+    client, token, fake_provider, external_context_allowed
 ):
-    secret = "ООО «Секретный завод», договор и коммерческая тайна"
+    secret = "ООО Секретный завод, ИП Иванов Иван Иванович, ИНН 77 1234 5678, договор и коммерческая тайна"
     response = await client.post(
         "/api/v1/buyer-agent/runs",
-        data={"request_text": "Нужно 5000 стаканов в Москву за 10 дней", "route": "complex_auto", "external_context_allowed": "true"},
+        data={"request_text": "Нужно 5000 стаканов в Москву за 10 дней", "route": "complex_auto",
+              "external_context_allowed": str(external_context_allowed).lower()},
         files=[
             ("files", ("secret-1.txt", secret.encode(), "text/plain")),
             ("files", ("secret-2.txt", "старый заказ 350 мл".encode(), "text/plain")),
@@ -427,9 +429,18 @@ async def test_external_review_never_receives_original_document_text(
         for model_name, prompt, prefer_external in fake_provider.prompts
         if model_name == "ComplexReview" and prefer_external
     ]
+    if not external_context_allowed:
+        assert review_prompts == []
+        return
     assert len(review_prompts) == 1
-    assert "Секретный завод" not in review_prompts[0]
-    assert "коммерческая тайна" not in review_prompts[0]
+    context = json.loads(review_prompts[0])
+    limits = {"source_count": 17, "fact_count": 1000,
+              "low_confidence_count": 1000, "repeated_key_count": 1000}
+    assert context.keys() == limits.keys()
+    assert context["source_count"] == 3
+    for key, value in context.items():
+        assert type(value) is int
+        assert 0 <= value <= limits[key]
 
 
 @pytest.mark.asyncio

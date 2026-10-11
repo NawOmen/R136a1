@@ -8,28 +8,83 @@ import uuid
 import pytest
 from sqlalchemy import func, select
 
-from app.models import CatalogImport, Product
+from app.models import CatalogImport, HumanApprovalRecord, Product, TrustAuditEvent
 from conftest import make_company, make_token, make_user
 
 CSV = 'Название;Категория;Цена;Минимум;Срок;Остаток;Характеристика: unit\nСтол офисный;Товары для бизнеса;7900;5;10;40;шт\n'.encode()
 
 
 @pytest.mark.asyncio
-async def test_import_carries_source_system_label(client, db_session):
+@pytest.mark.parametrize("api_version", ["v1", "v3"])
+async def test_import_source_survives_idempotent_repeat(client, db_session, api_version):
     user = await make_user(db_session)
     company = await make_company(db_session, user, can_buy=False, can_sell=True)
     headers = {"Authorization": f"Bearer {make_token(user)}"}
-    path = f"/api/v1/companies/{company}/catalog-import"
+    path = f"/api/{api_version}/companies/{company}/catalog-import"
     files = {"file": ("catalog.csv", CSV, "text/csv")}
-    preview = await client.post(path, files=files, headers=headers, data={"source_system": "1C:ERP"})
+    key = str(uuid.uuid4())
+    preview = await client.post(path, files=files, headers=headers, data={"source_system": " 1C:ERP "})
     assert preview.status_code == 200, preview.text
     assert preview.json()["source_system"] == "1C:ERP"
-    consent = {"commit": "true", "human_approved": "true", "request_key": str(uuid.uuid4()),
+    consent = {"commit": "true", "human_approved": "true", "request_key": key,
                "expected_hash": preview.json()["content_hash"], "source_system": "1C:ERP"}
-    result = await client.post(path, files=files, headers=headers, data=consent)
-    assert result.status_code == 200, result.text
-    assert result.json()["source_system"] == "1C:ERP"
-    assert await db_session.scalar(select(func.count()).select_from(Product)) == 1
+    first = await client.post(path, files=files, headers=headers, data=consent)
+    assert first.status_code == 200, first.text
+    assert first.json()["source_system"] == "1C:ERP"
+    stored = await db_session.scalar(select(CatalogImport).where(CatalogImport.company_id == company))
+    assert stored.source_system == "1C:ERP"
+    repeat = await client.post(path, files=files, headers=headers,
+                               data={**consent, "source_system": " 1C:ERP "})
+    assert repeat.status_code == 200, repeat.text
+    assert repeat.json()["import_id"] == first.json()["import_id"]
+    assert repeat.json()["source_system"] == "1C:ERP"
+    changed = await client.post(path, files=files, headers=headers,
+                                data={**consent, "source_system": "OtherERP"})
+    assert changed.status_code == 409
+    missing = await client.post(path, files=files, headers=headers,
+                                data={k: value for k, value in consent.items() if k != "source_system"})
+    assert missing.status_code == 409
+    assert await db_session.scalar(select(func.count()).select_from(CatalogImport).where(
+        CatalogImport.company_id == company)) == 1
+    assert await db_session.scalar(select(func.count()).select_from(Product).where(
+        Product.company_id == company)) == 1
+    audits = (await db_session.scalars(select(HumanApprovalRecord).where(
+        HumanApprovalRecord.action == "catalog_import",
+        HumanApprovalRecord.actor_company_id == company))).all()
+    assert len(audits) == 1
+    events = (await db_session.scalars(select(TrustAuditEvent).where(
+        TrustAuditEvent.actor_company_id == company,
+        TrustAuditEvent.event_type == "human_approval_recorded"))).all()
+    assert len(events) == 1
+    assert events[0].payload["approval_id"] == str(audits[0].id)
+    assert events[0].payload["decision_payload"]["source_system"] == stored.source_system
+    assert events[0].payload["decision_payload"]["content_hash"] == stored.content_hash
+
+
+@pytest.mark.asyncio
+async def test_unlabelled_import_stays_unknown_on_repeat(client, db_session):
+    user = await make_user(db_session)
+    company = await make_company(db_session, user, can_buy=False, can_sell=True)
+    headers = {"Authorization": f"Bearer {make_token(user)}"}
+    path = f"/api/v3/companies/{company}/catalog-import"
+    files = {"file": ("catalog.csv", CSV, "text/csv")}
+    preview = await client.post(path, files=files, headers=headers)
+    assert preview.status_code == 200, preview.text
+    assert preview.json()["source_system"] is None
+    consent = {"commit": "true", "human_approved": "true", "request_key": str(uuid.uuid4()),
+               "expected_hash": preview.json()["content_hash"]}
+    first = await client.post(path, files=files, headers=headers, data=consent)
+    assert first.status_code == 200, first.text
+    repeat = await client.post(path, files=files, headers=headers,
+                               data={**consent, "source_system": " "})
+    assert repeat.status_code == 200, repeat.text
+    assert repeat.json()["import_id"] == first.json()["import_id"]
+    assert repeat.json()["source_system"] is None
+    changed = await client.post(path, files=files, headers=headers,
+                                data={**consent, "source_system": "1C:ERP"})
+    assert changed.status_code == 409
+    stored = await db_session.get(CatalogImport, uuid.UUID(first.json()["import_id"]))
+    assert stored.source_system is None
 
 
 @pytest.mark.asyncio

@@ -211,10 +211,12 @@ async def import_catalog(company_id: uuid.UUID, file: UploadFile = File(...),
     if previous:
         if previous.content_hash != digest:
             raise HTTPException(409, "Этот запрос уже использован для другого файла")
+        if source_system != (previous.source_system or None):
+            raise HTTPException(409, "Этот запрос уже использован с другим источником")
         matched = await match_rows(db, company_id, rows)
         return {"content_hash": digest, "rows": matched, "errors": [], "created_ids": previous.product_ids,
                 "updated_ids": previous.updated_ids or [], "import_id": str(previous.id),
-                "source_system": source_system}
+                "source_system": previous.source_system}
     try:
         revisions = json.loads(expected_revisions) if expected_revisions else {}
         if not isinstance(revisions, dict):
@@ -283,7 +285,8 @@ async def import_catalog(company_id: uuid.UUID, file: UploadFile = File(...),
         await db.rollback()
         raise HTTPException(409, "Карточка с таким внешним ID уже создана параллельным запросом") from exc
     record = CatalogImport(company_id=company_id, request_key=request_key, content_hash=digest,
-                           product_ids=ids, updated_ids=updated, updated_snapshots=snapshots)
+                           product_ids=ids, updated_ids=updated, updated_snapshots=snapshots,
+                           source_system=source_system)
     db.add(record)
     await db.flush()
     await record_human_approval(db, action="catalog_import", entity_type="company", entity_id=company_id,

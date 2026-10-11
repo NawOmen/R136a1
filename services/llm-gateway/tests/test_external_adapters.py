@@ -1,4 +1,7 @@
-"""S14.03–S14.04: внешняя модель видит только обезличенное; внешние адаптеры deny-by-default."""
+"""S14: ограниченный regex-фильтр и отключённые внешние адаптеры.
+
+Граница counters-only/opt-in проверяется на настоящем caller в test_agents.py.
+"""
 import pytest
 
 from app.anonymizer import anonymize_text
