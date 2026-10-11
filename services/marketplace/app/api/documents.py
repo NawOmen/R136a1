@@ -3,7 +3,7 @@ from typing import Literal
 from datetime import date, datetime, timezone
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, UploadFile, status
-from sqlalchemy import text
+from sqlalchemy import select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..admission import BUYER_CHECKLIST_NOTE, company_admission, company_documents
@@ -23,6 +23,7 @@ from ..schemas import (
     CategoryRequirementsOut,
     DocumentOut,
     DocumentVerificationIn,
+    DocumentDecisionIn,
     PendingDocumentOut,
 )
 from ..storage import delete_object, upload_object
@@ -400,3 +401,21 @@ async def editor_document_file(document_id: uuid.UUID,user:CurrentUser=Depends(g
     from ..storage import download_object
     return Response(download_object(document.file_key),media_type="application/octet-stream",
                     headers={"Content-Disposition":f'attachment; filename="document-{document.id}"',"X-Content-Type-Options":"nosniff"})
+
+
+@router.post("/documents/{document_id}/decision", response_model=DocumentOut)
+async def decide_document(document_id: uuid.UUID, data: DocumentDecisionIn,
+                          user: CurrentUser = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
+    await require_category_editor(user, db)
+    document = await db.scalar(select(Document).where(Document.id == document_id)
+                               .with_for_update().execution_options(populate_existing=True))
+    if document is None:
+        raise HTTPException(404, "Документ не найден")
+    confirms = (data.confirms or {}) if data.decision == "verified" else {}
+    if (document.verified_by_user_id == user.id and document.verification_status == data.decision
+            and document.verification_note == data.note and document.valid_until == data.valid_until
+            and document.scope_category == (data.scope_category or document.scope_category or None)
+            and document.scope_subcategory == (data.scope_subcategory or document.scope_subcategory or None)
+            and document.confirms == confirms):
+        return document
+    return await verify_document(document_id, data, user, db)

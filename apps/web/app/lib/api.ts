@@ -317,7 +317,7 @@ export const api = {
   ): Promise<Company> {
     const body: { decision: "approve" | "reject"; reason?: string } = { decision };
     if (reason && reason.trim()) body.reason = reason.trim();
-    return request(`/api/v1/admin/companies/${id}/verification`, {
+    return request(`/api/v2/admin/companies/${id}/verification`, {
       method: "POST",
       token,
       body: JSON.stringify(body),

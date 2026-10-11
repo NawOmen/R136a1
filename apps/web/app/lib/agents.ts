@@ -132,25 +132,41 @@ export const agents = {
     }
     return ((await response.json()) as { text: string }).text;
   },
+  async trial(token: string): Promise<{ enabled: boolean; limit: number; used: number; remaining: number | null; status: string }> {
+    const response = await fetch(`${agentsBaseUrl()}/api/v1/buyer-agent/trial`, { headers: { Authorization: `Bearer ${token}` } });
+    if (!response.ok) throw new ApiError("Не удалось проверить пробный доступ. Ручное заполнение доступно.", response.status);
+    return response.json();
+  },
   async analyze(
     token: string,
     requestText: string,
     files: File[],
     route: "local" | "complex_auto",
     companyId?: string,
+    intentScope = "default",
   ): Promise<AgentRun> {
+    const fileHashes = await Promise.all(files.map(async (file) => [file.name, file.type, Array.from(new Uint8Array(await crypto.subtle.digest("SHA-256", await file.arrayBuffer()))).map((value) => value.toString(16).padStart(2, "0")).join("")]));
+    const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(JSON.stringify([intentScope, companyId, requestText, route, fileHashes])));
+    const storageKey = "porukam:analysis:" + Array.from(new Uint8Array(digest)).map((value) => value.toString(16).padStart(2, "0")).join("");
+    const requestKey = sessionStorage.getItem(storageKey) ?? crypto.randomUUID();
+    sessionStorage.setItem(storageKey, requestKey);
     const form = new FormData();
+    form.set("request_key", requestKey);
     form.set("request_text", requestText);
     form.set("route", route);
     if (companyId) form.set("company_id", companyId);
     files.forEach((file) => form.append("files", file));
-    return readResponse(
-      await fetch(`${agentsBaseUrl()}/api/v2/buyer-agent/runs`, {
-        method: "POST",
-        headers: { Authorization: `Bearer ${token}` },
-        body: form,
-      }),
-    );
+    let run = await readResponse(await fetch(`${agentsBaseUrl()}/api/v3/buyer-agent/runs`, {
+      method: "POST", headers: { Authorization: `Bearer ${token}` }, body: form,
+    }));
+    // A replay can arrive while the first request is still processing.
+    for (let attempt = 0; ["received", "processing_sources", "extracting_requirements", "extracting", "matching", "explaining"].includes(run.state) && attempt < 90; attempt += 1) {
+      await new Promise((resolve) => setTimeout(resolve, 2000));
+      run = await agents.getRun(token, run.id);
+    }
+    if (["received", "processing_sources", "extracting_requirements", "extracting", "matching", "explaining"].includes(run.state)) throw new ApiError("Разбор ещё выполняется. Повторите запрос позже: новый сценарий не будет списан.", 503);
+    if (run.state === "failed") { sessionStorage.removeItem(storageKey); throw new ApiError(run.error || "Разбор не завершён; пробный сценарий не списан.", 503); }
+    return run;
   },
 
   async clarify(

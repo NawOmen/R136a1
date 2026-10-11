@@ -151,6 +151,17 @@ class AdminVerificationIn(BaseModel):
         return self
 
 
+class AdminVerificationV2In(AdminVerificationIn):
+    reason: str = Field(min_length=1, max_length=500)
+
+    @model_validator(mode="after")
+    def require_reason(self):
+        if not self.reason.strip():
+            raise ValueError("Укажите причину решения")
+        self.reason = self.reason.strip()
+        return self
+
+
 class BlockIn(BaseModel):
     blocked: bool
     reason: str | None = Field(default=None, max_length=500)

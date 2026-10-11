@@ -4,28 +4,30 @@ from decimal import ROUND_HALF_UP
 import uuid
 import hashlib
 import json
-from datetime import datetime, timezone
+from datetime import date, datetime, timezone
 
-from fastapi import APIRouter, Depends, File, HTTPException, Response, UploadFile, status
+from fastapi import Query, APIRouter, Depends, File, HTTPException, Response, UploadFile, status
 from sqlalchemy import delete, func, select, text
+from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.exc import IntegrityError
 
-from ..admission import publicly_available_products
+from ..admission import company_admission, publicly_available_products
 from ..database import get_db
 from ..commerce import execution_totals, product_specification_hash
 from ..deps import CurrentUser, get_current_user, notify, require_company_admin, require_company_buyer, require_company_seller, require_membership
 from ..category_characteristics import validate_profile_values
 from ..experience import classify_cargo, validate_characteristics
 from ..models import (
-    CoalitionMember, Deal, DealCheckpoint, DealExecutionEvent, DealReview, DeliveryArrangement, MarketWatch,
-    Need, Product, ProductImage, ProductPriceObservation, ProductionProfile, CapabilityPassport,
+    CapacityEntry, CoalitionMember, Deal, DealCheckpoint, DealExecutionEvent, DealReview, DeliveryArrangement, MarketWatch,
+    Need, Offer, Product, ProductImage, ProductPriceObservation, ProductionProfile, CapabilityPassport,
 )
 from ..schemas import (
     BuyerSavingsOut, CharacteristicValidationIn, CharacteristicValidationOut,
     CheckpointUpdateIn, DealCheckpointOut, DealReviewIn, DealReviewOut,
     DeliveryArrangementIn, DeliveryArrangementOut, MarketWatchIn, MarketWatchOut,
-    NeedOut, NeedRepeatIn, PriceIndexPoint, PublicProducerOut, PublicProductDetailOut,
+    NeedOut, NeedRepeatIn, NextStepOut, PriceIndexPoint, PublicProducerOut, PublicProductDetailOut,
+    RepeatPreviewOut,
 )
 from ..storage import delete_object, download_object, upload_object
 from ..resources import consume
@@ -145,6 +147,201 @@ async def upload_production_photo(company_id: uuid.UUID, file: UploadFile = File
     if previous_key:
         delete_object(previous_key)
     return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
+@router.post("/needs/{need_id}/repeat-preview", response_model=RepeatPreviewOut)
+async def preview_need_repeat(
+    need_id: uuid.UUID,
+    data: NeedRepeatIn | None = None,
+    user: CurrentUser = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Сравнение прошлой потребности с текущими условиями до повтора.
+
+    Ничего не создаёт; повтор идёт отдельно с новыми датами и ключом запроса.
+    """
+    from ..category_registry import resolve_category
+    from ..resources import free_capacity_for_entry, free_stock, reservations
+    from ..resource_scopes import conversion_for
+    from ..matching import order_unit
+
+    original = await db.get(Need, need_id)
+    if original is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, detail="Потребность не найдена")
+    await require_company_buyer(original.company_id, user, db)
+    changes, warnings = [], []
+    leaf = resolve_category(original.category, original.subcategory)
+    saved_version = (original.category_profile or {}).get("profile_version")
+    current_version = (leaf["technical_profile"]["version"] if leaf else None)
+    if leaf is None:
+        warnings.append("Категория снята с публикации: повтор потребует новую классификацию")
+    elif saved_version != current_version:
+        changes.append({"field": "Предметный профиль",
+                        "was": f"версия {saved_version}" if saved_version is not None else "не зафиксирована",
+                        "now": f"версия {current_version}"})
+    if data and (data.deadline_date < datetime.now(timezone.utc).date()
+                 or (data.valid_until and (data.valid_until < datetime.now(timezone.utc).date()
+                                          or data.valid_until > data.deadline_date))):
+        raise HTTPException(422, "Укажите будущие даты; актуальность не может быть позднее срока выполнения")
+    offers = (await db.scalars(select(Offer).where(Offer.need_id == original.id,
+                                                  Offer.status.in_(("sent", "accepted"))).order_by(Offer.created_at.desc(), Offer.id))).all()
+    if not offers:
+        warnings.append("Прошлых предложений нет: условия поставщиков определит новый подбор")
+    names = {}
+    if offers:
+        rows = (await db.execute(text("SELECT id, display_name FROM auth.companies WHERE id = ANY(:ids)"),
+                                 {"ids": list({offer.company_id for offer in offers})})).mappings().all()
+        names = {row["id"]: row["display_name"] for row in rows}
+    for offer in offers:
+        label = f"{names.get(offer.company_id, 'Поставщик')}, КП № {str(offer.id)[:8]}"
+        estimate = (offer.commercial_quote or {}).get("estimate", {})
+        if estimate.get("complete"):
+            changes.append({"field": f"{label}: итог прошлого КП", "was": str(estimate["total_rub"]),
+                            "now": "новая смета ещё не получена"})
+        if offer.valid_until is None:
+            warnings.append(f"{label}: срок прошлого КП не указан; подтвердите новые условия")
+        elif offer.valid_until < datetime.now(timezone.utc).date():
+            warnings.append(f"{label}: прошлое КП истекло и не подтверждает новые условия")
+        admission = await company_admission(db, offer.company_id, original.category, original.subcategory,
+                                           characteristics=original.characteristics)
+        changes.append({"field": f"{label}: допуск", "was": "не переносится",
+                        "now": "требует проверки" if admission.blocking_open else "подтверждён на момент сравнения"})
+        for requirement in admission.requirements:
+            changes.append({"field": f"{label}: {requirement.title}",
+                            "was": "историческое подтверждение не зафиксировано",
+                            "now": requirement.state_label})
+        if admission.blocking_open:
+            warnings.append(f"{label}: новое предложение требует проверки допуска")
+        product = await db.get(Product, offer.product_id) if offer.product_id else None
+        if product and product.is_published and await publicly_available_products(db, [product]):
+            changes.append({"field": f"{label}: цена единицы каталога (₽)", "was": str(offer.price_rub),
+                            "now": str(product.price_rub)})
+        else:
+            warnings.append(f"{label}: актуальная цена единицы неизвестна, запросите новое КП")
+        if data is None:
+            continue
+        rows = await reservations(db, offer.company_id)
+        free = None
+        if offer.resource_kind == "stock" and product and product.stock_updated_at:
+            if (datetime.now(timezone.utc) - product.stock_updated_at).days < 7:
+                free = await free_stock(db, product, rows)
+        elif offer.resource_kind != "stock":
+            entries = (await db.scalars(select(CapacityEntry).where(
+                CapacityEntry.company_id == offer.company_id,
+                CapacityEntry.date >= datetime.now(timezone.utc).date(),
+                CapacityEntry.date <= data.deadline_date))).all()
+            supported = [(entry, conversion_for(entry, original.category, original.subcategory,
+                                                order_unit(original.characteristics))) for entry in entries]
+            supported = [(entry, conversion) for entry, conversion in supported if conversion]
+            if supported:
+                free = sum([(await free_capacity_for_entry(db, entry, rows)) // conversion["resource_units_per_order_unit"]
+                            for entry, conversion in supported])
+        # Не раскрываем покупателю полный частный календарь поставщика: оценка ограничена прошлым КП.
+        changes.append({"field": f"{label}: ресурс к новому сроку", "was": "резерв не переносится",
+                        "now": "не подтверждён" if free is None else str(min(free, offer.available_units))})
+    warnings.append("Сравнение не резервирует ресурс и не гарантирует цену; перед сделкой нужны новое КП и подтверждение")
+    if original.delivery_address_id is not None:
+        owner = await db.scalar(text("SELECT company_id FROM marketplace.delivery_addresses WHERE id = :id"),
+                                {"id": original.delivery_address_id})
+        changes.append({"field": "Адрес", "was": "прежний",
+                        "now": "сохранён" if owner == original.company_id else "недоступен: выберите новый"})
+    changes.append({"field": "Сроки", "was": str(original.deadline_date), "now": str(data.deadline_date) if data else "укажите новые даты"})
+    return RepeatPreviewOut(
+        changes=changes,
+        not_carried=["Файлы и исходные материалы", "Доказательства и подтверждения",
+                     "Допуск поставщика и резервы", "Согласия и подбор", "Цены прошлых КП"],
+        warnings=warnings,
+    )
+
+
+@router.get("/next-step", response_model=NextStepOut)
+async def personal_next_step(
+    company_id: uuid.UUID | None = None,
+    mode: str | None = Query(default=None, pattern="^(buy|sell)$"),
+    user: CurrentUser = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Персональный следующий шаг по состоянию аккаунта: первое невыполненное
+    действие из упорядоченных правил. Проверок вне чтения не делает."""
+    is_admin = await db.scalar(text("SELECT is_marketplace_admin FROM auth.users WHERE id = :uid"),
+                               {"uid": user.id})
+    if is_admin:
+        return NextStepOut(title="Проверьте очереди",
+                           description="Заявки компаний и обращения пользователей ждут решений.",
+                           href="/admin")
+    memberships = (await db.execute(text(
+        "SELECT company_id, can_buy, can_sell FROM auth.company_members WHERE user_id = :uid"),
+        {"uid": user.id})).mappings().all()
+    if company_id is not None:
+        memberships = [row for row in memberships if row["company_id"] == company_id]
+        if not memberships:
+            raise HTTPException(403, "Нет доступа к выбранной компании")
+    if mode and company_id and not memberships[0]["can_buy" if mode == "buy" else "can_sell"]:
+        raise HTTPException(403, "Нет прав для выбранного режима")
+    if not memberships:
+        return NextStepOut(title="Создайте компанию",
+                           description="Без компании недоступны потребности, товары и сделки.",
+                           href="/company/new")
+    companies = (await db.execute(text(
+        "SELECT id, verification_status FROM auth.companies WHERE id = ANY(:ids)"),
+        {"ids": [row["company_id"] for row in memberships]})).mappings().all()
+    verified = {row["id"]: row["verification_status"] == "verified" for row in companies}
+    if not any(verified.values()):
+        return NextStepOut(title="Завершите проверку компании",
+                           description="Публикация и сделки доступны проверенным компаниям.",
+                           href=f"/company/{memberships[0]["company_id"]}")
+    buyer_ids = [row["company_id"] for row in memberships if row["can_buy"] and verified.get(row["company_id"]) and mode != "sell"]
+    seller_ids = [row["company_id"] for row in memberships if row["can_sell"]
+                  and verified.get(row["company_id"]) and mode != "buy"]
+    active_deal = await db.scalar(select(Deal.id).where(
+        (Deal.buyer_company_id.in_(buyer_ids) | Deal.seller_company_id.in_(seller_ids)),
+        Deal.status.in_(("created", "in_production", "partially_shipped", "shipped", "delivered", "disputed", "partially_accepted"))).limit(1))
+    if active_deal:
+        return NextStepOut(title="Продолжите исполнение сделки",
+                           description="Проверьте согласованные сроки, отгрузку и приёмку.", href="/deals")
+    if buyer_ids:
+        draft = await db.scalar(select(Need.id).where(Need.company_id.in_(buyer_ids),
+            Need.status.in_(("draft", "needs_clarification", "confirmed"))).order_by(Need.created_at.desc()).limit(1))
+        if draft:
+            return NextStepOut(title="Завершите и опубликуйте потребность",
+                               description="Черновик ещё не опубликован: проверьте требования и подтвердите публикацию.",
+                               href=f"/needs/{draft}")
+        open_needs = (await db.execute(select(Need.id).where(
+            Need.company_id.in_(buyer_ids),
+            Need.status.in_(("draft", "needs_clarification", "confirmed", "open_for_offers",
+                              "waiting_for_match", "coalition_candidate"))))).scalars().all()
+        if not open_needs:
+            return NextStepOut(title="Создайте потребность",
+                               description="Опишите задачу — производители предложат условия.",
+                               href="/needs/new")
+        deciding = (await db.execute(select(Offer.need_id).where(
+            Offer.need_id.in_(open_needs), Offer.status == "sent", (Offer.valid_until.is_(None) | (Offer.valid_until >= datetime.now(timezone.utc).date()))).limit(1))).scalar_one_or_none()
+        if deciding is not None:
+            return NextStepOut(title="Выберите предложение",
+                               description="По открытым запросам есть предложения: сравните сметы и решите.",
+                               href="/needs")
+        return NextStepOut(title="Следите за подбором",
+                           description="Запросы опубликованы: новые предложения придут уведомлением.",
+                           href="/needs")
+    if seller_ids:
+        products = await db.scalar(select(func.count()).select_from(Product).where(
+            Product.company_id.in_(seller_ids)))
+        if not products:
+            return NextStepOut(title="Добавьте товар",
+                               description="Карточка товара открывает подбор и предложения.",
+                               href="/seller/products")
+        drafts = await db.scalar(select(func.count()).select_from(Product).where(
+            Product.company_id.in_(seller_ids), Product.is_published.is_(False)))
+        if drafts:
+            return NextStepOut(title="Опубликуйте товары",
+                               description="Черновики не участвуют в подборе до публикации и допуска.",
+                               href="/seller/products")
+        return NextStepOut(title="Ответьте на запросы",
+                           description="Проверьте свежий спрос и подготовьте предложения.",
+                           href="/seller/requests")
+    return NextStepOut(title="Откройте дашборд",
+                       description="Продолжите с того места, где остановились.",
+                       href="/dashboard")
 
 
 @router.post("/needs/{need_id}/repeat", response_model=NeedOut, status_code=status.HTTP_201_CREATED)
@@ -378,12 +575,14 @@ async def list_watches(user: CurrentUser = Depends(get_current_user), db: AsyncS
 
 @router.post("/market-watches", response_model=MarketWatchOut, status_code=status.HTTP_201_CREATED)
 async def create_watch(data: MarketWatchIn, user: CurrentUser = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
-    existing = (await db.execute(select(MarketWatch).where(MarketWatch.user_id == user.id, MarketWatch.category == data.category))).scalar_one_or_none()
-    if existing:
-        existing.demand_changes, existing.supply_changes = data.demand_changes, data.supply_changes; item = existing
-    else:
-        item = MarketWatch(user_id=user.id, **data.model_dump()); db.add(item)
-    await db.commit(); await db.refresh(item); return item
+    statement = insert(MarketWatch).values(user_id=user.id, **data.model_dump()).on_conflict_do_update(
+        constraint="uq_market_watch_user_category",
+        set_={"demand_changes": data.demand_changes, "supply_changes": data.supply_changes},
+    ).returning(MarketWatch)
+    item = (await db.execute(statement)).scalar_one()
+    await db.commit()
+    await db.refresh(item)
+    return item
 
 
 @router.delete("/market-watches/{watch_id}", status_code=status.HTTP_204_NO_CONTENT)

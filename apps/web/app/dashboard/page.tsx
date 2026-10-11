@@ -26,7 +26,9 @@ export default function DashboardPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [mode, setMode] = useState<Mode>(null);
+  const [companyId, setCompanyId] = useState("");
   const [unreadCount, setUnreadCount] = useState(0);
+  const [nextStep, setNextStep] = useState<{ title: string; description: string; href: string } | null>(null);
 
   useEffect(() => {
     const token = getToken();
@@ -39,16 +41,18 @@ export default function DashboardPage() {
       .then((result) => {
         setUser(result.user);
         setCompanies(result.companies);
-        const savedMode = window.localStorage.getItem("porukam-work-mode");
-        const canBuyNow = result.companies.some((item) => item.membership?.can_buy);
-        const canSellNow = result.companies.some((item) => item.membership?.can_sell);
-        setMode(savedMode === "sell" && canSellNow ? "sell" : canBuyNow ? "buy" : canSellNow ? "sell" : null);
+        const savedCompany = window.localStorage.getItem(`porukam:dashboard-company:${result.user.id}`);
+        const selected = result.companies.find((item) => item.id === savedCompany) ?? result.companies[0];
+        setCompanyId(selected?.id ?? "");
+        const savedMode = window.localStorage.getItem(`porukam:work-mode:${result.user.id}:${selected?.id}`);
+        setMode(savedMode === "sell" && selected?.membership?.can_sell ? "sell" : selected?.membership?.can_buy ? "buy" : selected?.membership?.can_sell ? "sell" : null);
         marketplace
           .getNotifications(token)
           .then((list) => setUnreadCount(list.filter((item) => !item.is_read).length))
           .catch(() => {
             // счётчик уведомлений не критичен для дашборда
           });
+
       })
       .catch((err: unknown) => {
         setError(err instanceof ApiError ? err.message : "Не удалось загрузить данные аккаунта.");
@@ -58,13 +62,34 @@ export default function DashboardPage() {
 
   function handleLogout() {
     clearToken();
+    window.localStorage.removeItem("porukam-work-mode");
     router.push("/login");
   }
 
   function selectMode(next: Exclude<Mode, null>) {
     setMode(next);
-    window.localStorage.setItem("porukam-work-mode", next);
+    if (user) window.localStorage.setItem(`porukam:work-mode:${user.id}:${companyId}`, next);
   }
+
+  const selectedCompany = companies.find((item) => item.id === companyId);
+  const canBuy = !!selectedCompany?.membership?.can_buy;
+  const canSell = !!selectedCompany?.membership?.can_sell;
+
+  useEffect(() => {
+    if (!user) return;
+    let cancelled = false;
+    setNextStep(null);
+    marketplace.getNextStep(getToken()!, user.is_marketplace_admin ? undefined : companyId || undefined, mode)
+      .then((result) => { if (!cancelled) setNextStep(result); }).catch(() => {});
+    return () => { cancelled = true; };
+  }, [user, companyId, mode]);
+
+  // При смене компаний сбрасываем чужой режим: нельзя оставаться в режиме без прав.
+  useEffect(() => {
+    if (!user || user.is_marketplace_admin) return;
+    if (mode === "buy" && !canBuy) setMode(canSell ? "sell" : null);
+    if (mode === "sell" && !canSell) setMode(canBuy ? "buy" : null);
+  }, [companies, mode, canBuy, canSell, user]);
 
   if (loading) return <p className="hint">Загрузка...</p>;
 
@@ -86,13 +111,24 @@ export default function DashboardPage() {
   }
 
   const fullName = [user.last_name, user.first_name, user.middle_name].filter(Boolean).join(" ");
-  const canBuy = companies.some((company) => company.membership?.can_buy);
-  const canSell = companies.some((company) => company.membership?.can_sell);
-  const buyerCompany = companies.find((company) => company.membership?.can_buy);
+  const buyerCompany = selectedCompany?.membership?.can_buy ? selectedCompany : undefined;
+
 
   return (
     <div className="dashboard-page">
-      <OnboardingTour canBuy={canBuy} canSell={canSell} />
+      <OnboardingTour canBuy={canBuy} canSell={canSell} scope={`${user.id}:${companyId}:${mode}`} companyId={companyId || undefined} />
+      {nextStep && (
+        <section className="card" aria-live="polite">
+          <span className="eyebrow">Следующий шаг</span>
+          <h2>{nextStep.title}</h2>
+          <p className="subtitle">{nextStep.description}</p>
+          <div className="actions">
+            <Link href={nextStep.href} className="btn btn-primary btn-sm">
+              Перейти
+            </Link>
+          </div>
+        </section>
+      )}
       <div className="dashboard-head">
         <div>
           <span className="eyebrow">Центр управления</span>
@@ -123,6 +159,13 @@ export default function DashboardPage() {
         </div>
       </div>
 
+      {companies.length > 0 && <div className="field"><label htmlFor="dashboard-company">Рабочая компания</label><select id="dashboard-company" value={companyId} onChange={(event) => {
+        setNextStep(null); setCompanyId(event.target.value);
+        window.localStorage.setItem(`porukam:dashboard-company:${user.id}`, event.target.value);
+        const selected = companies.find((item) => item.id === event.target.value);
+        const saved = window.localStorage.getItem(`porukam:work-mode:${user.id}:${event.target.value}`);
+        setMode(saved === "sell" && selected?.membership?.can_sell ? "sell" : selected?.membership?.can_buy ? "buy" : selected?.membership?.can_sell ? "sell" : null);
+      }}>{companies.map((item) => <option key={item.id} value={item.id}>{item.display_name}</option>)}</select></div>}
       <section className="workspace-card">
         <div className="workspace-card__head"><div><h2>Рабочие разделы</h2><p>Один аккаунт может покупать и продавать от имени компании</p></div><div className="mode-toggle" role="group" aria-label="Режим работы">
           <button

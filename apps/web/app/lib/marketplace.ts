@@ -96,6 +96,8 @@ export interface DealReview { id: string; deal_id: string; reviewer_company_id: 
 export interface PriceIndexPoint { date: string; average_unit_price_rub: Money; offers_count: number }
 export interface MarketWatch { id: string; category: string; demand_changes: boolean; supply_changes: boolean }
 export interface BuyerSavings { company_id: string; confirmed_savings_rub: Money; calculated_variants_rub: Money; coalitions_count: number; explanation: string }
+export interface RepeatPreview { changes: { field: string; was: string | null; now: string | null }[]; not_carried: string[]; warnings: string[] }
+export interface NextStep { title: string; description: string; href: string }
 
 export interface CapacityEntry {
   category_conversions?: {category_id: string; order_unit: string; resource_units_per_order_unit: number; profile_version?: number}[];
@@ -1213,8 +1215,20 @@ export const marketplace = {
     return marketplaceFetch(`/api/v1/deals/${dealId}/reviews`, { method: "POST", token, body: JSON.stringify({ company_id: companyId, rating, comment }) });
   },
 
-  repeatNeed(token: string, needId: string, deadlineDate: string, requestKey: string): Promise<Need> {
-    return marketplaceFetch(`/api/v1/needs/${needId}/repeat`, { method: "POST", token, body: JSON.stringify({ deadline_date: deadlineDate, request_key: requestKey }) });
+  repeatNeed(token: string, needId: string, deadlineDate: string, requestKey: string, validUntil?: string): Promise<Need> {
+    return marketplaceFetch(`/api/v1/needs/${needId}/repeat`, { method: "POST", token, body: JSON.stringify({ deadline_date: deadlineDate, request_key: requestKey, ...(validUntil ? { valid_until: validUntil } : {}) }) });
+  },
+
+  previewRepeat(token: string, needId: string, deadlineDate?: string, validUntil?: string): Promise<RepeatPreview> {
+    return marketplaceFetch(`/api/v1/needs/${needId}/repeat-preview`, { method: "POST", token, ...(deadlineDate ? { body: JSON.stringify({ deadline_date: deadlineDate, valid_until: validUntil || null }) } : {}) });
+  },
+
+  getNextStep(token: string, companyId?: string, mode?: "buy" | "sell" | null): Promise<NextStep> {
+    return marketplaceFetch(`/api/v1/next-step${companyId ? `?company_id=${encodeURIComponent(companyId)}${mode ? `&mode=${mode}` : ""}` : ""}`, { token });
+  },
+
+  duplicateProduct(token: string, productId: string): Promise<Product> {
+    return marketplaceFetch(`/api/v1/products/${productId}/duplicate`, { method: "POST", token });
   },
 
   validateCharacteristics(input: { category: string; subcategory?: string; characteristics: Record<string, unknown>; moq_units: number }): Promise<{ valid: boolean; errors: string[]; warnings: string[] }> {
@@ -1284,7 +1298,7 @@ export const marketplace = {
     documentId: string,
     input: DocumentVerificationInput,
   ): Promise<Document> {
-    return marketplaceFetch(`/api/v1/documents/${documentId}/verification`, {
+    return marketplaceFetch(`/api/v3/documents/${documentId}/decision`, {
       method: "POST",
       token,
       body: JSON.stringify(input),
@@ -1591,7 +1605,7 @@ export const marketplace = {
 
   createSupportTicket(
     token: string,
-    input: { company_id?: string; subject: string; message: string },
+    input: { company_id?: string; subject: string; message: string; request_key?: string },
   ): Promise<SupportTicket> {
     return marketplaceFetch("/api/v1/support/tickets", {
       method: "POST", token, body: JSON.stringify(input),

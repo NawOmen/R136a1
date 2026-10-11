@@ -392,6 +392,17 @@ class DocumentVerificationIn(BaseModel):
         return self
 
 
+class DocumentDecisionIn(DocumentVerificationIn):
+    note: str = Field(min_length=1, max_length=500)
+
+    @model_validator(mode="after")
+    def require_note(self):
+        if not self.note.strip():
+            raise ValueError("Укажите причину решения по документу")
+        self.note = self.note.strip()
+        return self
+
+
 # ---------- Категорийный допуск ----------
 
 class RequirementStatusOut(BaseModel):
@@ -978,6 +989,7 @@ class NotificationOut(BaseModel):
 # ---------- Доверие, KPI и поддержка ----------
 
 class SupportTicketIn(BaseModel):
+    request_key: uuid.UUID | None = None
     company_id: uuid.UUID | None = None
     subject: str = Field(min_length=3, max_length=200)
     message: str = Field(min_length=10, max_length=5000)
@@ -1057,6 +1069,31 @@ class NeedRepeatIn(BaseModel):
     deadline_date: date
     valid_until: date | None = None
     request_key: uuid.UUID | None = None
+
+
+class RepeatChangeOut(BaseModel):
+    field: str
+    was: str | None = None
+    now: str | None = None
+
+
+class RepeatPreviewOut(BaseModel):
+    """Сравнение прошлой потребности с текущими условиями до повтора.
+
+    Только чтение: повтор выполняется отдельным запросом с новыми датами.
+    """
+
+    changes: list[RepeatChangeOut] = Field(default_factory=list)
+    not_carried: list[str] = Field(default_factory=list)
+    warnings: list[str] = Field(default_factory=list)
+
+
+class NextStepOut(BaseModel):
+    """Персональный следующий шаг: первое невыполненное действие."""
+
+    title: str
+    description: str
+    href: str
 
 
 class CharacteristicValidationIn(BaseModel):

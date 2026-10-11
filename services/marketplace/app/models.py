@@ -824,7 +824,10 @@ class HumanApprovalRecord(Base):
 
 class SupportTicket(Base):
     __tablename__ = "support_tickets"
-    __table_args__ = {"schema": SCHEMA}
+    __table_args__ = (UniqueConstraint("user_id", "request_key", name="uq_support_user_request"), {"schema": SCHEMA})
+
+    request_key: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), nullable=True)
+    request_hash: Mapped[str | None] = mapped_column(String(64), nullable=True)
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=_uuid)
     user_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), nullable=False, index=True)

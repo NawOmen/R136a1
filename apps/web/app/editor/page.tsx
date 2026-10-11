@@ -69,6 +69,7 @@ export default function EditorPage() {
     const token = getToken(); if (!token || busy) return;
     const values = docInputs[doc.id];
     if (!values) { setError("Укажите область, подтверждённые характеристики и заключение."); return; }
+    if (!values.note.trim()) { setError("Укажите причину решения по документу."); return; }
     setBusy(true); setError(null);
     try {
       const confirms: Record<string, string[]> = {};

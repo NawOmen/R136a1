@@ -1,4 +1,7 @@
 import Link from "next/link";
+import type { Metadata } from "next";
+
+export const metadata: Metadata = { title: "Закупки с ИИ — ПоРукам", description: "Разбор потребности, проверяемые источники и программный расчёт закупки. Критичные действия подтверждает человек." };
 
 export default function AiProcurementPage() {
   return <div><span className="eyebrow">Закупки с ИИ-агентами</span><h1 className="page-title">Меньше ручной рутины, решения остаются за вами</h1><p className="subtitle">Агенты помогают описать запрос, сравнить предложения и подготовить коалицию. Экономическая выгода не гарантируется и всегда проверяется расчётом.</p>

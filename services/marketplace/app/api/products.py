@@ -210,6 +210,85 @@ async def update_product(
     return await _product_out(product, db)
 
 
+@router.post("/products/{product_id}/duplicate", response_model=ProductOut, status_code=status.HTTP_201_CREATED)
+async def duplicate_product(
+    product_id: uuid.UUID,
+    user: CurrentUser = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Шаблон продавца: копия товара новым черновиком без публикации.
+
+    Сокращает ввод, но не публикует карточку и не создаёт обязательств:
+    публикация выполняется отдельно после проверки допуска.
+    """
+    original = await db.get(Product, product_id)
+    if original is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, detail="Товар не найден")
+    await require_company_seller(original.company_id, user, db)
+    await require_company_admin(original.company_id, user, db)
+    copy = Product(
+        company_id=original.company_id,
+        created_by_user_id=user.id,
+        external_id=None,
+        sources=list(original.sources or []),
+        name=f"Копия: {original.name}"[:255],
+        category=original.category,
+        subcategory=original.subcategory,
+        characteristics=dict(original.characteristics or {}),
+        quantity_conversion=dict(original.quantity_conversion) if original.quantity_conversion else None,
+        category_profile=dict(original.category_profile) if original.category_profile else None,
+        price_rub=original.price_rub,
+        price_tiers=list(original.price_tiers or []),
+        moq_units=original.moq_units,
+        lead_time_days=original.lead_time_days,
+        stock_units=None,
+        is_published=False,
+    )
+    db.add(copy)
+    await db.flush()
+    original_images = (
+        await db.execute(
+            select(ProductImage)
+            .where(ProductImage.product_id == original.id)
+            .order_by(ProductImage.position)
+        )
+    ).scalars().all()
+    uploaded: list[str] = []
+    try:
+        for image in original_images:
+            key = f"products/{copy.id}/{uuid.uuid4()}"
+            uploaded.append(key)
+            upload_object(key, download_object(image.file_key), image.content_type)
+            db.add(
+                ProductImage(
+                    product_id=copy.id,
+                    file_name=image.file_name,
+                    file_key=key,
+                    content_type=image.content_type,
+                    position=image.position,
+                )
+            )
+        await append_audit_event(
+            db,
+            event_type="product_duplicated",
+            entity_type="product",
+            entity_id=copy.id,
+            actor_user_id=user.id,
+            actor_company_id=original.company_id,
+            source_refs=[{"type": "product", "id": str(original.id)}],
+            explanation="Продавец создал черновик товара из шаблона; публикация не выполнена.",
+            payload={"source_product_id": str(original.id)},
+        )
+        await db.commit()
+    except Exception:
+        await db.rollback()
+        for key in uploaded:
+            delete_object(key)
+        raise
+    await db.refresh(copy)
+    return await _product_out(copy, db)
+
+
 @router.post("/products/{product_id}/publish", response_model=ProductOut)
 async def publish_product(
     product_id: uuid.UUID,
@@ -397,5 +476,6 @@ async def remove_product_image(
     await require_company_admin(product.company_id, user, db)
     await db.execute(delete(ProductImage).where(ProductImage.id == image.id))
     await db.commit()
-    delete_object(image.file_key)
+    if await db.scalar(select(ProductImage.id).where(ProductImage.file_key == image.file_key).limit(1)) is None:
+        delete_object(image.file_key)
     return Response(status_code=status.HTTP_204_NO_CONTENT)

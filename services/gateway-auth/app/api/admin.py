@@ -11,7 +11,7 @@ from ..database import get_db
 from ..deps import require_admin
 from ..models import Company, CompanyVerificationEvent, SecurityEvent, User
 from ..security_events import audit
-from ..schemas import AdminCompaniesOut, AdminUsersOut, AdminVerificationIn, BlockIn, CompanyOut, UserOut, VerificationEventOut
+from ..schemas import AdminCompaniesOut, AdminUsersOut, AdminVerificationIn, AdminVerificationV2In, BlockIn, CompanyOut, UserOut, VerificationEventOut
 
 router = APIRouter(prefix="/admin", tags=["admin"])
 
@@ -75,7 +75,7 @@ async def verify_company(
     admin: User = Depends(require_admin),
     db: AsyncSession = Depends(get_db),
 ):
-    company = await db.get(Company, company_id)
+    company = await db.scalar(select(Company).where(Company.id == company_id).with_for_update().execution_options(populate_existing=True))
     if company is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, detail="Компания не найдена")
 
@@ -155,3 +155,19 @@ async def appoint_category_editor(user_id: uuid.UUID, data: EditorRoleIn, reques
     await db.commit()
     await db.refresh(user)
     return user
+
+
+v2_router = APIRouter(prefix="/admin", tags=["admin"])
+
+@v2_router.post("/companies/{company_id}/verification", response_model=CompanyOut)
+async def verify_company_v2(company_id: uuid.UUID, data: AdminVerificationV2In,
+                            admin: User = Depends(require_admin), db: AsyncSession = Depends(get_db)):
+    company = await db.scalar(select(Company).where(Company.id == company_id).with_for_update().execution_options(populate_existing=True))
+    if company and company.verification_status != "pending_review":
+        event = await db.scalar(select(CompanyVerificationEvent).where(CompanyVerificationEvent.company_id == company_id)
+                                .order_by(CompanyVerificationEvent.created_at.desc()).limit(1))
+        target = "verified" if data.decision == "approve" else "rejected"
+        if (event and event.to_status == target and company.verification_status == target
+                and event.performed_by_user_id == admin.id and event.reason == data.reason):
+            return company
+    return await verify_company(company_id, data, admin, db)

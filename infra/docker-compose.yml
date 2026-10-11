@@ -137,6 +137,7 @@ services:
       context: ../services/llm-gateway
     environment:
       DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-sborka}:${POSTGRES_PASSWORD:?Задайте POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-sborka}
+      BUYER_TRIAL_ENABLED: ${BUYER_TRIAL_ENABLED:-true}
       JWT_SECRET: ${JWT_SECRET:?Задайте JWT_SECRET}
       OLLAMA_BASE_URL: ${OLLAMA_DOCKER_BASE_URL:-http://host.docker.internal:11434}
       OLLAMA_MODEL: ${OLLAMA_MODEL:-qwen3.5:9b}
