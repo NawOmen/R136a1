@@ -224,8 +224,12 @@ python infra/compare_llm_routes.py
 python scripts/print-access-url.py
 ```
 
-И откройте новый http://<новый-IP>:3000. Ничего настраивать и пересобирать не нужно — CORS уже разрешает любые приватные подсети.
+Используйте HTTPS-адрес с доверенным сертификатом и явным `CORS_ORIGINS` по [инструкции защищённой локальной сети](docs/security/hardening.md). При смене IP обновите SAN сертификата и разрешённый origin. Базовый Compose публикует сайт только на localhost.
 
 ## Документация
 
 Очередь работы и статусы — [NEXT_STEPS.md](NEXT_STEPS.md). Предметная спецификация — `plan_sborka_b2b.md`; сценарии и входные данные — `docs/demo/`, `packages/test-fixtures/`. API-контракты — в `docs/api/`, архитектура устойчивости — `docs/architecture/stage-6-resilience.md`, контроль этапа 7 — `docs/architecture/stage-7-trust-control.md`, сопровождение сделки — `docs/architecture/stage9-experience.md`. Юридические файлы в `docs/legal/` являются проектными черновиками до проверки российским юристом.
+
+## Приёмка и восстановление
+
+[Эксплуатация этапа 15](docs/operations/stage-15.md): согласованный снимок PostgreSQL/MinIO, восстановление в отдельный проект, версии и ограничения измерений. Статусы приёмки остаются в `NEXT_STEPS.md`.

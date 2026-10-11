@@ -1,0 +1,316 @@
+{
+  "format": 1,
+  "conditions": [
+    {
+      "id": "T01",
+      "tests": [],
+      "scope": "Отдельное эксплуатационное/браузерное/конкурсное доказательство; JUnit сервиса недостаточен."
+    },
+    {
+      "id": "T02",
+      "tests": [
+        "services/llm-gateway/tests/test_agents.py::test_russian_request_becomes_validated_structure"
+      ],
+      "scope": "Автоматический срез бизнес-инварианта; внешние устройства и live-провайдеры отдельно."
+    },
+    {
+      "id": "T03",
+      "tests": [
+        "services/llm-gateway/tests/test_requirement_versions.py::test_every_critical_conflict_blocks_confirmation"
+      ],
+      "scope": "Автоматический срез бизнес-инварианта; внешние устройства и live-провайдеры отдельно."
+    },
+    {
+      "id": "T04",
+      "tests": [
+        "services/llm-gateway/tests/test_requirement_versions.py::test_empty_placeholder_and_unknown_answers_are_rejected"
+      ],
+      "scope": "Автоматический срез бизнес-инварианта; внешние устройства и live-провайдеры отдельно."
+    },
+    {
+      "id": "T05",
+      "tests": [
+        "services/llm-gateway/tests/test_agents.py::test_invalid_model_response_fails_safely"
+      ],
+      "scope": "Автоматический срез бизнес-инварианта; внешние устройства и live-провайдеры отдельно."
+    },
+    {
+      "id": "T06",
+      "tests": [
+        "services/llm-gateway/tests/test_agents.py::test_optional_review_failure_does_not_block_local_result"
+      ],
+      "scope": "Автоматический срез бизнес-инварианта; внешние устройства и live-провайдеры отдельно."
+    },
+    {
+      "id": "T07",
+      "tests": [
+        "services/llm-gateway/tests/test_tool_registry.py::test_instruction_inside_file_never_changes_price"
+      ],
+      "scope": "Автоматический срез бизнес-инварианта; внешние устройства и live-провайдеры отдельно."
+    },
+    {
+      "id": "T08",
+      "tests": [
+        "services/marketplace/tests/test_admission_enforcement.py::test_confirmed_coating_must_match_product"
+      ],
+      "scope": "Автоматический срез бизнес-инварианта; внешние устройства и live-провайдеры отдельно."
+    },
+    {
+      "id": "T09",
+      "tests": [
+        "services/marketplace/tests/test_offer_draft_and_scorecard.py::test_offer_draft_uses_catalog_and_capacity"
+      ],
+      "scope": "Автоматический срез бизнес-инварианта; внешние устройства и live-провайдеры отдельно."
+    },
+    {
+      "id": "T10",
+      "tests": [
+        "services/marketplace/tests/test_requirements_stage03.py::test_preview_expires_when_offer_revision_changes"
+      ],
+      "scope": "Автоматический срез бизнес-инварианта; внешние устройства и live-провайдеры отдельно."
+    },
+    {
+      "id": "T11",
+      "tests": [
+        "services/marketplace/tests/test_resource_ledger.py::test_concurrent_buyers_cannot_reserve_same_stock"
+      ],
+      "scope": "Автоматический срез бизнес-инварианта; внешние устройства и live-провайдеры отдельно."
+    },
+    {
+      "id": "T12",
+      "tests": [
+        "services/marketplace/tests/test_s06_ledger.py::test_capacity_overlap_guard_rejects_double_counting"
+      ],
+      "scope": "Автоматический срез бизнес-инварианта; внешние устройства и live-провайдеры отдельно."
+    },
+    {
+      "id": "T13",
+      "tests": [
+        "services/marketplace/tests/test_s06_ledger.py::test_expired_hold_sweep_is_idempotent"
+      ],
+      "scope": "Автоматический срез бизнес-инварианта; внешние устройства и live-провайдеры отдельно."
+    },
+    {
+      "id": "T14",
+      "tests": [
+        "services/marketplace/tests/test_stage5.py::test_5000_and_45000_create_explainable_coalition_and_private_orders"
+      ],
+      "scope": "Автоматический срез бизнес-инварианта; внешние устройства и live-провайдеры отдельно."
+    },
+    {
+      "id": "T15",
+      "tests": [
+        "services/marketplace/tests/test_need_classification.py::test_different_subcategories_are_not_combined_in_coalition"
+      ],
+      "scope": "Автоматический срез бизнес-инварианта; внешние устройства и live-провайдеры отдельно."
+    },
+    {
+      "id": "T16",
+      "tests": [
+        "services/marketplace/tests/test_money_stage02.py::test_buyer_selects_own_confirmed_baseline_negative_effect_and_private_snapshot"
+      ],
+      "scope": "Автоматический срез бизнес-инварианта; внешние устройства и live-провайдеры отдельно."
+    },
+    {
+      "id": "T17",
+      "tests": [
+        "services/marketplace/tests/test_money_stage02.py::test_buyer_selects_own_confirmed_baseline_negative_effect_and_private_snapshot"
+      ],
+      "scope": "Неизвестная/очищенная индивидуальная альтернатива не даёт суммы выгоды или снимка baseline; проверяется приватность. UI процента требует отдельного браузерного доказательства."
+    },
+    {
+      "id": "T18",
+      "tests": [
+        "services/marketplace/tests/test_s08_coalition.py::test_exit_below_moq_annuls_old_terms_and_keeps_history"
+      ],
+      "scope": "Автоматический срез бизнес-инварианта; внешние устройства и live-провайдеры отдельно."
+    },
+    {
+      "id": "T19",
+      "tests": [
+        "services/optimizer/tests/test_exact_money.py::test_coalition_distributes_one_kopeck_instead_of_rounding_each_participant_up"
+      ],
+      "scope": "Автоматический срез бизнес-инварианта; внешние устройства и live-провайдеры отдельно."
+    },
+    {
+      "id": "T20",
+      "tests": [
+        "services/marketplace/tests/test_category_admission.py::test_document_of_other_category_is_not_evidence"
+      ],
+      "scope": "Автоматический срез бизнес-инварианта; внешние устройства и live-провайдеры отдельно."
+    },
+    {
+      "id": "T21",
+      "tests": [
+        "services/marketplace/tests/test_admission_enforcement.py::test_catalog_rechecks_expired_and_revoked_documents"
+      ],
+      "scope": "Автоматический срез бизнес-инварианта; внешние устройства и live-провайдеры отдельно."
+    },
+    {
+      "id": "T22",
+      "tests": [
+        "services/marketplace/tests/test_admission_enforcement.py::test_evidence_change_notifies_active_deal"
+      ],
+      "scope": "Автоматический срез бизнес-инварианта; внешние устройства и live-провайдеры отдельно."
+    },
+    {
+      "id": "T23",
+      "tests": [
+        "services/marketplace/tests/test_stage9_final_recovery.py::test_recovery_deal_executes_and_replay_checks_current_access"
+      ],
+      "scope": "Автоматический срез бизнес-инварианта; внешние устройства и live-провайдеры отдельно."
+    },
+    {
+      "id": "T24",
+      "tests": [
+        "services/marketplace/tests/test_stage9_resilience.py::test_uncovered_failure_cannot_activate"
+      ],
+      "scope": "Автоматический срез бизнес-инварианта; внешние устройства и live-провайдеры отдельно."
+    },
+    {
+      "id": "T25",
+      "tests": [
+        "services/marketplace/tests/test_stage7_consent.py::test_final_consent_replay_after_commit_and_deadline"
+      ],
+      "scope": "Автоматический срез бизнес-инварианта; внешние устройства и live-провайдеры отдельно."
+    },
+    {
+      "id": "T26",
+      "tests": [
+        "services/marketplace/tests/test_stage13_access_matrix.py::test_denials_have_no_side_effects_and_hide_private_data"
+      ],
+      "scope": "Автоматический срез бизнес-инварианта; внешние устройства и live-провайдеры отдельно."
+    },
+    {
+      "id": "T27",
+      "tests": [
+        "services/marketplace/tests/test_stage7.py::test_admin_can_process_support_and_chain_detects_tampering"
+      ],
+      "scope": "Автоматический срез бизнес-инварианта; внешние устройства и live-провайдеры отдельно."
+    },
+    {
+      "id": "T28",
+      "tests": [
+        "services/marketplace/tests/test_stage12.py::test_scorecard_model_versions_and_unknown_cost"
+      ],
+      "scope": "Автоматический срез бизнес-инварианта; внешние устройства и live-провайдеры отдельно."
+    },
+    {
+      "id": "T29",
+      "tests": [
+        "services/marketplace/tests/test_stage12.py::test_scorecard_empty_denominator_none_and_buyer_access"
+      ],
+      "scope": "Автоматический срез бизнес-инварианта; внешние устройства и live-провайдеры отдельно."
+    },
+    {
+      "id": "T30",
+      "tests": [
+        "services/marketplace/tests/test_stage15_acceptance.py::test_partial_claim_cannot_be_completed_or_accepted_by_foreign_actor"
+      ],
+      "scope": "Автоматический срез бизнес-инварианта; внешние устройства и live-провайдеры отдельно."
+    },
+    {
+      "id": "T31",
+      "tests": [
+        "services/marketplace/tests/test_stage11.py::test_repeat_preview_does_not_create_and_explains_not_carried"
+      ],
+      "scope": "Автоматический срез бизнес-инварианта; внешние устройства и live-провайдеры отдельно."
+    },
+    {
+      "id": "T32",
+      "tests": [],
+      "scope": "Отдельное эксплуатационное/браузерное/конкурсное доказательство; JUnit сервиса недостаточен."
+    },
+    {
+      "id": "T33",
+      "tests": [],
+      "scope": "Отдельное эксплуатационное/браузерное/конкурсное доказательство; JUnit сервиса недостаточен."
+    },
+    {
+      "id": "T34",
+      "tests": [],
+      "scope": "Отдельное эксплуатационное/браузерное/конкурсное доказательство; JUnit сервиса недостаточен."
+    },
+    {
+      "id": "T35",
+      "tests": [
+        "services/marketplace/tests/test_stage15_acceptance.py::test_working_leaf_order_report_repeat_and_denials"
+      ],
+      "scope": "Автоматический срез бизнес-инварианта; внешние устройства и live-провайдеры отдельно.",
+      "case_set": "working_assortment_leaves"
+    },
+    {
+      "id": "T36",
+      "tests": [
+        "services/marketplace/tests/test_category_stage01.py::test_fractional_product_preview_and_persistence_cannot_round"
+      ],
+      "scope": "Автоматический срез бизнес-инварианта; внешние устройства и live-провайдеры отдельно."
+    },
+    {
+      "id": "T37",
+      "tests": [],
+      "scope": "Отдельное эксплуатационное/браузерное/конкурсное доказательство; JUnit сервиса недостаточен."
+    },
+    {
+      "id": "T38",
+      "tests": [
+        "services/marketplace/tests/test_category_profile_binding.py::test_repeat_captures_new_profile_and_retry_keeps_original_snapshot"
+      ],
+      "scope": "Автоматический срез бизнес-инварианта; внешние устройства и live-провайдеры отдельно."
+    },
+    {
+      "id": "T39",
+      "tests": [],
+      "scope": "Отдельное эксплуатационное/браузерное/конкурсное доказательство; JUnit сервиса недостаточен."
+    },
+    {
+      "id": "T40",
+      "tests": [
+        "services/marketplace/tests/test_stage5_supplier.py::test_assortment_scope_and_seed_stories"
+      ],
+      "scope": "Автоматический срез бизнес-инварианта; внешние устройства и live-провайдеры отдельно."
+    },
+    {
+      "id": "T41",
+      "tests": [
+        "services/marketplace/tests/test_commerce.py::test_control_example_partial_delivery_return_profit_and_privacy"
+      ],
+      "scope": "Автоматический срез бизнес-инварианта; внешние устройства и live-провайдеры отдельно."
+    },
+    {
+      "id": "T42",
+      "tests": [
+        "services/marketplace/tests/test_stage15_acceptance.py::test_unknown_cost_and_payments_do_not_fabricate_profit"
+      ],
+      "scope": "Автоматический срез бизнес-инварианта; внешние устройства и live-провайдеры отдельно."
+    },
+    {
+      "id": "T43",
+      "tests": [
+        "services/marketplace/tests/test_stage12.py::test_rejection_rate_cohort_and_empty"
+      ],
+      "scope": "Автоматический срез бизнес-инварианта; внешние устройства и live-провайдеры отдельно."
+    },
+    {
+      "id": "T44",
+      "tests": [
+        "services/marketplace/tests/test_stage12_evidence.py::test_cost_versions_and_snapshot_export_do_not_change"
+      ],
+      "scope": "Автоматический срез бизнес-инварианта; внешние устройства и live-провайдеры отдельно."
+    },
+    {
+      "id": "T45",
+      "tests": [
+        "services/marketplace/tests/test_stage12_evidence.py::test_snapshot_integrity_and_export_permission_revocation"
+      ],
+      "scope": "Автоматический срез бизнес-инварианта; внешние устройства и live-провайдеры отдельно."
+    },
+    {
+      "id": "T46",
+      "tests": [
+        "services/marketplace/tests/test_stage12.py::test_group_orders_do_not_double_revenue"
+      ],
+      "scope": "Автоматический срез бизнес-инварианта; внешние устройства и live-провайдеры отдельно."
+    }
+  ]
+}

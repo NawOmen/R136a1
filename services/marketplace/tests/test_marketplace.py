@@ -240,7 +240,7 @@ async def test_company_without_seller_cannot_create_product(client, db_session):
 
 
 async def test_demo_seed_separates_buyer_address_and_seller_data(
-    db_session, session_factory, monkeypatch
+    db_session, session_factory, monkeypatch, stub_object_storage
 ):
     import seed as marketplace_seed
     from app.models import DeliveryAddress, Product, ProductionProfile
@@ -265,6 +265,15 @@ async def test_demo_seed_separates_buyer_address_and_seller_data(
 
     monkeypatch.setattr(marketplace_seed, "SessionLocal", session_factory)
     await marketplace_seed.seed()
+
+    from app.models import Document
+    from pypdf import PdfReader
+    import io
+    docs=(await db_session.scalars(select(Document).where(Document.company_id==seller_company))).all()
+    assert len(docs)==2
+    for document in docs:
+        stored=stub_object_storage[document.file_key]
+        assert len(PdfReader(io.BytesIO(stored)).pages)==1
 
     buyer_addresses = (
         await db_session.execute(
@@ -293,7 +302,9 @@ async def test_demo_seed_separates_buyer_address_and_seller_data(
     from app.assortment import ASSORTMENT
     assert len(products) == 2 + len(ASSORTMENT)
     assert len({product.category for product in products}) >= 4
+    stub_object_storage.pop(docs[0].file_key)
     await marketplace_seed.seed()
+    assert docs[0].file_key in stub_object_storage
     count_after_retry = await db_session.scalar(
         select(func.count()).select_from(Product).where(Product.company_id == seller_company)
     )

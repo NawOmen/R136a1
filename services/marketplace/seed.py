@@ -5,6 +5,8 @@ Capability Passport и товары — для отдельной компани
 """
 
 import asyncio
+import io
+from pypdf import PdfWriter
 import os
 import uuid
 from datetime import datetime, timedelta, timezone
@@ -173,6 +175,16 @@ DEMO_DOCUMENTS = (
 )
 
 
+def synthetic_document_pdf(item) -> bytes:
+    """A readable local fixture, never a signed certificate or real company file."""
+    writer = PdfWriter()
+    writer.add_blank_page(width=300, height=200)
+    writer.add_metadata({"/Title": item["name"], "/Subject": "Synthetic local fixture; no legal force"})
+    stream = io.BytesIO()
+    writer.write(stream)
+    return stream.getvalue()
+
+
 async def _seed_category_documents(db, seller_company_id) -> None:
     """Доказательства допуска демо-производителя.
 
@@ -189,6 +201,7 @@ async def _seed_category_documents(db, seller_company_id) -> None:
     ).first()
     admin_id = admin_row[0] if admin_row else None
     valid_until = datetime.now(timezone.utc).date() + timedelta(days=730)
+    from app.storage import upload_object
     for item in DEMO_DOCUMENTS:
         existing = (
             await db.execute(
@@ -198,18 +211,24 @@ async def _seed_category_documents(db, seller_company_id) -> None:
             )
         ).scalars().first()
         if existing is not None:
+            # Repair only this loader's synthetic fixture objects. Never overwrite
+            # an uploaded user document that happens to have the same display name.
+            if existing.file_key.startswith("demo/synthetic/"):
+                await asyncio.to_thread(upload_object, existing.file_key, synthetic_document_pdf(item), "application/pdf")
             # Демо-документ мог быть загружен до появления подтверждённых
             # характеристик: обновляем их, чтобы чек-лист соответствовал данным.
             if existing.verification_status == "verified" and existing.confirms != item["confirms"]:
                 existing.confirms = item["confirms"]
             continue
+        file_key = f"demo/synthetic/{uuid.uuid4()}"
+        await asyncio.to_thread(upload_object, file_key, synthetic_document_pdf(item), "application/pdf")
         db.add(
             Document(
                 company_id=seller_company_id,
                 created_by_user_id=admin_id,
                 name=item["name"],
                 document_type=item["document_type"],
-                file_key=f"demo/synthetic/{uuid.uuid4()}",
+                file_key=file_key,
                 content_type="application/pdf",
                 verification_status="verified",
                 scope_category="Упаковка и тара",
