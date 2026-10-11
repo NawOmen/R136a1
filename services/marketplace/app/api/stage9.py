@@ -29,7 +29,7 @@ from ..schemas import (
     NeedOut, NeedRepeatIn, NextStepOut, PriceIndexPoint, PublicProducerOut, PublicProductDetailOut,
     RepeatPreviewOut,
 )
-from ..file_safety import check_upload
+from ..file_safety import validate_upload
 from ..storage import delete_object, download_object, upload_object
 from ..resources import consume
 from ..trust import append_audit_event, record_human_approval
@@ -131,11 +131,11 @@ async def upload_production_photo(company_id: uuid.UUID, file: UploadFile = File
     content_type = file.content_type or ""
     if content_type not in PRODUCTION_IMAGE_TYPES:
         raise HTTPException(status.HTTP_415_UNSUPPORTED_MEDIA_TYPE, detail="Допустимы PNG, JPG и WebP")
-    data = await file.read()
+    data = await file.read(8 * 1024 * 1024 + 1)
     if not data or len(data) > 8 * 1024 * 1024:
         raise HTTPException(status.HTTP_413_REQUEST_ENTITY_TOO_LARGE, detail="Фотография должна быть от 1 байта до 8 МБ")
     try:
-        content_type = check_upload(data, content_type)
+        content_type = await validate_upload(data, content_type)
     except ValueError as exc:
         raise HTTPException(status.HTTP_415_UNSUPPORTED_MEDIA_TYPE, detail=str(exc)) from None
     profile = await db.get(ProductionProfile, company_id)

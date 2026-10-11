@@ -1,4 +1,6 @@
 """Full S10 user journeys against PostgreSQL, including resource and race effects."""
+from synthetic_files import PNG, PDF
+
 import asyncio
 import uuid
 from datetime import date, timedelta
@@ -167,7 +169,7 @@ async def test_revision_race_has_one_effect_and_legacy_cannot_bypass(client, ful
 async def test_company_version_attachment_scopes_and_message_not_proposal(client, full_order, db_session):
     o = full_order
     upload = await client.post(f"/api/v3/deals/{o['deal']}/attachments", headers=o["bh"],
-        data={"company_id": str(o["bc"]), "terms_version": "1"}, files={"file": ("Синтетический акт.pdf", b"%PDF-1.7 synthetic", "application/pdf")})
+        data={"company_id": str(o["bc"]), "terms_version": "1"}, files={"file": ("Синтетический акт.pdf", PDF, "application/pdf")})
     assert upload.status_code == 201, upload.text
     aid = upload.json()["id"]
     message, _ = await act(client, o, "message", {**PROOF, "attachments": [aid]}, buyer=True)
@@ -255,7 +257,7 @@ async def test_stale_attachment_and_command_cannot_apply_to_new_terms(client, fu
     o = full_order
     await act(client, o, "prepare", DISPATCH)
     upload = await client.post(f"/api/v3/deals/{o['deal']}/attachments", headers=o["bh"],
-        data={"company_id": str(o["bc"]), "terms_version": "1"}, files={"file": ("акт.pdf", b"%PDF-1.7 synthetic", "application/pdf")})
+        data={"company_id": str(o["bc"]), "terms_version": "1"}, files={"file": ("акт.pdf", PDF, "application/pdf")})
     assert upload.status_code == 201
     pending, _ = await act(client, o, "logistics", {**LOGISTICS, "method": "seller_delivery", "cost_rub": "10.00"}, buyer=True)
     await act(client, o, "proposal_decision", {**PROOF, "proposal_id": pending["proposals"][0]["id"], "approved": True})

@@ -302,3 +302,65 @@ async def test_old_unpublished_image_link_stays_hidden(client, db_session):
     assert (await client.get(f"/api/v1/product-images/{w['image'].id}")).status_code == 404
     stranger_headers = _auth(make_token(w["stranger"]))
     assert (await client.get(f"/api/v1/product-images/{w['image'].id}", headers=stranger_headers)).status_code == 404
+
+
+import pytest
+
+
+@pytest.mark.parametrize("actor", ["anonymous", "stranger", "blocked", "revoked", "admin", "switched"])
+async def test_full_denial_surface_for_non_parties(client, db_session, actor):
+    """All private reads/writes/exports/old links, with a current membership check.
+
+    A company switch is represented by losing old membership and joining a new
+    company. Merely selecting another company in the UI does not revoke existing
+    membership and cannot itself be a server authorization rule.
+    """
+    w = await _world(db_session)
+    if actor == "switched":
+        await _member(db_session, w["stranger_co"], w["revoked"], True, True, True)
+    user_id = w.get("revoked" if actor == "switched" else actor)
+    headers = {} if actor == "anonymous" else _auth(make_token(user_id))
+    probes = [
+        ("get", f"/api/v1/needs/{w['need'].id}", None),
+        ("get", f"/api/v1/needs/{w['need'].id}/offers", None),
+        ("post", f"/api/v1/offers/{w['offer'].id}/select", {"expected_revision": 1, "human_approved": True, "request_key": str(uuid.uuid4())}),
+        ("post", f"/api/v1/coalitions/{w['coalition'].id}/decision", {"company_id": str(w['bc']), "decision": "approved", "expected_revision": 1}),
+        ("get", f"/api/v1/resilience-plans/{w['plan'].id}", None),
+        ("post", f"/api/v1/reserve-commitments/{w['commitment'].id}/decision", {"company_id": str(w['sc']), "decision": "approved"}),
+        ("get", f"/api/v1/deals/{w['deal'].id}/execution?company_id={w['bc']}", None),
+        ("post", f"/api/v1/deals/{w['deal'].id}/execution", {"company_id": str(w['bc']), "kind": "acceptance", "units": 1,
+            "note": "Матричный отказ", "human_approved": True, "idempotency_key": str(uuid.uuid4())}),
+        ("get", f"/api/v1/companies/{w['bc']}/commercial-analytics?role=buyer", None),
+        ("get", f"/api/v1/companies/{w['sc']}/commercial-report.csv?role=seller", None),
+        ("get", f"/api/v1/companies/{w['sc']}/agent-scorecard", None),
+        ("get", f"/api/v1/need-files/{w['need_file'].id}/download", None),
+        ("get", f"/api/v1/companies/{w['sc']}/documents", None),
+        ("delete", f"/api/v1/documents/{w['document'].id}", None),
+        ("get", f"/api/v1/companies/{w['sc']}/documents/expiring", None),
+        ("get", f"/api/v1/product-images/{w['image'].id}", None),
+        ("post", f"/api/v1/companies/{w['sc']}/catalog-imports/{uuid.uuid4()}/rollback", {"request_key": str(uuid.uuid4())}),
+    ]
+    before = await _counts(db_session)
+    for method, path, body in probes:
+        response = await client.request(method, path, headers=headers, **({"json": body} if body is not None else {}))
+        assert response.status_code in (401, 403, 404), (actor, path, response.status_code, response.text)
+        assert not any(secret in response.text for secret in ('file_key', 'password_hash', 'needs/матрица', 'products/матрица'))
+    assert await _counts(db_session) == before
+
+
+async def test_insufficient_admin_role_denied_across_all_commit_paths(client, db_session):
+    w = await _world(db_session)
+    seller_clerk = await make_user(db_session)
+    await _member(db_session, w["sc"], seller_clerk, False, True, False)
+    probes = [
+        (w["clerk"], "post", f"/api/v1/offers/{w['offer'].id}/select", {"json": {"expected_revision": 1, "human_approved": True}}),
+        (w["clerk"], "post", f"/api/v1/coalitions/{w['coalition'].id}/decision", {"json": {"company_id": str(w['bc']), "decision": "approved", "expected_revision": 1}}),
+        (seller_clerk, "post", f"/api/v1/reserve-commitments/{w['commitment'].id}/decision", {"json": {"company_id": str(w['sc']), "decision": "approved"}}),
+        (seller_clerk, "delete", f"/api/v1/documents/{w['document'].id}", {}),
+        (seller_clerk, "post", f"/api/v1/companies/{w['sc']}/catalog-import", {"files": {"file": ("synthetic.csv", b'name,category\na,b\n', 'text/csv')}}),
+    ]
+    before = await _counts(db_session)
+    for actor, method, path, kwargs in probes:
+        response = await client.request(method, path, headers=_auth(make_token(actor)), **kwargs)
+        assert response.status_code == 403, (path, response.text)
+    assert await _counts(db_session) == before

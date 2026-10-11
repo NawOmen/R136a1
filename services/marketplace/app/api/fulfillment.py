@@ -540,6 +540,11 @@ async def upload_attachment(deal_id: uuid.UUID, company_id: uuid.UUID = Form(...
     signatures = {"application/pdf": b"%PDF-", "image/png": b"\x89PNG\r\n\x1a\n", "image/jpeg": b"\xff\xd8\xff"}
     if not content or len(content) > 10 * 1024 * 1024 or mime not in signatures or not content.startswith(signatures[mime]):
         raise HTTPException(422, "Допустимы PDF, PNG и JPEG до 10 МБ с соответствующим содержимым")
+    from ..file_safety import validate_upload
+    try:
+        await validate_upload(content, file.content_type or "application/octet-stream")
+    except ValueError as exc:
+        raise HTTPException(422, str(exc)) from None
     item = DealAttachment(id=uuid.uuid4(), deal_id=deal.id, company_id=company_id, terms_version=terms_version,
         filename=(file.filename or "Материал").replace("/", "_").replace("\\", "_")[:255],
         storage_key=f"deal-materials/{deal.id}/{uuid.uuid4()}", content_type=mime, sha256=hashlib.sha256(content).hexdigest())

@@ -30,7 +30,7 @@ from ..schemas import (
     ProductPatch,
     PublishIn,
 )
-from ..file_safety import check_upload
+from ..file_safety import validate_upload
 from ..storage import delete_object, download_object, upload_object
 from ..trust import append_audit_event
 from ..admission import BUYER_CHECKLIST_NOTE, admission_audit_payload, company_admission, publicly_available_products
@@ -375,13 +375,13 @@ async def upload_product_image(
     content_type = file.content_type or ""
     if content_type not in ALLOWED_IMAGE_TYPES:
         raise HTTPException(status.HTTP_415_UNSUPPORTED_MEDIA_TYPE, detail="Допустимы PNG, JPG и WebP")
-    data = await file.read()
+    data = await file.read(MAX_IMAGE_SIZE + 1)
     if not data:
         raise HTTPException(status.HTTP_400_BAD_REQUEST, detail="Изображение пустое")
     if len(data) > MAX_IMAGE_SIZE:
         raise HTTPException(status.HTTP_413_REQUEST_ENTITY_TOO_LARGE, detail="Изображение больше 8 МБ")
     try:
-        content_type = check_upload(data, content_type)
+        content_type = await validate_upload(data, content_type)
     except ValueError as exc:
         raise HTTPException(status.HTTP_415_UNSUPPORTED_MEDIA_TYPE, detail=str(exc)) from None
     positions = set((await db.execute(

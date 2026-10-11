@@ -1,3 +1,6 @@
+import asyncio
+from contextlib import asynccontextmanager, suppress
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
@@ -27,7 +30,19 @@ from .api import (
 )
 from .config import settings
 
-app = FastAPI(title="Marketplace Service", version="0.2.0")
+@asynccontextmanager
+async def lifespan(app):
+    from .document_lifecycle import lifecycle_worker
+    worker = asyncio.create_task(lifecycle_worker())
+    try:
+        yield
+    finally:
+        worker.cancel()
+        with suppress(asyncio.CancelledError):
+            await worker
+
+
+app = FastAPI(title="Marketplace Service", version="0.2.0", lifespan=lifespan)
 
 app.add_middleware(
     CORSMiddleware,

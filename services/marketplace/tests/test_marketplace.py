@@ -1,3 +1,5 @@
+from synthetic_files import PNG, PDF
+
 from conftest import confirmed_quote_terms
 from sqlalchemy import func, select, text
 
@@ -180,7 +182,7 @@ async def test_need_file_download_is_available_only_to_buyer(
     need_id = created.json()["id"]
     uploaded = await client.post(
         f"/api/v1/needs/{need_id}/files",
-        files={"file": ("evidence.pdf", b"%PDF-1.4 synthetic-pdf", "application/pdf")},
+        files={"file": ("evidence.pdf", PDF, "application/pdf")},
         headers=_auth(make_token(buyer)),
     )
     assert uploaded.status_code == 201
@@ -201,7 +203,7 @@ async def test_need_file_download_is_available_only_to_buyer(
         f"/api/v1/need-files/{file_id}/download", headers=_auth(make_token(buyer))
     )
     assert downloaded.status_code == 200
-    assert downloaded.content == b"%PDF-1.4 synthetic-pdf"
+    assert downloaded.content == PDF
 
     outsider = await make_user(db_session)
     forbidden = await client.get(

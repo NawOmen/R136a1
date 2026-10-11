@@ -21,6 +21,7 @@ from .models import (
     MatchEvent,
     Need,
     Offer,
+    Product,
 )
 from .resources import occupies, reservations
 from .category_registry import resolve_category
@@ -186,6 +187,21 @@ async def _has_direct_match(db: AsyncSession, need: Need) -> tuple[bool, str]:
         if not quote or not quote.get('estimate', {}).get('complete'):
             continue
         if quote['need']['revision'] != need.revision:
+            continue
+        from .admission import company_admission
+        product = await db.get(Product, offer.product_id) if offer.product_id else None
+        if offer.product_id and (product is None or product.company_id != offer.company_id):
+            continue
+        company = (await db.execute(text("SELECT verification_status FROM auth.companies WHERE id=:id"),
+                                    {"id": offer.company_id})).scalar_one_or_none()
+        if company != "verified":
+            continue
+        admission = await company_admission(db, offer.company_id,
+            product.category if product else need.category,
+            product.subcategory if product else need.subcategory,
+            characteristics=product.characteristics if product else need.characteristics,
+            moq_units=offer.moq_units)
+        if admission.blocking_open:
             continue
         total = decimal(quote['estimate']['total_rub'])
         if (
@@ -466,8 +482,9 @@ async def run_market_rematch(
     event_type: str,
     entity_id: uuid.UUID | None,
     payload: dict | None = None,
+    *, event: MatchEvent | None = None,
 ) -> None:
-    event = MatchEvent(
+    event = event or MatchEvent(
         event_type=event_type,
         entity_id=entity_id,
         payload=payload or {},

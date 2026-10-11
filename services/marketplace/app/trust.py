@@ -1,5 +1,6 @@
 import hashlib
 import json
+import re
 import uuid
 from datetime import datetime, timezone
 from typing import Any
@@ -17,22 +18,26 @@ def _canonical(value: Any) -> str:
     return json.dumps(value, ensure_ascii=False, sort_keys=True, separators=(",", ":"), default=str)
 
 
-_SECRET_KEY_HINTS = ("password", "passwd", "pwd", "secret", "token", "api_key", "apikey", "authorization")
+_SECRET_KEY = re.compile(r"(?:password|passwd|pwd|secret|token|api[_-]?key|authorization|cookie|credential)", re.I)
+_SECRET_TEXT = re.compile(
+    r"(?i)(?:\bBearer\s+[^\s,;]+|\b(?:[\w-]*(?:password|secret|token|api[_-]?key|authorization|credential)[\w-]*)"
+    r"\s*[:=]\s*(?:\"[^\"]*\"|'[^']*'|[^\s,;]+))"
+)
 
 
 def scrub_secrets(value: Any) -> Any:
-    """Вычистить секреты из журнальных данных: пароли/токены не хранятся в аудите.
+    """Structured secrets and labelled free-text credentials are removed before hashing.
 
-    Применяется к payload и source_refs до записи и хеширования: в цепочке лежит
-    уже вычищенный материал, проверка хешей при этом корректна.
+    No regexp can identify every arbitrary unlabelled secret. Callers must never
+    supply original documents or opaque credentials as journal prose.
     """
     if isinstance(value, dict):
-        return {
-            key: ("[скрыто]" if isinstance(key, str) and key.strip().lower() in _SECRET_KEY_HINTS else scrub_secrets(item))
-            for key, item in value.items()
-        }
-    if isinstance(value, list):
+        return {key: ("[скрыто]" if isinstance(key, str) and _SECRET_KEY.search(key)
+                       else scrub_secrets(item)) for key, item in value.items()}
+    if isinstance(value, (list, tuple)):
         return [scrub_secrets(item) for item in value]
+    if isinstance(value, str):
+        return _SECRET_TEXT.sub("[скрыто]", value)
     return value
 
 
@@ -83,7 +88,7 @@ async def append_audit_event(
         actor_user_id=actor_user_id,
         actor_company_id=actor_company_id,
         source_refs=scrub_secrets(source_refs or []),
-        explanation=explanation,
+        explanation=scrub_secrets(explanation),
         payload=scrub_secrets(payload or {}),
         created_at=datetime.now(timezone.utc),
     )
@@ -118,7 +123,7 @@ async def record_human_approval(
         actor_company_id=actor_company_id,
         permission=permission,
         decision=decision,
-        reason=reason,
+        reason=scrub_secrets(reason),
         payload_hash=payload_hash(payload),
     )
     db.add(approval)

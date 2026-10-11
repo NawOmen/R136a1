@@ -11,10 +11,7 @@ from test_category_admission import _auth, _seller_with_product, _upload_documen
 from conftest import grant_packaging_documents, make_company, make_marketplace_admin, make_token, make_user
 
 CONFIRMS = {"material": ["крафт-картон"], "coating": ["PE"]}
-PNG = b"\x89PNG\r\n\x1a\nrest"
-JPEG = b"\xff\xd8\xffrest"
-WEBP = b"RIFF\x00\x00\x00\x00WEBPrest"
-PDF = b"%PDF-1.4 rest"
+from synthetic_files import PNG, JPEG, WEBP, PDF
 
 
 @pytest.mark.parametrize("data,content_type", [

@@ -3,6 +3,8 @@
 Проверяем приёмку S05.01–S05.05: ступени и версии карточек, идемпотентность КП,
 фильтры и отклонения ленты, diff/откат импорта, идемпотентность сида.
 """
+from synthetic_files import PNG, PDF
+
 import uuid
 from datetime import date, timedelta
 from decimal import Decimal
@@ -83,11 +85,11 @@ async def test_product_characteristics_limit_and_photo_bounds(client, db_session
     assert bad_type.status_code == 415
     for position in range(5):
         uploaded = await client.post(f"/api/v1/products/{created['id']}/images",
-                                     files={"file": (f"p{position}.png", b"\x89PNG\r\n\x1a\n", "image/png")},
+                                     files={"file": (f"p{position}.png", PNG, "image/png")},
                                      headers=_auth(token))
         assert uploaded.status_code == 201, uploaded.text
     sixth = await client.post(f"/api/v1/products/{created['id']}/images",
-                              files={"file": ("p5.png", b"\x89PNG\r\n\x1a\n", "image/png")},
+                              files={"file": ("p5.png", PNG, "image/png")},
                               headers=_auth(token))
     assert sixth.status_code == 409
 
@@ -240,7 +242,7 @@ async def test_assortment_scope_and_seed_stories(client, db_session):
     assert len(families) == 6
     for family in families:
         assert sum(1 for item in ASSORTMENT if item[1] == family) >= 3
-    assert group_pictogram("Крепёж")[:8] == b"\x89PNG\r\n\x1a\n"
+    assert group_pictogram("Крепёж")[:8] == PNG[:8]
 
     seller_tokens = {}
     for index, (title, can_sell) in enumerate((("ООО «Урал Комплект»", True), ("ООО «Регион Поставка»", True))):

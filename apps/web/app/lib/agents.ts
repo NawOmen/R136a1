@@ -144,9 +144,10 @@ export const agents = {
     route: "local" | "complex_auto",
     companyId?: string,
     intentScope = "default",
+    externalContextAllowed = false,
   ): Promise<AgentRun> {
     const fileHashes = await Promise.all(files.map(async (file) => [file.name, file.type, Array.from(new Uint8Array(await crypto.subtle.digest("SHA-256", await file.arrayBuffer()))).map((value) => value.toString(16).padStart(2, "0")).join("")]));
-    const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(JSON.stringify([intentScope, companyId, requestText, route, fileHashes])));
+    const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(JSON.stringify(externalContextAllowed ? [intentScope, companyId, requestText, route, fileHashes, true] : [intentScope, companyId, requestText, route, fileHashes])));
     const storageKey = "porukam:analysis:" + Array.from(new Uint8Array(digest)).map((value) => value.toString(16).padStart(2, "0")).join("");
     const requestKey = sessionStorage.getItem(storageKey) ?? crypto.randomUUID();
     sessionStorage.setItem(storageKey, requestKey);
@@ -154,6 +155,7 @@ export const agents = {
     form.set("request_key", requestKey);
     form.set("request_text", requestText);
     form.set("route", route);
+    form.set("external_context_allowed", String(externalContextAllowed));
     if (companyId) form.set("company_id", companyId);
     files.forEach((file) => form.append("files", file));
     let run = await readResponse(await fetch(`${agentsBaseUrl()}/api/v3/buyer-agent/runs`, {

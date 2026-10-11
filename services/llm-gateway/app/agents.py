@@ -445,6 +445,7 @@ class BuyerInvestigationAgent:
         warnings: list[str],
         requested_route: str,
         buyer_company_id: uuid.UUID | None = None,
+        external_context_allowed: bool = False,
     ) -> tuple[BuyerAgentResult, str, str | None, RawExtraction]:
         material_warnings = list(warnings)
         review_notes: list[str] = []
@@ -466,24 +467,25 @@ class BuyerInvestigationAgent:
             f"фактов: {len(extraction.facts)}; маршрут: local_qwen",
             actor="model",
         )
-        if requested_route == "complex_auto" and len(sources) >= 3:
-            safe_facts = [
-                {
-                    "key": fact.key,
-                    "value": fact.value,
-                    "source_id": fact.source_id,
-                    "confidence": fact.confidence,
-                }
-                for fact in extraction.facts
-            ]
+        if requested_route == "complex_auto" and not external_context_allowed:
+            material_warnings.append("Внешняя проверка не разрешена: выполнена только локальная обработка.")
+        if requested_route == "complex_auto" and external_context_allowed and len(sources) >= 3:
+            # Only server-computed bounded counters cross the external boundary.
+            # No source text, names, IDs, category strings or arbitrary fact values.
+            counts = {}
+            for fact in extraction.facts:
+                counts[fact.key] = counts.get(fact.key, 0) + 1
+            safe_context = {
+                "source_count": min(len(sources), 17),
+                "fact_count": min(len(extraction.facts), 1000),
+                "low_confidence_count": min(sum(f.confidence < 0.8 for f in extraction.facts), 1000),
+                "repeated_key_count": min(sum(count > 1 for count in counts.values()), 1000),
+            }
             try:
                 review, review_route, fallback = await self.provider.structured(
-                    "Ты внешний консультант. Видишь только обезличенные факты. "
+                    "Ты внешний консультант. Видишь только числовые счётчики полноты источников. "
                     "Укажи краткие риски и вопросы; не меняй значения, цены или статусы.",
-                    json.dumps(
-                        {"category": extraction.category, "facts": safe_facts},
-                        ensure_ascii=False,
-                    ),
+                    json.dumps(safe_context),
                     ComplexReview,
                     prefer_external=True,
                 )
@@ -498,7 +500,7 @@ class BuyerInvestigationAgent:
                     run_id,
                     "review_anonymized_facts",
                     "success",
-                    f"обезличенных фактов: {len(safe_facts)}",
+                    "Переданы только четыре счётчика полноты; исходные значения не передавались",
                     f"маршрут: {review_route}; замечаний: {len(review.notes)}",
                     actor="model",
                 )
@@ -509,7 +511,7 @@ class BuyerInvestigationAgent:
                     run_id,
                     "review_anonymized_facts",
                     "failed",
-                    f"обезличенных фактов: {len(safe_facts)}",
+                    "Переданы только четыре счётчика полноты; исходные значения не передавались",
                     "Углублённая проверка пропущена; локальное извлечение сохранено",
                     actor="model",
                 )

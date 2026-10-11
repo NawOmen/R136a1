@@ -70,6 +70,7 @@ export default function NewNeedPage() {
   const [files, setFiles] = useState<File[]>([]);
   const [requestDescription, setRequestDescription] = useState("");
   const [analysisRoute, setAnalysisRoute] = useState<"local" | "complex_auto">("local");
+  const [externalContextAllowed, setExternalContextAllowed] = useState(false);
   const [agentRun, setAgentRun] = useState<AgentRun | null>(null);
   const [answers, setAnswers] = useState<Record<string, string>>({});
   const [trial, setTrial] = useState<{ enabled: boolean; limit: number; used: number; remaining: number | null } | null>(null);
@@ -292,6 +293,7 @@ export default function NewNeedPage() {
         analysisRoute,
         company?.id,
         creationKey.current,
+        analysisRoute === "complex_auto" && externalContextAllowed,
       );
       if (activeScope.current !== scope) return;
       setAgentRun(run);
@@ -580,13 +582,22 @@ export default function NewNeedPage() {
               id="analysis_route"
               value={analysisRoute}
               onChange={(event) =>
-                setAnalysisRoute(event.target.value as "local" | "complex_auto")
+                { setAnalysisRoute(event.target.value as "local" | "complex_auto"); setExternalContextAllowed(false); }
               }
             >
               <option value="local">Только локальная обработка</option>
-              <option value="complex_auto">Углублённая проверка после обезличивания</option>
+              <option value="complex_auto">Внешняя проверка полноты источников</option>
             </select>
           </div>
+          {analysisRoute === "complex_auto" && (
+            <label className="hint">
+              <input type="checkbox" checked={externalContextAllowed} disabled={analyzing}
+                onChange={(event) => setExternalContextAllowed(event.target.checked)} />
+              Разрешаю передать внешней модели DeepSeek только четыре счётчика: количество источников,
+              фактов, фактов с низкой уверенностью и повторяющихся характеристик.
+              Файлы, текст, названия компаний и значения характеристик остаются локально.
+            </label>
+          )}
           <button
             type="button"
             className="btn btn-primary"

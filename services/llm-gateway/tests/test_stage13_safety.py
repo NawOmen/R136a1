@@ -1,7 +1,20 @@
 """S13.04: выключаемый внешний маршрут, сигнатуры аудио, лимит распознавания."""
 
+import io
+import wave
+
 import pytest
 from pydantic import BaseModel
+
+
+def real_wav():
+    stream = io.BytesIO()
+    with wave.open(stream, "wb") as audio:
+        audio.setnchannels(1)
+        audio.setsampwidth(2)
+        audio.setframerate(8000)
+        audio.writeframes(b"\x00\x00" * 800)
+    return stream.getvalue()
 
 
 class _Note(BaseModel):
@@ -91,7 +104,7 @@ async def test_transcribe_accepts_valid_signature(client, token, monkeypatch):
         return "распознанный текст"
 
     monkeypatch.setattr(gateway_api.transcriber, "transcribe", _fake_transcribe)
-    wav = b"RIFF" + b"\x00" * 4 + b"WAVE" + b"\x00" * 100
+    wav = real_wav()
     response = await client.post(
         "/api/v1/transcribe",
         files={"file": ("note.wav", wav, "audio/wav")},
@@ -113,7 +126,7 @@ async def test_transcribe_timeout_is_bounded(client, token, monkeypatch):
 
     monkeypatch.setattr(gateway_api.transcriber, "transcribe", _slow_transcribe)
     monkeypatch.setattr(settings, "transcribe_timeout_seconds", 0.05)
-    wav = b"RIFF" + b"\x00" * 4 + b"WAVE" + b"\x00" * 100
+    wav = real_wav()
     response = await client.post(
         "/api/v1/transcribe",
         files={"file": ("note.wav", wav, "audio/wav")},
