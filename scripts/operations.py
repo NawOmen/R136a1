@@ -46,7 +46,28 @@ def validate_archive(path):
             if Path(entry.name).is_absolute() or '..' in parts or not (entry.isfile() or entry.isdir()):
                 raise ValueError('Недопустимый путь или тип объекта в архиве MinIO')
 
+def application_versions(cs, revision):
+    versions = {}
+    for container in cs:
+        service = container['Config']['Labels'].get('com.docker.compose.service')
+        if service not in {'gateway-auth', 'marketplace', 'llm-gateway', 'optimizer', 'web'}:
+            continue
+        labels = inspect(container['Image'])['Config'].get('Labels') or {}
+        bound = any(m['Type'] == 'bind' and m['Destination'] == '/app'
+                    and Path(m['Source']).resolve() == ROOT / 'services' / service
+                    for m in container['Mounts'])
+        versions[service] = {'image_revision': labels.get('org.opencontainers.image.revision'),
+                             'bound_source_revision': revision if bound else None}
+    return versions
+
+
 def backup(args):
+    if subprocess.run(['git','-C',str(ROOT),'diff','--quiet','HEAD']).returncode:
+        raise ValueError('Зафиксируйте изменения checkout до снимка; HEAD не описывает незакоммиченный код')
+    pending = output('git','-C',str(ROOT),'ls-files','--others','--exclude-standard','--','apps','services','packages','scripts')
+    if pending:
+        raise ValueError('В checkout есть незакоммиченные файлы исходников')
+    revision = output('git','-C',str(ROOT),'rev-parse','HEAD')
     cs = containers(args.project)
     if not cs:
         raise ValueError('Проект не найден')
@@ -72,7 +93,8 @@ def backup(args):
             '-cf', '/backup/minio.tar', '-C', '/snapshot', '.')
         validate_archive(directory / 'minio.tar')
         manifest = {'format': 1, 'source_project': args.project,
-                    'git_commit': output('git', '-C', str(ROOT), 'rev-parse', 'HEAD'),
+                    'checkout_revision': revision,
+                    'applications': application_versions(cs, revision),
                     'models': json.loads((ROOT / 'infra/models.lock.json').read_text()),
                     'images': {c['Config']['Labels']['com.docker.compose.service']: c['Image'] for c in cs},
                     'files': {name: digest(directory / name) for name in ('postgres.dump', 'minio.tar')}}
