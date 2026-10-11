@@ -1,0 +1,1113 @@
+{
+  "schema_version": 1,
+  "kind": "team_scenario_assumptions",
+  "currency": "RUB",
+  "period": "одна закупочная задача; распределённые расходы относятся к ней",
+  "note": "Все значения заданы командой для проверки модели. Нулевой сбор соответствует текущему продукту; подписка — отдельный сценарий. Трудовой эквивалент не означает денежное поступление.",
+  "cases": [
+    {
+      "id": "direct",
+      "label": "Прямой запрос с сопоставимой альтернативой",
+      "outcome": "completed",
+      "buyer": {
+        "baseline": {
+          "scope": {
+            "category_id": "packaging.boxes",
+            "specification": "СИН-ЭКОНОМИКА-1",
+            "quantity": "100",
+            "unit": "шт",
+            "tax_basis": "same_inclusive",
+            "destination": "RU-synthetic-address-1",
+            "deadline": "synthetic-period-1"
+          },
+          "costs": {
+            "goods_rub": "10000.00",
+            "delivery_rub": "1000.00",
+            "other_rub": "0.00"
+          }
+        },
+        "system": {
+          "scope": {
+            "category_id": "packaging.boxes",
+            "specification": "СИН-ЭКОНОМИКА-1",
+            "quantity": "100",
+            "unit": "шт",
+            "tax_basis": "same_inclusive",
+            "destination": "RU-synthetic-address-1",
+            "deadline": "synthetic-period-1"
+          },
+          "costs": {
+            "goods_rub": "9500.00",
+            "delivery_rub": "1000.00",
+            "other_rub": "200.00"
+          }
+        },
+        "time": {
+          "manual_active_minutes": "60",
+          "system_active_minutes": "15",
+          "correction_minutes": "5",
+          "retry_minutes": "0",
+          "manual_training_minutes": "0",
+          "system_training_minutes": "10",
+          "manual_wait_minutes": "120",
+          "system_wait_minutes": "90",
+          "model_wait_minutes": "2",
+          "hourly_rate_rub": "600.00"
+        }
+      },
+      "seller": {
+        "time": {
+          "manual_active_minutes": "60",
+          "system_active_minutes": "15",
+          "correction_minutes": "5",
+          "retry_minutes": "0",
+          "manual_training_minutes": "0",
+          "system_training_minutes": "10",
+          "manual_wait_minutes": "120",
+          "system_wait_minutes": "90",
+          "model_wait_minutes": "2",
+          "hourly_rate_rub": "600.00"
+        },
+        "incremental_units": "0",
+        "unit_revenue_rub": "95.00",
+        "unit_cost_rub": "60.00",
+        "new_expenses_rub": "100.00",
+        "payments_rub": null,
+        "tax_comparable": true
+      },
+      "platform": {
+        "gmv_rub": "10700.00",
+        "subscription_income_rub": "0.00",
+        "commission_income_rub": "0.00",
+        "inference_rub": "5.00",
+        "storage_rub": "2.00",
+        "support_rub": "30.00",
+        "document_review_rub": "50.00",
+        "integration_rub": "10.00",
+        "allocated_development_rub": "200.00",
+        "allocated_acquisition_rub": "50.00",
+        "tax_comparable": true
+      },
+      "reserve": {
+        "holding_rub": "100.00",
+        "switching_rub": "200.00",
+        "loss_without_rub": "5000.00",
+        "loss_with_rub": "1000.00",
+        "incident_probability": null,
+        "uncovered_units": "0"
+      }
+    },
+    {
+      "id": "corrections",
+      "label": "Правки и повторы съедают выигрыш",
+      "outcome": "completed",
+      "buyer": {
+        "baseline": {
+          "scope": {
+            "category_id": "packaging.boxes",
+            "specification": "СИН-ЭКОНОМИКА-1",
+            "quantity": "100",
+            "unit": "шт",
+            "tax_basis": "same_inclusive",
+            "destination": "RU-synthetic-address-1",
+            "deadline": "synthetic-period-1"
+          },
+          "costs": {
+            "goods_rub": "10000.00",
+            "delivery_rub": "1000.00",
+            "other_rub": "0.00"
+          }
+        },
+        "system": {
+          "scope": {
+            "category_id": "packaging.boxes",
+            "specification": "СИН-ЭКОНОМИКА-1",
+            "quantity": "100",
+            "unit": "шт",
+            "tax_basis": "same_inclusive",
+            "destination": "RU-synthetic-address-1",
+            "deadline": "synthetic-period-1"
+          },
+          "costs": {
+            "goods_rub": "9500.00",
+            "delivery_rub": "1000.00",
+            "other_rub": "800.00"
+          }
+        },
+        "time": {
+          "manual_active_minutes": "60",
+          "system_active_minutes": "15",
+          "correction_minutes": "45",
+          "retry_minutes": "30",
+          "manual_training_minutes": "0",
+          "system_training_minutes": "10",
+          "manual_wait_minutes": "120",
+          "system_wait_minutes": "90",
+          "model_wait_minutes": "2",
+          "hourly_rate_rub": "600.00"
+        }
+      },
+      "seller": {
+        "time": {
+          "manual_active_minutes": "60",
+          "system_active_minutes": "15",
+          "correction_minutes": "45",
+          "retry_minutes": "30",
+          "manual_training_minutes": "0",
+          "system_training_minutes": "10",
+          "manual_wait_minutes": "120",
+          "system_wait_minutes": "90",
+          "model_wait_minutes": "2",
+          "hourly_rate_rub": "600.00"
+        },
+        "incremental_units": "0",
+        "unit_revenue_rub": "95.00",
+        "unit_cost_rub": "60.00",
+        "new_expenses_rub": "100.00",
+        "payments_rub": null,
+        "tax_comparable": true
+      },
+      "platform": {
+        "gmv_rub": "10700.00",
+        "subscription_income_rub": "0.00",
+        "commission_income_rub": "0.00",
+        "inference_rub": "5.00",
+        "storage_rub": "2.00",
+        "support_rub": "30.00",
+        "document_review_rub": "50.00",
+        "integration_rub": "10.00",
+        "allocated_development_rub": "200.00",
+        "allocated_acquisition_rub": "50.00",
+        "tax_comparable": true
+      },
+      "reserve": {
+        "holding_rub": "100.00",
+        "switching_rub": "200.00",
+        "loss_without_rub": "5000.00",
+        "loss_with_rub": "1000.00",
+        "incident_probability": null,
+        "uncovered_units": "0"
+      }
+    },
+    {
+      "id": "below-moq",
+      "label": "Группа не набрана: переход к прямому запросу",
+      "outcome": "blocked",
+      "buyer": {
+        "baseline": {
+          "scope": {
+            "category_id": "packaging.boxes",
+            "specification": "СИН-ЭКОНОМИКА-1",
+            "quantity": "100",
+            "unit": "шт",
+            "tax_basis": "same_inclusive",
+            "destination": "RU-synthetic-address-1",
+            "deadline": "synthetic-period-1"
+          },
+          "costs": {
+            "goods_rub": "10000.00",
+            "delivery_rub": "1000.00",
+            "other_rub": "0.00"
+          }
+        },
+        "system": {
+          "scope": {
+            "category_id": "packaging.boxes",
+            "specification": "СИН-ЭКОНОМИКА-1",
+            "quantity": "100",
+            "unit": "шт",
+            "tax_basis": "same_inclusive",
+            "destination": "RU-synthetic-address-1",
+            "deadline": "synthetic-period-1"
+          },
+          "costs": {
+            "goods_rub": "9500.00",
+            "delivery_rub": "1000.00",
+            "other_rub": "200.00"
+          }
+        },
+        "time": {
+          "manual_active_minutes": "60",
+          "system_active_minutes": "15",
+          "correction_minutes": "5",
+          "retry_minutes": "0",
+          "manual_training_minutes": "0",
+          "system_training_minutes": "10",
+          "manual_wait_minutes": "120",
+          "system_wait_minutes": "90",
+          "model_wait_minutes": "2",
+          "hourly_rate_rub": "600.00"
+        }
+      },
+      "seller": {
+        "time": {
+          "manual_active_minutes": "60",
+          "system_active_minutes": "15",
+          "correction_minutes": "5",
+          "retry_minutes": "0",
+          "manual_training_minutes": "0",
+          "system_training_minutes": "10",
+          "manual_wait_minutes": "120",
+          "system_wait_minutes": "90",
+          "model_wait_minutes": "2",
+          "hourly_rate_rub": "600.00"
+        },
+        "incremental_units": "0",
+        "unit_revenue_rub": "95.00",
+        "unit_cost_rub": "60.00",
+        "new_expenses_rub": "100.00",
+        "payments_rub": null,
+        "tax_comparable": true
+      },
+      "platform": {
+        "gmv_rub": "10700.00",
+        "subscription_income_rub": "0.00",
+        "commission_income_rub": "0.00",
+        "inference_rub": "5.00",
+        "storage_rub": "2.00",
+        "support_rub": "30.00",
+        "document_review_rub": "50.00",
+        "integration_rub": "10.00",
+        "allocated_development_rub": "200.00",
+        "allocated_acquisition_rub": "50.00",
+        "tax_comparable": true
+      },
+      "reserve": {
+        "holding_rub": "100.00",
+        "switching_rub": "200.00",
+        "loss_without_rub": "5000.00",
+        "loss_with_rub": "1000.00",
+        "incident_probability": null,
+        "uncovered_units": "100"
+      }
+    },
+    {
+      "id": "expensive-reserve",
+      "label": "Резерв слишком дорог при заданной чувствительности",
+      "outcome": "completed",
+      "buyer": {
+        "baseline": {
+          "scope": {
+            "category_id": "packaging.boxes",
+            "specification": "СИН-ЭКОНОМИКА-1",
+            "quantity": "100",
+            "unit": "шт",
+            "tax_basis": "same_inclusive",
+            "destination": "RU-synthetic-address-1",
+            "deadline": "synthetic-period-1"
+          },
+          "costs": {
+            "goods_rub": "10000.00",
+            "delivery_rub": "1000.00",
+            "other_rub": "0.00"
+          }
+        },
+        "system": {
+          "scope": {
+            "category_id": "packaging.boxes",
+            "specification": "СИН-ЭКОНОМИКА-1",
+            "quantity": "100",
+            "unit": "шт",
+            "tax_basis": "same_inclusive",
+            "destination": "RU-synthetic-address-1",
+            "deadline": "synthetic-period-1"
+          },
+          "costs": {
+            "goods_rub": "9500.00",
+            "delivery_rub": "1000.00",
+            "other_rub": "200.00"
+          }
+        },
+        "time": {
+          "manual_active_minutes": "60",
+          "system_active_minutes": "15",
+          "correction_minutes": "5",
+          "retry_minutes": "0",
+          "manual_training_minutes": "0",
+          "system_training_minutes": "10",
+          "manual_wait_minutes": "120",
+          "system_wait_minutes": "90",
+          "model_wait_minutes": "2",
+          "hourly_rate_rub": "600.00"
+        }
+      },
+      "seller": {
+        "time": {
+          "manual_active_minutes": "60",
+          "system_active_minutes": "15",
+          "correction_minutes": "5",
+          "retry_minutes": "0",
+          "manual_training_minutes": "0",
+          "system_training_minutes": "10",
+          "manual_wait_minutes": "120",
+          "system_wait_minutes": "90",
+          "model_wait_minutes": "2",
+          "hourly_rate_rub": "600.00"
+        },
+        "incremental_units": "0",
+        "unit_revenue_rub": "95.00",
+        "unit_cost_rub": "60.00",
+        "new_expenses_rub": "100.00",
+        "payments_rub": null,
+        "tax_comparable": true
+      },
+      "platform": {
+        "gmv_rub": "10700.00",
+        "subscription_income_rub": "0.00",
+        "commission_income_rub": "0.00",
+        "inference_rub": "5.00",
+        "storage_rub": "2.00",
+        "support_rub": "30.00",
+        "document_review_rub": "50.00",
+        "integration_rub": "10.00",
+        "allocated_development_rub": "200.00",
+        "allocated_acquisition_rub": "50.00",
+        "tax_comparable": true
+      },
+      "reserve": {
+        "holding_rub": "3000.00",
+        "switching_rub": "200.00",
+        "loss_without_rub": "5000.00",
+        "loss_with_rub": "1000.00",
+        "incident_probability": "0.1",
+        "uncovered_units": "20"
+      }
+    },
+    {
+      "id": "unknown",
+      "label": "Неизвестные цена альтернативы, затраты и платежи",
+      "outcome": "completed",
+      "buyer": {
+        "baseline": {
+          "scope": {
+            "category_id": "packaging.boxes",
+            "specification": "СИН-ЭКОНОМИКА-1",
+            "quantity": "100",
+            "unit": "шт",
+            "tax_basis": "same_inclusive",
+            "destination": "RU-synthetic-address-1",
+            "deadline": "synthetic-period-1"
+          },
+          "costs": {
+            "goods_rub": null,
+            "delivery_rub": "1000.00",
+            "other_rub": "0.00"
+          }
+        },
+        "system": {
+          "scope": {
+            "category_id": "packaging.boxes",
+            "specification": "СИН-ЭКОНОМИКА-1",
+            "quantity": "100",
+            "unit": "шт",
+            "tax_basis": "same_inclusive",
+            "destination": "RU-synthetic-address-1",
+            "deadline": "synthetic-period-1"
+          },
+          "costs": {
+            "goods_rub": "9500.00",
+            "delivery_rub": "1000.00",
+            "other_rub": "200.00"
+          }
+        },
+        "time": {
+          "manual_active_minutes": "60",
+          "system_active_minutes": "15",
+          "correction_minutes": "5",
+          "retry_minutes": "0",
+          "manual_training_minutes": "0",
+          "system_training_minutes": "10",
+          "manual_wait_minutes": "120",
+          "system_wait_minutes": "90",
+          "model_wait_minutes": "2",
+          "hourly_rate_rub": "600.00"
+        }
+      },
+      "seller": {
+        "time": {
+          "manual_active_minutes": "60",
+          "system_active_minutes": "15",
+          "correction_minutes": "5",
+          "retry_minutes": "0",
+          "manual_training_minutes": "0",
+          "system_training_minutes": "10",
+          "manual_wait_minutes": "120",
+          "system_wait_minutes": "90",
+          "model_wait_minutes": "2",
+          "hourly_rate_rub": "600.00"
+        },
+        "incremental_units": "20",
+        "unit_revenue_rub": "95.00",
+        "unit_cost_rub": null,
+        "new_expenses_rub": "100.00",
+        "payments_rub": null,
+        "tax_comparable": true
+      },
+      "platform": {
+        "gmv_rub": "10700.00",
+        "subscription_income_rub": "0.00",
+        "commission_income_rub": "0.00",
+        "inference_rub": "5.00",
+        "storage_rub": null,
+        "support_rub": "30.00",
+        "document_review_rub": "50.00",
+        "integration_rub": "10.00",
+        "allocated_development_rub": "200.00",
+        "allocated_acquisition_rub": "50.00",
+        "tax_comparable": true
+      },
+      "reserve": {
+        "holding_rub": "100.00",
+        "switching_rub": "200.00",
+        "loss_without_rub": "5000.00",
+        "loss_with_rub": "1000.00",
+        "incident_probability": null,
+        "uncovered_units": "0"
+      }
+    },
+    {
+      "id": "repeat",
+      "label": "Повтор существующего клиента: дополнительный объём нулевой",
+      "outcome": "completed",
+      "buyer": {
+        "baseline": {
+          "scope": {
+            "category_id": "packaging.boxes",
+            "specification": "СИН-ЭКОНОМИКА-1",
+            "quantity": "100",
+            "unit": "шт",
+            "tax_basis": "same_inclusive",
+            "destination": "RU-synthetic-address-1",
+            "deadline": "synthetic-period-1"
+          },
+          "costs": {
+            "goods_rub": "10000.00",
+            "delivery_rub": "1000.00",
+            "other_rub": "0.00"
+          }
+        },
+        "system": {
+          "scope": {
+            "category_id": "packaging.boxes",
+            "specification": "СИН-ЭКОНОМИКА-1",
+            "quantity": "100",
+            "unit": "шт",
+            "tax_basis": "same_inclusive",
+            "destination": "RU-synthetic-address-1",
+            "deadline": "synthetic-period-1"
+          },
+          "costs": {
+            "goods_rub": "9500.00",
+            "delivery_rub": "1000.00",
+            "other_rub": "200.00"
+          }
+        },
+        "time": {
+          "manual_active_minutes": "60",
+          "system_active_minutes": "15",
+          "correction_minutes": "5",
+          "retry_minutes": "0",
+          "manual_training_minutes": "0",
+          "system_training_minutes": "0",
+          "manual_wait_minutes": "120",
+          "system_wait_minutes": "90",
+          "model_wait_minutes": "2",
+          "hourly_rate_rub": "600.00"
+        }
+      },
+      "seller": {
+        "time": {
+          "manual_active_minutes": "60",
+          "system_active_minutes": "15",
+          "correction_minutes": "5",
+          "retry_minutes": "0",
+          "manual_training_minutes": "0",
+          "system_training_minutes": "0",
+          "manual_wait_minutes": "120",
+          "system_wait_minutes": "90",
+          "model_wait_minutes": "2",
+          "hourly_rate_rub": "600.00"
+        },
+        "incremental_units": "0",
+        "unit_revenue_rub": "95.00",
+        "unit_cost_rub": null,
+        "new_expenses_rub": "100.00",
+        "payments_rub": null,
+        "tax_comparable": true
+      },
+      "platform": {
+        "gmv_rub": "10700.00",
+        "subscription_income_rub": "0.00",
+        "commission_income_rub": "0.00",
+        "inference_rub": "5.00",
+        "storage_rub": "2.00",
+        "support_rub": "30.00",
+        "document_review_rub": "50.00",
+        "integration_rub": "10.00",
+        "allocated_development_rub": "200.00",
+        "allocated_acquisition_rub": "50.00",
+        "tax_comparable": true
+      },
+      "reserve": {
+        "holding_rub": "100.00",
+        "switching_rub": "200.00",
+        "loss_without_rub": "5000.00",
+        "loss_with_rub": "1000.00",
+        "incident_probability": null,
+        "uncovered_units": "0"
+      }
+    },
+    {
+      "id": "additional-volume",
+      "label": "Заданный дополнительный объём и сценарная подписка",
+      "outcome": "completed",
+      "buyer": {
+        "baseline": {
+          "scope": {
+            "category_id": "packaging.boxes",
+            "specification": "СИН-ЭКОНОМИКА-1",
+            "quantity": "100",
+            "unit": "шт",
+            "tax_basis": "same_inclusive",
+            "destination": "RU-synthetic-address-1",
+            "deadline": "synthetic-period-1"
+          },
+          "costs": {
+            "goods_rub": "10000.00",
+            "delivery_rub": "1000.00",
+            "other_rub": "0.00"
+          }
+        },
+        "system": {
+          "scope": {
+            "category_id": "packaging.boxes",
+            "specification": "СИН-ЭКОНОМИКА-1",
+            "quantity": "100",
+            "unit": "шт",
+            "tax_basis": "same_inclusive",
+            "destination": "RU-synthetic-address-1",
+            "deadline": "synthetic-period-1"
+          },
+          "costs": {
+            "goods_rub": "9500.00",
+            "delivery_rub": "1000.00",
+            "other_rub": "350.00"
+          }
+        },
+        "time": {
+          "manual_active_minutes": "60",
+          "system_active_minutes": "15",
+          "correction_minutes": "5",
+          "retry_minutes": "0",
+          "manual_training_minutes": "0",
+          "system_training_minutes": "10",
+          "manual_wait_minutes": "120",
+          "system_wait_minutes": "90",
+          "model_wait_minutes": "2",
+          "hourly_rate_rub": "600.00"
+        }
+      },
+      "seller": {
+        "time": {
+          "manual_active_minutes": "60",
+          "system_active_minutes": "15",
+          "correction_minutes": "5",
+          "retry_minutes": "0",
+          "manual_training_minutes": "0",
+          "system_training_minutes": "10",
+          "manual_wait_minutes": "120",
+          "system_wait_minutes": "90",
+          "model_wait_minutes": "2",
+          "hourly_rate_rub": "600.00"
+        },
+        "incremental_units": "20",
+        "unit_revenue_rub": "95.00",
+        "unit_cost_rub": "60.00",
+        "new_expenses_rub": "100.00",
+        "payments_rub": null,
+        "tax_comparable": true
+      },
+      "platform": {
+        "gmv_rub": "10700.00",
+        "subscription_income_rub": "150.00",
+        "commission_income_rub": "0.00",
+        "inference_rub": "5.00",
+        "storage_rub": "2.00",
+        "support_rub": "30.00",
+        "document_review_rub": "50.00",
+        "integration_rub": "10.00",
+        "allocated_development_rub": "200.00",
+        "allocated_acquisition_rub": "50.00",
+        "tax_comparable": true
+      },
+      "reserve": {
+        "holding_rub": "100.00",
+        "switching_rub": "200.00",
+        "loss_without_rub": "5000.00",
+        "loss_with_rub": "1000.00",
+        "incident_probability": null,
+        "uncovered_units": "0"
+      }
+    },
+    {
+      "id": "incomparable",
+      "label": "Другие количество и налоговая база",
+      "outcome": "completed",
+      "buyer": {
+        "baseline": {
+          "scope": {
+            "category_id": "packaging.boxes",
+            "specification": "СИН-ЭКОНОМИКА-1",
+            "quantity": "100",
+            "unit": "шт",
+            "tax_basis": "same_inclusive",
+            "destination": "RU-synthetic-address-1",
+            "deadline": "synthetic-period-1"
+          },
+          "costs": {
+            "goods_rub": "10000.00",
+            "delivery_rub": "1000.00",
+            "other_rub": "0.00"
+          }
+        },
+        "system": {
+          "scope": {
+            "category_id": "packaging.boxes",
+            "specification": "СИН-ЭКОНОМИКА-1",
+            "quantity": "120",
+            "unit": "шт",
+            "tax_basis": "same_exclusive",
+            "destination": "RU-synthetic-address-1",
+            "deadline": "synthetic-period-1"
+          },
+          "costs": {
+            "goods_rub": "9500.00",
+            "delivery_rub": "1000.00",
+            "other_rub": "200.00"
+          }
+        },
+        "time": {
+          "manual_active_minutes": "60",
+          "system_active_minutes": "15",
+          "correction_minutes": "5",
+          "retry_minutes": "0",
+          "manual_training_minutes": "0",
+          "system_training_minutes": "10",
+          "manual_wait_minutes": "120",
+          "system_wait_minutes": "90",
+          "model_wait_minutes": "2",
+          "hourly_rate_rub": "600.00"
+        }
+      },
+      "seller": {
+        "time": {
+          "manual_active_minutes": "60",
+          "system_active_minutes": "15",
+          "correction_minutes": "5",
+          "retry_minutes": "0",
+          "manual_training_minutes": "0",
+          "system_training_minutes": "10",
+          "manual_wait_minutes": "120",
+          "system_wait_minutes": "90",
+          "model_wait_minutes": "2",
+          "hourly_rate_rub": "600.00"
+        },
+        "incremental_units": "0",
+        "unit_revenue_rub": "95.00",
+        "unit_cost_rub": "60.00",
+        "new_expenses_rub": "100.00",
+        "payments_rub": null,
+        "tax_comparable": true
+      },
+      "platform": {
+        "gmv_rub": "10700.00",
+        "subscription_income_rub": "0.00",
+        "commission_income_rub": "0.00",
+        "inference_rub": "5.00",
+        "storage_rub": "2.00",
+        "support_rub": "30.00",
+        "document_review_rub": "50.00",
+        "integration_rub": "10.00",
+        "allocated_development_rub": "200.00",
+        "allocated_acquisition_rub": "50.00",
+        "tax_comparable": true
+      },
+      "reserve": {
+        "holding_rub": "100.00",
+        "switching_rub": "200.00",
+        "loss_without_rub": "5000.00",
+        "loss_with_rub": "1000.00",
+        "incident_probability": null,
+        "uncovered_units": "0"
+      }
+    },
+    {
+      "id": "abandoned",
+      "label": "Незавершённый запрос с затратами на повтор",
+      "outcome": "abandoned",
+      "buyer": {
+        "baseline": {
+          "scope": {
+            "category_id": "packaging.boxes",
+            "specification": "СИН-ЭКОНОМИКА-1",
+            "quantity": "100",
+            "unit": "шт",
+            "tax_basis": "same_inclusive",
+            "destination": "RU-synthetic-address-1",
+            "deadline": "synthetic-period-1"
+          },
+          "costs": {
+            "goods_rub": "10000.00",
+            "delivery_rub": "1000.00",
+            "other_rub": "0.00"
+          }
+        },
+        "system": {
+          "scope": {
+            "category_id": "packaging.boxes",
+            "specification": "СИН-ЭКОНОМИКА-1",
+            "quantity": "100",
+            "unit": "шт",
+            "tax_basis": "same_inclusive",
+            "destination": "RU-synthetic-address-1",
+            "deadline": "synthetic-period-1"
+          },
+          "costs": {
+            "goods_rub": "9500.00",
+            "delivery_rub": "1000.00",
+            "other_rub": "200.00"
+          }
+        },
+        "time": {
+          "manual_active_minutes": "60",
+          "system_active_minutes": "15",
+          "correction_minutes": "5",
+          "retry_minutes": "50",
+          "manual_training_minutes": "0",
+          "system_training_minutes": "10",
+          "manual_wait_minutes": "120",
+          "system_wait_minutes": "90",
+          "model_wait_minutes": "2",
+          "hourly_rate_rub": "600.00"
+        }
+      },
+      "seller": {
+        "time": {
+          "manual_active_minutes": "60",
+          "system_active_minutes": "15",
+          "correction_minutes": "5",
+          "retry_minutes": "50",
+          "manual_training_minutes": "0",
+          "system_training_minutes": "10",
+          "manual_wait_minutes": "120",
+          "system_wait_minutes": "90",
+          "model_wait_minutes": "2",
+          "hourly_rate_rub": "600.00"
+        },
+        "incremental_units": "0",
+        "unit_revenue_rub": "95.00",
+        "unit_cost_rub": "60.00",
+        "new_expenses_rub": "100.00",
+        "payments_rub": null,
+        "tax_comparable": true
+      },
+      "platform": {
+        "gmv_rub": "10700.00",
+        "subscription_income_rub": "0.00",
+        "commission_income_rub": "0.00",
+        "inference_rub": "5.00",
+        "storage_rub": "2.00",
+        "support_rub": "30.00",
+        "document_review_rub": "50.00",
+        "integration_rub": "10.00",
+        "allocated_development_rub": "200.00",
+        "allocated_acquisition_rub": "50.00",
+        "tax_comparable": true
+      },
+      "reserve": {
+        "holding_rub": "100.00",
+        "switching_rub": "200.00",
+        "loss_without_rub": "5000.00",
+        "loss_with_rub": "1000.00",
+        "incident_probability": null,
+        "uncovered_units": "0"
+      }
+    },
+    {
+      "id": "unknown-time",
+      "label": "Неизвестные трудозатраты и стоимость переключения",
+      "outcome": "completed",
+      "buyer": {
+        "baseline": {
+          "scope": {
+            "category_id": "packaging.boxes",
+            "specification": "СИН-ЭКОНОМИКА-1",
+            "quantity": "100",
+            "unit": "шт",
+            "tax_basis": "same_inclusive",
+            "destination": "RU-synthetic-address-1",
+            "deadline": "synthetic-period-1"
+          },
+          "costs": {
+            "goods_rub": "10000.00",
+            "delivery_rub": "1000.00",
+            "other_rub": "0.00"
+          }
+        },
+        "system": {
+          "scope": {
+            "category_id": "packaging.boxes",
+            "specification": "СИН-ЭКОНОМИКА-1",
+            "quantity": "100",
+            "unit": "шт",
+            "tax_basis": "same_inclusive",
+            "destination": "RU-synthetic-address-1",
+            "deadline": "synthetic-period-1"
+          },
+          "costs": {
+            "goods_rub": "9500.00",
+            "delivery_rub": "1000.00",
+            "other_rub": "200.00"
+          }
+        },
+        "time": {
+          "manual_active_minutes": "60",
+          "system_active_minutes": "15",
+          "correction_minutes": null,
+          "retry_minutes": "0",
+          "manual_training_minutes": "0",
+          "system_training_minutes": "10",
+          "manual_wait_minutes": "120",
+          "system_wait_minutes": "90",
+          "model_wait_minutes": "2",
+          "hourly_rate_rub": "600.00"
+        }
+      },
+      "seller": {
+        "time": {
+          "manual_active_minutes": "60",
+          "system_active_minutes": "15",
+          "correction_minutes": "5",
+          "retry_minutes": "0",
+          "manual_training_minutes": "0",
+          "system_training_minutes": "10",
+          "manual_wait_minutes": "120",
+          "system_wait_minutes": "90",
+          "model_wait_minutes": "2",
+          "hourly_rate_rub": "600.00"
+        },
+        "incremental_units": "0",
+        "unit_revenue_rub": "95.00",
+        "unit_cost_rub": "60.00",
+        "new_expenses_rub": "100.00",
+        "payments_rub": null,
+        "tax_comparable": true
+      },
+      "platform": {
+        "gmv_rub": "10700.00",
+        "subscription_income_rub": "0.00",
+        "commission_income_rub": "0.00",
+        "inference_rub": "5.00",
+        "storage_rub": "2.00",
+        "support_rub": "30.00",
+        "document_review_rub": "50.00",
+        "integration_rub": "10.00",
+        "allocated_development_rub": "200.00",
+        "allocated_acquisition_rub": "50.00",
+        "tax_comparable": true
+      },
+      "reserve": {
+        "holding_rub": "100.00",
+        "switching_rub": null,
+        "loss_without_rub": "5000.00",
+        "loss_with_rub": "1000.00",
+        "incident_probability": null,
+        "uncovered_units": "0"
+      }
+    },
+    {
+      "id": "known-supplier",
+      "label": "Постоянный поставщик: лишняя автоматизация дороже",
+      "outcome": "completed",
+      "buyer": {
+        "baseline": {
+          "scope": {
+            "category_id": "packaging.boxes",
+            "specification": "СИН-ЭКОНОМИКА-1",
+            "quantity": "100",
+            "unit": "шт",
+            "tax_basis": "same_inclusive",
+            "destination": "RU-synthetic-address-1",
+            "deadline": "synthetic-period-1"
+          },
+          "costs": {
+            "goods_rub": "10000.00",
+            "delivery_rub": "1000.00",
+            "other_rub": "0.00"
+          }
+        },
+        "system": {
+          "scope": {
+            "category_id": "packaging.boxes",
+            "specification": "СИН-ЭКОНОМИКА-1",
+            "quantity": "100",
+            "unit": "шт",
+            "tax_basis": "same_inclusive",
+            "destination": "RU-synthetic-address-1",
+            "deadline": "synthetic-period-1"
+          },
+          "costs": {
+            "goods_rub": "10000.00",
+            "delivery_rub": "1000.00",
+            "other_rub": "0.00"
+          }
+        },
+        "time": {
+          "manual_active_minutes": "5",
+          "system_active_minutes": "15",
+          "correction_minutes": "5",
+          "retry_minutes": "0",
+          "manual_training_minutes": "0",
+          "system_training_minutes": "10",
+          "manual_wait_minutes": "120",
+          "system_wait_minutes": "90",
+          "model_wait_minutes": "2",
+          "hourly_rate_rub": "600.00"
+        }
+      },
+      "seller": {
+        "time": {
+          "manual_active_minutes": "5",
+          "system_active_minutes": "15",
+          "correction_minutes": "5",
+          "retry_minutes": "0",
+          "manual_training_minutes": "0",
+          "system_training_minutes": "10",
+          "manual_wait_minutes": "120",
+          "system_wait_minutes": "90",
+          "model_wait_minutes": "2",
+          "hourly_rate_rub": "600.00"
+        },
+        "incremental_units": "0",
+        "unit_revenue_rub": "95.00",
+        "unit_cost_rub": "60.00",
+        "new_expenses_rub": "100.00",
+        "payments_rub": null,
+        "tax_comparable": true
+      },
+      "platform": {
+        "gmv_rub": "10700.00",
+        "subscription_income_rub": "0.00",
+        "commission_income_rub": "0.00",
+        "inference_rub": "5.00",
+        "storage_rub": "2.00",
+        "support_rub": "30.00",
+        "document_review_rub": "50.00",
+        "integration_rub": "10.00",
+        "allocated_development_rub": "200.00",
+        "allocated_acquisition_rub": "50.00",
+        "tax_comparable": true
+      },
+      "reserve": {
+        "holding_rub": "100.00",
+        "switching_rub": "200.00",
+        "loss_without_rub": "5000.00",
+        "loss_with_rub": "1000.00",
+        "incident_probability": null,
+        "uncovered_units": "0"
+      }
+    },
+    {
+      "id": "commission",
+      "label": "Сценарная комиссия поставщика включена в его расходы",
+      "outcome": "completed",
+      "buyer": {
+        "baseline": {
+          "scope": {
+            "category_id": "packaging.boxes",
+            "specification": "СИН-ЭКОНОМИКА-1",
+            "quantity": "100",
+            "unit": "шт",
+            "tax_basis": "same_inclusive",
+            "destination": "RU-synthetic-address-1",
+            "deadline": "synthetic-period-1"
+          },
+          "costs": {
+            "goods_rub": "10000.00",
+            "delivery_rub": "1000.00",
+            "other_rub": "0.00"
+          }
+        },
+        "system": {
+          "scope": {
+            "category_id": "packaging.boxes",
+            "specification": "СИН-ЭКОНОМИКА-1",
+            "quantity": "100",
+            "unit": "шт",
+            "tax_basis": "same_inclusive",
+            "destination": "RU-synthetic-address-1",
+            "deadline": "synthetic-period-1"
+          },
+          "costs": {
+            "goods_rub": "9500.00",
+            "delivery_rub": "1000.00",
+            "other_rub": "200.00"
+          }
+        },
+        "time": {
+          "manual_active_minutes": "60",
+          "system_active_minutes": "15",
+          "correction_minutes": "5",
+          "retry_minutes": "0",
+          "manual_training_minutes": "0",
+          "system_training_minutes": "10",
+          "manual_wait_minutes": "120",
+          "system_wait_minutes": "90",
+          "model_wait_minutes": "2",
+          "hourly_rate_rub": "600.00"
+        }
+      },
+      "seller": {
+        "time": {
+          "manual_active_minutes": "60",
+          "system_active_minutes": "15",
+          "correction_minutes": "5",
+          "retry_minutes": "0",
+          "manual_training_minutes": "0",
+          "system_training_minutes": "10",
+          "manual_wait_minutes": "120",
+          "system_wait_minutes": "90",
+          "model_wait_minutes": "2",
+          "hourly_rate_rub": "600.00"
+        },
+        "incremental_units": "20",
+        "unit_revenue_rub": "95.00",
+        "unit_cost_rub": "60.00",
+        "new_expenses_rub": "250.00",
+        "payments_rub": null,
+        "tax_comparable": true
+      },
+      "platform": {
+        "gmv_rub": "10700.00",
+        "subscription_income_rub": "0.00",
+        "commission_income_rub": "150.00",
+        "inference_rub": "5.00",
+        "storage_rub": "2.00",
+        "support_rub": "30.00",
+        "document_review_rub": "50.00",
+        "integration_rub": "10.00",
+        "allocated_development_rub": "200.00",
+        "allocated_acquisition_rub": "50.00",
+        "tax_comparable": true
+      },
+      "reserve": {
+        "holding_rub": "100.00",
+        "switching_rub": "200.00",
+        "loss_without_rub": "5000.00",
+        "loss_with_rub": "1000.00",
+        "incident_probability": null,
+        "uncovered_units": "0"
+      }
+    }
+  ]
+}

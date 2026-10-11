@@ -48,6 +48,14 @@ jobs:
         run: |
           python3 -m unittest discover -s scripts -p 'test_*.py'
           python3 scripts/acceptance-report.py > "$RUNNER_TEMP/acceptance-unverified.json"
+          python3 scripts/business_analysis.py --markdown > "$RUNNER_TEMP/stage-16-scenarios.md"
+          diff -u docs/analysis/stage-16-scenarios.md "$RUNNER_TEMP/stage-16-scenarios.md"
+      - name: Subject profiles and guards for all catalogue leaves
+        working-directory: services/marketplace
+        run: >-
+          "$RUNNER_TEMP/venv-marketplace/bin/python" -m unittest
+          unit.test_category_registry unit.test_category_admission_registry
+          unit.test_category_characteristics unit.test_category_stage_acceptance
       - name: Verify migrations (gateway-auth)
         working-directory: services/gateway-auth
         env:
