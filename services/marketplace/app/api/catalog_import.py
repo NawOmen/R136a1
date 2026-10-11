@@ -183,10 +183,11 @@ async def match_rows(db: AsyncSession, company_id: uuid.UUID, rows: list[dict]) 
 @router.post("/companies/{company_id}/catalog-import")
 async def import_catalog(company_id: uuid.UUID, file: UploadFile = File(...),
     commit: bool = Form(False), expected_hash: str | None = Form(None), request_key: uuid.UUID | None = Form(None),
-    expected_revisions: str | None = Form(None),
+    expected_revisions: str | None = Form(None), source_system: str | None = Form(None),
     human_approved: bool = Form(False), user: CurrentUser = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
     await require_company_seller(company_id, user, db)
     await require_company_admin(company_id, user, db)
+    source_system = (source_system or "").strip()[:64] or None
     content = await file.read(MAX_BYTES + 1)
     if len(content) > MAX_BYTES:
         raise HTTPException(413, "Размер таблицы не должен превышать 2 МБ")
@@ -197,7 +198,8 @@ async def import_catalog(company_id: uuid.UUID, file: UploadFile = File(...),
         raise HTTPException(422, "Не удалось прочитать заголовок CSV") from exc
     if not commit:
         matched = await match_rows(db, company_id, rows)
-        return {"content_hash": digest, "rows": matched, "errors": errors, "created_ids": [], "updated_ids": []}
+        return {"content_hash": digest, "rows": matched, "errors": errors, "created_ids": [], "updated_ids": [],
+                "source_system": source_system}
     if not human_approved or not request_key or expected_hash != digest:
         raise HTTPException(428, "Подтвердите предпросмотр именно этой версии файла")
     if errors:
@@ -211,7 +213,8 @@ async def import_catalog(company_id: uuid.UUID, file: UploadFile = File(...),
             raise HTTPException(409, "Этот запрос уже использован для другого файла")
         matched = await match_rows(db, company_id, rows)
         return {"content_hash": digest, "rows": matched, "errors": [], "created_ids": previous.product_ids,
-                "updated_ids": previous.updated_ids or [], "import_id": str(previous.id)}
+                "updated_ids": previous.updated_ids or [], "import_id": str(previous.id),
+                "source_system": source_system}
     try:
         revisions = json.loads(expected_revisions) if expected_revisions else {}
         if not isinstance(revisions, dict):
@@ -285,10 +288,10 @@ async def import_catalog(company_id: uuid.UUID, file: UploadFile = File(...),
     await db.flush()
     await record_human_approval(db, action="catalog_import", entity_type="company", entity_id=company_id,
         actor_user_id=user.id, actor_company_id=company_id, permission="company_admin+seller", decision="approved",
-        payload={"content_hash": digest, "count": len(ids), "updated": updated}, explanation="Продавец подтвердил предпросмотр импорта каталога")
+        payload={"content_hash": digest, "count": len(ids), "updated": updated, "source_system": source_system}, explanation="Продавец подтвердил предпросмотр импорта каталога")
     await db.commit()
     return {"content_hash": digest, "rows": matched, "errors": [], "created_ids": ids,
-            "updated_ids": updated, "import_id": str(record.id)}
+            "updated_ids": updated, "import_id": str(record.id), "source_system": source_system}
 
 
 @router.post("/companies/{company_id}/catalog-imports/{import_id}/rollback")
