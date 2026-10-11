@@ -124,25 +124,28 @@ async def require_company_admission(
 ) -> CategoryAdmissionOut:
     """Проверить допуск компании к обязательству и остановить его при пробелах."""
     from .category_registry import resolve_category
+    from .denials import BusinessDenied
+    def denied(status_code, detail):
+        return BusinessDenied(status_code, detail, company_id=company_id, entity_type="product" if check.product_id else "company", entity_id=check.product_id)
     if check.product_id is not None:
         from .category_compatibility import compare_specifications
         from types import SimpleNamespace
         product=await db.get(Product,check.product_id)
         if product is None or product.company_id!=company_id:
-            raise HTTPException(409,"Товар обязательства недоступен продавцу")
+            raise denied(409,"Товар обязательства недоступен продавцу")
         requested=SimpleNamespace(category=check.category,subcategory=check.subcategory,characteristics=check.characteristics,
             category_profile=check.category_profile,volume_units=check.volume_units or check.moq_units)
         compatibility=compare_specifications(product,requested)
-        if not compatibility.matches:raise HTTPException(409,"Товар обязательства не соответствует потребности: "+compatibility.reason)
+        if not compatibility.matches:raise denied(409,"Товар обязательства не соответствует потребности: "+compatibility.reason)
         check=SpecificationCheck(category=product.category,subcategory=product.subcategory,characteristics=product.characteristics,
             moq_units=check.moq_units,label=check.label,product_id=product.id,volume_units=check.volume_units,category_profile=product.category_profile)
     leaf = resolve_category(check.category,check.subcategory)
     if leaf is None:
-        raise HTTPException(409,(context+": " if context else "")+"Выберите известную листовую категорию; исходная классификация не подтверждена")
+        raise denied(409,(context+": " if context else "")+"Выберите известную листовую категорию; исходная классификация не подтверждена")
     if check.product_id is None:
         from .category_profile_snapshot import profile_matches_leaf
         if not profile_matches_leaf(check.category_profile, leaf):
-            raise HTTPException(409, (context + ': ' if context else '') +
+            raise denied(409, (context + ': ' if context else '') +
                                 'Сохранённая версия правил потребности не совпадает с актуальной категорией. '
                                 'Владелец должен сравнить изменения и явно принять правила в черновике')
     admission = await company_admission(
@@ -155,11 +158,11 @@ async def require_company_admission(
     )
     if admission.blocking_open:
         prefix = f"{context}: " if context else ""
-        raise HTTPException(status.HTTP_409_CONFLICT, detail=f"{prefix}{admission.blocking_message}")
+        raise BusinessDenied(status.HTTP_409_CONFLICT, detail=f"{prefix}{admission.blocking_message}", company_id=company_id, entity_id=check.product_id, entity_type="product" if check.product_id else "company")
     from .category_characteristics import validate_profile_values
     errors = validate_profile_values(check.category, check.subcategory, check.characteristics or {}, require_product_fields=True)
     if errors:
-        raise HTTPException(409, (context + ": " if context else "") + "; ".join(errors))
+        raise denied(409, (context + ": " if context else "") + "; ".join(errors))
     if check.product_id is not None:
         from .trust import append_audit_event
         await append_audit_event(db,event_type="product_specification_checked",entity_type="product",entity_id=check.product_id,
@@ -171,7 +174,7 @@ async def require_company_admission(
         from .matching import _passport_matches
         passport = await db.get(CapabilityPassport,company_id)
         if passport is None or not _passport_matches(passport,check.category,check.characteristics,check.subcategory,check.volume_units,category_profile=check.category_profile):
-            raise HTTPException(409,(context+": " if context else "")+"Заполните и подтвердите область возможностей производителя для этой категории, единицы и спецификации")
+            raise denied(409,(context+": " if context else "")+"Заполните и подтвердите область возможностей производителя для этой категории, единицы и спецификации")
         from .trust import append_audit_event
         await append_audit_event(db,event_type="capability_scope_checked",entity_type="company",entity_id=company_id,
             actor_company_id=company_id,payload={"details":deepcopy(passport.details),"category":check.category,

@@ -55,6 +55,9 @@ async def _deal(db_session, *, buyer=None, seller=None, bc=None, seller_name=Non
     deal = Deal(offer_id=offer.id, need_id=need.id, buyer_company_id=bc, seller_company_id=sc,
                 units=units, total_price_rub=Decimal(unit_price) * units,
                 unit_price_rub=Decimal(unit_price), delivery_price_rub=0, status=status)
+    deal.commercial_snapshot = {"need": {"category": category, "characteristics": need.characteristics,
+        "deadline_date": str(need.deadline_date)}, "product": {"name": "Тестовый товар", "characteristics": need.characteristics},
+        "estimate": {"terms": {"tax_basis": "no_vat", "vat_rate_pct": None}, "complete": True, "lines": [], "missing": []}}
     if created_days_ago:
         deal.created_at = datetime.now(timezone.utc) - timedelta(days=created_days_ago)
     db_session.add(deal)
@@ -103,9 +106,11 @@ async def test_average_price_single_unit_and_mixed_units(client, db_session):
     token = make_token(first["seller"])
     seller2_token = make_token(second["seller"])
     r = await client.get(f"/api/v1/companies/{first['sc']}/commercial-analytics?role=seller", headers=_auth(token))
-    assert r.json()["average_prices"] == [{"unit": "шт", "accepted_units": 10, "average_unit_price_rub": 1000.0}]
+    assert r.json()["average_prices"][0]["average_unit_price_rub"] == 1000.0
+    assert r.json()["average_prices"][0]["net_units"] == 10
     r = await client.get(f"/api/v1/companies/{second['sc']}/commercial-analytics?role=seller", headers=_auth(seller2_token))
-    assert r.json()["average_prices"] == [{"unit": "комплект", "accepted_units": 5, "average_unit_price_rub": 2000.0}]
+    assert r.json()["average_prices"][0]["average_unit_price_rub"] == 2000.0
+    assert r.json()["average_prices"][0]["unit"] == "комплект"
 
 
 async def test_rejection_rate_cohort_and_empty(client, db_session):
@@ -150,6 +155,7 @@ async def test_filters_status_counterparty_product_source(client, db_session):
     db_session.add(product)
     await db_session.flush()
     ctx_a["offer"].product_id = product.id
+    ctx_a["deal"].commercial_snapshot = {**ctx_a["deal"].commercial_snapshot, "product": {"name": product.name, "characteristics": {}}}
     await db_session.commit()
     assert (await client.get(base + "&product=табурет", headers=_auth(token))).json()["orders_count"] == 1
     assert (await client.get(base + "&product=диван", headers=_auth(token))).json()["orders_count"] == 0
@@ -286,6 +292,8 @@ async def agents_ledger(db_session):
         "CREATE TABLE IF NOT EXISTS agents.agent_runs (id UUID PRIMARY KEY, revision INTEGER NOT NULL DEFAULT 1, "
         "state TEXT NOT NULL, result JSONB NOT NULL DEFAULT '{}', user_id UUID NOT NULL, company_id UUID)"))
     for ddl in (
+        "ALTER TABLE agents.agent_runs ADD COLUMN IF NOT EXISTS initial_result JSONB",
+        "ALTER TABLE agents.agent_runs ADD COLUMN IF NOT EXISTS human_corrections INTEGER DEFAULT 0",
         "ALTER TABLE agents.agent_runs ADD COLUMN IF NOT EXISTS agent_type VARCHAR(64)",
         "ALTER TABLE agents.agent_runs ADD COLUMN IF NOT EXISTS requested_route VARCHAR(32) DEFAULT 'local'",
         "ALTER TABLE agents.agent_runs ADD COLUMN IF NOT EXISTS used_route VARCHAR(32)",
@@ -342,7 +350,7 @@ async def test_role_quality_gates_scoping_and_versions(client, db_session, agent
         {"rid": run_id})
     await db_session.commit()
     body = (await client.get(f"/api/v1/companies/{bc}/role-quality", headers=_auth(token))).json()
-    assert body["method_version"] == "role-quality-1"
+    assert body["method_version"] == "role-quality-2"
     assert body["min_observations"] == 5
     assert "single_score" not in body and "score" not in body["roles"][0]
     role = [x for x in body["roles"] if x["role"] == "buyer_agent"][0]
@@ -354,11 +362,13 @@ async def test_role_quality_gates_scoping_and_versions(client, db_session, agent
         await _agent_run(db_session, agents_ledger, buyer, bc, "buyer_agent", result)
     body = (await client.get(f"/api/v1/companies/{bc}/role-quality", headers=_auth(token))).json()
     role = [x for x in body["roles"] if x["role"] == "buyer_agent"][0]
-    assert role["status"] == "evaluated"
+    assert role["status"] == "not_evaluated"
+    assert role["expert_verified_runs"] == 0
+    assert role["initial_result_known_runs"] == 0
     assert role["sample"] == 5
-    assert role["completed_share_pct"] == 100.0
-    assert role["critical_completeness_pct"] == 66.7
-    assert role["conflicts_found"] == 5
+    assert role["completed_share_pct"] is None
+    assert role["critical_completeness_pct"] is None
+    assert role["conflicts_found"] == 0  # Mutable legacy result is not original evidence.
     assert role["clarification_runs"] == 1
     assert role["model_versions"] == ["qwen3.5:9b"]
     assert role["prompt_versions"] == ["buyer-extraction-1"]

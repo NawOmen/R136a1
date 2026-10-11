@@ -415,6 +415,7 @@ async def analyze_buyer_request(
                 f"Выполнен возврат к локальной Qwen: {fallback}",
             )
         run.result = result.model_dump(mode="json")
+        run.initial_result = result.model_dump(mode="json")
         run.duration_ms = round((perf_counter() - started_at) * 1000)
         run.output_chars = len(json.dumps(run.result, ensure_ascii=False))
         if used_route in {"local", "local_qwen"}:
@@ -511,6 +512,8 @@ async def clarify_agent_run(
             "impact": next((item.impact for item in result.conflicts if item.key == key), "Уточнение требования покупателем"),
             "value": value, "resolved_by_user_id": str(user.id), "revision": run.revision,
             "resolved_at": now.isoformat()})
+        if prop.value != value:
+            run.human_corrections = (run.human_corrections or 0) + 1
         prop.value = value
         prop.confidence = 1
         prop.status = "confirmed"
@@ -750,6 +753,7 @@ async def explain_seller_match(
     run.state = "completed_with_fallback" if failure else "completed"
     run.error = failure
     run.result = {"eligible": eligible, "reasons": reasons, "explanation": explanation}
+    run.initial_result = dict(run.result)
     if used_route in {"local", "local_qwen"}:
         run.estimated_cost_rub = (Decimal(run.duration_ms)/Decimal(60_000)*settings.local_inference_cost_rub_per_minute).quantize(Decimal("0.0001"),rounding=ROUND_HALF_UP)
         run.cost_basis = "Оценка локального выполнения, не подтверждённый биллинг"

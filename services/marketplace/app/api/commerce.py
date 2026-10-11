@@ -13,7 +13,7 @@ from ..commerce import execution_totals, financials
 from ..database import get_db
 from ..deps import CurrentUser, get_current_user, notify, require_company_admin, require_company_buyer, require_company_seller, require_membership
 from ..matching import order_unit
-from ..models import Deal, DealCheckpoint, DealCostSnapshot, DealExecutionEvent, DeliveryArrangement, HumanApprovalRecord, Need, Offer, ParticipantOrder, ResourceReservation
+from ..models import DealCostVersion, CommercialReportSnapshot, Deal, DealCheckpoint, DealCostSnapshot, DealExecutionEvent, DeliveryArrangement, HumanApprovalRecord, Need, Offer, ParticipantOrder, ResourceReservation
 from ..resources import release, consume
 from ..resilience_execution import lock_execution_need, require_shipment_allowed
 from ..trust import record_human_approval
@@ -45,6 +45,7 @@ class CostsIn(BaseModel):
     tax_basis: Literal["includes_vat", "no_vat", "unknown"] = "unknown"
     note: str = Field(min_length=3, max_length=1000)
     human_approved: Literal[True]
+    effective_from: datetime | None = None
 
 
 class EventOut(BaseModel):
@@ -136,7 +137,8 @@ async def execution(deal_id: uuid.UUID, company_id: uuid.UUID, user: CurrentUser
     result = {"deal_id": deal.id, "status": deal.status, **totals,
               "events": [EventOut.model_validate(e) for e in events], **await shipping_totals(db, deal, events)}
     # Seller costs are private, including cost notes and revisions.
-    if company_id == deal.seller_company_id:
+    membership = await require_membership(company_id, user, db)
+    if company_id == deal.seller_company_id and membership["can_sell"]:
         costs = await db.get(DealCostSnapshot, deal.id)
         result["financials"] = financials(deal, totals, costs)
         result["cost_revision"] = costs.revision if costs else 0
@@ -144,6 +146,11 @@ async def execution(deal_id: uuid.UUID, company_id: uuid.UUID, user: CurrentUser
         result["cost_updated_at"] = costs.updated_at if costs else None
         result["unit_cost_rub"] = costs.unit_cost_rub if costs else None
         result["cost_note"] = costs.note if costs else ""
+        versions = (await db.scalars(select(DealCostVersion).where(DealCostVersion.deal_id == deal.id).order_by(DealCostVersion.revision))).all()
+        result["cost_history"] = [{"revision": c.revision, "unit_cost_rub": c.unit_cost_rub,
+            "attributable_expenses_rub": c.attributable_expenses_rub, "tax_basis": c.tax_basis,
+            "source": c.note, "effective_from": c.effective_from, "recorded_at": c.recorded_at,
+            "legacy_history_unknown": c.legacy_history_unknown} for c in versions]
     else:
         result["financials"] = {key: value for key, value in financials(deal, totals).items()
                                 if key in {"unit_price_rub", "ordered_value_rub", "delivery_price_rub", "net_goods_revenue_rub", "payments_rub"}}
@@ -301,16 +308,29 @@ async def save_costs(deal_id: uuid.UUID, data: CostsIn, user: CurrentUser = Depe
     if data.company_id != deal.seller_company_id:
         raise HTTPException(403, "Себестоимость доступна только продавцу")
     await require_company_admin(data.company_id, user, db)
+    await require_company_seller(data.company_id, user, db)
     costs = await db.get(DealCostSnapshot, deal.id)
     revision = costs.revision if costs else 0
     if data.expected_revision != revision:
         raise HTTPException(409, "Расходы уже изменены. Обновите данные перед сохранением")
+    now = datetime.now(timezone.utc)
+    effective = data.effective_from or now
+    if effective.tzinfo is None or effective > now or effective < deal.created_at:
+        raise HTTPException(422, "Начало действия затрат: дата UTC между созданием сделки и текущим временем")
+    if costs and not await db.get(DealCostVersion, (deal.id, revision)):
+        db.add(DealCostVersion(deal_id=deal.id, revision=revision, unit_cost_rub=costs.unit_cost_rub,
+            attributable_expenses_rub=costs.attributable_expenses_rub, tax_basis=costs.tax_basis,
+            note=costs.note, effective_from=costs.updated_at, recorded_at=costs.updated_at,
+            updated_by_user_id=costs.updated_by_user_id, legacy_history_unknown=True))
     if costs is None:
         costs = DealCostSnapshot(deal_id=deal.id)
         db.add(costs)
     costs.unit_cost_rub, costs.attributable_expenses_rub = data.unit_cost_rub, data.attributable_expenses_rub
     costs.tax_basis = data.tax_basis
     costs.revision, costs.note, costs.updated_by_user_id = revision + 1, data.note, user.id
+    db.add(DealCostVersion(deal_id=deal.id, revision=costs.revision, unit_cost_rub=data.unit_cost_rub,
+        attributable_expenses_rub=data.attributable_expenses_rub, tax_basis=data.tax_basis, note=data.note,
+        effective_from=effective, recorded_at=now, updated_by_user_id=user.id, legacy_history_unknown=False))
     # Public deal audit contains only revision, never seller-private amounts.
     await audit(db, deal, data.company_id, user, "update_cost_snapshot", {"cost_revision": costs.revision})
     await db.commit()
@@ -324,137 +344,7 @@ def _csv_cell(value) -> str:
     return '"' + text_value.replace('"', '""') + '"'
 
 
-async def _commercial_report(db, company_id, role, *, start=None, end=None, category=None,
-                             status=None, counterparty=None, product=None, source="all"):
-    if start and end and start > end:
-        raise HTTPException(422, "Начало периода должно быть не позже окончания")
-    if source not in ("all", "direct", "group"):
-        raise HTTPException(422, "Источник заказа: all, direct или group")
-    built_at = datetime.now(timezone.utc)
-    # Explicit order cohort: period filters creation, execution is current for that cohort.
-    owner = Deal.seller_company_id if role == "seller" else Deal.buyer_company_id
-    query = select(Deal, Need).join(Need, Need.id == Deal.need_id).where(owner == company_id)
-    if start:
-        query = query.where(Deal.created_at >= datetime.combine(start, time.min, tzinfo=timezone.utc))
-    if end:
-        query = query.where(Deal.created_at <= datetime.combine(end, time.max, tzinfo=timezone.utc))
-    if category:
-        query = query.where(Need.category == category)
-    if status:
-        query = query.where(Deal.status == status)
-    pairs = list((await db.execute(query.order_by(Deal.created_at.desc()))).all())
-    if counterparty:
-        wanted = counterparty.strip().lower()
-        other_ids = list({getattr(d, "buyer_company_id" if role == "seller" else "seller_company_id") for d, _ in pairs})
-        names = dict((await db.execute(text(
-            "SELECT id, display_name FROM auth.companies WHERE id = ANY(:ids)"),
-            {"ids": other_ids})).all()) if other_ids else {}
-        pairs = [(d, n) for d, n in pairs
-                 if wanted in (names.get(getattr(d, "buyer_company_id" if role == "seller" else "seller_company_id")) or "").lower()]
-    if product:
-        offer_ids = [d.offer_id for d, _ in pairs]
-        prod_of_offer = {}
-        titles: dict = {}
-        if offer_ids:
-            prod_of_offer = {o.id: o.product_id for o in (await db.scalars(select(Offer).where(Offer.id.in_(offer_ids)))).all()}
-            product_ids = list({pid for pid in prod_of_offer.values() if pid})
-            if product_ids:
-                titles = dict((await db.execute(text(
-                    "SELECT id, name FROM marketplace.products WHERE id = ANY(:ids)"),
-                    {"ids": product_ids})).all())
-        wanted = product.strip().lower()
-        pairs = [(d, n) for d, n in pairs
-                 if wanted in (titles.get(prod_of_offer.get(d.offer_id)) or "").lower()]
-    ids = [deal.id for deal, _ in pairs]
-    all_events = list((await db.scalars(select(DealExecutionEvent).where(DealExecutionEvent.deal_id.in_(ids)))).all()) if ids else []
-    costs_by_id = {c.deal_id: c for c in (await db.scalars(select(DealCostSnapshot).where(DealCostSnapshot.deal_id.in_(ids)))).all()} if ids and role == "seller" else {}
-    by_deal = {}
-    for event in all_events:
-        by_deal.setdefault(event.deal_id, []).append(event)
-    rows = []
-    for deal, need in pairs:
-        totals = execution_totals(deal, by_deal.get(deal.id, []))
-        costs = costs_by_id.get(deal.id)
-        values = financials(deal, totals, costs)
-        if role == "seller":
-            values["cost_tax_basis"] = costs.tax_basis if costs else "unknown"
-        if role == "buyer":
-            values = {key: value for key, value in values.items() if key in {"unit_price_rub", "ordered_value_rub", "delivery_price_rub", "net_goods_revenue_rub", "payments_rub"}}
-        rows.append({"deal_id": deal.id, "category": need.category, "unit": order_unit(need.characteristics), "created_at": deal.created_at, "status": deal.status, **totals, **values})
-    aggregate = {}
-    keys = ("ordered_value_rub", "net_goods_revenue_rub", "cost_of_goods_rub", "gross_profit_rub", "attributable_expenses_rub", "contribution_rub") if role == "seller" else ("ordered_value_rub", "net_goods_revenue_rub")
-    for key in keys:
-        known = [row[key] for row in rows if row[key] is not None]
-        aggregate[key] = sum(known, Decimal(0)) if len(known) == len(rows) else None
-        aggregate[f"{key}_known_orders"] = len(known)
-    # Average price only over comparable executed volume: one line per unit.
-    by_unit: dict = {}
-    for row in rows:
-        if row["accepted_units"] and row["net_goods_revenue_rub"] is not None:
-            slot = by_unit.setdefault(row["unit"], {"value": Decimal(0), "units": 0})
-            slot["value"] += row["net_goods_revenue_rub"]
-            slot["units"] += row["accepted_units"]
-    average_prices = [{"unit": unit, "accepted_units": slot["units"],
-                       "average_unit_price_rub": (slot["value"] / slot["units"]).quantize(Decimal("0.01"))}
-                      for unit, slot in sorted(by_unit.items()) if slot["units"] > 0]
-    # Rejections are separate from execution; never fold them into cancellations.
-    # Cohort: offers created in the period. Known outcomes: rejected + selected;
-    # sent is open, anything else expired without a decision.
-    offer_query = select(Offer).join(Need, Need.id == Offer.need_id).where((Offer.company_id if role == "seller" else Need.company_id) == company_id)
-    if start: offer_query = offer_query.where(Offer.created_at >= datetime.combine(start, time.min, tzinfo=timezone.utc))
-    if end: offer_query = offer_query.where(Offer.created_at <= datetime.combine(end, time.max, tzinfo=timezone.utc))
-    if category: offer_query = offer_query.where(Need.category == category)
-    offers = list((await db.scalars(offer_query)).all())
-    rejected = sum(o.status == "rejected" for o in offers)
-    selected = sum(o.status == "selected" for o in offers)
-    open_offers = sum(o.status == "sent" for o in offers)
-    stale = sum(o.status not in ("rejected", "selected", "sent") for o in offers)
-    known = rejected + selected
-    rejection_rate = {"offers_total": len(offers), "rejected": rejected, "selected": selected,
-                      "open": open_offers, "stale": stale, "known_outcomes": known,
-                      "rate_pct": round(rejected / known * 100, 1) if known else None}
-    monthly_buckets: dict = {}
-    for row in rows:
-        month = row["created_at"].strftime("%Y-%m")
-        slot = monthly_buckets.setdefault(month, {"orders": 0, "value": Decimal(0), "value_known": 0,
-                                                  "units": 0, "unit": row["unit"], "mixed_units": False})
-        slot["orders"] += 1
-        if row["net_goods_revenue_rub"] is not None:
-            slot["value"] += row["net_goods_revenue_rub"]
-            slot["value_known"] += 1
-        if row["unit"] != slot["unit"]:
-            slot["mixed_units"] = True
-        else:
-            slot["units"] += row["accepted_units"] or 0
-    monthly = [{"month": month, "orders_count": slot["orders"],
-                "accepted_value_rub": slot["value"] if slot["value_known"] else None,
-                "accepted_units": None if slot["mixed_units"] else slot["units"],
-                "unit": None if slot["mixed_units"] else slot["unit"]}
-               for month, slot in sorted(monthly_buckets.items())]
-    group_owner = ParticipantOrder.seller_company_id if role == "seller" else ParticipantOrder.buyer_company_id
-    group_query = select(ParticipantOrder, Need).join(Need, Need.id == ParticipantOrder.need_id).where(
-        group_owner == company_id, ParticipantOrder.status != "superseded")
-    if start: group_query = group_query.where(ParticipantOrder.created_at >= datetime.combine(start, time.min, tzinfo=timezone.utc))
-    if end: group_query = group_query.where(ParticipantOrder.created_at <= datetime.combine(end, time.max, tzinfo=timezone.utc))
-    if category: group_query = group_query.where(Need.category == category)
-    group_orders = [{"order_id": item.id, "coalition_id": item.coalition_id, "category": need.category,
-                     "unit": order_unit(need.characteristics), "created_at": item.created_at, "status": item.status, "units": item.units,
-                     "contract_value_rub": Decimal(str(item.total_price_rub)), "payments_rub": None}
-                    for item, need in (await db.execute(group_query.order_by(ParticipantOrder.created_at.desc()))).all()]
-    if source == "direct":
-        group_orders = []
-    if source == "group":
-        rows, average_prices, monthly = [], [], []
-        aggregate = {k: (0 if k.endswith("_known_orders") else None) for k in aggregate}
-    return {"company_id": company_id, "role": role, "period_basis": "order_created_at_utc", "built_at": built_at,
-            "filters": {"start": start.isoformat() if start else None, "end": end.isoformat() if end else None,
-                        "category": category, "status": status, "counterparty": counterparty, "product": product, "source": source},
-            "orders_count": len(rows),
-            "offers_count": len(offers), "rejected_offers_count": rejected, "rejection_rate": rejection_rate,
-            "average_prices": average_prices, "monthly": monthly,
-            "payments_rub": None, "totals": aggregate, "orders": rows,
-            "group_orders_count": len(group_orders), "group_orders": group_orders,
-            "explanation": "Когорта — заказы, созданные в период (даты UTC включительно: начало 00:00, конец 23:59:59); исполнение — текущее состояние этих заказов на момент построения отчёта. Принятый сегодня заказ прошлого периода остаётся в прошлом периоде. Групповые обязательства показаны отдельно: их сумма не включена в выручку до учёта исполнения, групповой заказ не удваивает оборот. Выручка от товаров учитывает приёмку минус подтверждённые возвраты, без доставки. Себестоимость относится на принятое количество; прочие прямые затраты относятся на заказ целиком. Прибыль — на налоговой базе из карточки затрат продавца (unknown — база не подтверждена, сравнение условно); платежи не подключены, чистая прибыль не выводится. Отказы — когорта предложений, созданных в период: известны решения (отклонено/выбрано), открытые и истекшие показаны отдельно; фильтр источника действует на заказы, когорта предложений считается всегда. Количества сравниваются внутри заказа; средние цены — только в одинаковых единицах."}
+from ..analytics import commercial_report as _commercial_report
 
 
 def _report_csv(report: dict) -> str:
@@ -489,6 +379,19 @@ def _report_csv(report: dict) -> str:
     lines.append([f"Период и фильтры: с {filters['start']} по {filters['end']}; категория: {filters['category']}; "
                   f"статус: {filters['status']}; контрагент: {filters['counterparty']}; товар: {filters['product']}; "
                   f"источник: {filters['source']}"] + [None] * (len(header) - 1))
+    import json
+    detail_keys = ["cohort_key", "product_name", "delivery_price_rub", "discount_rub", "charge_lines",
+                   "estimate_complete", "source_refs", "events", "missing"]
+    if role == "seller": detail_keys += ["cost_revision", "cost_effective_from", "cost_source", "cost_tax_basis", "profit_missing_reason", "cost_history"]
+    lines.append(["Детализация", "Заказ", "Поле", "Значение"])
+    for row in report["orders"] + report["group_orders"]:
+        for key in detail_keys:
+            value = row.get(key)
+            lines.append(["Детализация", row.get("deal_id", row.get("order_id")), key,
+                          json.dumps(value, default=str, ensure_ascii=False) if isinstance(value, (dict, list)) else value])
+    for event in report.get("period_events", []):
+        lines.append(["Событие периода", event["deal_id"], event["event_id"], json.dumps(event, default=str, ensure_ascii=False)])
+    lines.append(["Снимок отчёта", report.get("report_id"), "Исторический пересчёт", report.get("historical_recalculated")])
     return "\r\n".join(",".join(_csv_cell(v) for v in row) for row in lines)
 
 
@@ -497,21 +400,52 @@ async def analytics(company_id: uuid.UUID, role: Literal["buyer", "seller"], sta
                     category: str | None = None, status: str | None = None, counterparty: str | None = None,
                     product: str | None = None, source: Literal["all", "direct", "group"] = "all",
                     user: CurrentUser = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
+    # A report spans several tables: freeze one database snapshot for every row.
+    await db.rollback()
+    await db.connection(execution_options={"isolation_level": "REPEATABLE READ"})
     await (require_company_seller if role == "seller" else require_company_buyer)(company_id, user, db)
-    return await _commercial_report(db, company_id, role, start=start, end=end, category=category,
-                                    status=status, counterparty=counterparty, product=product, source=source)
+    import hashlib, json
+    report = await _commercial_report(db, company_id, role, start=start, end=end, category=category,
+                                     status=status, counterparty=counterparty, product=product, source=source)
+    report["report_id"] = str(uuid.uuid4())
+    from ..money import exact_json
+    payload = json.loads(json.dumps(exact_json(report), default=lambda v: v.isoformat() if isinstance(v, (date, datetime)) else str(v), ensure_ascii=False))
+    digest = hashlib.sha256(json.dumps(payload, sort_keys=True).encode()).hexdigest()
+    db.add(CommercialReportSnapshot(id=uuid.UUID(report["report_id"]), user_id=user.id, company_id=company_id,
+        role=role, built_at=report["built_at"], payload=payload, payload_hash=digest))
+    await db.commit()
+    return report
 
 
 @router.get("/companies/{company_id}/commercial-report.csv")
 async def analytics_csv(company_id: uuid.UUID, role: Literal["buyer", "seller"], start: date | None = None, end: date | None = None,
                         category: str | None = None, status: str | None = None, counterparty: str | None = None,
                         product: str | None = None, source: Literal["all", "direct", "group"] = "all",
+                        report_id: uuid.UUID | None = None,
                         user: CurrentUser = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
     """Выгрузка использует те же данные, фильтры и определения, что экран; права проверяются при каждом запросе."""
     from fastapi.responses import PlainTextResponse
+    # A report spans several tables: freeze one database snapshot for every row.
+    await db.rollback()
+    await db.connection(execution_options={"isolation_level": "REPEATABLE READ"})
     await (require_company_seller if role == "seller" else require_company_buyer)(company_id, user, db)
-    report = await _commercial_report(db, company_id, role, start=start, end=end, category=category,
-                                      status=status, counterparty=counterparty, product=product, source=source)
+    if report_id:
+        snapshot = await db.get(CommercialReportSnapshot, report_id)
+        if not snapshot or (snapshot.user_id, snapshot.company_id, snapshot.role) != (user.id, company_id, role):
+            raise HTTPException(404, "Снимок отчёта не найден")
+        expected = {"start": start.isoformat() if start else None, "end": end.isoformat() if end else None,
+                    "category": category or None, "status": status or None, "counterparty": counterparty or None,
+                    "product": product or None, "source": source}
+        if snapshot.payload["filters"] != expected:
+            raise HTTPException(409, "Фильтры не совпадают со снимком отчёта. Обновите экран")
+        import hashlib, json
+        actual_hash = hashlib.sha256(json.dumps(snapshot.payload, sort_keys=True).encode()).hexdigest()
+        if actual_hash != snapshot.payload_hash:
+            raise HTTPException(409, "Снимок отчёта повреждён. Постройте новый отчёт")
+        report = snapshot.payload
+    else:
+        report = await _commercial_report(db, company_id, role, start=start, end=end, category=category,
+                                          status=status, counterparty=counterparty, product=product, source=source)
     stamp = (report["filters"]["start"] or "all") + "_" + (report["filters"]["end"] or "all")
     return PlainTextResponse("\ufeff" + _report_csv(report), media_type="text/csv; charset=utf-8",
                              headers={"Content-Disposition": f"attachment; filename=porukam-{role}-{stamp}.csv"})

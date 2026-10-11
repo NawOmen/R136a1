@@ -25,6 +25,7 @@ async def order(db_session):
     db_session.add(offer); await db_session.flush()
     deal = Deal(offer_id=offer.id, need_id=need.id, buyer_company_id=bc, seller_company_id=sc,
                 units=10, total_price_rub=10000, unit_price_rub=Decimal("1000"), delivery_price_rub=0, status="shipped")
+    deal.commercial_snapshot = {"estimate": {"terms": {"tax_basis": "no_vat"}}}
     db_session.add(deal); await db_session.flush()
     for kind in ("production", "shipment"):
         db_session.add(DealCheckpoint(deal_id=deal.id, kind=kind, status="completed"))
@@ -56,7 +57,7 @@ async def test_control_example_partial_delivery_return_profit_and_privacy(client
     assert request.status_code == 201
     assert (await decision(client, order, request.json()["id"])).status_code == 200
     cost = await client.put(f"/api/v1/deals/{deal}/costs", headers=sh, json={"company_id": str(seller), "expected_revision": 0,
-        "unit_cost_rub": "600.00", "attributable_expenses_rub": "200.00", "note": "Учётные затраты продавца", "human_approved": True})
+        "unit_cost_rub": "600.00", "attributable_expenses_rub": "200.00", "tax_basis": "no_vat", "note": "Учётные затраты продавца", "human_approved": True})
     assert cost.status_code == 200, cost.text
     report = (await client.get(f"/api/v1/companies/{seller}/commercial-analytics?role=seller", headers=sh)).json()
     row = report["orders"][0]

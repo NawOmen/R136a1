@@ -672,12 +672,14 @@ export interface AgentScorecard {
   offer_drafts_total: number;
   offer_drafts_used: number;
   offer_draft_conversion_pct: number | null;
-  average_changed_fields: number;
+  average_changed_fields: number | null;
+  offer_drafts_excluded: number; offer_drafts_open: number; agent_timed_runs: number;
   offers_total: number;
   offers_from_drafts: number;
   offer_rejections: number;
   deals_total: number;
   deals_from_drafts: number;
+  selected_origin_offers:number; open_origin_offers:number; rejected_origin_offers:number; expired_origin_offers:number;
   recommendations_total: number;
   recommendations_converted: number;
   recommendation_conversion_pct: number | null;
@@ -693,8 +695,8 @@ export interface AgentScorecard {
   agent_runs_rules_route: number;
   agent_runs_unknown_route: number;
   agent_costed_runs: number;
-  agent_average_duration_ms: number;
-  agent_estimated_cost_rub: Money;
+  agent_average_duration_ms: number | null;
+  agent_estimated_cost_rub: Money | null;
   agent_model_versions: string[];
   agent_prompt_versions: string[];
   llm_metrics_available: boolean;
@@ -706,8 +708,11 @@ export interface RoleQualityRole {
   completed_runs: number; completed_share_pct: number | null;
   critical_fields_total: number; critical_fields_confirmed: number; critical_completeness_pct: number | null;
   conflicts_found: number; clarification_runs: number; human_corrections: number; blocked_actions: number;
-  average_duration_ms: number | null; known_cost_rub: number | null; costed_share_pct: number | null;
+  average_duration_ms: number | null; known_cost_rub: Money | null; costed_share_pct: number | null;
   model_versions: string[]; prompt_versions: string[];
+  cohort_key: string; task_scope: string; expert_verified_runs: number; initial_result_known_runs: number;
+  critical_correctness_pct: number | null; critical_fields_correct: number; open_runs: number; failed_runs: number;
+  fallback_runs: number; timed_runs: number; corrections_known_runs: number;
 }
 
 export interface RoleQuality {
@@ -986,6 +991,7 @@ export interface ExecutionTotals {
 export interface CommercialValues {
   unit_price_rub: Money | null; ordered_value_rub: Money; delivery_price_rub: Money | null;
   net_goods_revenue_rub: Money | null; payments_rub: Money | null;
+  profit_missing_reason?: string | null; profit_tax_basis?: string; comparable_revenue_rub?: Money | null;
   cost_of_goods_rub?: Money | null; gross_profit_rub?: Money | null;
   attributable_expenses_rub?: Money | null; contribution_rub?: Money | null;
 }
@@ -993,25 +999,32 @@ export interface DealExecution extends ExecutionTotals {
   deal_id: string; status: string; events: ExecutionEvent[]; financials: CommercialValues;
   cost_revision?: number; unit_cost_rub?: Money | null; cost_note?: string; cost_tax_basis?: string;
   cost_updated_at?: string | null;
+  cost_history?: {revision:number;unit_cost_rub:Money|null;attributable_expenses_rub:Money|null;tax_basis:string;source:string;effective_from:string;recorded_at:string;legacy_history_unknown:boolean}[];
 }
 export interface CommercialOrder extends ExecutionTotals, CommercialValues {
   deal_id: string; category: string; unit: string; created_at: string; status: string; cost_tax_basis?: string;
+  product_name: string|null; discount_rub: Money|null; charge_lines: {code:string;title:string;amount_rub:Money|null;source:unknown}[];
+  estimate_complete: boolean; missing:string[]; cost_revision?:number|null;cost_effective_from?:string|null;cost_source?:string|null;
+  profit_missing_reason?:string|null; cost_history?:{revision:number;unit_cost_rub:Money|null;tax_basis:string;source:string;effective_from:string;legacy_history_unknown:boolean}[];
 }
 export interface RejectionRate {
   offers_total: number; rejected: number; selected: number; open: number; stale: number;
   known_outcomes: number; rate_pct: number | null;
 }
-export interface AveragePrice { unit: string; accepted_units: number; average_unit_price_rub: Money }
+export interface AveragePrice { cohort_key: string; product_name: string | null; net_units: number; unit: string; accepted_units: number; average_unit_price_rub: Money }
 export interface MonthlyPoint {
   month: string; orders_count: number; accepted_value_rub: Money | null;
-  accepted_units: number | null; unit: string | null;
+  accepted_units: number | null; unit: string | null; value_known_orders: number;
 }
 export interface CommercialReport {
   company_id: string; role: "buyer" | "seller"; period_basis: string; built_at: string;
+  report_id: string; historical_recalculated: boolean;
+  period_events: {event_id:string;deal_id:string;kind:string;status:string;units:number;unit:string;occurred_at:string;goods_value_rub:Money|null;source_acceptances:{acceptance_event_id:string|null;units:number}[]}[];
+  reliability: {status:string;known_outcomes:number;orders:number;on_time_share_pct:number|null;outcomes:Record<string,number>};
   filters: { start: string | null; end: string | null; category: string | null; status: string | null; counterparty: string | null; product: string | null; source: string };
   orders_count: number; offers_count: number; rejected_offers_count: number; rejection_rate: RejectionRate;
   average_prices: AveragePrice[]; monthly: MonthlyPoint[];
-  payments_rub: null; totals: Record<string, number | null>; orders: CommercialOrder[]; explanation: string;
+  payments_rub: null; totals: Record<string, Money | number | null>; orders: CommercialOrder[]; explanation: string;
   group_orders_count: number;
   group_orders: { order_id: string; coalition_id: string; category: string; unit: string; created_at: string; status: string; units: number; contract_value_rub: Money; payments_rub: null }[];
 }
@@ -1080,8 +1093,9 @@ export const marketplace = {
     Object.entries(filters).forEach(([key, value]) => { if (value) params.set(key, value); });
     return marketplaceFetch(`/api/v1/companies/${companyId}/commercial-analytics?${params}`, { token });
   },
-  downloadCommercialCsv(token: string, companyId: string, role: "buyer" | "seller", filters: { start?: string; end?: string; category?: string; status?: string; counterparty?: string; product?: string; source?: string } = {}): Promise<Blob> {
+  downloadCommercialCsv(token: string, companyId: string, role: "buyer" | "seller", filters: { start?: string; end?: string; category?: string; status?: string; counterparty?: string; product?: string; source?: string } = {}, reportId?: string): Promise<Blob> {
     const params = new URLSearchParams({ role });
+    if (reportId) params.set("report_id", reportId);
     Object.entries(filters).forEach(([key, value]) => { if (value) params.set(key, value); });
     return marketplaceFetchBlob(`/api/v1/companies/${companyId}/commercial-report.csv?${params}`, token);
   },
@@ -1482,6 +1496,12 @@ export const marketplace = {
     return marketplaceFetch("/api/v1/platform/agent-scorecard", { token });
   },
 
+  getQualityEvidence(token: string, companyId: string): Promise<{company_id:string;bank_tasks:{id:string;input_text:string;critical_fields:Record<string,unknown>;expected_category:string}[];runs:{run_id:string;role:string;state:string;initial_result:unknown}[]}> {
+    return marketplaceFetch(`/api/v3/companies/${companyId}/quality-evidence`, {token});
+  },
+  saveQualityEvidence(token: string, companyId: string, data: {run_id:string;task_scope:string;source:string;bank_task_id?:string;bank_applicability_confirmed:boolean;critical_fields:Record<string,unknown>;expected_category?:string;human_approved:true}): Promise<{assessment:{total:number;correct:number;present:number}}> {
+    return marketplaceFetch(`/api/v3/companies/${companyId}/quality-evidence`, {token,method:"POST",body:JSON.stringify(data)});
+  },
   getRoleQuality(token: string, companyId: string): Promise<RoleQuality> {
     return marketplaceFetch(`/api/v1/companies/${companyId}/role-quality`, { token });
   },

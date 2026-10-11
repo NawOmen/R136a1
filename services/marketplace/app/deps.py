@@ -106,7 +106,8 @@ async def require_company_seller(company_id: uuid.UUID, user: CurrentUser, db: A
 async def require_company_admin(company_id: uuid.UUID, user: CurrentUser, db: AsyncSession) -> dict:
     membership = await require_membership(company_id, user, db)
     if not membership["is_admin"]:
-        raise HTTPException(status.HTTP_403_FORBIDDEN, detail="Требуются права администратора компании")
+        from .denials import BusinessDenied
+        raise BusinessDenied(status.HTTP_403_FORBIDDEN, detail="Требуются права администратора компании", company_id=company_id, reason_code="company_admin_required", role="human_approval_guard")
     return membership
 
 

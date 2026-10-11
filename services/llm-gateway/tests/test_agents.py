@@ -237,7 +237,7 @@ async def test_english_cup_category_from_local_model_is_normalized(
 
 
 @pytest.mark.asyncio
-async def test_conflict_can_be_resolved_by_user(client, token, fake_provider):
+async def test_conflict_can_be_resolved_by_user(client, token, fake_provider, db_session):
     fake_provider.extraction = RawExtraction(
         category="бумажные стаканы",
         facts=[
@@ -269,6 +269,12 @@ async def test_conflict_can_be_resolved_by_user(client, token, fake_provider):
     assert clarified.status_code == 200
     assert clarified.json()["state"] == "ready_for_review"
     assert clarified.json()["result"]["can_confirm"] is True
+    from app.models import AgentRun
+    import uuid
+    run = await db_session.get(AgentRun, uuid.UUID(run_id))
+    assert run.initial_result == created.json()["result"]
+    assert run.initial_result["conflicts"] and not run.result["conflicts"]
+    assert run.human_corrections == 1
 
 
 @pytest.mark.asyncio

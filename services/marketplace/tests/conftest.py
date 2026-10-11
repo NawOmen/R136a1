@@ -37,6 +37,7 @@ AUTH_DDL_STATEMENTS = [
 
 TRUNCATE = """
 TRUNCATE
+  marketplace.commercial_report_snapshots, marketplace.agent_quality_evaluations, marketplace.business_denial_events,
   auth.company_members, auth.companies, auth.users,
   marketplace.category_registry_revisions, marketplace.market_watches, marketplace.product_price_observations,
   marketplace.deal_reviews, marketplace.delivery_arrangements, marketplace.deal_checkpoints,

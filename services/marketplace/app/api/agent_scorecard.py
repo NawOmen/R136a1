@@ -6,7 +6,7 @@
 """
 
 from __future__ import annotations
-from ..money import amount
+from ..money import decimal
 
 import uuid
 from datetime import datetime, timedelta, timezone
@@ -25,24 +25,21 @@ from ..deps import (
 from fastapi import HTTPException, status
 from ..models import (
     Deal,
+    BusinessDenialEvent,
+    ResilienceEvent,
     GroupOffer,
     HumanApprovalRecord,
     MarketOpportunity,
     Offer,
     OfferDraft,
     TrustAuditEvent,
+    Need,
 )
-from ..schemas import AgentScorecardOut, RoleQualityBenchmarkOut, RoleQualityOut, RoleQualityRoleOut
+from ..schemas import AgentScorecardOut, RoleQualityOut
 
 router = APIRouter(tags=["agent-scorecard"])
 
 WINDOW_DAYS_DEFAULT = 30
-ROLE_QUALITY_METHOD_VERSION = "role-quality-1"
-ROLE_QUALITY_MIN_OBSERVATIONS = 5
-ROLE_PASSPORTS = {
-    "buyer_agent": "buyer_investigation/buyer (паспорт ролей S04)",
-    "seller_agent": "seller (паспорт ролей S04)",
-}
 
 
 def _percent(part: int, total: int) -> float | None:
@@ -71,8 +68,8 @@ async def _llm_metrics(db: AsyncSession, since: datetime, company_id: uuid.UUID 
         "count(*) FILTER (WHERE used_route IS NULL OR used_route NOT IN "
         "('local', 'local_qwen', 'external', 'external_deepseek', 'local_qwen+external_deepseek', 'rules_only')) AS unknown_route, "
         "count(estimated_cost_rub) AS costed, "
-        "coalesce(avg(duration_ms), 0) AS avg_duration, "
-        "coalesce(sum(estimated_cost_rub), 0) AS cost, "
+        "avg(duration_ms) AS avg_duration, count(duration_ms) AS timed, "
+        "sum(estimated_cost_rub) AS cost, "
         "coalesce(array_agg(DISTINCT model_version) FILTER (WHERE model_version IS NOT NULL), '{}') AS models, "
         "coalesce(array_agg(DISTINCT prompt_version) FILTER (WHERE prompt_version IS NOT NULL), '{}') AS prompts "
         "FROM agents.agent_runs WHERE created_at >= :since "
@@ -91,42 +88,63 @@ async def scorecard(db: AsyncSession, *, scope: str, company_id: uuid.UUID | Non
     opportunity_query = select(MarketOpportunity).where(MarketOpportunity.created_at >= since)
     approval_query = select(HumanApprovalRecord).where(HumanApprovalRecord.created_at >= since)
     audit_query = select(TrustAuditEvent).where(TrustAuditEvent.created_at >= since)
-    group_offer_query = select(GroupOffer).where(GroupOffer.created_at >= since)
     if company_id is not None:
         draft_query = draft_query.where(OfferDraft.company_id == company_id)
-        offer_query = offer_query.where(Offer.company_id == company_id)
+        offer_query = offer_query.join(Need,Need.id==Offer.need_id).where(or_(Offer.company_id == company_id,Need.company_id == company_id))
         deal_query = deal_query.where(
             or_(Deal.seller_company_id == company_id, Deal.buyer_company_id == company_id)
         )
         opportunity_query = opportunity_query.where(MarketOpportunity.company_id == company_id)
         approval_query = approval_query.where(HumanApprovalRecord.actor_company_id == company_id)
         audit_query = audit_query.where(TrustAuditEvent.actor_company_id == company_id)
-        group_offer_query = group_offer_query.where(GroupOffer.company_id == company_id)
 
     drafts = list((await db.execute(draft_query)).scalars().all())
-    used_drafts = [item for item in drafts if item.status == "used"]
+    all_drafts = drafts
+    eligible = []
+    from ..models import Product
+    for item in drafts:
+        if item.status == "used" and item.used_offer_id:
+            eligible.append(item)
+        elif item.status == "draft" and not (item.missing or []):
+            need = await db.get(Need,item.need_id)
+            if not need or need.status != 'open_for_offers' or item.payload.get('need_revision') != need.revision:
+                continue
+            pid = item.payload.get('product_id')
+            if pid:
+                product = await db.get(Product,uuid.UUID(str(pid)))
+                if not product or item.payload.get('source_updated_at') != product.updated_at.isoformat():
+                    continue
+            eligible.append(item)
+    drafts = eligible
+    used_drafts = [item for item in drafts if item.status == "used" and item.used_offer_id]
+    # Follow outcomes of this draft cohort even when the linked rows were created outside the window.
+    origin_ids = {item.used_offer_id for item in used_drafts}
+    linked_deals = list((await db.scalars(select(Deal).where(Deal.offer_id.in_(origin_ids)))).all()) if origin_ids else []
     changed_counts = [len(item.changed_fields or []) for item in used_drafts]
     offers = list((await db.execute(offer_query)).scalars().all())
+    origin_offers = list((await db.scalars(select(Offer).where(Offer.id.in_(origin_ids)))).all()) if origin_ids else []
     rejected_offers = [item for item in offers if item.status == "rejected"]
-    used_offer_ids = {item.used_offer_id for item in used_drafts if item.used_offer_id}
     deals = list((await db.execute(deal_query)).scalars().all())
-    deals_from_drafts = [item for item in deals if item.offer_id in used_offer_ids]
+    deals_from_drafts = linked_deals
     opportunities = list((await db.execute(opportunity_query)).scalars().all())
+    group_offer_query = select(GroupOffer).where(GroupOffer.opportunity_id.in_(select(MarketOpportunity.id).where(MarketOpportunity.created_at>=since)))
+    if company_id is not None: group_offer_query=group_offer_query.where(GroupOffer.company_id==company_id)
     group_offers = list((await db.execute(group_offer_query)).scalars().all())
     approvals = len((await db.execute(approval_query)).scalars().all())
     audit_events = list((await db.execute(audit_query)).scalars().all())
-    blocked = [
-        item
-        for item in audit_events
-        if "blocked" in item.event_type or "blocked" in (item.explanation or "").lower()
-    ]
-    admission_checks = [
-        item
-        for item in audit_events
-        if item.event_type in {"product_published_with_admission", "offer_draft_generated"}
-        or item.event_type.startswith("document_")
-    ]
-    admission_blocked = [item for item in blocked if "admission" in item.event_type or "допуск" in (item.explanation or "").lower()]
+    denial_query = select(BusinessDenialEvent).where(BusinessDenialEvent.created_at >= since)
+    resilience_query = select(ResilienceEvent).where(ResilienceEvent.created_at >= since,
+        ResilienceEvent.event_type == 'automatic_replacement_blocked')
+    if company_id is not None:
+        denial_query = denial_query.where(BusinessDenialEvent.company_id == company_id)
+        # Resilience evidence is scoped by its plan, not by inferred role.
+        from ..models import ResiliencePlan
+        resilience_query = resilience_query.join(ResiliencePlan, ResiliencePlan.id == ResilienceEvent.plan_id).join(Need, Need.id == ResiliencePlan.need_id).where(Need.company_id == company_id)
+    blocked = list((await db.scalars(denial_query)).all())
+    resilience_blocked = list((await db.scalars(resilience_query)).all())
+    admission_checks = [item for item in audit_events if item.event_type in {'product_published_with_admission','product_specification_checked'}]
+    admission_blocked = [item for item in blocked if item.role == 'supplier_admission']
+    notes.append('Блокировки допуска и проверки предложения — типизированные события; повтор одинакового отклонённого запроса не увеличивает счётчик. Старые незаписанные отказы неизвестны.')
 
     opportunity_ids = {item.id for item in opportunities}
     converted_recommendations = {
@@ -155,17 +173,26 @@ async def scorecard(db: AsyncSession, *, scope: str, company_id: uuid.UUID | Non
         offer_drafts_total=len(drafts),
         offer_drafts_used=len(used_drafts),
         offer_draft_conversion_pct=_percent(len(used_drafts), len(drafts)),
-        average_changed_fields=round(sum(changed_counts) / len(changed_counts), 2) if changed_counts else 0.0,
+        average_changed_fields=round(sum(changed_counts) / len(changed_counts), 2) if changed_counts else None,
+        offer_drafts_excluded=len(all_drafts) - len(drafts),
+        offer_drafts_open=len(drafts)-len(used_drafts),
+        agent_timed_runs=llm.get("timed", 0),
         offers_total=len(offers),
-        offers_from_drafts=len([item for item in offers if item.id in used_offer_ids]),
+        offers_from_drafts=len(origin_offers),
         offer_rejections=len(rejected_offers),
         deals_total=len(deals),
         deals_from_drafts=len(deals_from_drafts),
+        selected_origin_offers=len({d.offer_id for d in linked_deals}),
+        open_origin_offers=sum(o.status=='sent' and (o.valid_until is None or o.valid_until>=datetime.now(timezone.utc).date()) for o in origin_offers),
+        rejected_origin_offers=sum(o.status=='rejected' for o in origin_offers),
+        expired_origin_offers=sum(o.status not in {'selected','rejected'} and (o.status!='sent' or (o.valid_until is not None and o.valid_until<datetime.now(timezone.utc).date())) for o in origin_offers),
         recommendations_total=recommendations_total,
         recommendations_converted=len(converted_recommendations),
         recommendation_conversion_pct=_percent(len(converted_recommendations), recommendations_total),
         human_approvals=approvals,
-        blocked_actions=len(blocked),
+        blocked_actions=len(blocked)+len(resilience_blocked),
+        business_denials_by_role={role:sum(e.role==role for e in blocked) for role in {e.role for e in blocked}},
+        resilience_blocked=len(resilience_blocked),
         admission_checks=len(admission_checks),
         admission_blocked=len(admission_blocked),
         agent_runs_total=llm.get("total", 0),
@@ -178,8 +205,8 @@ async def scorecard(db: AsyncSession, *, scope: str, company_id: uuid.UUID | Non
         agent_costed_runs=llm.get("costed", 0),
         agent_model_versions=sorted(llm.get("models", []) or []),
         agent_prompt_versions=sorted(llm.get("prompts", []) or []),
-        agent_average_duration_ms=round(llm.get("avg_duration", 0.0), 1),
-        agent_estimated_cost_rub=amount(llm.get("cost", 0)),
+        agent_average_duration_ms=round(llm["avg_duration"], 1) if llm.get("avg_duration") is not None else None,
+        agent_estimated_cost_rub=decimal(llm["cost"]) if llm.get("cost") is not None else None,
         llm_metrics_available=bool(llm["available"]),
         notes=notes,
     )
@@ -214,135 +241,7 @@ async def platform_agent_scorecard(
     return await scorecard(db, scope="platform", company_id=None, window_days=window_days)
 
 
-def _bank_info() -> RoleQualityBenchmarkOut:
-    """Эталон методики: банк русскоязычных задач с критичными полями.
-
-    Автоматического сопоставления прогонов с задачами банка в рантайме нет:
-    входная сводка прогона не содержит полного текста для надёжного matching,
-    поэтому методика опирается на телеметрию, а банк — на периодические
-    точечные проверки по docs/analytics/role-quality-method.md.
-    """
-    import json
-    import pathlib
-
-    compares = ["expected_category", "critical_fields"]
-    for base in (pathlib.Path.cwd(), pathlib.Path.cwd().parent, pathlib.Path("/app"), pathlib.Path("/repo")):
-        bank = base / "packages" / "test-fixtures" / "agent-task-bank" / "ru_tasks.json"
-        try:
-            tasks = json.loads(bank.read_text(encoding="utf-8"))
-            count = len(tasks.get("tasks", tasks)) if isinstance(tasks, dict) else len(tasks)
-            return RoleQualityBenchmarkOut(tasks=count, compares=compares, available=True)
-        except (OSError, ValueError):
-            continue
-    return RoleQualityBenchmarkOut(compares=compares, available=False)
-
-
-async def _runs_available(db: AsyncSession) -> bool:
-    available = await db.scalar(text("SELECT to_regclass('agents.agent_runs') IS NOT NULL"))
-    if not available:
-        return False
-    return bool(await db.scalar(text(
-        "SELECT EXISTS (SELECT 1 FROM information_schema.columns "
-        "WHERE table_schema='agents' AND table_name='agent_runs' AND column_name='company_id')"
-    )))
-
-
-async def role_quality(db: AsyncSession, *, scope: str, company_id: uuid.UUID | None, window_days: int) -> RoleQualityOut:
-    since = datetime.now(timezone.utc) - timedelta(days=window_days)
-    notes = [
-        "Человеко-время напрямую не измеряется: прокси — число подтверждений человека и исправлений; это неполная мера, а не учёт часов.",
-        "Кодовые роли (подбор, коалиции, устойчивость) оцениваются конверсиями scorecard и проверками допуска, а не этой методикой: сравниваются только сопоставимые модельные роли.",
-        "Нарушение полномочий измеряется счётчиком заблокированных действий журнала; у модельных ролей нет инструментов записи, блокировка — это отклонённый вызов.",
-        "Доля успешных сценариев: прогон без сбоя и без ошибки. Итоговый балл не вводится: аспекты не компенсируют друг друга.",
-    ]
-    if not await _runs_available(db):
-        notes.append("Журнал прогонов LLM Gateway недоступен: роли не оценены.")
-        return RoleQualityOut(scope=scope, window_days=window_days, method_version=ROLE_QUALITY_METHOD_VERSION,
-                              min_observations=ROLE_QUALITY_MIN_OBSERVATIONS, benchmark=_bank_info(), roles=[], notes=notes)
-    params: dict = {"since": since, "company_id": company_id}
-    if company_id is not None:
-        runs_query = text(
-            "SELECT id, agent_type, state, error, duration_ms, estimated_cost_rub, model_version, prompt_version, "
-            "COALESCE(result, '{}') AS result FROM agents.agent_runs WHERE created_at >= :since "
-            "AND company_id = CAST(:company_id AS uuid)")
-    else:
-        runs_query = text(
-            "SELECT id, agent_type, state, error, duration_ms, estimated_cost_rub, model_version, prompt_version, "
-            "COALESCE(result, '{}') AS result FROM agents.agent_runs WHERE created_at >= :since")
-    rows = (await db.execute(runs_query, params)).mappings().all()
-    clarified = set((await db.execute(text(
-        "SELECT DISTINCT run_id FROM agents.tool_calls WHERE tool_name = 'apply_user_clarification' AND status = 'success'"
-    ))).scalars().all()) if await db.scalar(text("SELECT to_regclass('agents.tool_calls') IS NOT NULL")) else set()
-    if company_id is not None:
-        blocked_query = text(
-            "SELECT COUNT(*) FROM marketplace.trust_audit_events WHERE created_at >= :since "
-            "AND actor_company_id = CAST(:company_id AS uuid) "
-            "AND (event_type LIKE '%blocked%' OR explanation ILIKE '%заблокировано%')")
-    else:
-        blocked_query = text(
-            "SELECT COUNT(*) FROM marketplace.trust_audit_events WHERE created_at >= :since "
-            "AND (event_type LIKE '%blocked%' OR explanation ILIKE '%заблокировано%')")
-    blocked = await db.scalar(blocked_query, params) or 0
-    corrections = 0
-    if company_id is not None:
-        corrections_query = text(
-            "SELECT COALESCE(SUM(CASE WHEN jsonb_typeof(changed_fields) = 'array' "
-            "THEN jsonb_array_length(changed_fields) ELSE 0 END), 0) FROM marketplace.offer_drafts "
-            "WHERE company_id = CAST(:company_id AS uuid) AND status = 'used' AND created_at >= :since")
-    else:
-        corrections_query = text(
-            "SELECT COALESCE(SUM(CASE WHEN jsonb_typeof(changed_fields) = 'array' "
-            "THEN jsonb_array_length(changed_fields) ELSE 0 END), 0) FROM marketplace.offer_drafts "
-            "WHERE status = 'used' AND created_at >= :since")
-    corrections = await db.scalar(corrections_query, params) or 0
-    by_role: dict[str, list] = {}
-    for row in rows:
-        by_role.setdefault(row["agent_type"], []).append(row)
-    roles = []
-    for agent_type in sorted(by_role):
-        sample = by_role[agent_type]
-        evaluated = len(sample) >= ROLE_QUALITY_MIN_OBSERVATIONS
-        completed = [r for r in sample if r["state"] != "failed" and r["error"] is None]
-        props_total = props_confirmed = conflicts = 0
-        for r in sample:
-            result = r["result"] or {}
-            if not isinstance(result, dict):
-                continue
-            properties = result.get("properties", []) or []
-            for prop in properties if isinstance(properties, list) else []:
-                if not isinstance(prop, dict):
-                    continue
-                props_total += 1
-                if prop.get("status") == "confirmed":
-                    props_confirmed += 1
-            found = result.get("conflicts", []) or []
-            conflicts += len(found) if isinstance(found, list) else 0
-        durations = [r["duration_ms"] for r in sample if r["duration_ms"] is not None]
-        costs = [float(r["estimated_cost_rub"]) for r in sample if r["estimated_cost_rub"] is not None]
-        role = RoleQualityRoleOut(
-            role=agent_type, passport=ROLE_PASSPORTS.get(agent_type, "паспорт не описан"),
-            sample=len(sample), status="evaluated" if evaluated else "not_evaluated",
-            completed_runs=len(completed),
-            completed_share_pct=round(len(completed) / len(sample) * 100, 1) if evaluated else None,
-            critical_fields_total=props_total, critical_fields_confirmed=props_confirmed,
-            critical_completeness_pct=round(props_confirmed / props_total * 100, 1) if evaluated and props_total else None,
-            conflicts_found=conflicts,
-            clarification_runs=len([r for r in sample if r["id"] in clarified]),
-            human_corrections=corrections if agent_type == "seller_agent" else 0,
-            blocked_actions=blocked,
-            average_duration_ms=round(sum(durations) / len(durations), 1) if evaluated and durations else None,
-            known_cost_rub=round(sum(costs), 4) if evaluated and costs else None,
-            costed_share_pct=round(len(costs) / len(sample) * 100, 1) if evaluated else None,
-            model_versions=sorted({r["model_version"] for r in sample if r["model_version"]}),
-            prompt_versions=sorted({r["prompt_version"] for r in sample if r["prompt_version"]}),
-        )
-        roles.append(role)
-    if not roles:
-        notes.append("Прогонов за период нет: роли не оценены.")
-    elif any(r.status == "not_evaluated" for r in roles):
-        notes.append(f"Для оценки нужно не менее {ROLE_QUALITY_MIN_OBSERVATIONS} наблюдений на роль; меньшие выборки — «Не оценено».")
-    return RoleQualityOut(scope=scope, window_days=window_days, method_version=ROLE_QUALITY_METHOD_VERSION,
-                          min_observations=ROLE_QUALITY_MIN_OBSERVATIONS, benchmark=_bank_info(), roles=roles, notes=notes)
+from ..agent_quality import role_quality, bank_info as _bank_info, runs_available as _runs_available
 
 
 @router.get("/companies/{company_id}/role-quality", response_model=RoleQualityOut)

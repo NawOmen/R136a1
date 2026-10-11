@@ -6,10 +6,10 @@
 
 | Пакет | Ограничение версии | Лицензия | Где объявлен |
 |---|---|---|---|
-| `next` | `^16.3.4` | MIT | `apps/web/package.json` (dependencies) |
+| `next` | `^16.3.8` | MIT | `apps/web/package.json` (dependencies) |
 | `react` | `^19.3.0` | MIT | `apps/web/package.json` (dependencies) |
 | `react-dom` | `^19.3.0` | MIT | `apps/web/package.json` (dependencies) |
-| `@types/node` | `^26.5.0` | MIT | `apps/web/package.json` (devDependencies) |
+| `@types/node` | `^26.6.4` | MIT | `apps/web/package.json` (devDependencies) |
 | `@types/react` | `^19.3.0` | MIT | `apps/web/package.json` (devDependencies) |
 | `@types/react-dom` | `^19.3.0` | MIT | `apps/web/package.json` (devDependencies) |
 | `typescript` | `^7.0.2` | Apache-2.0 | `apps/web/package.json` (devDependencies) |
@@ -32,7 +32,8 @@
 | `click` | 8.5.0 | BSD-3-Clause |
 | `dnspython` | 2.8.0 | ISC |
 | `email-validator` | 2.3.0 | Unlicense |
-| `fastapi` | 0.141.1 | MIT |
+| `fastapi` | 0.143.0 | MIT |
+| `opentelemetry-api` | 1.45.1 | Apache-2.0 |
 | `greenlet` | 3.5.5 | MIT AND PSF-2.0 |
 | `h11` | 0.16.0 | MIT |
 | `httptools` | 0.8.0 | MIT |
@@ -45,11 +46,11 @@
 | `pyjwt` | 2.15.1 | MIT |
 | `python-dotenv` | 1.2.3 | BSD-3-Clause |
 | `pyyaml` | 6.0.3 | MIT |
-| `sqlalchemy` | 2.0.52 | MIT |
+| `sqlalchemy` | 2.1.4 | MIT |
 | `starlette` | 1.6.0 | BSD-3-Clause |
 | `typing-extensions` | 4.16.0 | PSF-2.0 |
 | `typing-inspection` | 0.4.4 | MIT |
-| `uvicorn` | 0.52.4 | BSD-3-Clause |
+| `uvicorn` | 0.54.0 | BSD-3-Clause |
 | `uvloop` | 0.22.1 | MIT License |
 | `watchfiles` | 1.2.0 | MIT |
 | `websockets` | 17.1 | BSD-3-Clause |
@@ -67,7 +68,8 @@
 | `certifi` | 2026.7.22 | MPL-2.0 |
 | `click` | 8.5.0 | BSD-3-Clause |
 | `ctranslate2` | 4.8.2 | MIT |
-| `fastapi` | 0.141.1 | MIT |
+| `fastapi` | 0.143.0 | MIT |
+| `opentelemetry-api` | 1.45.1 | Apache-2.0 |
 | `faster-whisper` | 1.2.1 | MIT |
 | `filelock` | 3.32.6 | MIT |
 | `flatbuffers` | 25.12.19 | Apache 2.0 |
@@ -94,13 +96,13 @@
 | `python-dotenv` | 1.2.3 | BSD-3-Clause |
 | `python-multipart` | 0.0.32 | Apache-2.0 |
 | `pyyaml` | 6.0.3 | MIT |
-| `sqlalchemy` | 2.0.52 | MIT |
+| `sqlalchemy` | 2.1.4 | MIT |
 | `starlette` | 1.6.0 | BSD-3-Clause |
 | `tokenizers` | 0.23.2 | Apache Software License |
 | `tqdm` | 4.70.0 | MPL-2.0 AND MIT |
 | `typing-extensions` | 4.16.0 | PSF-2.0 |
 | `typing-inspection` | 0.4.4 | MIT |
-| `uvicorn` | 0.52.4 | BSD-3-Clause |
+| `uvicorn` | 0.54.0 | BSD-3-Clause |
 | `uvloop` | 0.22.1 | MIT License |
 | `watchfiles` | 1.2.0 | MIT |
 | `websockets` | 17.1 | BSD-3-Clause |
@@ -119,7 +121,8 @@
 | `certifi` | 2026.7.22 | MPL-2.0 |
 | `cffi` | 2.1.1 | MIT-0 |
 | `click` | 8.5.0 | BSD-3-Clause |
-| `fastapi` | 0.141.1 | MIT |
+| `fastapi` | 0.143.0 | MIT |
+| `opentelemetry-api` | 1.45.1 | Apache-2.0 |
 | `greenlet` | 3.5.5 | MIT AND PSF-2.0 |
 | `h11` | 0.16.0 | MIT |
 | `httpcore` | 1.0.9 | BSD-3-Clause |
@@ -138,12 +141,12 @@
 | `python-dotenv` | 1.2.3 | BSD-3-Clause |
 | `python-multipart` | 0.0.32 | Apache-2.0 |
 | `pyyaml` | 6.0.3 | MIT |
-| `sqlalchemy` | 2.0.52 | MIT |
+| `sqlalchemy` | 2.1.4 | MIT |
 | `starlette` | 1.6.0 | BSD-3-Clause |
 | `typing-extensions` | 4.16.0 | PSF-2.0 |
 | `typing-inspection` | 0.4.4 | MIT |
 | `urllib3` | 2.8.0 | MIT |
-| `uvicorn` | 0.52.4 | BSD-3-Clause |
+| `uvicorn` | 0.54.0 | BSD-3-Clause |
 | `uvloop` | 0.22.1 | MIT License |
 | `watchfiles` | 1.2.0 | MIT |
 | `websockets` | 17.1 | BSD-3-Clause |
@@ -157,7 +160,8 @@
 | `annotated-types` | 0.8.0 | MIT |
 | `anyio` | 4.15.1 | MIT |
 | `click` | 8.5.0 | BSD-3-Clause |
-| `fastapi` | 0.141.1 | MIT |
+| `fastapi` | 0.143.0 | MIT |
+| `opentelemetry-api` | 1.45.1 | Apache-2.0 |
 | `h11` | 0.16.0 | MIT |
 | `httptools` | 0.8.0 | MIT |
 | `idna` | 3.19 | BSD-3-Clause |
@@ -176,7 +180,7 @@
 | `starlette` | 1.6.0 | BSD-3-Clause |
 | `typing-extensions` | 4.16.0 | PSF-2.0 |
 | `typing-inspection` | 0.4.4 | MIT |
-| `uvicorn` | 0.52.4 | BSD-3-Clause |
+| `uvicorn` | 0.54.0 | BSD-3-Clause |
 | `uvloop` | 0.22.1 | MIT License |
 | `watchfiles` | 1.2.0 | MIT |
 | `websockets` | 17.1 | BSD-3-Clause |
@@ -215,3 +219,5 @@
 - Все прямые зависимости Node и Python-пакеты из lock-файлов имеют указанную лицензию в метаданных; метаданные не подтверждают исполнение лицензионных обязанностей. Ручная сверка нужна также для выбранных библиотек, в частности PyMuPDF/MuPDF, моделей и ассетов, с учётом способа использования.
 - Перечень собран из локальных метаданных на дату составления и обновляется после изменения зависимостей.
 - Документ не заменяет юридическую проверку лицензий.
+
+Обновление PR #124: версии FastAPI 0.143.0, SQLAlchemy 2.1.4, Uvicorn 0.54.0 и PyJWT 2.15.1 сверены с установленными метаданными четырёх изолированных сервисов. `opentelemetry-api` — обязательная транзитивная зависимость нового FastAPI, а не отдельная интеграция отправки телеметрии. Lock-файлы сохраняют хеши; установка проверена с `--require-hashes` и `pip check`.

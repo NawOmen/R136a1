@@ -426,7 +426,8 @@ async def create_offer(
         available_units=data.available_units, lead_time_days=data.lead_time_days,
         resource_kind=resource_kind, product_id=product_id)
     if blockers:
-        raise HTTPException(409, "; ".join(blockers))
+        from ..denials import BusinessDenied
+        raise BusinessDenied(409, "; ".join(blockers), company_id=data.company_id, reason_code="offer_validation", role="offer_validation", entity_type="need", entity_id=need.id)
     offer = Offer(
         resource_kind=resource_kind,
         product_id=product_id,
