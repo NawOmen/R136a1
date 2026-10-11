@@ -1,5 +1,7 @@
 """Настоящие HTTP-переходы заказа на синтетическом, отдельно поднятом стенде."""
 import os
+import io
+from pypdf import PdfWriter
 import uuid
 from datetime import date, timedelta
 from decimal import Decimal
@@ -8,6 +10,15 @@ import httpx
 import pytest
 
 pytestmark = pytest.mark.skipif(os.getenv("RUN_DOCKER_INTEGRATION") != "1", reason="Только выделенный Docker-стенд")
+
+
+def synthetic_pdf():
+    writer = PdfWriter()
+    writer.add_blank_page(width=200, height=200)
+    writer.add_metadata({"/Title": "Synthetic acceptance fixture"})
+    stream = io.BytesIO()
+    writer.write(stream)
+    return stream.getvalue()
 
 
 def ok(response, status=200):
@@ -53,7 +64,7 @@ def test_classified_order_partial_acceptance_return_costs_and_privacy():
         document = ok(market.post(f"/api/v1/companies/{seller}/documents", headers=seller_headers,
             data={"name": "Синтетическое заключение по спецификации крепежа", "document_type": "specification_review",
                   "scope_category": product["category"], "scope_subcategory": product.get("subcategory") or ""},
-            files={"file": ("synthetic-specification.pdf", b"%PDF-1.7 synthetic specification", "application/pdf")}), 201)
+            files={"file": ("synthetic-specification.pdf", synthetic_pdf(), "application/pdf")}), 201)
         ok(market.post(f"/api/v1/documents/{document['id']}/verification", headers=editor_headers, json={
             "decision": "verified", "scope_category": product["category"], "scope_subcategory": product.get("subcategory"),
             "valid_until": (date.today()+timedelta(days=60)).isoformat(),
@@ -88,7 +99,7 @@ def test_classified_order_partial_acceptance_return_costs_and_privacy():
             command = {"company_id": company, "expected_revision": current["revision"], "terms_version": current["terms_version"],
                 "human_approved": True, "idempotency_key": str(uuid.uuid4()), "action": action, "payload": payload}
             return ok(market.post(f"/api/v3/deals/{deal_id}/fulfillment", headers=headers, json=command)), command
-        material_bytes = b"%PDF-1.7\nSynthetic fulfillment proof\n"
+        material_bytes = synthetic_pdf()
         material = ok(market.post(f"/api/v3/deals/{deal_id}/attachments", headers=seller_headers,
             data={"company_id": seller, "terms_version": "1"},
             files={"file": ("synthetic-act.pdf", material_bytes, "application/pdf")}), 201)
@@ -111,7 +122,7 @@ def test_classified_order_partial_acceptance_return_costs_and_privacy():
         perform("return_complete", {**proof, "event_id": request, "restock_accepted": False}, seller, seller_headers)
         ok(market.put(f"/api/v1/deals/{deal_id}/costs", headers=seller_headers, json={
             "company_id": seller, "expected_revision": 0, "unit_cost_rub": "3.00", "attributable_expenses_rub": "100.00",
-            "note": "Синтетическая смета", "human_approved": True,
+            "note": "Синтетическая смета", "tax_basis": "no_vat", "human_approved": True,
         }))
         report = ok(market.get(f"/api/v1/companies/{seller}/commercial-analytics?role=seller", headers=seller_headers))
         row = next(row for row in report["orders"] if row["deal_id"] == deal_id)
