@@ -82,3 +82,9 @@ app.include_router(physical_quantities.router, prefix='/api/v3/physical')
 
 from .api import fulfillment
 app.include_router(fulfillment.router, prefix="/api/v3")
+
+from .api import quality_evidence
+app.include_router(quality_evidence.router, prefix="/api/v3")
+
+from .denials import BusinessDenied, handle_denial
+app.add_exception_handler(BusinessDenied, handle_denial)

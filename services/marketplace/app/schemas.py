@@ -227,19 +227,29 @@ class AgentScorecardOut(BaseModel):
     window_days: int
     offer_drafts_total: int
     offer_drafts_used: int
-    offer_draft_conversion_pct: float
-    average_changed_fields: float
+    offer_draft_conversion_pct: float | None
+    average_changed_fields: float | None
+    offer_drafts_excluded: int = 0
+    offer_drafts_open: int = 0
+    agent_timed_runs: int = 0
     offers_total: int
     offers_from_drafts: int
+    offer_rejections: int = 0
     deals_total: int
     deals_from_drafts: int
+    selected_origin_offers: int = 0
+    open_origin_offers: int = 0
+    rejected_origin_offers: int = 0
+    expired_origin_offers: int = 0
     recommendations_total: int
     recommendations_converted: int
-    recommendation_conversion_pct: float
+    recommendation_conversion_pct: float | None
     human_approvals: int
     blocked_actions: int
     admission_checks: int
     admission_blocked: int
+    business_denials_by_role: dict[str,int] = Field(default_factory=dict)
+    resilience_blocked: int = 0
     agent_runs_total: int
     agent_runs_failed: int
     agent_runs_local_route: int
@@ -248,10 +258,69 @@ class AgentScorecardOut(BaseModel):
     agent_runs_rules_route: int = 0
     agent_runs_unknown_route: int = 0
     agent_costed_runs: int = 0
-    agent_average_duration_ms: float
-    agent_estimated_cost_rub: Amount
+    agent_average_duration_ms: float | None
+    agent_estimated_cost_rub: Money | None
+    agent_model_versions: list[str] = Field(default_factory=list)
+    agent_prompt_versions: list[str] = Field(default_factory=list)
     llm_metrics_available: bool
     notes: list[str]
+
+
+class RoleQualityBenchmarkOut(BaseModel):
+    """Эталон методики: что сравнивается и где лежит."""
+
+    bank: str = "packages/test-fixtures/agent-task-bank/ru_tasks.json"
+    tasks: int = 0
+    compares: list[str] = Field(default_factory=list)
+    available: bool = False
+
+
+class RoleQualityRoleOut(BaseModel):
+    """Качество одной сопоставимой роли. Итогового балла нет осознанно:
+    аспекты не компенсируют друг друга, нарушение прав не покрывается скоростью."""
+
+    role: str
+    passport: str
+    sample: int
+    status: str = Field(pattern="^(evaluated|not_evaluated)$")
+    completed_runs: int = 0
+    completed_share_pct: float | None = None
+    critical_fields_total: int = 0
+    critical_fields_confirmed: int = 0
+    critical_completeness_pct: float | None = None
+    conflicts_found: int = 0
+    clarification_runs: int = 0
+    human_corrections: int = 0
+    blocked_actions: int = 0
+    average_duration_ms: float | None = None
+    known_cost_rub: Money | None = None
+    cohort_key: str = ""
+    task_scope: str = "unknown"
+    expert_verified_runs: int = 0
+    initial_result_known_runs: int = 0
+    critical_correctness_pct: float | None = None
+    critical_fields_correct: int = 0
+    open_runs: int = 0
+    failed_runs: int = 0
+    fallback_runs: int = 0
+    timed_runs: int = 0
+    corrections_known_runs: int = 0
+    assessments: list[dict] = Field(default_factory=list)
+    costed_share_pct: float | None = None
+    model_versions: list[str] = Field(default_factory=list)
+    prompt_versions: list[str] = Field(default_factory=list)
+
+
+class RoleQualityOut(BaseModel):
+    """Обоснованная оценка агентных ролей по методике с версией и минимумом наблюдений."""
+
+    scope: str
+    window_days: int
+    method_version: str
+    min_observations: int
+    benchmark: RoleQualityBenchmarkOut
+    roles: list[RoleQualityRoleOut] = Field(default_factory=list)
+    notes: list[str] = Field(default_factory=list)
 
 
 class DealMessageIn(BaseModel):

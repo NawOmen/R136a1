@@ -35,6 +35,8 @@ class AgentRun(Base):
     provider_kind: Mapped[str | None] = mapped_column(String(16), nullable=True)
     input_summary: Mapped[str] = mapped_column(Text, nullable=False, default="")
     result: Mapped[dict] = mapped_column(JSONB, nullable=False, default=dict)
+    initial_result: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
+    human_corrections: Mapped[int] = mapped_column(Integer, nullable=False, default=0, server_default="0")
     error: Mapped[str | None] = mapped_column(Text, nullable=True)
     duration_ms: Mapped[int | None] = mapped_column(Integer, nullable=True)
     input_chars: Mapped[int | None] = mapped_column(Integer, nullable=True)

@@ -347,6 +347,7 @@ class DealCostSnapshot(Base):
     deal_id: Mapped[uuid.UUID] = mapped_column(ForeignKey(f"{SCHEMA}.deals.id", ondelete="CASCADE"), primary_key=True)
     unit_cost_rub: Mapped[Decimal | None] = mapped_column(ExactNumeric(), nullable=True)
     attributable_expenses_rub: Mapped[Decimal | None] = mapped_column(ExactNumeric(), nullable=True)
+    tax_basis: Mapped[str] = mapped_column(String(16), nullable=False, default="unknown", server_default="unknown")
     revision: Mapped[int] = mapped_column(Integer, default=1)
     note: Mapped[str] = mapped_column(String(1000))
     updated_by_user_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True))
@@ -909,3 +910,63 @@ class DealAttachment(Base):
     storage_key: Mapped[str] = mapped_column(String(255), nullable=False)
     content_type: Mapped[str] = mapped_column(String(80), nullable=False)
     sha256: Mapped[str] = mapped_column(String(64), nullable=False)
+
+
+class DealCostVersion(Base):
+    """Private append-only history; legacy versions are never invented."""
+    __tablename__ = "deal_cost_versions"
+    __table_args__ = {"schema": SCHEMA}
+    deal_id: Mapped[uuid.UUID] = mapped_column(ForeignKey(f"{SCHEMA}.deals.id", ondelete="CASCADE"), primary_key=True)
+    revision: Mapped[int] = mapped_column(Integer, primary_key=True)
+    unit_cost_rub: Mapped[Decimal | None] = mapped_column(ExactNumeric(), nullable=True)
+    attributable_expenses_rub: Mapped[Decimal | None] = mapped_column(ExactNumeric(), nullable=True)
+    tax_basis: Mapped[str] = mapped_column(String(16), nullable=False)
+    note: Mapped[str] = mapped_column(String(1000))
+    effective_from: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    recorded_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now())
+    updated_by_user_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True))
+    legacy_history_unknown: Mapped[bool] = mapped_column(Boolean, default=False, server_default="false")
+
+
+class CommercialReportSnapshot(Base):
+    __tablename__ = "commercial_report_snapshots"
+    __table_args__ = {"schema": SCHEMA}
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=_uuid)
+    user_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), nullable=False)
+    company_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), nullable=False, index=True)
+    role: Mapped[str] = mapped_column(String(8), nullable=False)
+    built_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    payload: Mapped[dict] = mapped_column(ExactJSONB(), nullable=False)
+    payload_hash: Mapped[str] = mapped_column(String(64), nullable=False)
+
+
+class BusinessDenialEvent(Base):
+    __tablename__ = "business_denial_events"
+    __table_args__ = (UniqueConstraint("company_id", "fingerprint", name="uq_business_denial_retry"), {"schema": SCHEMA})
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=_uuid)
+    company_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), nullable=False, index=True)
+    user_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), nullable=False)
+    role: Mapped[str] = mapped_column(String(64), nullable=False)
+    reason_code: Mapped[str] = mapped_column(String(64), nullable=False)
+    entity_type: Mapped[str] = mapped_column(String(64), nullable=False)
+    entity_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), nullable=True)
+    fingerprint: Mapped[str] = mapped_column(String(64), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now())
+
+
+class AgentQualityEvaluation(Base):
+    __tablename__ = "agent_quality_evaluations"
+    __table_args__ = (UniqueConstraint("run_id", "reviewer_user_id", "reference_hash", name="uq_quality_evaluation_retry"), {"schema": SCHEMA})
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=_uuid)
+    run_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), nullable=False, index=True)
+    company_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), nullable=False, index=True)
+    reviewer_user_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), nullable=False)
+    method_version: Mapped[str] = mapped_column(String(64), nullable=False)
+    task_scope: Mapped[str] = mapped_column(String(120), nullable=False)
+    source: Mapped[str] = mapped_column(String(1000), nullable=False)
+    bank_task_id: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    reference: Mapped[dict] = mapped_column(ExactJSONB(), nullable=False)
+    result_hash: Mapped[str] = mapped_column(String(64), nullable=False)
+    reference_hash: Mapped[str] = mapped_column(String(64), nullable=False)
+    assessment: Mapped[dict] = mapped_column(ExactJSONB(), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now())

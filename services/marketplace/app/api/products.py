@@ -170,13 +170,14 @@ async def update_product(
             moq_units=validated.moq_units,
         )
         if admission.blocking_open:
-            raise HTTPException(
+            from ..denials import BusinessDenied
+            raise BusinessDenied(
                 status.HTTP_409_CONFLICT,
                 detail=(
                     "Изменение отклонено, пока товар опубликован: "
                     f"{admission.blocking_reasons or admission.summary} "
                     "Сначала снимите товар с публикации."
-                ),
+                ), company_id=product.company_id, entity_type="product", entity_id=product.id,
             )
         errors, _ = validate_characteristics(validated.category, validated.subcategory, validated.characteristics, validated.moq_units)
         if errors:
@@ -309,7 +310,8 @@ async def publish_product(
         from ..category_admission import match_profile
         profile = match_profile(product.category, product.subcategory, product.characteristics)
         if profile is not None and not profile.supported:
-            raise HTTPException(409, "Публикация заблокирована: " + profile.summary)
+            from ..denials import BusinessDenied
+            raise BusinessDenied(409, "Публикация заблокирована: " + profile.summary, company_id=product.company_id, entity_type="product", entity_id=product.id)
         errors, _ = validate_characteristics(product.category, product.subcategory, product.characteristics, product.moq_units)
         if errors:
             raise HTTPException(422, "; ".join(errors))
@@ -323,12 +325,13 @@ async def publish_product(
             moq_units=product.moq_units,
         )
         if admission.blocking_open:
-            raise HTTPException(
+            from ..denials import BusinessDenied
+            raise BusinessDenied(
                 status.HTTP_409_CONFLICT,
                 detail=(
                     "Публикация заблокирована: "
                     f"{admission.blocking_reasons or admission.summary}"
-                ),
+                ), company_id=product.company_id, entity_type="product", entity_id=product.id,
             )
     was_published = product.is_published
     product.is_published = data.published
