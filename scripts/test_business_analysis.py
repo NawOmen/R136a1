@@ -120,6 +120,10 @@ class BusinessAnalysis(unittest.TestCase):
                 r = self.result(self.case(id))
                 self.assertIsNone(r['buyer']['value_equivalent_rub'])
                 self.assertIsNone(r['seller']['value_equivalent_rub'])
+                self.assertIsNone(r['buyer']['time']['labour_equivalent_rub'])
+                self.assertIsNone(r['buyer']['time']['first_use_active_saving_minutes'])
+                self.assertEqual(r['buyer']['time']['system_labour_cost_equivalent_rub'],
+                                 '300.00' if id == 'below-moq' else '800.00')
                 self.assertEqual(r['platform']['operating_result_rub'], '-97.00')
 
     def test_exact_decimal_input_and_round_only_final_value(self):

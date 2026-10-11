@@ -49,12 +49,18 @@ def time_analysis(data):
     rate = number(data['hourly_rate_rub'], cents=True)
     system = total([values[k] for k in ('system_active_minutes', 'correction_minutes', 'retry_minutes')])
     steady = difference(values['manual_active_minutes'], system)
-    first = difference(total([values['manual_active_minutes'], values['manual_training_minutes']]),
-                       total([system, values['system_training_minutes']]))
+    manual_total = total([values['manual_active_minutes'], values['manual_training_minutes']])
+    system_total = total([system, values['system_training_minutes']])
+    first = difference(manual_total, system_total)
     labour = None if first is None or rate is None else first * rate / 60
     return {'steady_active_saving_minutes': None if steady is None else str(steady),
             'first_use_active_saving_minutes': None if first is None else str(first),
             'labour_equivalent_rub': money(labour),
+            'manual_total_active_minutes': None if manual_total is None else str(manual_total),
+            'system_total_active_minutes': None if system_total is None else str(system_total),
+            'system_labour_cost_equivalent_rub': money(None if system_total is None or rate is None else system_total * rate / 60),
+            'active_components_minutes': {k: None if v is None else str(v)
+                                         for k,v in values.items() if 'wait' not in k},
             'waiting_minutes': {k: None if values[k] is None else str(values[k])
                                for k in ('manual_wait_minutes', 'system_wait_minutes', 'model_wait_minutes')}}, labour
 
@@ -79,7 +85,7 @@ def analyse_case(case):
     saving = difference(baseline, system) if matched and completed else None
     bt, labour = time_analysis(buyer['time'])
     st, seller_labour = time_analysis(seller['time'])
-    if not matched:
+    if not matched or not completed:
         labour = seller_labour = None
         for metrics in (bt, st):
             for key in ('steady_active_saving_minutes', 'first_use_active_saving_minutes', 'labour_equivalent_rub'):
