@@ -114,9 +114,9 @@
     {
       "id": "T17",
       "tests": [
-        "services/marketplace/tests/test_stage5.py::test_unknown_specifications_are_not_silently_individual_operations"
+        "services/marketplace/tests/test_money_stage02.py::test_buyer_selects_own_confirmed_baseline_negative_effect_and_private_snapshot"
       ],
-      "scope": "Автоматический срез бизнес-инварианта; внешние устройства и live-провайдеры отдельно."
+      "scope": "Неизвестная/очищенная индивидуальная альтернатива не даёт суммы выгоды или снимка baseline; проверяется приватность. UI процента требует отдельного браузерного доказательства."
     },
     {
       "id": "T18",
@@ -205,7 +205,7 @@
     {
       "id": "T30",
       "tests": [
-        "services/marketplace/tests/test_stage10_complete.py::test_reviews_block_unperformed_pending_and_full_return"
+        "services/marketplace/tests/test_stage15_acceptance.py::test_partial_claim_cannot_be_completed_or_accepted_by_foreign_actor"
       ],
       "scope": "Автоматический срез бизнес-инварианта; внешние устройства и live-провайдеры отдельно."
     },
@@ -237,7 +237,7 @@
         "services/marketplace/tests/test_stage15_acceptance.py::test_working_leaf_order_report_repeat_and_denials"
       ],
       "scope": "Автоматический срез бизнес-инварианта; внешние устройства и live-провайдеры отдельно.",
-      "minimum_cases": 9
+      "case_set": "working_assortment_leaves"
     },
     {
       "id": "T36",
@@ -266,7 +266,7 @@
     {
       "id": "T40",
       "tests": [
-        "services/marketplace/tests/test_stage11.py::test_duplicate_product_creates_unpublished_draft"
+        "services/marketplace/tests/test_stage5_supplier.py::test_assortment_scope_and_seed_stories"
       ],
       "scope": "Автоматический срез бизнес-инварианта; внешние устройства и live-провайдеры отдельно."
     },
@@ -280,7 +280,7 @@
     {
       "id": "T42",
       "tests": [
-        "services/marketplace/tests/test_stage12.py::test_cost_tax_basis_roundtrip_and_privacy"
+        "services/marketplace/tests/test_stage15_acceptance.py::test_unknown_cost_and_payments_do_not_fabricate_profit"
       ],
       "scope": "Автоматический срез бизнес-инварианта; внешние устройства и live-провайдеры отдельно."
     },

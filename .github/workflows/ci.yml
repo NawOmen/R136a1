@@ -46,7 +46,7 @@ jobs:
           done
       - name: Restore safety and acceptance map
         run: |
-          python3 -m unittest discover -s scripts -p test_operations.py
+          python3 -m unittest discover -s scripts -p 'test_*.py'
           python3 scripts/acceptance-report.py > "$RUNNER_TEMP/acceptance-unverified.json"
       - name: Verify migrations (gateway-auth)
         working-directory: services/gateway-auth

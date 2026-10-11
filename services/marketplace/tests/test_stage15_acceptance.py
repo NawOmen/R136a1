@@ -15,6 +15,8 @@ from app.models import Document, HumanApprovalRecord, ResourceReservation
 from conftest import make_company, make_token, make_user
 from test_stage10_complete import ready, shipped, received, inspected, act
 from conftest import confirmed_quote_terms, grant_capacity
+from test_stage10_complete import full_order, state, PROOF, DAY
+from test_s10_fulfillment import order
 
 LEAVES = list({(r[2], r[3]): r for r in reversed(ASSORTMENT)}.values())
 
@@ -79,3 +81,47 @@ async def test_working_leaf_order_report_repeat_and_denials(client, db_session, 
     assert len(reservations)==1 and reservations[0].units==10
     approvals=(await db_session.scalars(select(HumanApprovalRecord).where(HumanApprovalRecord.actor_company_id==bc))).all()
     assert approvals
+
+
+async def test_partial_claim_cannot_be_completed_or_accepted_by_foreign_actor(client, full_order, db_session):
+    o = full_order
+    await ready(client, o)
+    batch = await shipped(client, o, 10)
+    await received(client, o, batch, 8, missing=2)
+    before = await state(client, o)
+    payload = {**PROOF, 'expected_date': DAY, 'batch_id': batch,
+               'line_id': before['line_id'], 'accepted': 5, 'rejected': 3}
+    stranger = await make_user(db_session)
+    foreign = await make_company(db_session, stranger)
+    await db_session.commit()
+    command = {'company_id': str(foreign), 'expected_revision': before['revision'],
+               'terms_version': before['terms_version'], 'human_approved': True,
+               'idempotency_key': str(uuid.uuid4()), 'action': 'inspection', 'payload': payload}
+    denied = await client.post(f"/api/v3/deals/{o['deal']}/fulfillment",
+        headers={'Authorization': 'Bearer ' + make_token(stranger)}, json=command)
+    assert denied.status_code in (403, 404)
+    after = await state(client, o)
+    assert after['revision'] == before['revision'] and after['totals'] == before['totals']
+    await act(client, o, 'inspection', payload, status=403)  # Seller cannot accept for buyer.
+    accepted, _ = await inspected(client, o, batch, 5, rejected=3)
+    assert accepted['status'] == 'disputed' and accepted['totals']['accepted_units'] == 5
+    assert accepted['disputes'] and accepted['totals']['shipped_units'] == 10
+    await act(client, o, 'complete', {**PROOF, 'expected_date': DAY}, buyer=True, status=409)
+    final = await state(client, o)
+    assert final['revision'] == accepted['revision'] and final['totals'] == accepted['totals']
+
+
+async def test_unknown_cost_and_payments_do_not_fabricate_profit(client, db_session):
+    from test_stage12 import _deal, _accept, _auth
+    c = await _deal(db_session)
+    await _accept(db_session, c, 6)
+    response = await client.get(f"/api/v3/companies/{c['sc']}/commercial-analytics?role=seller",
+                               headers=_auth(make_token(c['seller'])))
+    report = body(response)
+    row = next(row for row in report['orders'] if row['deal_id'] == str(c['deal'].id))
+    assert Decimal(row['net_goods_revenue_rub']) == 6000
+    for field in ('cost_of_goods_rub', 'gross_profit_rub', 'contribution_rub'):
+        assert row[field] is None and report['totals'][field] is None
+        assert report['totals'][field + '_known_orders'] == 0
+    assert row['cost_tax_basis'] == 'unknown'
+    assert row['payments_rub'] is None and report['payments_rub'] is None

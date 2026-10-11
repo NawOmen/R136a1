@@ -12,11 +12,20 @@ from sqlalchemy import text
 from sqlalchemy.ext.asyncio import create_async_engine
 from app.config import settings
 
+def copy_secure():
+    value = os.environ.get('MINIO_COPY_SECURE')
+    if value is None:
+        return settings.minio_secure
+    if value.lower() not in ('true', 'false'):
+        raise ValueError('MINIO_COPY_SECURE должен быть true или false')
+    return value.lower() == 'true'
+
+
 async def main():
     target=os.environ['MINIO_COPY_ENDPOINT']
     if target==settings.minio_endpoint:raise ValueError('Нужен отдельный MinIO')
     clients=[Minio(endpoint,access_key=settings.minio_access_key,secret_key=settings.minio_secret_key,
-                   secure=False) for endpoint in (settings.minio_endpoint,target)]
+                   secure=secure) for endpoint, secure in ((settings.minio_endpoint, settings.minio_secure), (target, copy_secure()))]
     copies=[]
     for client in clients:
         hashes={}

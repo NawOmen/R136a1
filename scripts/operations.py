@@ -11,6 +11,7 @@ import json
 import os
 from pathlib import Path
 import re
+import shlex
 import subprocess
 import sys
 import tarfile
@@ -61,6 +62,37 @@ def application_versions(cs, revision):
     return versions
 
 
+def validate_snapshot_directory(directory):
+    directory = directory.resolve()
+    if directory.is_relative_to(ROOT.resolve()):
+        raise ValueError('Каталог снимка должен находиться вне Git-репозиториев')
+    parent = directory
+    while not parent.exists():
+        parent = parent.parent
+    env = {**os.environ, 'LC_ALL': 'C'}
+    check = subprocess.run(['git', '-C', str(parent), 'rev-parse', '--is-inside-work-tree'],
+                           capture_output=True, text=True, env=env)
+    if check.returncode == 0 and check.stdout.strip() == 'true':
+        raise ValueError('Каталог снимка должен находиться вне Git-репозиториев')
+    if check.returncode not in (0, 128) or (check.returncode == 128 and 'not a git repository' not in check.stderr):
+        raise ValueError('Не удалось проверить Git-принадлежность каталога снимка')
+    # A bare repository has no work tree, but is also unsuitable for private dumps.
+    if subprocess.run(['git', '-C', str(parent), 'rev-parse', '--git-dir'],
+                      capture_output=True).returncode == 0:
+        raise ValueError('Каталог снимка должен находиться вне Git-репозиториев')
+
+
+def postgres_name(value):
+    if not isinstance(value, str) or not value or len(value.encode('utf-8')) > 63 or any(ord(c) < 32 or ord(c) == 127 for c in value):
+        raise ValueError('Некорректное имя PostgreSQL-пользователя или базы')
+    return value
+
+
+def database_connection(database):
+    # libpq accepts '=' in -d as conninfo; quote the literal database name explicitly.
+    return "dbname='" + database.replace('\\', '\\\\').replace("'", "\\'") + "'"
+
+
 def backup(args):
     if subprocess.run(['git','-C',str(ROOT),'diff','--quiet','HEAD']).returncode:
         raise ValueError('Зафиксируйте изменения checkout до снимка; HEAD не описывает незакоммиченный код')
@@ -81,18 +113,21 @@ def backup(args):
     if not pg['State']['Running']:
         raise ValueError('PostgreSQL должен работать для pg_dump')
     env = dict(v.split('=', 1) for v in pg['Config']['Env'] if '=' in v)
+    user = postgres_name(env.get('POSTGRES_USER', 'sborka'))
+    database = postgres_name(env.get('POSTGRES_DB') or user)
     directory = args.directory.resolve()
     directory.mkdir(mode=0o700, parents=True, exist_ok=False)
     os.chmod(directory, 0o700)
     try:
         with (directory / 'postgres.dump').open('wb') as stream:
             run('docker', 'exec', pg['Id'], 'pg_dump', '-Fc', '--no-owner', '--no-acl',
-                '-U', env.get('POSTGRES_USER', 'sborka'), '-d', env.get('POSTGRES_DB', 'sborka'), stdout=stream)
+                '-U', user, '-d', database_connection(database), stdout=stream)
         run('docker', 'run', '--rm', '--network', 'none', '-v', f'{volume}:/snapshot:ro',
             '-v', f'{directory}:/backup', '--entrypoint', 'tar', pg['Image'],
             '-cf', '/backup/minio.tar', '-C', '/snapshot', '.')
         validate_archive(directory / 'minio.tar')
-        manifest = {'format': 1, 'source_project': args.project,
+        manifest = {'format': 2, 'source_project': args.project,
+                    'postgres': {'user': user, 'database': database},
                     'checkout_revision': revision,
                     'applications': application_versions(cs, revision),
                     'models': json.loads((ROOT / 'infra/models.lock.json').read_text()),
@@ -109,7 +144,7 @@ def backup(args):
 
 def restore(args):
     manifest = json.loads((args.directory / 'manifest.json').read_text())
-    if manifest.get('format') != 1 or set(manifest.get('files', {})) != {'postgres.dump', 'minio.tar'}:
+    if manifest.get('format') not in (1, 2) or set(manifest.get('files', {})) != {'postgres.dump', 'minio.tar'}:
         raise ValueError('Неизвестный формат снимка')
     if args.project == manifest['source_project'] or containers(args.project):
         raise ValueError('Восстановление разрешено только в новый отдельный проект')
@@ -126,6 +161,9 @@ def restore(args):
     if not re.fullmatch(r'sha256:[0-9a-f]{64}',image):
         raise ValueError('В manifest нужен неизменяемый ID PostgreSQL-образа')
     inspect(image)
+    coordinates = manifest['postgres'] if manifest['format'] == 2 else {'user': 'sborka', 'database': 'sborka'}
+    user = postgres_name(coordinates['user'] if getattr(args, 'postgres_user', None) is None else args.postgres_user)
+    database = postgres_name(coordinates['database'] if getattr(args, 'postgres_db', None) is None else args.postgres_db)
     password = os.environ.get('RESTORE_POSTGRES_PASSWORD')
     if not password:
         raise ValueError('Задайте RESTORE_POSTGRES_PASSWORD вне Git')
@@ -141,10 +179,10 @@ def restore(args):
         '-v', f'{args.directory.resolve()}:/backup:ro', '--entrypoint', 'tar', image,
         '-xf', '/backup/minio.tar', '-C', '/snapshot')
     name = args.project + '-restore-postgres'
-    env = os.environ.copy(); env['POSTGRES_PASSWORD'] = password
+    env = os.environ.copy(); env.update(POSTGRES_PASSWORD=password, POSTGRES_USER=user, POSTGRES_DB=database)
     run('docker', 'run', '-d', '--name', name, '--label', f'com.docker.compose.project={args.project}',
-        '--network', 'none', '-e', 'POSTGRES_PASSWORD', '-e', 'POSTGRES_USER=sborka', '-e', 'POSTGRES_DB=sborka',
-        '-v', f'{volumes[0]}:/var/lib/postgresql/data', '--health-cmd', 'pg_isready -U sborka -d sborka',
+        '--network', 'none', '-e', 'POSTGRES_PASSWORD', '-e', 'POSTGRES_USER', '-e', 'POSTGRES_DB',
+        '-v', f'{volumes[0]}:/var/lib/postgresql/data', '--health-cmd', shlex.join(['pg_isready', '-U', user, '-d', database_connection(database)]),
         '--health-interval', '1s', '--health-retries', '60', image, env=env, stdout=subprocess.DEVNULL)
     import time
     for _ in range(60):
@@ -158,7 +196,7 @@ def restore(args):
         raise ValueError('Истекло ожидание PostgreSQL; сохранены тома для диагностики')
     with (args.directory / 'postgres.dump').open('rb') as stream:
         run('docker', 'exec', '-i', name, 'pg_restore', '--exit-on-error', '--single-transaction',
-            '--no-owner', '--no-acl', '-U', 'sborka', '-d', 'sborka', stdin=stream)
+            '--no-owner', '--no-acl', '-U', user, '-d', database_connection(database), stdin=stream)
     run('docker', 'rm', lock, stdout=subprocess.DEVNULL)
     print(f'Восстановлено в {args.project}. Проверьте историю и файлы до подключения приложения. Секреты и модели восстанавливаются отдельно.')
 
@@ -167,13 +205,16 @@ def main():
     parser.add_argument('action', choices=['backup', 'restore'])
     parser.add_argument('--project', required=True)
     parser.add_argument('--directory', type=Path, required=True)
+    parser.add_argument('--postgres-user', help='Явное переназначение пользователя восстановленной БД')
+    parser.add_argument('--postgres-db', help='Явное переназначение имени восстановленной БД')
     args = parser.parse_args()
     if not re.fullmatch(r'[a-z][a-z0-9-]{1,50}', args.project):
         parser.error('Нужен явный безопасный идентификатор проекта')
     # Dumps and private object data must never enter the checkout.
-    if args.directory.resolve().is_relative_to(ROOT):
-        parser.error('Каталог снимка должен находиться вне репозитория')
     try:
+        validate_snapshot_directory(args.directory)
+        if args.action == 'backup' and (args.postgres_user is not None or args.postgres_db is not None):
+            raise ValueError('Переназначение PostgreSQL доступно только при restore')
         (backup if args.action == 'backup' else restore)(args)
     except (ValueError, StopIteration, subprocess.CalledProcessError, OSError, KeyError) as error:
         print(f'Операция не завершена: {error}', file=sys.stderr)
