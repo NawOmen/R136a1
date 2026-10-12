@@ -1,0 +1,194 @@
+{
+  "schema": "contest-evidence-1",
+  "scope": "Синтетическая программная проверка, не оценка жюри и не полная приёмка критериев.",
+  "source_digests": {
+    "docs/analysis/stage-16-scenarios.md": "a33b18b171b90610ab9dcadb7df1af6b7473636c0af5a4127319ec6224326379",
+    "docs/analysis/stage-16.md": "568fddd00799e8f2fcb62b2126304f74f36c6a6a15237e2992ee0bb4a127239e",
+    "docs/analytics/role-quality-method.md": "452833f11ffe6256436a37bd5b40009373ca87a93d9d853a0b3983a4d5e53c1f",
+    "docs/contest/Porukam-pitch.pptx": "32f4652179794a4b355f40461255bbe8b911c4229d4f30f5005067f4eb6d7fcf",
+    "docs/contest/appendix-01-agents-environment.md": "e0a74549584202fe12e430d086c1db393886de2f961dc8d7322b7a1a36344ad5",
+    "docs/contest/appendix-02-agent-interaction-scenarios.md": "d4918a2a4c6c88252a9d27ffcf2ac7d53b34145e36d6458c1f4fc16a05fe7f25",
+    "docs/contest/appendix-03-architecture-and-roles.md": "4bae2129e40a123c45bcd6e5f0be93937c5fc2e7e0aef2982d86a30cae17d2b0",
+    "docs/contest/appendix-04-automation-demo.md": "542140cd6f648bf7b4eedbaad05cd30a0f195c1752d03337cd24c0394acfaf02",
+    "docs/operations/stage-15.md": "4f842fe0c8e17a759e3348ed06e73a370dd360f000fb40dcd26dec298d4795d5",
+    "scripts/test_business_analysis.py": "d91cb1ae16b186d004beb4e03202f414e74fa89aaa6f4551cc1988a6533f95c9",
+    "services/llm-gateway/tests/test_stage13_review_regressions.py": "d1dc925761da201d75464a04c6c64c2a0a63f6b2ffcc3b728cb21e52520a7995",
+    "services/llm-gateway/tests/test_stage17_trace.py": "fc1b2e5d36576fa0862d9de4ff0efe05396b657477cf7310ac17b475d31bb165",
+    "services/marketplace/tests/test_commerce.py": "e776e41abc514d41d26eaa0fb245c558f9926c14a8379db7ee1a2a99dcb180ee",
+    "services/marketplace/tests/test_resource_ledger.py": "99e24b67a98467b6c152da94a57c2a32f7ddeef0eafe82aa0831dce239e29f43",
+    "services/marketplace/tests/test_stage12.py": "ea403607edcb8a9bb08443caeaa043f2f02c5a781775a0f713cbdee1eb638142",
+    "services/marketplace/tests/test_stage15_acceptance.py": "8f9daeab54b9bab5bbfc1050e92f106e55c17f266f4b3cf624b3b559ff9a4aa4",
+    "services/marketplace/tests/test_stage5_supplier.py": "fed0cb5b685e01fea61e197aba91fba5bc658b1d44f7cae44d1f94b73b92c025"
+  },
+  "criteria": [
+    {
+      "id": "K1",
+      "weight": 10,
+      "automated_slice_status": "passed",
+      "checks": [
+        {
+          "test": "scripts/test_business_analysis.py::test_all_current_categories_have_exact_profile_and_example_coverage",
+          "status": "passed",
+          "cases": 1,
+          "missing_cases": []
+        },
+        {
+          "test": "scripts/test_business_analysis.py::test_full_cost_and_first_use_training_without_waiting_in_labour",
+          "status": "passed",
+          "cases": 1,
+          "missing_cases": []
+        },
+        {
+          "test": "scripts/test_business_analysis.py::test_corrections_retries_and_losses_are_retained",
+          "status": "passed",
+          "cases": 1,
+          "missing_cases": []
+        }
+      ],
+      "documents": [
+        "docs/analysis/stage-16.md",
+        "docs/analysis/stage-16-scenarios.md"
+      ],
+      "readiness": "requires_human_review"
+    },
+    {
+      "id": "K2",
+      "weight": 20,
+      "automated_slice_status": "passed",
+      "checks": [
+        {
+          "test": "services/llm-gateway/tests/test_stage17_trace.py::test_actual_task_trace_denial_recovery_and_artifact",
+          "status": "passed",
+          "cases": 1,
+          "missing_cases": []
+        },
+        {
+          "test": "services/marketplace/tests/test_stage12.py::test_role_quality_gates_scoping_and_versions",
+          "status": "passed",
+          "cases": 1,
+          "missing_cases": []
+        },
+        {
+          "test": "services/marketplace/tests/test_stage12.py::test_scorecard_empty_denominator_none_and_buyer_access",
+          "status": "passed",
+          "cases": 1,
+          "missing_cases": []
+        }
+      ],
+      "documents": [
+        "docs/analytics/role-quality-method.md",
+        "docs/contest/appendix-01-agents-environment.md"
+      ],
+      "readiness": "requires_human_review"
+    },
+    {
+      "id": "K3",
+      "weight": 15,
+      "automated_slice_status": "passed",
+      "checks": [
+        {
+          "test": "services/llm-gateway/tests/test_stage13_review_regressions.py::test_external_boundary_has_only_counters_and_separate_permission",
+          "status": "passed",
+          "cases": 2,
+          "missing_cases": []
+        },
+        {
+          "test": "services/marketplace/tests/test_commerce.py::test_control_example_partial_delivery_return_profit_and_privacy",
+          "status": "passed",
+          "cases": 1,
+          "missing_cases": []
+        },
+        {
+          "test": "services/marketplace/tests/test_resource_ledger.py::test_concurrent_buyers_cannot_reserve_same_stock",
+          "status": "passed",
+          "cases": 1,
+          "missing_cases": []
+        }
+      ],
+      "documents": [
+        "docs/operations/stage-15.md",
+        "docs/contest/appendix-03-architecture-and-roles.md"
+      ],
+      "readiness": "requires_human_review"
+    },
+    {
+      "id": "K4",
+      "weight": 25,
+      "automated_slice_status": "passed",
+      "checks": [
+        {
+          "test": "services/marketplace/tests/test_stage15_acceptance.py::test_working_leaf_order_report_repeat_and_denials",
+          "status": "passed",
+          "cases": 9,
+          "missing_cases": []
+        },
+        {
+          "test": "services/marketplace/tests/test_stage5_supplier.py::test_catalog_import_tiers_external_id_diff_and_rollback",
+          "status": "passed",
+          "cases": 1,
+          "missing_cases": []
+        },
+        {
+          "test": "services/marketplace/tests/test_stage5_supplier.py::test_unknown_delivery_is_not_zero_and_blocks_select",
+          "status": "passed",
+          "cases": 1,
+          "missing_cases": []
+        }
+      ],
+      "documents": [
+        "docs/contest/appendix-04-automation-demo.md",
+        "docs/analysis/stage-16.md"
+      ],
+      "readiness": "requires_human_review"
+    },
+    {
+      "id": "K5",
+      "weight": 30,
+      "automated_slice_status": "unverified",
+      "checks": [],
+      "documents": [
+        "docs/contest/Porukam-pitch.pptx",
+        "docs/contest/appendix-02-agent-interaction-scenarios.md"
+      ],
+      "readiness": "requires_human_review"
+    }
+  ],
+  "junit_provenance": [
+    {
+      "report": "scripts.xml",
+      "service": "scripts",
+      "source_matches": true
+    },
+    {
+      "report": "marketplace.xml",
+      "service": "marketplace",
+      "source_matches": true
+    },
+    {
+      "report": "llm-gateway.xml",
+      "service": "llm-gateway",
+      "source_matches": true
+    }
+  ],
+  "implementation_digests": {
+    "scripts": "01092669b771ae409e4d9a7b1488fa820e3309a3dc00ede2bc6e3bf1db42147d",
+    "marketplace": "60be8f70091474df6510a66f61f1d7ffc4c3a54b17fd824d8587d81e024ca488",
+    "llm-gateway": "ada32d4ba0687c2fe0055c7b61c9893836555751a623732ae6cdbde5b6b687f7"
+  },
+  "working_leaf_ids": [
+    "bag",
+    "bolt",
+    "box",
+    "cable",
+    "desk",
+    "fabric",
+    "film",
+    "jacket",
+    "tile"
+  ],
+  "unverified": [
+    "Финальное ревью NeTRUPPER",
+    "Функциональное видео и резерв S18.03–S18.04",
+    "Физические условия S15.03"
+  ]
+}

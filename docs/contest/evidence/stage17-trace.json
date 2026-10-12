@@ -1,0 +1,105 @@
+{
+  "schema": "stage17-trace-1",
+  "fixture": "synthetic",
+  "execution": "ASGI/PostgreSQL; model provider stubbed",
+  "source_refs": [
+    {
+      "kind": "text",
+      "version": 1
+    }
+  ],
+  "input_hash": "0ae2588a5d8930e918f280dc7dae1e1f0063f32708ba5b24a03f75fe855343c9",
+  "events": [
+    {
+      "kind": "task",
+      "operation": "create",
+      "status": 201,
+      "state": "queued"
+    },
+    {
+      "kind": "task",
+      "operation": "start",
+      "status": 200,
+      "state": "running"
+    },
+    {
+      "kind": "denial",
+      "operation": "resume_while_live",
+      "status": 409
+    },
+    {
+      "kind": "recovery",
+      "operation": "resume_after_stale_heartbeat",
+      "status": 200,
+      "state": "running"
+    },
+    {
+      "kind": "run",
+      "operation": "buyer_run",
+      "status": 201,
+      "state": "ready_for_review",
+      "tool_calls": [
+        {
+          "tool": "extract_requirements",
+          "executor": "model",
+          "status": "success"
+        },
+        {
+          "tool": "search_capability_passports",
+          "executor": "calculator",
+          "status": "success"
+        }
+      ]
+    },
+    {
+      "kind": "run",
+      "operation": "clarify",
+      "status": 200,
+      "state": "ready_for_review",
+      "tool_calls": [
+        {
+          "tool": "extract_requirements",
+          "executor": "model",
+          "status": "success"
+        },
+        {
+          "tool": "search_capability_passports",
+          "executor": "calculator",
+          "status": "success"
+        },
+        {
+          "tool": "apply_user_clarification",
+          "executor": "human",
+          "status": "success"
+        }
+      ]
+    },
+    {
+      "kind": "task",
+      "operation": "attach_run",
+      "status": 200,
+      "state": "awaiting_approval"
+    },
+    {
+      "kind": "denial",
+      "operation": "approve_stale_revision",
+      "status": 409
+    },
+    {
+      "kind": "task",
+      "operation": "approve",
+      "status": 200,
+      "state": "completed",
+      "artifact_type": "agent_run_result",
+      "artifact_revision": 2
+    },
+    {
+      "kind": "artifact",
+      "operation": "reopen",
+      "status": 200,
+      "state": "completed",
+      "artifact_type": "agent_run_result",
+      "artifact_revision": 2
+    }
+  ]
+}
