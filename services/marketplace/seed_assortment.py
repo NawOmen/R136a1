@@ -92,7 +92,7 @@ async def seed_assortment(db):
                                         characteristics=attributes, moq_units=moq, documents=[])
             product = Product(id=product_id, company_id=company_id, created_by_user_id=user_id,
                 name=name, category=category, subcategory=subcategory, characteristics=attributes,
-                price_rub=float(Decimal(str(price)) * (Decimal("1.04") if seller_index else Decimal(1))),
+                price_rub=Decimal(str(price)) * (Decimal("1.04") if seller_index else Decimal(1)),
                 price_tiers=[], moq_units=moq, lead_time_days=lead + seller_index,
                 stock_units=stock // (seller_index + 1), stock_updated_at=datetime.now(timezone.utc),
                 is_published=report.blocking_open == 0)

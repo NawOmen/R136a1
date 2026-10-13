@@ -16,7 +16,6 @@ services/gateway-auth/       FastAPI — аккаунты, вход, компа�
 services/marketplace/        FastAPI — каталог/потребности/сделки
 services/llm-gateway/        FastAPI — обработка материалов и агенты (этап 4)
 services/optimizer/          FastAPI + OR-Tools — распределение объёма, коалиции и N-1/N-2
-services/evidence-audit/     зарезервирован для следующих этапов
 packages/{contracts,ui}/     общие пакеты (pnpm workspace)
 infra/                       docker-compose.yml, миграции, скрипты проверки
 docs/                        demo/, api/, architecture/, contest/, research/
@@ -137,7 +136,7 @@ export OLLAMA_BASE_URL=http://127.0.0.1:11434
 # Каждому сервису — собственное окружение, как в Docker и CI.
 for service_name in gateway-auth marketplace llm-gateway optimizer; do
   python3.12 -m venv "services/$service_name/.venv"
-  "services/$service_name/.venv/bin/python" -m pip install "pytest>=8,<9" "pytest-asyncio>=0.26,<1" "httpx>=0.27,<1"
+  "services/$service_name/.venv/bin/python" -m pip install "pytest>=9.1.1,<10" "pytest-asyncio>=1.4.0,<2" "httpx>=0.28.1,<1"
   "services/$service_name/.venv/bin/python" -m pip install --require-hashes -r "services/$service_name/requirements.lock"
   "services/$service_name/.venv/bin/python" -m pip check
 done
@@ -170,7 +169,25 @@ marketplace/optimizer и MINIO_SECRET_KEY для marketplace. DATABASE_URL до�
 
 ## Тесты
 
-После установки отдельных окружений и загрузки собственного `.env` из корня:
+После установки отдельных окружений можно проверить бэкенд без работающего
+стенда, MinIO и собственного `.env`:
+
+```bash
+docker pull postgres:16.4-alpine   # один раз подготовить образ
+python3 scripts/test-backend.py
+# Один сервис или отдельный сценарий:
+python3 scripts/test-backend.py --service marketplace -- -q tests/test_seed_catalog.py
+```
+
+Скрипт использует отдельную временную PostgreSQL для каждого сервиса на случайном
+порту `127.0.0.1`, случайные тестовые ключи и память вместо постоянного тома.
+Он подменяет DATABASE_URL и TEST_DATABASE_URL только в дочернем процессе,
+удаляет контейнер после проверки, включая сбой теста, и возвращает ненулевой код
+при ошибке. Существующий стенд не изменяется. Для optimizer база не нужна.
+Требуются Docker и версии pytest/pytest-asyncio из инструкции выше, совпадающие с CI;
+зависимости автоматически не устанавливаются. Smoke-тест живой Ollama выполняется отдельно.
+
+Для уже работающей PostgreSQL после загрузки собственного `.env` из корня:
 
 ```bash
 # Создать отдельную тестовую БД один раз (для PostgreSQL из Compose).

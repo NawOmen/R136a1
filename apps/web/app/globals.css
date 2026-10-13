@@ -904,6 +904,10 @@ h2 {
 .market-supplier { margin-top: auto; color: var(--success); font-size: 12px; }
 .volume-price { width: 100%; margin-top: 12px; padding: 8px 10px; border-radius: 6px; color: var(--text-muted); background: var(--bg-accent); font-size: 12px; }
 .market-product__cta { width: 100%; margin-top: 14px; padding: 9px 12px; border-radius: 6px; color: #11151a; background: var(--primary); text-align: center; font-size: 13px; font-weight: 900; }
+.route-state { max-width: 720px; margin: 40px auto; padding: 32px; border: 1px solid var(--border); border-radius: var(--radius); background: var(--surface); }
+.route-state p { color: var(--text-muted); }
+.route-state__actions { display: flex; flex-wrap: wrap; align-items: center; gap: 16px; margin-top: 24px; }
+@media (max-width: 600px) { .route-state { margin: 16px auto; padding: 20px; } }
 .empty-market { min-height: 150px; display: flex; align-items: center; gap: 18px; padding: 28px; border: 1px dashed var(--border); border-radius: var(--radius); background: var(--surface); }
 .empty-market > span { display: grid; place-items: center; width: 50px; height: 50px; border-radius: 12px; color: var(--primary); background: var(--primary-soft); font-size: 24px; }
 .empty-market div { flex: 1; }.empty-market p { margin: 4px 0 0; color: var(--text-muted); }
