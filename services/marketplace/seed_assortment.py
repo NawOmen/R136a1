@@ -20,12 +20,43 @@ NAMESPACE = uuid.UUID("76fba05a-d0fb-4eeb-9b0f-90afeb845a32")
 
 GROUP_COLORS = {
     "Упаковка и тара": (196, 132, 62),
-    "Крепёж": (110, 120, 135),
-    "Текстиль": (96, 140, 120),
-    "Мебель": (140, 100, 80),
-    "Строительные материалы": (150, 110, 90),
-    "Электротехнические товары": (90, 120, 170),
+    "Сырьё и материалы": (96, 140, 120),
+    "Оборудование": (110, 120, 135),
+    "Строительство": (150, 110, 90),
+    "Продукты питания": (160, 135, 70),
+    "Товары для бизнеса": (140, 100, 80),
+    "Электроника": (90, 120, 170),
+    "Транспорт и логистика": (80, 140, 160),
+    "Полиграфия и реклама": (150, 95, 140),
+    "Услуги производства": (120, 130, 100),
+    "Медицина и гигиена": (100, 150, 155),
+    "Другое": (120, 120, 120),
 }
+
+LEGACY_COMPARISON_KEYS = ("box", "bolt", "jacket", "desk", "tile", "cable", "lamp")
+
+
+def comparison_assortment():
+    """Preserve the second seller's old IDs, then cover every remaining leaf."""
+    items = [row for row in ASSORTMENT if row[0] in LEGACY_COMPARISON_KEYS]
+    covered = {(row[2], row[3]) for row in items}
+    for row in ASSORTMENT:
+        leaf = (row[2], row[3])
+        if leaf not in covered:
+            items.append(row)
+            covered.add(leaf)
+    return items
+
+
+def assortment_scope(row, seller_index=0):
+    from app.category_registry import resolve_category
+    from app.category_units import order_unit
+    _, _, category, subcategory, _, attributes, _, moq, stock, _ = row
+    leaf = resolve_category(category, subcategory)
+    return {"category_id": leaf["id"], "profile_version": leaf["technical_profile"]["version"],
+            "unit": order_unit(attributes), "min_units": moq,
+            "max_units": stock // (seller_index + 1),
+            "characteristics": {key: [value] for key, value in attributes.items() if key != "unit"}}
 
 
 def _png_chunk(chunk_type: bytes, data: bytes) -> bytes:
@@ -62,27 +93,19 @@ async def seed_assortment(db):
         if row is None:
             continue
         company_id, user_id = row
-        # Второй продавец покрывает все шесть групп: сравнение и резерв
-        # показываются в каждой группе, а не только в трёх позициях.
-        items = ASSORTMENT if seller_index == 0 else [ASSORTMENT[i] for i in (0, 3, 6, 9, 12, 15, 16)]
-        from app.category_registry import resolve_category
-        from app.category_units import order_unit
-        scopes = []
-        for _, _, category, subcategory, _, attributes, _, moq, stock, _ in items:
-            leaf = resolve_category(category, subcategory)
-            scopes.append({"category_id":leaf["id"], "profile_version":leaf["technical_profile"]["version"],
-                           "unit":order_unit(attributes), "min_units":moq, "max_units":stock,
-                           "characteristics":{key:[value] for key,value in attributes.items() if key != "unit"}})
-        if await db.get(CapabilityPassport, company_id) is None:
-            db.add(CapabilityPassport(company_id=company_id, details={
-                "category_scopes": scopes, "business_kind": "stock_supplier", "product_types": "Товары для снабжения бизнеса",
+        items = ASSORTMENT if seller_index == 0 else comparison_assortment()
+        passport = await db.get(CapabilityPassport, company_id)
+        if passport is None:
+            passport = CapabilityPassport(company_id=company_id, details={
+                "category_scopes": [assortment_scope(row, seller_index) for row in items],
+                "business_kind": "both", "product_types": "Товары и услуги для снабжения бизнеса",
                 "delivery": "Самовывоз; стоимость перевозчика согласовывается отдельно",
                 "limitations": "Точные характеристики и доступность указаны в карточке товара",
             }, technologies=[], materials=[], equipment=[], certifications=[], size_ranges={},
-                delivery_regions=["Россия"], completed_order_types=[], min_order_units=1))
-        # Позиции первого продавца плюс сравнимые товары второго во всех группах.
-        items = ASSORTMENT if seller_index == 0 else [ASSORTMENT[i] for i in (0, 3, 6, 9, 12, 15, 16)]
-        for key, family, category, subcategory, name, attributes, price, moq, stock, lead in items:
+                delivery_regions=["Россия"], completed_order_types=[], min_order_units=1)
+            db.add(passport)
+        for row in items:
+            key, family, category, subcategory, name, attributes, price, moq, stock, lead = row
             product_id = uuid.uuid5(NAMESPACE, f"{company_id}:{key}")
             if await db.get(Product, product_id) is not None:
                 continue
@@ -97,6 +120,13 @@ async def seed_assortment(db):
                 stock_units=stock // (seller_index + 1), stock_updated_at=datetime.now(timezone.utc),
                 is_published=report.blocking_open == 0)
             db.add(product)
+            # Extend scope only for this newly inserted fixture. Existing scope edits
+            # and deliberately removed scope entries survive subsequent seed runs.
+            details = passport.details or {}
+            existing_scopes = list(details.get("category_scopes", []))
+            scope = assortment_scope(row, seller_index)
+            if scope not in existing_scopes:
+                passport.details = {**details, "category_scopes": [*existing_scopes, scope]}
             await db.flush()
             if product.is_published:
                 db.add(ProductPriceObservation(product_id=product.id, category=category,

@@ -233,15 +233,18 @@ async def test_catalog_import_tiers_external_id_diff_and_rollback(client, db_ses
 
 async def test_assortment_scope_and_seed_stories(client, db_session):
     from app.assortment import ASSORTMENT
+    from app.models import CapabilityPassport
+    from app.category_registry import resolve_category
+    from seed_assortment import comparison_assortment
     from seed_assortment import group_pictogram, seed_assortment
 
-    assert len(ASSORTMENT) == 24
+    assert len(ASSORTMENT) == 101
     keys = [item[0] for item in ASSORTMENT]
     assert len(set(keys)) == len(keys)
     families = {item[1] for item in ASSORTMENT}
-    assert len(families) == 6
+    assert len(families) == 12
     for family in families:
-        assert sum(1 for item in ASSORTMENT if item[1] == family) >= 3
+        assert sum(1 for item in ASSORTMENT if item[1] == family) >= 2
     assert group_pictogram("Крепёж")[:8] == PNG[:8]
 
     seller_tokens = {}
@@ -265,7 +268,14 @@ async def test_assortment_scope_and_seed_stories(client, db_session):
     await seed_assortment(db_session)
     await db_session.commit()
     first_products = await db_session.scalar(select(func.count()).select_from(Product))
-    assert first_products > before_products
+    assert first_products - before_products == len(ASSORTMENT) + len(comparison_assortment())
+    expected_leaves = {resolve_category(row[2], row[3])["id"] for row in ASSORTMENT}
+    for title, (company, _) in seller_tokens.items():
+        products = (await db_session.scalars(select(Product).where(Product.company_id == company))).all()
+        assert {resolve_category(product.category, product.subcategory)["id"] for product in products} == expected_leaves
+        assert all(not product.is_published for product in products)
+        passport = await db_session.get(CapabilityPassport, company)
+        assert {scope["category_id"] for scope in passport.details["category_scopes"]} == expected_leaves
     await seed_assortment(db_session)
     await db_session.commit()
     after_products = await db_session.scalar(select(func.count()).select_from(Product))
@@ -283,9 +293,9 @@ async def test_assortment_scope_and_seed_stories(client, db_session):
                                                                 ("cancellation", "confirmed")}
     assert sum(event.units for event in events if event.kind == "acceptance") == 1000
     images = (await db_session.execute(select(ProductImage))).scalars().all()
-    assert len(images) == 6
+    assert len(images) == 12
     assert all(image.content_type == "image/png" for image in images)
-    assert len({image.product_id for image in images}) == 6
+    assert len({image.product_id for image in images}) == 12
     ural_id, ural_token = seller_tokens["ООО «Урал Комплект»"]
     analytics = await client.get(f"/api/v1/companies/{ural_id}/seller-analytics",
                                  headers=_auth(ural_token))
@@ -293,6 +303,67 @@ async def test_assortment_scope_and_seed_stories(client, db_session):
     assert analytics.json()["sold_units"] == 1000
     assert Decimal(str(analytics.json()["revenue_rub"])) == Decimal("12000")
     assert analytics.json()["deals_total"] == 2
+
+
+async def test_assortment_upgrade_preserves_old_ids_prices_and_passport_edits(db_session, monkeypatch):
+    import seed_assortment as loader
+    from app.assortment import ASSORTMENT
+    from app.models import CapabilityPassport
+    from app.category_registry import resolve_category
+    from copy import deepcopy
+    import uuid
+
+    companies = []
+    for index, title in enumerate(("ООО «Урал Комплект»", "ООО «Регион Поставка»")):
+        user = await make_user(db_session, email=f"upgrade-{index}@demo.ru")
+        company = await make_company(db_session, user, can_buy=False)
+        await db_session.execute(text("UPDATE auth.companies SET display_name=:title WHERE id=:id"),
+                                 {"title": title, "id": company})
+        companies.append(company)
+    await db_session.commit()
+    # Reproduce the preceding catalogue: 24 first-seller and 7 second-seller SKUs.
+    legacy = ASSORTMENT[:24]
+    legacy_second = [row for row in legacy if row[0] in loader.LEGACY_COMPARISON_KEYS]
+    with monkeypatch.context() as old:
+        old.setattr(loader, "ASSORTMENT", legacy)
+        old.setattr(loader, "comparison_assortment", lambda: legacy_second)
+        await loader.seed_assortment(db_session)
+    await db_session.commit()
+    old_ids = set((await db_session.scalars(select(Product.id))).all())
+    assert len(old_ids) == 31
+    box_id = uuid.uuid5(loader.NAMESPACE, f"{companies[0]}:box")
+    box = await db_session.get(Product, box_id)
+    box.price_rub = Decimal("123.45")
+    box.stock_units = 777
+    passport = await db_session.get(CapabilityPassport, companies[0])
+    details = deepcopy(passport.details)
+    details["delivery"] = "Условия доставки изменены продавцом"
+    details["category_scopes"][0]["max_units"] = 700
+    retained_scope = deepcopy(details["category_scopes"][0])
+    passport.details = details
+    await db_session.commit()
+
+    await loader.seed_assortment(db_session)
+    await db_session.commit()
+    all_ids = set((await db_session.scalars(select(Product.id))).all())
+    assert old_ids <= all_ids
+    assert len(all_ids) == len(ASSORTMENT) + len(loader.comparison_assortment())
+    await db_session.refresh(box)
+    await db_session.refresh(passport)
+    assert box.price_rub == Decimal("123.45") and box.stock_units == 777
+    assert passport.details["delivery"] == details["delivery"]
+    assert retained_scope in passport.details["category_scopes"]
+    expected = {resolve_category(row[2], row[3])["id"] for row in ASSORTMENT}
+    assert {scope["category_id"] for scope in passport.details["category_scopes"]} == expected
+    # A deliberately removed scope for an existing SKU stays removed on replay.
+    passport.details = {**passport.details, "category_scopes": [scope for scope in
+                       passport.details["category_scopes"] if scope != retained_scope]}
+    await db_session.commit()
+    await loader.seed_assortment(db_session)
+    await db_session.commit()
+    await db_session.refresh(passport)
+    assert retained_scope not in passport.details["category_scopes"]
+    assert set((await db_session.scalars(select(Product.id))).all()) == all_ids
 
 
 async def test_import_respects_held_stock_like_editor(client, db_session):

@@ -5,6 +5,7 @@ import pytest
 from sqlalchemy import select, text
 
 import seed
+from app.assortment import ASSORTMENT
 from app.models import Document, Product, ProductPriceObservation, TrustAuditEvent
 from conftest import make_company, make_marketplace_admin, make_user
 
@@ -32,7 +33,7 @@ async def test_clean_seed_publishes_admitted_cups_and_preserves_rerun(client, db
     assert {item["name"] for item in catalog} == {"Стакан 400 мл PE", "Стакан 350 мл PE"}
     assert {Decimal(item["price_rub"]) for item in catalog} == {Decimal("11.2"), Decimal("10.5")}
     products = (await db_session.scalars(select(Product).where(Product.company_id == company))).all()
-    assert len(products) == 26
+    assert len(products) == 2 + len(ASSORTMENT)
     assert sum(product.is_published for product in products) == 2
     assert len((await db_session.scalars(select(ProductPriceObservation))).all()) == 2
     events = (await db_session.scalars(select(TrustAuditEvent).where(
@@ -50,7 +51,7 @@ async def test_clean_seed_publishes_admitted_cups_and_preserves_rerun(client, db
     assert (await client.get("/api/v3/products")).json() == []
     await db_session.refresh(cups[0])
     assert cups[0].price_rub == Decimal("12.34") and cups[0].stock_units == 7
-    assert len((await db_session.scalars(select(Product))).all()) == 26
+    assert len((await db_session.scalars(select(Product))).all()) == 2 + len(ASSORTMENT)
     assert len((await db_session.scalars(select(ProductPriceObservation))).all()) == 2
 
 
