@@ -89,6 +89,10 @@ jobs:
       - name: Run optimizer tests
         working-directory: services/optimizer
         run: '"$RUNNER_TEMP/venv-optimizer/bin/python" -m pytest -q'
+      - name: Linux container runner and real PNG decoder
+        run: >-
+          python3 scripts/test-backend.py --service marketplace -- -q
+          tests/test_stage5_supplier.py::test_product_characteristics_limit_and_photo_bounds
 
   frontend:
     runs-on: ubuntu-latest
