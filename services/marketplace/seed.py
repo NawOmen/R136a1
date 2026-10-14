@@ -10,6 +10,7 @@ from pypdf import PdfWriter
 import os
 import uuid
 from datetime import datetime, timedelta, timezone
+from decimal import Decimal
 
 from sqlalchemy import select, text
 
@@ -43,6 +44,8 @@ SELLER_USER_EMAIL = os.getenv("SEED_SELLER_EMAIL", "seller@demo.ru")
 
 
 async def seed() -> None:
+    if os.getenv("ENABLE_DEMO_SEED", "false").lower() != "true":
+        raise RuntimeError("Синтетическое наполнение требует ENABLE_DEMO_SEED=true")
     from app.category_runtime import current_registry_context
     async with SessionLocal() as db, current_registry_context(db):
         seller_row = (
@@ -63,7 +66,7 @@ async def seed() -> None:
         ).first()
         user_row = (
             await db.execute(
-                text("SELECT id FROM auth.users WHERE email = :email"),
+                text("SELECT id FROM auth.users WHERE email = :email AND account_status = 'active'"),
                 {"email": SELLER_USER_EMAIL},
             )
         ).first()
@@ -123,39 +126,59 @@ async def seed() -> None:
                 select(Product).where(Product.company_id == seller_company_id)
             )
         ).scalars().first()
+        new_products = []
         if product is None:
-            db.add(
+            new_products.append(
                 Product(
                     company_id=seller_company_id,
                     created_by_user_id=user_id,
                     name="Стакан 400 мл PE",
-                    category="бумажные стаканы",
-                    characteristics={"volume_ml": 400, "coating": "PE", "material": "крафт-картон 300 г/м²"},
-                    price_rub=11.2,
+                    category="Упаковка и тара",
+                    subcategory="Бумажные стаканы",
+                    characteristics={"volume_ml": 400, "coating": "PE", "material": "крафт-картон 300 г/м²", "food_contact": True, "unit": "шт"},
+                    price_rub=Decimal("11.2"),
                     moq_units=20000,
                     lead_time_days=9,
                     stock_units=12000,
                     is_published=False,
                 )
             )
-            db.add(
+            new_products.append(
                 Product(
                     company_id=seller_company_id,
                     created_by_user_id=user_id,
                     name="Стакан 350 мл PE",
-                    category="бумажные стаканы",
-                    characteristics={"volume_ml": 350, "coating": "PE", "material": "крафт-картон 300 г/м²"},
-                    price_rub=10.5,
+                    category="Упаковка и тара",
+                    subcategory="Бумажные стаканы",
+                    characteristics={"volume_ml": 350, "coating": "PE", "material": "крафт-картон 300 г/м²", "food_contact": True, "unit": "шт"},
+                    price_rub=Decimal("10.5"),
                     moq_units=15000,
                     lead_time_days=8,
                     is_published=False,
                 )
             )
+            db.add_all(new_products)
 
         await _seed_category_documents(db, seller_company_id)
 
         from seed_assortment import seed_assortment
         await seed_assortment(db)
+        await db.flush()
+        # Only newly created fixtures: reruns never republish a seller's draft.
+        # The regular handler checks membership, company, specification and evidence,
+        # and records the same audit/price event as an interactive publication.
+        if user_id is not None:
+            from fastapi import HTTPException
+            from app.api.products import publish_product
+            from app.deps import CurrentUser
+            from app.schemas import PublishIn
+            for created in new_products:
+                try:
+                    await publish_product(created.id, PublishIn(published=True), CurrentUser(user_id), db)
+                except HTTPException as error:
+                    if error.status_code not in (403, 409, 422):
+                        raise
+                    print(f"Карточка «{created.name}» осталась черновиком: {error.detail}")
         await db.commit()
 
 
@@ -230,13 +253,13 @@ async def _seed_category_documents(db, seller_company_id) -> None:
                 document_type=item["document_type"],
                 file_key=file_key,
                 content_type="application/pdf",
-                verification_status="verified",
+                verification_status="verified" if admin_id else "unverified",
                 scope_category="Упаковка и тара",
                 scope_subcategory="Бумажные стаканы",
                 valid_until=valid_until,
                 confirms=item["confirms"],
                 verified_by_user_id=admin_id,
-                verified_at=datetime.now(timezone.utc),
+                verified_at=datetime.now(timezone.utc) if admin_id else None,
                 verification_note=item["verification_note"],
             )
         )

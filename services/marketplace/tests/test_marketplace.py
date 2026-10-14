@@ -264,6 +264,7 @@ async def test_demo_seed_separates_buyer_address_and_seller_data(
     await db_session.commit()
 
     monkeypatch.setattr(marketplace_seed, "SessionLocal", session_factory)
+    monkeypatch.setenv("ENABLE_DEMO_SEED", "true")
     await marketplace_seed.seed()
 
     from app.models import Document
