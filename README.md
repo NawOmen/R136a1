@@ -1,272 +1,157 @@
-# Сборка B2B
+# ПоРукам — B2B-маркетплейс
 
-Прототип B2B-маркетплейса, создающего коалиции покупателей и производителей и моделирующего устойчивость сделки.
+Российские покупатели и производители, каталог, потребности, КП, коалиции,
+резерв, исполнение и аналитика. Расчёты выполняются кодом и OR-Tools;
+локальная модель помогает обрабатывать материалы и готовить предложения.
 
-## С чего продолжать
+**Запуск приложения — только через Docker.** Для размещения сайта на сервере
+и подключения двух ноутбуков с моделями используйте
+[DEPLOYMENT.md](DEPLOYMENT.md): RTX 5060 и MacBook, SSH-туннели, HTTPS,
+ручное переключение, автоматическое резервирование и распределение запросов.
 
-Единственный актуальный план — [NEXT_STEPS.md](NEXT_STEPS.md): подробные этапы 00–19, текущая база, оставшиеся функции, все категории, пять критериев конкурса и порядок подачи. Следующий исполнитель начинает с S00.01, затем предметных профилей S01; статусы/доказательства обновляет в этом же файле.
-
-В коде есть основные пути покупателя и поставщика, агенты, коалиции, резерв, исполнение и аналитика; их наличие не означает завершения всех требований. На базе `a4ecbb3` стандартный Docker-стенд и 245 автоматических проверок прошли успешно. [Результаты, происхождение и ограничения](docs/reviews/verification-baseline.md). Оставшиеся задачи не помечаются выполненными по одному зелёному CI.
-
-## Структура
-
-```
-apps/web/                    Next.js (App Router, TypeScript) — интерфейс
-services/gateway-auth/       FastAPI — аккаунты, вход, компании, проверка
-services/marketplace/        FastAPI — каталог/потребности/сделки
-services/llm-gateway/        FastAPI — обработка материалов и агенты (этап 4)
-services/optimizer/          FastAPI + OR-Tools — распределение объёма, коалиции и N-1/N-2
-packages/{contracts,ui}/     общие пакеты (pnpm workspace)
-infra/                       docker-compose.yml, миграции, скрипты проверки
-docs/                        demo/, api/, architecture/, contest/, research/
-```
+Актуальные задачи и доказательства готовности — [NEXT_STEPS.md](NEXT_STEPS.md).
+Наличие функции и зелёный CI не подтверждают все условия эксплуатации.
 
 ## Требования
 
-- Docker Desktop / Docker Engine с Docker Compose;
-- Node.js 20+ и pnpm;
-- Python 3.12 (для локального запуска сервисов без Docker);
-- Ollama с моделью `qwen3.5:9b` (нужна с этапа 4; для этапа 2 не обязательна).
+- Docker Engine с плагином Compose v2 на Linux либо Docker Desktop.
+- Git и терминал bash/zsh; для Windows — WSL2.
+- Для ИИ — Docker-узел Ollama по инструкции ниже или два ноутбука по
+  [серверной инструкции](DEPLOYMENT.md).
 
-## Быстрый старт
+Node.js, Python, PostgreSQL и зависимости приложения устанавливаются в образы.
+Создавать окружения сервисов или запускать их отдельно на хосте не требуется.
+
+## Docker-стенд на одном компьютере
+
+Все команды — из корня репозитория. Для **нового** стенда создайте секреты:
 
 ```bash
-python3 scripts/init-local-env.py  # новый .env со случайными секретами, без перезаписи
-docker compose --env-file .env -f infra/docker-compose.yml up --build
+docker run --rm --user "$(id -u):$(id -g)" \
+  -v "$PWD:/workspace" -w /workspace \
+  python:3.12-slim python scripts/init-local-env.py
 ```
 
-MinIO собирается из исходников фиксированного коммита с проверкой SHA-256, поэтому первый запуск требует загрузки Go-модулей и занимает больше времени. Готовый образ MinIO из удалённого registry не требуется. Происхождение сборки и соответствующие исходники: [infra/minio/README.md](infra/minio/README.md).
+Скрипт не перезаписывает существующий `.env`. Контейнер подготовки не видит
+список томов хоста: если PostgreSQL уже запускалась, сначала выполните
+[порядок обновления и ротации](docs/security/hardening.md#существующая-база-и-ротация).
+Не создавайте новые секреты вместо существующих без их согласованной смены.
 
-Если стенд уже запускался раньше (на компьютере остался том PostgreSQL),
-`init-local-env.py` предупредит об этом, а сервисы упадут с
-`password authentication failed for user "sborka"`: PostgreSQL применяет
-`POSTGRES_PASSWORD` только при первой инициализации тома, и смена `.env` пароль
-роли не меняет. Перед запуском выполните один раз:
+Для Ollama подготовьте контейнер и модель:
 
 ```bash
-python3 scripts/sync-db-password.py   # выставит пароль роли из .env, данные сохранятся
+docker run -d --name porukam-ollama --restart unless-stopped \
+  -e OLLAMA_NO_CLOUD=1 \
+  -p 127.0.0.1:11434:11434 -v porukam_ollama:/root/.ollama \
+  ollama/ollama:latest
+docker exec porukam-ollama ollama pull qwen3.5:9b
 ```
 
-Если данные не нужны, вместо этого удалите том (они будут потеряны):
+Это вариант на CPU. Для NVIDIA и настройки двух узлов см.
+[DEPLOYMENT.md](DEPLOYMENT.md). Docker Desktop на macOS не предоставляет
+Ollama GPU-ускорение Apple; измерения прежнего запуска на Mac нельзя переносить
+на этот контейнер. Не запускайте второй контейнер, если имя/порт уже заняты:
+проверьте `docker ps -a` и используйте существующий проверенный экземпляр.
 
-```bash
-docker compose --env-file .env -f infra/docker-compose.yml down
-docker volume rm infra_postgres_data   # имя тома уточните: docker volume ls | grep postgres
+В `.env` задайте:
+
+```dotenv
+OLLAMA_DOCKER_BASE_URL=http://host.docker.internal:11434
+OLLAMA_MODEL=qwen3.5:9b
+DEEPSEEK_API_KEY=
+ENABLE_DEMO_SEED=false
 ```
 
-Тот же шаг нужен после ротации `POSTGRES_PASSWORD` на существующем стенде;
-подробности — в [docs/security/hardening.md](docs/security/hardening.md).
-
-Для функций этапа 4 Ollama запускается на хосте отдельно:
+Запустите сервисы:
 
 ```bash
-ollama pull qwen3.5:9b
-ollama serve
+docker compose --project-name infra --env-file .env -f infra/docker-compose.yml up -d --build
+docker compose --project-name infra --env-file .env -f infra/docker-compose.yml ps
 ```
 
-Базовый маркетплейс работает и без модели; в этом случае недоступен только
-разбор новых материалов. Whisper `small` использует кеш в Docker volume.
-Перед первым аудиозапросом подготовьте веса (скачиваются только веса модели,
-пользовательские материалы не передаются):
+Миграции применяются entrypoint-контейнерами. Первый build MinIO собирает
+фиксированный исходный код с проверкой SHA-256 и требует доступа к Go-модулям:
+[происхождение сборки](infra/minio/README.md).
+
+Для аудио один раз подготовьте кеш Whisper **в контейнере Gateway**:
 
 ```bash
-docker compose -f infra/docker-compose.yml exec llm-gateway python -c 'from faster_whisper.utils import download_model; download_model("small")'
+docker compose --project-name infra --env-file .env -f infra/docker-compose.yml \
+  exec llm-gateway python -c 'from faster_whisper.utils import download_model; download_model("small")'
 ```
 
-Обработчик аудио использует только этот локальный кеш; при отсутствии модели возвращает сообщение о временной недоступности. DeepSeek необязателен и включается только через
-`DEEPSEEK_API_KEY` в локальном `.env`; ключ нельзя добавлять в Git.
-Для Docker адрес Ollama задаётся отдельно как
-`OLLAMA_DOCKER_BASE_URL=http://host.docker.internal:11434`.
+Скачиваются веса, а не отправляются пользовательские материалы. Без кеша аудио
+возвращает диагностируемую недоступность. Без доступной Ollama обязательное
+извлечение новых материалов также не выполняется; ручные пути остаются доступны.
 
-После запуска:
+| Компонент | Доступ на компьютере Docker |
+| --- | --- |
+| Сайт | http://localhost:3000 |
+| Auth / Marketplace / LLM Gateway | http://localhost:8001 / http://localhost:8002 / http://localhost:8003; OpenAPI `/docs` |
+| PostgreSQL | TCP `127.0.0.1:5433`; внутри Compose — `postgres:5432` |
+| MinIO / консоль | http://localhost:9000 / http://localhost:9001 |
+| pgAdmin | http://localhost:5050 |
+| Optimizer | Только внутри Compose: `http://optimizer:8004` |
 
-| Сервис | Адрес | Описание |
-| --- | --- | --- |
-| Web App | http://localhost:3000 | интерфейс покупателя/производителя/админа |
-| Gateway Auth | http://localhost:8001 | аккаунты, вход, компании, проверка (OpenAPI: `/docs`) |
-| Marketplace | http://localhost:8002 | каталог, потребности, предложения, сделки, уведомления (OpenAPI: `/docs`) |
-| LLM Gateway | http://localhost:8003 | восстановление требований и агенты (OpenAPI: `/docs`) |
-| Optimizer | http://localhost:8004 | детерминированные варианты, MOQ, скидки и коалиции (OpenAPI: `/docs`) |
-| MinIO | http://localhost:9000 | объектное хранилище файлов (консоль: :9001) |
-| PostgreSQL | http://localhost:5433 | БД (внутри Docker — хост `postgres:5432`) |
-| pgAdmin | http://localhost:5050 | веб-интерфейс для просмотра локальной PostgreSQL |
+Базовый Compose привязывает опубликованные порты к loopback. Со второго устройства
+используйте HTTPS-прокси из [DEPLOYMENT.md](DEPLOYMENT.md), а не IP с портом 3000.
+Для pgAdmin параметры подключения — `postgres:5432`, база/пользователь/пароль из
+`.env`. Секреты, сертификаты и исходные клиентские файлы в Git не добавляются.
 
-В pgAdmin войдите с `PGADMIN_DEFAULT_EMAIL` и `PGADMIN_DEFAULT_PASSWORD` из
-локального `.env`. При первом подключении зарегистрируйте сервер с параметрами:
-хост `postgres`, порт `5432`, база и пользователь из `POSTGRES_DB` и
-`POSTGRES_USER`, пароль из `POSTGRES_PASSWORD`. Данные pgAdmin сохраняются в
-Docker volume `pgadmin_data` и не попадают в Git.
+## Синтетическое наполнение
 
-Миграции применяются при старте. Демо-аккаунты создаются только при явном
-`ENABLE_DEMO_SEED=true`; пароли берутся из локального .env.
-Для существующей базы обязательно выполнить [инструкцию смены секретов](docs/security/hardening.md).
+На пустой тестовой базе при необходимости задайте `ENABLE_DEMO_SEED=true`,
+проверьте случайные `SEED_*_PASSWORD` в `.env` и выполните тот же `up -d --build`.
+Auth создаёт аккаунты перед начальным наполнением Marketplace. После подготовки
+верните флаг в `false` и повторите `up -d`. Для рабочего серверного развёртывания
+seed оставляют выключенным. [Состав и правила повторного наполнения](docs/synthetic-assortment.md).
 
-### Доступ с других устройств в локальной сети
-
-Базовый Compose доступен только на localhost. Для других устройств включите
-[HTTPS-прокси и доверенный сертификат](docs/security/hardening.md).
-Прямые API и служебные порты в сеть не публикуйте.
-
-### Демо-аккаунты (синтетические)
-
-| Роль | Email | Пароль |
-| --- | --- | --- |
-| Администратор | `admin@demo.ru` | `SEED_ADMIN_PASSWORD` из .env |
-| Покупатель + продавец (проверенная компания) | `demo@demo.ru` | `SEED_DEMO_PASSWORD` из .env |
-| Производитель «СтаканОпт Демо» | `seller@demo.ru` | `SEED_SELLER_PASSWORD` из .env |
-
-После входа откройте «Создать потребность»: верхний блок принимает обычный
-русский текст, фото, PDF и голос, показывает источники и противоречия, а затем
-переносит только подтверждённые данные в карточку.
-
-## Локальный запуск сервисов без Docker
-
-Нужен Python 3.12, запущенные PostgreSQL и MinIO. Для нового стенда создайте
-`.env` через `python3 scripts/init-local-env.py`; для существующего сначала выполните
-[ротацию секретов](docs/security/hardening.md). Следующие команды выполняются
-из корня проекта в bash/zsh. Загружайте только собственный доверенный `.env`:
+## Остановка и обновление
 
 ```bash
-set -a
-. ./.env
-set +a
-export OPTIMIZER_URL=http://127.0.0.1:8004
-export OLLAMA_BASE_URL=http://127.0.0.1:11434
-
-# Каждому сервису — собственное окружение, как в Docker и CI.
-for service_name in gateway-auth marketplace llm-gateway optimizer; do
-  python3.12 -m venv "services/$service_name/.venv"
-  "services/$service_name/.venv/bin/python" -m pip install "pytest>=9.1.1,<10" "pytest-asyncio>=1.4.0,<2" "httpx>=0.28.1,<1"
-  "services/$service_name/.venv/bin/python" -m pip install --require-hashes -r "services/$service_name/requirements.lock"
-  "services/$service_name/.venv/bin/python" -m pip check
-done
-
-# миграции (при запущенном PostgreSQL)
-for service_name in gateway-auth marketplace llm-gateway; do
-  (cd "services/$service_name" && .venv/bin/alembic upgrade head)
-done
-
-# Только для синтетического демо: явный флаг, пароли SEED_*_PASSWORD из .env.
-export ENABLE_DEMO_SEED=true
-if [ "$ENABLE_DEMO_SEED" = "true" ]; then
-  (cd services/gateway-auth && .venv/bin/python seed.py)
-  (cd services/marketplace && .venv/bin/python seed.py)
-fi
-export ENABLE_DEMO_SEED=false
-
-# Запуск авторизации; для остальных сервисов — отдельные терминалы.
-cd services/gateway-auth
-.venv/bin/uvicorn app.main:app --reload --host 127.0.0.1 --port 8001 --no-proxy-headers --no-access-log
+docker compose --project-name infra --env-file .env -f infra/docker-compose.yml logs --tail=100 llm-gateway
+docker compose --project-name infra --env-file .env -f infra/docker-compose.yml stop
 ```
 
-В каждом новом терминале сначала загрузите `.env` из корня теми же командами
-`set -a; . ./.env; set +a` и экспортируйте указанные локальные URL.
-Для marketplace, llm-gateway и optimizer перейдите в соответствующий каталог
-`services/...` и выполните ту же команду uvicorn с портами 8002, 8003 и 8004.
-Обязательны JWT_SECRET для авторизации/marketplace/LLM, OPTIMIZER_TOKEN для
-marketplace/optimizer и MINIO_SECRET_KEY для marketplace. DATABASE_URL должен
-содержать **текущий** пароль PostgreSQL. Флаг seed сам по себе не создаёт секреты.
+`stop` сохраняет контейнеры и тома; для продолжения выполните `up -d`.
+Перед обновлением подготовьте резервную копию по
+[операционному порядку](docs/operations/stage-15.md). Не используйте `down -v`
+для обновления или смены пароля: это удаляет данные. Для HTTPS/модельного прокси
+во всех командах сохраняйте набор Compose-файлов из серверной инструкции.
 
-## Тесты
+## Проверки
 
-На macOS и Linux бэкенд можно проверить без работающего стенда, локальных
-`.venv`, MinIO и собственного `.env`. Запустите Docker Desktop / Docker Engine:
+Проверки не требуют отдельного запуска приложения без Docker. CI выполняет
+миграции, серверные тесты, клиентские проверки и сборку контейнера интерфейса.
+Короткий серверный прогон можно выполнить Docker-runner'ом:
 
 ```bash
-docker pull postgres:16.4-alpine   # один раз подготовить образ
-python3 scripts/test-backend.py
-# Один сервис или отдельный сценарий:
 python3 scripts/test-backend.py --service marketplace -- -q tests/test_seed_catalog.py
 ```
 
-По умолчанию тесты и нативные декодеры выполняются в Linux-контейнерах.
-При первом запуске runner собирает отдельный тестовый образ каждого выбранного
-сервиса из его `requirements.lock` и версий pytest/pytest-asyncio, используемых CI.
-Для первой сборки нужен доступ к реестру образов и пакетам; следующие сборки
-используют Docker cache. Образы тестов сохраняются для повторного использования.
-Production-образы и зависимости приложения не меняются.
+Здесь Python 3 — только управляющая утилита на хосте; сервис, зависимости,
+декодеры и временная PostgreSQL работают в изолированных Docker-контейнерах.
+Runner не меняет рабочие тома и не использует секреты стенда. При первой сборке
+нужна сеть. Полный набор запускается тем же runner'ом без `--service`.
+Проверки живой модели и браузерная приёмка отделены от сборки; порядок серверной
+проверки модели приведён в [DEPLOYMENT.md](DEPLOYMENT.md).
 
-Для каждого сервиса создаётся отдельная закрытая Docker-сеть и временная
-PostgreSQL без опубликованных портов, с памятью вместо постоянного тома.
-Исходники подключаются только для чтения. В контейнер передаются только временные
-ключи и адрес тестовой базы; окружение приложения и smoke-флаги не наследуются; `.env` корня и сервисов
-при наличии закрываются пустым файлом внутри тестового контейнера.
-Контейнеры и сеть удаляются после проверки, включая сбой или прерывание теста;
-сбой тестов даёт ненулевой код возврата. Существующий стенд не изменяется. Для optimizer
-база не создаётся. Живая Ollama проверяется отдельно: внешняя сеть тестового
-окружения закрыта.
+## Структура и документация
 
-На **Linux** после подготовки `.venv` по инструкции выше можно явно выбрать
-нативный режим; его временная PostgreSQL публикуется только на случайном
-loopback-порту:
-
-```bash
-python3 scripts/test-backend.py --runtime native --service marketplace -- -q
+```text
+apps/web/                  Next.js / React / TypeScript
+services/gateway-auth/     аккаунты, компании и доступ
+services/marketplace/      каталог, потребности, сделки и исполнение
+services/llm-gateway/      извлечение материалов, агенты, OCR и Whisper
+services/optimizer/        детерминированный расчёт / OR-Tools
+infra/                    Compose, HTTPS-прокси, модели и сборка MinIO
 ```
 
-На macOS нативный режим отклоняется до старта тестов: используемый декодерами
-`RLIMIT_AS` требует Linux. Системные ограничения обработки файлов сохраняются.
+- [Развёртывание: сервер и два ноутбука](DEPLOYMENT.md).
+- [Оглавление документации](docs/README.md), [API](docs/api/marketplace-api.md),
+  [безопасный запуск и ротация](docs/security/hardening.md).
+- [Основная спецификация](plan_sborka_b2b.md) и [актуальная очередь](NEXT_STEPS.md).
+- [Историческая проверенная база и её ограничения](docs/reviews/verification-baseline.md).
 
-Для уже работающей PostgreSQL после загрузки собственного `.env` из корня:
-
-```bash
-# Создать отдельную тестовую БД один раз (для PostgreSQL из Compose).
-docker compose --env-file .env -f infra/docker-compose.yml exec -T postgres psql -U "$POSTGRES_USER" -d postgres -c "CREATE DATABASE sborka_test"
-# Сохраняет подключение и пароль из DATABASE_URL, меняет только имя базы.
-export TEST_DATABASE_URL="${DATABASE_URL%/*}/sborka_test"
-for service_name in gateway-auth marketplace llm-gateway optimizer; do
-  (cd "services/$service_name" && .venv/bin/python -m pytest -q)
-done
-```
-
-Тесты очищают свои таблицы; TEST_DATABASE_URL должен указывать только на тестовую БД.
-Для PostgreSQL без Docker создайте sborka_test через локальный psql.
-
-Опциональный smoke-тест с реальной локальной Qwen (Ollama должна быть запущена):
-
-```bash
-cd services/llm-gateway
-RUN_OLLAMA_SMOKE=1 OLLAMA_BASE_URL=http://localhost:11434 .venv/bin/python -m pytest -m ollama
-```
-
-### Playwright (E2E)
-
-```bash
-cd tests/e2e
-pnpm install
-pnpm install:browsers   # один раз — скачает Chromium
-docker compose -f ../../infra/docker-compose.yml up --build   # поднимите стек
-pnpm test
-```
-
-CI (`.github/workflows/ci.yml`) выполняет миграции и тесты бэкенда, а также type-check и сборку фронтенда.
-
-## Проверка Ollama (Qwen3.5 9B)
-
-```bash
-python infra/verify_ollama.py
-```
-
-Результаты замера на основном компьютере — в `docs/architecture/ollama-benchmark.md`.
-
-Сравнение Qwen и необязательного DeepSeek на одинаковых синтетических задачах:
-
-```bash
-python infra/compare_llm_routes.py
-```
-
-Если IP сменится (переподключились к другой сети) — узнайте новый адрес одной командой на ноутбуке:
-
-```bash
-python scripts/print-access-url.py
-```
-
-Используйте HTTPS-адрес с доверенным сертификатом и явным `CORS_ORIGINS` по [инструкции защищённой локальной сети](docs/security/hardening.md). При смене IP обновите SAN сертификата и разрешённый origin. Базовый Compose публикует сайт только на localhost.
-
-## Документация
-
-Очередь работы и статусы — [NEXT_STEPS.md](NEXT_STEPS.md). Предметная спецификация — `plan_sborka_b2b.md`; сценарии и входные данные — `docs/demo/`, `packages/test-fixtures/`. API-контракты — в `docs/api/`, архитектура устойчивости — `docs/architecture/stage-6-resilience.md`, контроль этапа 7 — `docs/architecture/stage-7-trust-control.md`, сопровождение сделки — `docs/architecture/stage9-experience.md`. Юридические файлы в `docs/legal/` являются проектными черновиками до проверки российским юристом.
-
-## Приёмка и восстановление
-
-[Эксплуатация этапа 15](docs/operations/stage-15.md): согласованный снимок PostgreSQL/MinIO, восстановление в отдельный проект, версии и ограничения измерений. Статусы приёмки остаются в `NEXT_STEPS.md`.
+Данные наполнения синтетические. Юридические файлы в `docs/legal/` — проекты,
+требующие утверждения и проверки применимости к реальному использованию.

@@ -6,6 +6,11 @@
 > где запущена Ollama. Это не «основной компьютер» конкурса (Intel Core Ultra 7 255H + RTX 5060 8 ГБ).
 > Показатели RAM/VRAM для основного компьютера нужно замерить на нём самом — команды и таблица приведены в конце.
 
+Текущий запуск описан только через Docker в [DEPLOYMENT.md](../../DEPLOYMENT.md).
+Исторические замеры на Apple Silicon не подтверждают скорость CPU-инференса
+Ollama в Docker Desktop macOS. На ноутбуках текущей схемы состояние модели
+проверяют командой `docker exec porukam-ollama ollama ps`.
+
 ## Модель
 
 - имя в Ollama: `qwen3.5:9b`;
@@ -44,7 +49,7 @@ free -h
 # во время генерации (в параллельном терминале)
 nvidia-smi --query-gpu=memory.used,memory.total --format=csv,noheader
 free -h
-ollama ps
+docker exec porukam-ollama ollama ps
 ```
 
 Таблица для заполнения:
