@@ -2,14 +2,11 @@
   "schema": "contest-evidence-1",
   "scope": "Синтетическая программная проверка, не оценка жюри и не полная приёмка критериев.",
   "source_digests": {
+    "README.md": "fcc019b5e6847bd0bcb892f17e78e1007d49863d63ec69e8d5fcd599a0ee09ad",
     "docs/analysis/stage-16-scenarios.md": "c79342df78e3ae54f387eb18639460b8b4df1e57a10b8a2528b7a94df9e478fe",
     "docs/analysis/stage-16.md": "044b392ddad75e710d265db74a1e6d14d8b7d9c9f80b52f361e37cf4dc93401b",
     "docs/analytics/role-quality-method.md": "452833f11ffe6256436a37bd5b40009373ca87a93d9d853a0b3983a4d5e53c1f",
     "docs/contest/Porukam-pitch.pptx": "874e6c3859e4c4ee9aef3746dde31a198f978accb587a53ffe3fb5eace6720cc",
-    "docs/contest/appendix-01-agents-environment.md": "b300c57e3c0bc0ff892cd1e475c1d28693b605fc9e34ac7f6f4fd8ad3a3bf97c",
-    "docs/contest/appendix-02-agent-interaction-scenarios.md": "4e232dac86bb38427824495feeb1f0d0d05ce2d9c07fcbfe245b3812823eca0d",
-    "docs/contest/appendix-03-architecture-and-roles.md": "4bae2129e40a123c45bcd6e5f0be93937c5fc2e7e0aef2982d86a30cae17d2b0",
-    "docs/contest/appendix-04-automation-demo.md": "2052e61bd203eda1d1e2821a1e37c11d362cfc6808f65af52c57cbdf1f28fa71",
     "docs/operations/stage-15.md": "4f842fe0c8e17a759e3348ed06e73a370dd360f000fb40dcd26dec298d4795d5",
     "scripts/test_business_analysis.py": "411a50e1e8e22cfbea2ed7b1bae19e2bf797c50f204d57fcfb7a4764d4cf3f05",
     "services/llm-gateway/tests/test_stage13_review_regressions.py": "d1dc925761da201d75464a04c6c64c2a0a63f6b2ffcc3b728cb21e52520a7995",
@@ -77,7 +74,7 @@
       ],
       "documents": [
         "docs/analytics/role-quality-method.md",
-        "docs/contest/appendix-01-agents-environment.md"
+        "README.md"
       ],
       "readiness": "requires_human_review"
     },
@@ -107,7 +104,7 @@
       ],
       "documents": [
         "docs/operations/stage-15.md",
-        "docs/contest/appendix-03-architecture-and-roles.md"
+        "README.md"
       ],
       "readiness": "requires_human_review"
     },
@@ -136,7 +133,7 @@
         }
       ],
       "documents": [
-        "docs/contest/appendix-04-automation-demo.md",
+        "README.md",
         "docs/analysis/stage-16.md"
       ],
       "readiness": "requires_human_review"
@@ -148,7 +145,7 @@
       "checks": [],
       "documents": [
         "docs/contest/Porukam-pitch.pptx",
-        "docs/contest/appendix-02-agent-interaction-scenarios.md"
+        "README.md"
       ],
       "readiness": "requires_human_review"
     }
@@ -171,9 +168,9 @@
     }
   ],
   "implementation_digests": {
-    "scripts": "be30ea21148b1f03dfdcd6650e32c5e6d1c60a66b2488b8f787aa1e1d278b37d",
-    "marketplace": "3de94d0834f6540fd154b8d36f13a0f421d0d184c40f59d81cc243ac8b3e4429",
-    "llm-gateway": "69b8e51e1b62e29bf688afc5e5a0e5a32034d2f1ebdf4cb0c7ff3a823916649a"
+    "scripts": "a55a8ddae37d3cb66e2717c78ca76335d6a32b568c51d1b06e16178f9a313c80",
+    "marketplace": "aedf4cbe348465d225b91c09b2a91443745c464392461235d4a68e2a9353358b",
+    "llm-gateway": "98bdd6a3fc48cfa35aba77fd355abbd1ccfb64944590173c8c7bc2a39607b3df"
   },
   "working_leaf_ids": [
     "assembly_bracket",
