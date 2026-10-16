@@ -1,0 +1,253 @@
+{
+  "all41_assets_present": true,
+  "all_sizes_match": true,
+  "all_github_sha256_match": true,
+  "assets": [
+    {
+      "name": "porukam-ml-all.tar.part001",
+      "bytes": 1073741824,
+      "sha256": "ab120c7e8a401697bb6b391eafa329b5ea4a6e3fa961866a8e8dda295cbc8b9b",
+      "url": "https://github.com/NawOmen/R136a1/releases/download/ml-training-final-20261017/porukam-ml-all.tar.part001"
+    },
+    {
+      "name": "porukam-ml-all.tar.part002",
+      "bytes": 1073741824,
+      "sha256": "afb61ed3cdf114388c1652fd1c77619282287becba9a91eaab07afdb6883ead2",
+      "url": "https://github.com/NawOmen/R136a1/releases/download/ml-training-final-20261017/porukam-ml-all.tar.part002"
+    },
+    {
+      "name": "porukam-ml-all.tar.part003",
+      "bytes": 1073741824,
+      "sha256": "2544367e77777179f9a7c05ccadafa3f61bf629b9d9a50462b443d840467bb40",
+      "url": "https://github.com/NawOmen/R136a1/releases/download/ml-training-final-20261017/porukam-ml-all.tar.part003"
+    },
+    {
+      "name": "porukam-ml-all.tar.part004",
+      "bytes": 1073741824,
+      "sha256": "5ef6a30045e4f754fedfb2f1a1a26b66feda435e33e484da8c7bff4a3ea3e809",
+      "url": "https://github.com/NawOmen/R136a1/releases/download/ml-training-final-20261017/porukam-ml-all.tar.part004"
+    },
+    {
+      "name": "porukam-ml-all.tar.part005",
+      "bytes": 1073741824,
+      "sha256": "ae36a5cd04c24a92c309bf9d851547fc2b4130916ed93691d4da434d0fcfaa22",
+      "url": "https://github.com/NawOmen/R136a1/releases/download/ml-training-final-20261017/porukam-ml-all.tar.part005"
+    },
+    {
+      "name": "porukam-ml-all.tar.part006",
+      "bytes": 1073741824,
+      "sha256": "873984f96fc3d8e32d27a3d789893fcd691c73a9c08c4fa11b4dc683db30103f",
+      "url": "https://github.com/NawOmen/R136a1/releases/download/ml-training-final-20261017/porukam-ml-all.tar.part006"
+    },
+    {
+      "name": "porukam-ml-all.tar.part007",
+      "bytes": 1073741824,
+      "sha256": "244a49ebbc0e364259304f585e7ba0b54da0c593394a3ef4f0ab30721d2cdfd3",
+      "url": "https://github.com/NawOmen/R136a1/releases/download/ml-training-final-20261017/porukam-ml-all.tar.part007"
+    },
+    {
+      "name": "porukam-ml-all.tar.part008",
+      "bytes": 1073741824,
+      "sha256": "0f9d20b86698c4124804bc133004563583fa12c37f3f40924426dd3967bb61b5",
+      "url": "https://github.com/NawOmen/R136a1/releases/download/ml-training-final-20261017/porukam-ml-all.tar.part008"
+    },
+    {
+      "name": "porukam-ml-all.tar.part009",
+      "bytes": 1073741824,
+      "sha256": "df8f29177567d694acfa84da842d0250d45a3b4b533658345c4f51eadaeb0df3",
+      "url": "https://github.com/NawOmen/R136a1/releases/download/ml-training-final-20261017/porukam-ml-all.tar.part009"
+    },
+    {
+      "name": "porukam-ml-all.tar.part010",
+      "bytes": 1073741824,
+      "sha256": "b9e62a56bbf6f652bbdbd31523e3e3b94e9a49e4e1ea491b011a45ecc44c648a",
+      "url": "https://github.com/NawOmen/R136a1/releases/download/ml-training-final-20261017/porukam-ml-all.tar.part010"
+    },
+    {
+      "name": "porukam-ml-all.tar.part011",
+      "bytes": 1073741824,
+      "sha256": "d386ae9db39d412d18205b21bc943c28b0b2fe9492dfa132e5609d08a7c1ef3e",
+      "url": "https://github.com/NawOmen/R136a1/releases/download/ml-training-final-20261017/porukam-ml-all.tar.part011"
+    },
+    {
+      "name": "porukam-ml-all.tar.part012",
+      "bytes": 1073741824,
+      "sha256": "ebba23e1b7197d5d16f9c298d407b485626b58f726cf66f39e223b58bdb0afaa",
+      "url": "https://github.com/NawOmen/R136a1/releases/download/ml-training-final-20261017/porukam-ml-all.tar.part012"
+    },
+    {
+      "name": "porukam-ml-all.tar.part013",
+      "bytes": 1073741824,
+      "sha256": "14857df9d67668c0c9c82984bfab1bec35f99c04c5a0dcaa0564ff8e2abce0b4",
+      "url": "https://github.com/NawOmen/R136a1/releases/download/ml-training-final-20261017/porukam-ml-all.tar.part013"
+    },
+    {
+      "name": "porukam-ml-all.tar.part014",
+      "bytes": 1073741824,
+      "sha256": "226e977d7eeff8dba8fed2d81b970af13a93082c8871e3354149814975bc4202",
+      "url": "https://github.com/NawOmen/R136a1/releases/download/ml-training-final-20261017/porukam-ml-all.tar.part014"
+    },
+    {
+      "name": "porukam-ml-all.tar.part015",
+      "bytes": 1073741824,
+      "sha256": "222602958734fc53a4088fcc55d3b2d4f7c2f364f26fe2aae7b3017739a10eeb",
+      "url": "https://github.com/NawOmen/R136a1/releases/download/ml-training-final-20261017/porukam-ml-all.tar.part015"
+    },
+    {
+      "name": "porukam-ml-all.tar.part016",
+      "bytes": 1073741824,
+      "sha256": "2ea0b2e1ff691b600519298e953a092297d4df04f8511434867e27a1e0a5c203",
+      "url": "https://github.com/NawOmen/R136a1/releases/download/ml-training-final-20261017/porukam-ml-all.tar.part016"
+    },
+    {
+      "name": "porukam-ml-all.tar.part017",
+      "bytes": 1073741824,
+      "sha256": "72a718d6206d2638c97281aca302f73d59b57d0cb0bcac58a019511561397c55",
+      "url": "https://github.com/NawOmen/R136a1/releases/download/ml-training-final-20261017/porukam-ml-all.tar.part017"
+    },
+    {
+      "name": "porukam-ml-all.tar.part018",
+      "bytes": 1073741824,
+      "sha256": "4d76ec9f63f7ee1455b90f86e5503125942a6f6ba2ff5a30d0977739d1314050",
+      "url": "https://github.com/NawOmen/R136a1/releases/download/ml-training-final-20261017/porukam-ml-all.tar.part018"
+    },
+    {
+      "name": "porukam-ml-all.tar.part019",
+      "bytes": 1073741824,
+      "sha256": "05b70715bfc4bd89648d879ed8cf553f708ef72c66ddba4ea1006a7a2aa655d0",
+      "url": "https://github.com/NawOmen/R136a1/releases/download/ml-training-final-20261017/porukam-ml-all.tar.part019"
+    },
+    {
+      "name": "porukam-ml-all.tar.part020",
+      "bytes": 1073741824,
+      "sha256": "504f1f40903de0fb8218b7830c8bd8a6ed22c338658a1c8add87789b9df45588",
+      "url": "https://github.com/NawOmen/R136a1/releases/download/ml-training-final-20261017/porukam-ml-all.tar.part020"
+    },
+    {
+      "name": "porukam-ml-all.tar.part021",
+      "bytes": 1073741824,
+      "sha256": "0984aa80741da118182b1706db33b9bed9541e15f0876bb49c5ca3049f1bdcb1",
+      "url": "https://github.com/NawOmen/R136a1/releases/download/ml-training-final-20261017/porukam-ml-all.tar.part021"
+    },
+    {
+      "name": "porukam-ml-all.tar.part022",
+      "bytes": 1073741824,
+      "sha256": "c32955f544908028a55c54e603bc9df5b93f63007ca07b3bad97fccdc529299b",
+      "url": "https://github.com/NawOmen/R136a1/releases/download/ml-training-final-20261017/porukam-ml-all.tar.part022"
+    },
+    {
+      "name": "porukam-ml-all.tar.part023",
+      "bytes": 1073741824,
+      "sha256": "19756741b1048c9def9f43f368d51fb5412b65f70b4af1e2e742ab4b006094da",
+      "url": "https://github.com/NawOmen/R136a1/releases/download/ml-training-final-20261017/porukam-ml-all.tar.part023"
+    },
+    {
+      "name": "porukam-ml-all.tar.part024",
+      "bytes": 1073741824,
+      "sha256": "1400f5d14f915677ffddfcaf23d22301183bcb50710944339d7ba885b39e92e7",
+      "url": "https://github.com/NawOmen/R136a1/releases/download/ml-training-final-20261017/porukam-ml-all.tar.part024"
+    },
+    {
+      "name": "porukam-ml-all.tar.part025",
+      "bytes": 1073741824,
+      "sha256": "c546cd1c7be24f214c3e6a22c5d136aa0898d4b33d66d4ed85f873faed5529bd",
+      "url": "https://github.com/NawOmen/R136a1/releases/download/ml-training-final-20261017/porukam-ml-all.tar.part025"
+    },
+    {
+      "name": "porukam-ml-all.tar.part026",
+      "bytes": 1073741824,
+      "sha256": "ed3318fa3e8b697e0236329068654f4eff7b2dbfc79887a77d0558f4188817e8",
+      "url": "https://github.com/NawOmen/R136a1/releases/download/ml-training-final-20261017/porukam-ml-all.tar.part026"
+    },
+    {
+      "name": "porukam-ml-all.tar.part027",
+      "bytes": 1073741824,
+      "sha256": "339309756b753129a0eaf470d5705cab0fa9caac0c89cc52b3955a0156f45453",
+      "url": "https://github.com/NawOmen/R136a1/releases/download/ml-training-final-20261017/porukam-ml-all.tar.part027"
+    },
+    {
+      "name": "porukam-ml-all.tar.part028",
+      "bytes": 1073741824,
+      "sha256": "f949f83d11718ef0c5fbfee4f1d6cd97c7454b2b2c2ee47c26bec95d12604121",
+      "url": "https://github.com/NawOmen/R136a1/releases/download/ml-training-final-20261017/porukam-ml-all.tar.part028"
+    },
+    {
+      "name": "porukam-ml-all.tar.part029",
+      "bytes": 1073741824,
+      "sha256": "d696312f60860f6432124f9ae3bceb3a6eed005c27962c47d1308de7d7243cae",
+      "url": "https://github.com/NawOmen/R136a1/releases/download/ml-training-final-20261017/porukam-ml-all.tar.part029"
+    },
+    {
+      "name": "porukam-ml-all.tar.part030",
+      "bytes": 1073741824,
+      "sha256": "e1b3f4071bbc973f3014707338ec5fb0102c06d2cda3aa27b3ba3dc7b85a4723",
+      "url": "https://github.com/NawOmen/R136a1/releases/download/ml-training-final-20261017/porukam-ml-all.tar.part030"
+    },
+    {
+      "name": "porukam-ml-all.tar.part031",
+      "bytes": 1073741824,
+      "sha256": "ec42c6508639ccb61aed490f330cab2a0be84fef028a382c3aa4ddff95f9a1f2",
+      "url": "https://github.com/NawOmen/R136a1/releases/download/ml-training-final-20261017/porukam-ml-all.tar.part031"
+    },
+    {
+      "name": "porukam-ml-all.tar.part032",
+      "bytes": 1073741824,
+      "sha256": "60e1515f7a179e968ae41766e2d32c1e39ce7384b2d60eaa66501fabba8a9117",
+      "url": "https://github.com/NawOmen/R136a1/releases/download/ml-training-final-20261017/porukam-ml-all.tar.part032"
+    },
+    {
+      "name": "porukam-ml-all.tar.part033",
+      "bytes": 1073741824,
+      "sha256": "35a28136be54d30e0d844b8c8939615f1316786e616f91b6f1769a2c06477ef5",
+      "url": "https://github.com/NawOmen/R136a1/releases/download/ml-training-final-20261017/porukam-ml-all.tar.part033"
+    },
+    {
+      "name": "porukam-ml-all.tar.part034",
+      "bytes": 1073741824,
+      "sha256": "6e6e4c50958da47bd801c3e3800f65b335d0c36a9413cf400c7e185081eb6902",
+      "url": "https://github.com/NawOmen/R136a1/releases/download/ml-training-final-20261017/porukam-ml-all.tar.part034"
+    },
+    {
+      "name": "porukam-ml-all.tar.part035",
+      "bytes": 1073741824,
+      "sha256": "c44bd272e6a5cc364c90099d73b3067d3c1bc767eb3112c71dd4da1023eaf202",
+      "url": "https://github.com/NawOmen/R136a1/releases/download/ml-training-final-20261017/porukam-ml-all.tar.part035"
+    },
+    {
+      "name": "porukam-ml-all.tar.part036",
+      "bytes": 1073741824,
+      "sha256": "fdd6b463179f2bb0935bce82553ab1c8fafcef320c021d7203927783aff0f0de",
+      "url": "https://github.com/NawOmen/R136a1/releases/download/ml-training-final-20261017/porukam-ml-all.tar.part036"
+    },
+    {
+      "name": "porukam-ml-all.tar.part037",
+      "bytes": 1073741824,
+      "sha256": "70772ab9e981a4c15847a2702e7d4b96d09fcad25c197240eddae48c10590ab2",
+      "url": "https://github.com/NawOmen/R136a1/releases/download/ml-training-final-20261017/porukam-ml-all.tar.part037"
+    },
+    {
+      "name": "porukam-ml-all.tar.part038",
+      "bytes": 1073741824,
+      "sha256": "b19da006eee66734512149e401f1c11a97b058527b1566c483c03f8fa212b6e8",
+      "url": "https://github.com/NawOmen/R136a1/releases/download/ml-training-final-20261017/porukam-ml-all.tar.part038"
+    },
+    {
+      "name": "porukam-ml-all.tar.part039",
+      "bytes": 1073741824,
+      "sha256": "5042faab92c5083848ba70d21b6423e329fa9c11db76ab1bf067620494ddbe2b",
+      "url": "https://github.com/NawOmen/R136a1/releases/download/ml-training-final-20261017/porukam-ml-all.tar.part039"
+    },
+    {
+      "name": "porukam-ml-all.tar.part040",
+      "bytes": 1073741824,
+      "sha256": "b2b13816a6fbf5f4d4a39baaba6eef7f62b8ad90072221446916551009846c56",
+      "url": "https://github.com/NawOmen/R136a1/releases/download/ml-training-final-20261017/porukam-ml-all.tar.part040"
+    },
+    {
+      "name": "porukam-ml-all.tar.part041",
+      "bytes": 834457600,
+      "sha256": "7f8190cd697c8239b3004b3b3ad1b2f3f37c48d241d916949c28768fa229fe04",
+      "url": "https://github.com/NawOmen/R136a1/releases/download/ml-training-final-20261017/porukam-ml-all.tar.part041"
+    }
+  ]
+}

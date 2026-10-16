@@ -1,0 +1,8 @@
+{
+  "verified_parts": 41,
+  "verified_files": 5127,
+  "all_asset_sha256": true,
+  "all_archived_file_sha256": true,
+  "safe_regular_paths_only": true,
+  "restore_directory": null
+}
