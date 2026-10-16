@@ -1186,7 +1186,7 @@ sborka-b2b/
 - Docker Desktop или Docker Engine с Docker Compose;
 - Cursor или Visual Studio Code;
 - Node.js LTS;
-- Python 3.12;
+- Python 3.14;
 - Ollama;
 - Qwen3.5 9B Q4_K_M как локальная модель;
 - локальная модель распознавания речи, совместимая с faster-whisper;
