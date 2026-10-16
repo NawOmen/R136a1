@@ -69,7 +69,7 @@ async def require_verified_company(company_id: uuid.UUID, user: User, db: AsyncS
     """Защита публикации: действовать может только проверенная компания.
 
     Будущие endpoint'ы публикации потребностей, товаров и предложений обязаны
-    использовать этот guard (см. docs/api/auth-api.md).
+    использовать этот guard (см. README.md).
     """
     await get_membership(company_id, user, db)
     company = await db.get(Company, company_id)

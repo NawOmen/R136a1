@@ -1,4 +1,4 @@
-"""Версия 1 внутреннего сценарного анализа S16. Без сервисов, записей и LLM."""
+"""Версия 1 сценарной экономики продукта. Без сервисов, записей и LLM."""
 from __future__ import annotations
 
 import argparse
@@ -200,7 +200,7 @@ def build_report(data, root=ROOT):
 
 
 def markdown(report):
-    lines = ['# Сценарный анализ этапа 16', '', report['scope'], '',
+    lines = ['# Расчётные сценарии и предметные профили', '', report['scope'], '',
              'Денежные результаты в рублях. null означает неизвестное или несопоставимое.', '',
              '| Сценарий | Исход | Покупатель: стоимость / время, ₽ | Поставщик: вклад / время, ₽ | Платформа: результат, ₽ | Резерв: ожидаемый эффект, ₽ |',
              '|---|---|---|---|---|---|']
@@ -220,10 +220,19 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--input', type=Path, default=DEFAULT_INPUT)
     parser.add_argument('--markdown', action='store_true')
+    parser.add_argument('--check-readme', type=Path, help='Проверить расчётный блок единого README')
     args = parser.parse_args()
     try:
         report = build_report(json.loads(args.input.read_text()))
-        if args.markdown:
+        if args.check_readme:
+            content = args.check_readme.read_text()
+            start, end = '<!-- business-model:start -->', '<!-- business-model:end -->'
+            if content.count(start) != 1 or content.count(end) != 1:
+                raise ValueError('README должен содержать один расчётный блок')
+            actual = content.split(start, 1)[1].split(end, 1)[0]
+            if actual != '\n' + markdown(report):
+                raise ValueError('Расчётный блок README не соответствует исходным данным')
+        elif args.markdown:
             sys.stdout.write(markdown(report))
         else:
             print(json.dumps(report, ensure_ascii=False, indent=2))
