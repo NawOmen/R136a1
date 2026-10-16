@@ -17,24 +17,24 @@
     {
       "id": "K1",
       "weight": 10,
-      "automated_slice_status": "unverified",
+      "automated_slice_status": "passed",
       "checks": [
         {
           "test": "scripts/test_business_analysis.py::test_all_current_categories_have_exact_profile_and_example_coverage",
-          "status": "unverified",
-          "cases": 0,
+          "status": "passed",
+          "cases": 1,
           "missing_cases": []
         },
         {
           "test": "scripts/test_business_analysis.py::test_full_cost_and_first_use_training_without_waiting_in_labour",
-          "status": "unverified",
-          "cases": 0,
+          "status": "passed",
+          "cases": 1,
           "missing_cases": []
         },
         {
           "test": "scripts/test_business_analysis.py::test_corrections_retries_and_losses_are_retained",
-          "status": "unverified",
-          "cases": 0,
+          "status": "passed",
+          "cases": 1,
           "missing_cases": []
         }
       ],
@@ -46,24 +46,24 @@
     {
       "id": "K2",
       "weight": 20,
-      "automated_slice_status": "unverified",
+      "automated_slice_status": "passed",
       "checks": [
         {
           "test": "services/llm-gateway/tests/test_stage17_trace.py::test_actual_task_trace_denial_recovery_and_artifact",
-          "status": "unverified",
-          "cases": 0,
+          "status": "passed",
+          "cases": 1,
           "missing_cases": []
         },
         {
           "test": "services/marketplace/tests/test_stage12.py::test_role_quality_gates_scoping_and_versions",
-          "status": "unverified",
-          "cases": 0,
+          "status": "passed",
+          "cases": 1,
           "missing_cases": []
         },
         {
           "test": "services/marketplace/tests/test_stage12.py::test_scorecard_empty_denominator_none_and_buyer_access",
-          "status": "unverified",
-          "cases": 0,
+          "status": "passed",
+          "cases": 1,
           "missing_cases": []
         }
       ],
@@ -75,27 +75,24 @@
     {
       "id": "K3",
       "weight": 15,
-      "automated_slice_status": "unverified",
+      "automated_slice_status": "passed",
       "checks": [
         {
           "test": "services/llm-gateway/tests/test_stage13_review_regressions.py::test_external_boundary_has_only_counters_and_separate_permission",
-          "status": "unverified",
-          "cases": 0,
-          "missing_cases": [
-            "test_external_boundary_has_only_counters_and_separate_permission[False]",
-            "test_external_boundary_has_only_counters_and_separate_permission[True]"
-          ]
+          "status": "passed",
+          "cases": 2,
+          "missing_cases": []
         },
         {
           "test": "services/marketplace/tests/test_commerce.py::test_control_example_partial_delivery_return_profit_and_privacy",
-          "status": "unverified",
-          "cases": 0,
+          "status": "passed",
+          "cases": 1,
           "missing_cases": []
         },
         {
           "test": "services/marketplace/tests/test_resource_ledger.py::test_concurrent_buyers_cannot_reserve_same_stock",
-          "status": "unverified",
-          "cases": 0,
+          "status": "passed",
+          "cases": 1,
           "missing_cases": []
         }
       ],
@@ -107,71 +104,24 @@
     {
       "id": "K4",
       "weight": 25,
-      "automated_slice_status": "unverified",
+      "automated_slice_status": "passed",
       "checks": [
         {
           "test": "services/marketplace/tests/test_stage15_acceptance.py::test_working_leaf_order_report_repeat_and_denials",
-          "status": "unverified",
-          "cases": 0,
-          "missing_cases": [
-            "test_working_leaf_order_report_repeat_and_denials[assembly_bracket]",
-            "test_working_leaf_order_report_repeat_and_denials[automation_controller_24]",
-            "test_working_leaf_order_report_repeat_and_denials[bag]",
-            "test_working_leaf_order_report_repeat_and_denials[bolt]",
-            "test_working_leaf_order_report_repeat_and_denials[box]",
-            "test_working_leaf_order_report_repeat_and_denials[cable]",
-            "test_working_leaf_order_report_repeat_and_denials[calcium_carbonate]",
-            "test_working_leaf_order_report_repeat_and_denials[canister_5]",
-            "test_working_leaf_order_report_repeat_and_denials[cardboard_sheet]",
-            "test_working_leaf_order_report_repeat_and_denials[cleaning_bucket_10]",
-            "test_working_leaf_order_report_repeat_and_denials[combination_wrench]",
-            "test_working_leaf_order_report_repeat_and_denials[cup_200]",
-            "test_working_leaf_order_report_repeat_and_denials[cutting_machine]",
-            "test_working_leaf_order_report_repeat_and_denials[desk]",
-            "test_working_leaf_order_report_repeat_and_denials[desk_organizer_small]",
-            "test_working_leaf_order_report_repeat_and_denials[dough_mixer]",
-            "test_working_leaf_order_report_repeat_and_denials[drinking_water]",
-            "test_working_leaf_order_report_repeat_and_denials[fabric]",
-            "test_working_leaf_order_report_repeat_and_denials[film]",
-            "test_working_leaf_order_report_repeat_and_denials[food_container_500]",
-            "test_working_leaf_order_report_repeat_and_denials[frozen_vegetables]",
-            "test_working_leaf_order_report_repeat_and_denials[jacket]",
-            "test_working_leaf_order_report_repeat_and_denials[label_50]",
-            "test_working_leaf_order_report_repeat_and_denials[laser_part_2]",
-            "test_working_leaf_order_report_repeat_and_denials[liquid_soap_1]",
-            "test_working_leaf_order_report_repeat_and_denials[machine_roller]",
-            "test_working_leaf_order_report_repeat_and_denials[machined_bushing_20]",
-            "test_working_leaf_order_report_repeat_and_denials[network_switch_8]",
-            "test_working_leaf_order_report_repeat_and_denials[office_keyboard]",
-            "test_working_leaf_order_report_repeat_and_denials[office_paper_a4]",
-            "test_working_leaf_order_report_repeat_and_denials[office_sign]",
-            "test_working_leaf_order_report_repeat_and_denials[packing_500]",
-            "test_working_leaf_order_report_repeat_and_denials[polypropylene_granule]",
-            "test_working_leaf_order_report_repeat_and_denials[printed_leaflet_a5]",
-            "test_working_leaf_order_report_repeat_and_denials[printed_tote_small]",
-            "test_working_leaf_order_report_repeat_and_denials[protective_coverall_52]",
-            "test_working_leaf_order_report_repeat_and_denials[retail_display]",
-            "test_working_leaf_order_report_repeat_and_denials[rice_pack]",
-            "test_working_leaf_order_report_repeat_and_denials[shipping_cage]",
-            "test_working_leaf_order_report_repeat_and_denials[steel_plate_2]",
-            "test_working_leaf_order_report_repeat_and_denials[tile]",
-            "test_working_leaf_order_report_repeat_and_denials[trolley_wheel]",
-            "test_working_leaf_order_report_repeat_and_denials[warehouse_day]",
-            "test_working_leaf_order_report_repeat_and_denials[warehouse_trolley]",
-            "test_working_leaf_order_report_repeat_and_denials[water_manifold]",
-            "test_working_leaf_order_report_repeat_and_denials[wheat_flour]"
-          ]
+          "status": "passed",
+          "cases": 46,
+          "missing_cases": []
         },
         {
           "test": "services/marketplace/tests/test_stage5_supplier.py::test_catalog_import_tiers_external_id_diff_and_rollback",
-          "status": "unverified",
-          "cases": 0,
+          "status": "passed",
+          "cases": 1,
           "missing_cases": []
         },
         {
           "test": "services/marketplace/tests/test_stage5_supplier.py::test_unknown_delivery_is_not_zero_and_blocks_select",
-          "status": "unverified",
-          "cases": 0,
+          "status": "passed",
+          "cases": 1,
           "missing_cases": []
         }
       ],
@@ -192,7 +142,23 @@
       "readiness": "requires_human_review"
     }
   ],
-  "junit_provenance": [],
+  "junit_provenance": [
+    {
+      "report": "scripts.xml",
+      "service": "scripts",
+      "source_matches": true
+    },
+    {
+      "report": "marketplace.xml",
+      "service": "marketplace",
+      "source_matches": true
+    },
+    {
+      "report": "llm-gateway.xml",
+      "service": "llm-gateway",
+      "source_matches": true
+    }
+  ],
   "implementation_digests": {
     "scripts": "3f6e3355ca04d1e37a6991266fb19a544169cd751681513e55cdf0b50cc2a5f9",
     "marketplace": "d37a00a1eac22b35107f748ad52dd8a599515093ff551b86d11cc58e27a33f7a",
