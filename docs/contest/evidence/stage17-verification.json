@@ -2,7 +2,7 @@
   "schema": "contest-evidence-1",
   "scope": "Синтетическая программная проверка, не оценка жюри и не полная приёмка критериев.",
   "source_digests": {
-    "README.md": "7a64adf14567234d59e48e28f8cf404e5d0cd45fde04f33bad8c05b45e1ad418",
+    "README.md": "6f2b1c660e1b5212674cf22f1ce82d1cbed1ccfe51ed736c82d9812dac9bc18c",
     "docs/contest/Porukam-pitch.pptx": "874e6c3859e4c4ee9aef3746dde31a198f978accb587a53ffe3fb5eace6720cc",
     "scripts/test_business_analysis.py": "0b70326d1e62570467c40073ddea5a0b0f942fec6d91c983ba4b0b59d7a4c46b",
     "services/llm-gateway/tests/test_stage13_review_regressions.py": "d1dc925761da201d75464a04c6c64c2a0a63f6b2ffcc3b728cb21e52520a7995",
