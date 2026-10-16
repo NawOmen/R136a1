@@ -1,0 +1,228 @@
+{
+  "schema": "contest-evidence-1",
+  "scope": "Синтетическая программная проверка, не оценка жюри и не полная приёмка критериев.",
+  "source_digests": {
+    "README.md": "fcc019b5e6847bd0bcb892f17e78e1007d49863d63ec69e8d5fcd599a0ee09ad",
+    "docs/analysis/stage-16-scenarios.md": "c79342df78e3ae54f387eb18639460b8b4df1e57a10b8a2528b7a94df9e478fe",
+    "docs/analysis/stage-16.md": "044b392ddad75e710d265db74a1e6d14d8b7d9c9f80b52f361e37cf4dc93401b",
+    "docs/analytics/role-quality-method.md": "452833f11ffe6256436a37bd5b40009373ca87a93d9d853a0b3983a4d5e53c1f",
+    "docs/contest/Porukam-pitch.pptx": "874e6c3859e4c4ee9aef3746dde31a198f978accb587a53ffe3fb5eace6720cc",
+    "docs/operations/stage-15.md": "4f842fe0c8e17a759e3348ed06e73a370dd360f000fb40dcd26dec298d4795d5",
+    "scripts/test_business_analysis.py": "411a50e1e8e22cfbea2ed7b1bae19e2bf797c50f204d57fcfb7a4764d4cf3f05",
+    "services/llm-gateway/tests/test_stage13_review_regressions.py": "d1dc925761da201d75464a04c6c64c2a0a63f6b2ffcc3b728cb21e52520a7995",
+    "services/llm-gateway/tests/test_stage17_trace.py": "fc1b2e5d36576fa0862d9de4ff0efe05396b657477cf7310ac17b475d31bb165",
+    "services/marketplace/tests/test_commerce.py": "e776e41abc514d41d26eaa0fb245c558f9926c14a8379db7ee1a2a99dcb180ee",
+    "services/marketplace/tests/test_resource_ledger.py": "99e24b67a98467b6c152da94a57c2a32f7ddeef0eafe82aa0831dce239e29f43",
+    "services/marketplace/tests/test_stage12.py": "ea403607edcb8a9bb08443caeaa043f2f02c5a781775a0f713cbdee1eb638142",
+    "services/marketplace/tests/test_stage15_acceptance.py": "8f9daeab54b9bab5bbfc1050e92f106e55c17f266f4b3cf624b3b559ff9a4aa4",
+    "services/marketplace/tests/test_stage5_supplier.py": "f424920c63ca656b9788542b73b85886c59b711b6adc7741fc31c7ba82546dea"
+  },
+  "criteria": [
+    {
+      "id": "K1",
+      "weight": 10,
+      "automated_slice_status": "passed",
+      "checks": [
+        {
+          "test": "scripts/test_business_analysis.py::test_all_current_categories_have_exact_profile_and_example_coverage",
+          "status": "passed",
+          "cases": 1,
+          "missing_cases": []
+        },
+        {
+          "test": "scripts/test_business_analysis.py::test_full_cost_and_first_use_training_without_waiting_in_labour",
+          "status": "passed",
+          "cases": 1,
+          "missing_cases": []
+        },
+        {
+          "test": "scripts/test_business_analysis.py::test_corrections_retries_and_losses_are_retained",
+          "status": "passed",
+          "cases": 1,
+          "missing_cases": []
+        }
+      ],
+      "documents": [
+        "docs/analysis/stage-16.md",
+        "docs/analysis/stage-16-scenarios.md"
+      ],
+      "readiness": "requires_human_review"
+    },
+    {
+      "id": "K2",
+      "weight": 20,
+      "automated_slice_status": "passed",
+      "checks": [
+        {
+          "test": "services/llm-gateway/tests/test_stage17_trace.py::test_actual_task_trace_denial_recovery_and_artifact",
+          "status": "passed",
+          "cases": 1,
+          "missing_cases": []
+        },
+        {
+          "test": "services/marketplace/tests/test_stage12.py::test_role_quality_gates_scoping_and_versions",
+          "status": "passed",
+          "cases": 1,
+          "missing_cases": []
+        },
+        {
+          "test": "services/marketplace/tests/test_stage12.py::test_scorecard_empty_denominator_none_and_buyer_access",
+          "status": "passed",
+          "cases": 1,
+          "missing_cases": []
+        }
+      ],
+      "documents": [
+        "docs/analytics/role-quality-method.md",
+        "README.md"
+      ],
+      "readiness": "requires_human_review"
+    },
+    {
+      "id": "K3",
+      "weight": 15,
+      "automated_slice_status": "passed",
+      "checks": [
+        {
+          "test": "services/llm-gateway/tests/test_stage13_review_regressions.py::test_external_boundary_has_only_counters_and_separate_permission",
+          "status": "passed",
+          "cases": 2,
+          "missing_cases": []
+        },
+        {
+          "test": "services/marketplace/tests/test_commerce.py::test_control_example_partial_delivery_return_profit_and_privacy",
+          "status": "passed",
+          "cases": 1,
+          "missing_cases": []
+        },
+        {
+          "test": "services/marketplace/tests/test_resource_ledger.py::test_concurrent_buyers_cannot_reserve_same_stock",
+          "status": "passed",
+          "cases": 1,
+          "missing_cases": []
+        }
+      ],
+      "documents": [
+        "docs/operations/stage-15.md",
+        "README.md"
+      ],
+      "readiness": "requires_human_review"
+    },
+    {
+      "id": "K4",
+      "weight": 25,
+      "automated_slice_status": "passed",
+      "checks": [
+        {
+          "test": "services/marketplace/tests/test_stage15_acceptance.py::test_working_leaf_order_report_repeat_and_denials",
+          "status": "passed",
+          "cases": 46,
+          "missing_cases": []
+        },
+        {
+          "test": "services/marketplace/tests/test_stage5_supplier.py::test_catalog_import_tiers_external_id_diff_and_rollback",
+          "status": "passed",
+          "cases": 1,
+          "missing_cases": []
+        },
+        {
+          "test": "services/marketplace/tests/test_stage5_supplier.py::test_unknown_delivery_is_not_zero_and_blocks_select",
+          "status": "passed",
+          "cases": 1,
+          "missing_cases": []
+        }
+      ],
+      "documents": [
+        "README.md",
+        "docs/analysis/stage-16.md"
+      ],
+      "readiness": "requires_human_review"
+    },
+    {
+      "id": "K5",
+      "weight": 30,
+      "automated_slice_status": "unverified",
+      "checks": [],
+      "documents": [
+        "docs/contest/Porukam-pitch.pptx",
+        "README.md"
+      ],
+      "readiness": "requires_human_review"
+    }
+  ],
+  "junit_provenance": [
+    {
+      "report": "scripts.xml",
+      "service": "scripts",
+      "source_matches": true
+    },
+    {
+      "report": "marketplace.xml",
+      "service": "marketplace",
+      "source_matches": true
+    },
+    {
+      "report": "llm-gateway.xml",
+      "service": "llm-gateway",
+      "source_matches": true
+    }
+  ],
+  "implementation_digests": {
+    "scripts": "a55a8ddae37d3cb66e2717c78ca76335d6a32b568c51d1b06e16178f9a313c80",
+    "marketplace": "aedf4cbe348465d225b91c09b2a91443745c464392461235d4a68e2a9353358b",
+    "llm-gateway": "98bdd6a3fc48cfa35aba77fd355abbd1ccfb64944590173c8c7bc2a39607b3df"
+  },
+  "working_leaf_ids": [
+    "assembly_bracket",
+    "automation_controller_24",
+    "bag",
+    "bolt",
+    "box",
+    "cable",
+    "calcium_carbonate",
+    "canister_5",
+    "cardboard_sheet",
+    "cleaning_bucket_10",
+    "combination_wrench",
+    "cup_200",
+    "cutting_machine",
+    "desk",
+    "desk_organizer_small",
+    "dough_mixer",
+    "drinking_water",
+    "fabric",
+    "film",
+    "food_container_500",
+    "frozen_vegetables",
+    "jacket",
+    "label_50",
+    "laser_part_2",
+    "liquid_soap_1",
+    "machine_roller",
+    "machined_bushing_20",
+    "network_switch_8",
+    "office_keyboard",
+    "office_paper_a4",
+    "office_sign",
+    "packing_500",
+    "polypropylene_granule",
+    "printed_leaflet_a5",
+    "printed_tote_small",
+    "protective_coverall_52",
+    "retail_display",
+    "rice_pack",
+    "shipping_cage",
+    "steel_plate_2",
+    "tile",
+    "trolley_wheel",
+    "warehouse_day",
+    "warehouse_trolley",
+    "water_manifold",
+    "wheat_flour"
+  ],
+  "unverified": [
+    "Финальное ревью NeTRUPPER",
+    "Функциональное видео и резерв S18.03–S18.04",
+    "Физические условия S15.03"
+  ]
+}
