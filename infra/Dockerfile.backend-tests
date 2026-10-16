@@ -1,5 +1,5 @@
-# Test-only dependencies; application images and runtime dependencies are unchanged.
-FROM python:3.12-slim
+# Test-only dependencies; Python runtime matches the application images.
+FROM python:3.14-slim
 ARG SERVICE
 WORKDIR /test-dependencies
 COPY services/${SERVICE}/requirements.lock ./requirements.lock
