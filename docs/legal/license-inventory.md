@@ -2,18 +2,22 @@
 
 > Проектный документ для конкурсной подачи по п. 6.15 положения RLT.StartUp: гарантии использования сторонних компонентов на законном основании. Данные собраны из локальных метаданных установленных пакетов и не являются юридическим заключением; позиции с пометкой «требует проверки» подтверждаются вручную.
 
+Версии в таблицах согласованы с объединённым обновлением Dependabot и lock-файлами
+ветки Python 3.14. Исторические даты проверок ниже не являются новой юридической
+проверкой всего набора; наличие версии в таблице не снимает отмеченные ограничения.
+
 ## 1. Прямые зависимости Node.js
 
 | Пакет | Ограничение версии | Лицензия | Где объявлен |
 |---|---|---|---|
-| `next` | `^16.3.8` | MIT | `apps/web/package.json` (dependencies) |
+| `next` | `^16.4.0` | MIT | `apps/web/package.json` (dependencies) |
 | `react` | `^19.3.0` | MIT | `apps/web/package.json` (dependencies) |
 | `react-dom` | `^19.3.0` | MIT | `apps/web/package.json` (dependencies) |
-| `@types/node` | `^26.6.4` | MIT | `apps/web/package.json` (devDependencies) |
+| `@types/node` | `^26.6.5` | MIT | `apps/web/package.json` (devDependencies) |
 | `@types/react` | `^19.3.0` | MIT | `apps/web/package.json` (devDependencies) |
 | `@types/react-dom` | `^19.3.0` | MIT | `apps/web/package.json` (devDependencies) |
 | `typescript` | `^7.0.2` | Apache-2.0 | `apps/web/package.json` (devDependencies) |
-| `@playwright/test` | `^1.63.0` | Apache-2.0 | `tests/e2e/package.json` (devDependencies) |
+| `@playwright/test` | `^1.64.0` | Apache-2.0 | `tests/e2e/package.json` (devDependencies) |
 
 Транзитивные зависимости проверены 11.10.2026 командой `pnpm licenses list --prod`: набор лицензий — MIT, Apache-2.0, ISC, BSD-3-Clause, 0BSD, CC-BY-4.0 (данные `caniuse-lite`) и LGPL-3.0-or-later. Единственный copyleft-компонент — предсобранный платформенный пакет `@img/sharp-libvips-darwin-arm64 1.3.4` (зависимость `sharp`, используется Next.js для оптимизации изображений): немодифицированный бинарник, динамическая компоновка, в Docker-сборке подставляется linux-вариант. Совместимость LGPL при таком использовании подтверждает юрист; замена/исключение при необходимости оформляется отдельно.
 
@@ -27,7 +31,7 @@
 | `annotated-doc` | 0.0.5 | MIT |
 | `annotated-types` | 0.8.0 | MIT |
 | `anyio` | 4.15.1 | MIT |
-| `asyncpg` | 0.31.0 | Apache-2.0 |
+| `asyncpg` | 0.32.0 | Apache-2.0 |
 | `bcrypt` | 4.3.0 | Apache-2.0 |
 | `click` | 8.5.0 | BSD-3-Clause |
 | `dnspython` | 2.8.0 | ISC |
@@ -40,8 +44,8 @@
 | `idna` | 3.19 | BSD-3-Clause |
 | `mako` | 1.4.1 | MIT |
 | `markupsafe` | 3.0.3 | BSD-3-Clause |
-| `pydantic` | 2.13.5 | MIT |
-| `pydantic-core` | 2.46.5 | MIT |
+| `pydantic` | 2.14.1 | MIT |
+| `pydantic-core` | 2.50.1 | MIT |
 | `pydantic-settings` | 2.15.0 | MIT |
 | `pyjwt` | 2.15.1 | MIT |
 | `python-dotenv` | 1.2.3 | BSD-3-Clause |
@@ -63,7 +67,7 @@
 | `annotated-doc` | 0.0.5 | MIT |
 | `annotated-types` | 0.8.0 | MIT |
 | `anyio` | 4.15.1 | MIT |
-| `asyncpg` | 0.31.0 | Apache-2.0 |
+| `asyncpg` | 0.32.0 | Apache-2.0 |
 | `av` | 18.1.0 | BSD-3-Clause |
 | `certifi` | 2026.7.22 | MPL-2.0 |
 | `click` | 8.5.0 | BSD-3-Clause |
@@ -88,8 +92,8 @@
 | `onnxruntime` | 1.29.0 | MIT License |
 | `packaging` | 26.3 | Apache-2.0 OR BSD-2-Clause |
 | `protobuf` | 7.36.1 | 3-Clause BSD License |
-| `pydantic` | 2.13.5 | MIT |
-| `pydantic-core` | 2.46.5 | MIT |
+| `pydantic` | 2.14.1 | MIT |
+| `pydantic-core` | 2.50.1 | MIT |
 | `pydantic-settings` | 2.15.0 | MIT |
 | `pyjwt` | 2.15.1 | MIT |
 | `pymupdf` | 1.28.2 | Dual Licensed - GNU AFFERO GPL 3.0 or Artifex Commercial License |
@@ -118,7 +122,7 @@
 | `anyio` | 4.15.1 | MIT |
 | `argon2-cffi` | 25.1.0 | MIT |
 | `argon2-cffi-bindings` | 26.1.0 | MIT |
-| `asyncpg` | 0.31.0 | Apache-2.0 |
+| `asyncpg` | 0.32.0 | Apache-2.0 |
 | `certifi` | 2026.7.22 | MPL-2.0 |
 | `cffi` | 2.1.1 | MIT-0 |
 | `click` | 8.5.0 | BSD-3-Clause |
@@ -135,8 +139,8 @@
 | `minio` | 7.2.20 | Apache-2.0 |
 | `pycparser` | 3.0 | BSD-3-Clause |
 | `pycryptodome` | 3.23.0 | BSD, Public Domain |
-| `pydantic` | 2.13.5 | MIT |
-| `pydantic-core` | 2.46.5 | MIT |
+| `pydantic` | 2.14.1 | MIT |
+| `pydantic-core` | 2.50.1 | MIT |
 | `pydantic-settings` | 2.15.0 | MIT |
 | `pyjwt` | 2.15.1 | MIT |
 | `python-dotenv` | 1.2.3 | BSD-3-Clause |
@@ -174,8 +178,8 @@
 | `ortools` | 9.15.6755 | Apache 2.0 |
 | `pandas` | 3.0.5 | BSD 3-Clause License |
 | `protobuf` | 6.33.6 | 3-Clause BSD License |
-| `pydantic` | 2.13.5 | MIT |
-| `pydantic-core` | 2.46.5 | MIT |
+| `pydantic` | 2.14.1 | MIT |
+| `pydantic-core` | 2.50.1 | MIT |
 | `pydantic-settings` | 2.15.0 | MIT |
 | `python-dateutil` | 2.9.0.post0 | Dual License |
 | `python-dotenv` | 1.2.3 | BSD-3-Clause |
@@ -197,7 +201,7 @@
 | MinIO (сборка `infra/minio/Dockerfile`, коммит `16f8cf1c52f0a77eeb8f7565aaf7f7df12454583`) | хранение документов и изображений | AGPL-3.0; LICENSE и соответствующие исходники включены в образ; см. `infra/minio/README.md` |
 | nginx (`nginx:stable-alpine`) | HTTPS-прокси, единый origin | BSD-2-Clause |
 | pgAdmin 4 | локальное администрирование базы, только для разработки | PostgreSQL License |
-| Python 3.12 (образ `python:3.12-slim`) | среда выполнения сервисов | PSF License |
+| Python 3.14 (образ `python:3.14-slim`) | среда выполнения сервисов | PSF License |
 | Node.js 26 (образ `node:26-alpine`) | среда выполнения интерфейса | MIT |
 | Ollama | локальный инференс агентов | код — MIT, [официальный LICENSE](https://github.com/ollama/ollama/blob/main/LICENSE), проверен 11.10.2026; версия установленной среды должна фиксироваться оператором перед распространением |
 | Qwen / Whisper | веса локальных моделей и STT | код `faster-whisper 1.2.1` — MIT, `ctranslate2 4.8.2` — MIT; лицензия конкретных весов (`qwen3.5:9b`, whisper `small`, см. `infra/models.lock.json`) не приложена — требуется проверка перед публикацией |

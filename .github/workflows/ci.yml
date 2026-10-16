@@ -26,7 +26,7 @@ jobs:
       - uses: actions/checkout@v7
       - uses: actions/setup-python@v7
         with:
-          python-version: "3.12"
+          python-version: "3.14"
       - name: Ephemeral service keys for this job
         run: |
           python - <<'PY'
@@ -50,6 +50,11 @@ jobs:
           python3 scripts/acceptance-report.py > "$RUNNER_TEMP/acceptance-unverified.json"
           python3 scripts/business_analysis.py --markdown > "$RUNNER_TEMP/stage-16-scenarios.md"
           diff -u docs/analysis/stage-16-scenarios.md "$RUNNER_TEMP/stage-16-scenarios.md"
+      - name: Contest evidence guards and scenario economics
+        run: >-
+          python3 scripts/run_evidence_tests.py --service scripts
+          --python "$RUNNER_TEMP/venv-marketplace/bin/python" --junit "$RUNNER_TEMP/scripts.xml" --
+          scripts/test_business_analysis.py scripts/test_contest_evidence.py
       - name: Subject profiles and guards for all catalogue leaves
         working-directory: services/marketplace
         run: >-
@@ -80,19 +85,35 @@ jobs:
         working-directory: services/marketplace
         env:
           TEST_DATABASE_URL: postgresql+asyncpg://sborka:sborka@localhost:5432/sborka_test
-        run: '"$RUNNER_TEMP/venv-marketplace/bin/python" -m pytest -q'
+        run: 'python3 "$GITHUB_WORKSPACE/scripts/run_evidence_tests.py" --service marketplace --python "$RUNNER_TEMP/venv-marketplace/bin/python" --junit "$RUNNER_TEMP/marketplace.xml"'
       - name: Run llm-gateway tests
         working-directory: services/llm-gateway
         env:
           TEST_DATABASE_URL: postgresql+asyncpg://sborka:sborka@localhost:5432/sborka_test
-        run: '"$RUNNER_TEMP/venv-llm-gateway/bin/python" -m pytest -q'
+          STAGE17_TRACE_PATH: ${{ runner.temp }}/stage17-trace.json
+        run: 'python3 "$GITHUB_WORKSPACE/scripts/run_evidence_tests.py" --service llm-gateway --python "$RUNNER_TEMP/venv-llm-gateway/bin/python" --junit "$RUNNER_TEMP/llm-gateway.xml"'
       - name: Run optimizer tests
         working-directory: services/optimizer
         run: '"$RUNNER_TEMP/venv-optimizer/bin/python" -m pytest -q'
+      - name: Verify automated K1-K4 evidence without closing manual readiness
+        run: >-
+          python3 scripts/contest_evidence.py
+          "$RUNNER_TEMP/scripts.xml" "$RUNNER_TEMP/marketplace.xml" "$RUNNER_TEMP/llm-gateway.xml"
+          --require K1 K2 K3 K4 > "$RUNNER_TEMP/stage17-verification.json"
       - name: Linux container runner and real PNG decoder
         run: >-
           python3 scripts/test-backend.py --service marketplace -- -q
           tests/test_stage5_supplier.py::test_product_characteristics_limit_and_photo_bounds
+      - name: Publish sanitized stage 17 evidence for the tested commit
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: stage17-evidence-${{ github.sha }}-${{ github.run_attempt }}
+          path: |
+            ${{ runner.temp }}/stage17-trace.json
+            ${{ runner.temp }}/stage17-verification.json
+          if-no-files-found: error
+          retention-days: 30
 
   frontend:
     runs-on: ubuntu-latest

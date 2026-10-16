@@ -73,7 +73,7 @@ git pull --ff-only
 
 docker run --rm --user "$(id -u):$(id -g)" \
   -v "$PWD:/workspace" -w /workspace \
-  python:3.12-slim python scripts/init-local-env.py
+  python:3.14-slim python scripts/init-local-env.py
 ```
 
 Инициализация предназначена для нового стенда. При переносе существующего сначала
@@ -213,7 +213,7 @@ docker exec porukam-ollama ollama list
 
 ```bash
 docker run --rm --add-host host.docker.internal:host-gateway \
-  python:3.12-slim python -c 'import socket; print(socket.gethostbyname("host.docker.internal"))'
+  python:3.14-slim python -c 'import socket; print(socket.gethostbyname("host.docker.internal"))'
 ```
 
 Далее пример использует `172.17.0.1`. Если вывод другой, замените адрес во всех

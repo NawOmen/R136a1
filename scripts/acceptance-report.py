@@ -21,16 +21,21 @@ def working_leaf_ids():
     return set({(r[2], r[3]): r[0] for r in reversed(rows)}.values())
 
 
-def build_report(paths):
-
-    matrix=json.loads((ROOT/'docs/operations/acceptance-tests.json').read_text())
-    ids=[r['id'] for r in matrix['conditions']]
-    assert ids==[f'T{i:02d}' for i in range(1,47)]
+def test_evidence(paths):
+    """Read actual JUnit outcomes; repeated reports never add coverage."""
     evidence=[]
     for path in dict.fromkeys(Path(p).resolve() for p in paths):
         for case in ET.parse(path).iter('testcase'):
             status='failed' if case.find('failure') is not None or case.find('error') is not None else 'skipped' if case.find('skipped') is not None else 'passed'
             evidence.append((path.name,case.attrib.get('classname',''),case.attrib.get('name',''),status))
+    return evidence
+
+
+def build_report(paths):
+    matrix=json.loads((ROOT/'docs/operations/acceptance-tests.json').read_text())
+    ids=[r['id'] for r in matrix['conditions']]
+    assert ids==[f'T{i:02d}' for i in range(1,47)]
+    evidence=test_evidence(paths)
     expected={parts[1].strip():parts[3].strip() for line in (ROOT/'NEXT_STEPS.md').read_text().splitlines()
               if line.startswith('| T') and len(parts:=line.split('|'))>=5}
     rows=[]
