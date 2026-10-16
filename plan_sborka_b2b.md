@@ -1152,10 +1152,8 @@ sborka-b2b/
   services/
     gateway-auth/
     marketplace/
-    agent-orchestrator/
     optimizer/
     llm-gateway/
-    evidence-audit/
   packages/
     contracts/
     ui/
@@ -1175,6 +1173,11 @@ sborka-b2b/
 
 Все сервисы используют версионированные API-контракты. Репозиторий один, чтобы небольшой команде было проще разрабатывать и запускать проект.
 
+Оркестрация агентных задач реализована в `llm-gateway/app/tasks.py`, а проверка
+доказательств и аудит — в модулях `marketplace/app/admission.py` и
+`marketplace/app/trust.py`. Это части работающих сервисов. Выделение их в отдельные
+сервисы требует отдельного обоснования; пустые каталоги не обозначают реализацию.
+
 ## 13. Инструменты разработки
 
 Необходимый минимум:
@@ -1183,7 +1186,7 @@ sborka-b2b/
 - Docker Desktop или Docker Engine с Docker Compose;
 - Cursor или Visual Studio Code;
 - Node.js LTS;
-- Python 3.12;
+- Python 3.14;
 - Ollama;
 - Qwen3.5 9B Q4_K_M как локальная модель;
 - локальная модель распознавания речи, совместимая с faster-whisper;

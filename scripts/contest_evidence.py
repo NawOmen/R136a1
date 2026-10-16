@@ -40,17 +40,35 @@ CRITERIA = [
 ]
 
 
-def source_digest(service):
-    """Bind JUnit to code/tests/fixtures, never to credentials or private files."""
+def source_paths(service):
+    """Public test inputs only; missing declared inputs must fail closed."""
     if service not in {"scripts", "marketplace", "llm-gateway"}:
         raise ValueError("Неизвестный источник JUnit")
     paths = set((ROOT / "scripts").glob("*.py"))
     paths.update((ROOT / "packages/test-fixtures").rglob("*.json"))
+    # business_analysis.catalogue_analysis and acceptance.working_leaf_ids read
+    # these directly, including when the tests run outside the service package.
+    paths.update(ROOT / relative for relative in (
+        "services/marketplace/app/category_registry.json",
+        "services/marketplace/app/assortment.py",
+        "services/marketplace/unit/fixtures/category_stage01.json",
+        ".github/workflows/ci.yml",
+    ))
+    runtime = "marketplace" if service == "scripts" else service
+    service_root = ROOT / "services" / runtime
+    paths.update(service_root / name for name in ("requirements.lock", "requirements.txt", "pytest.ini"))
     if service != "scripts":
-        for directory in ("app", "tests"):
-            paths.update((ROOT / "services" / service / directory).rglob("*.py"))
-    digest = hashlib.sha256()
-    for path in sorted(paths):
+        for directory in ("app", "tests", "unit", "alembic"):
+            for pattern in ("*.py", "*.json"):
+                paths.update((service_root / directory).rglob(pattern))
+        paths.update(service_root.glob("alembic.ini"))
+    return sorted(paths)
+
+
+def source_digest(service):
+    """Bind JUnit to its inputs and dependency lock, never to .env/private files."""
+    digest = hashlib.sha256(f"contest-evidence-source-2\0{service}\0".encode())
+    for path in source_paths(service):
         digest.update(str(path.relative_to(ROOT)).encode() + b"\0" + path.read_bytes() + b"\0")
     return digest.hexdigest()
 

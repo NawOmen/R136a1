@@ -1,0 +1,10 @@
+# Test-only dependencies; Python runtime matches the application images.
+FROM python:3.14-slim
+ARG SERVICE
+WORKDIR /test-dependencies
+COPY services/${SERVICE}/requirements.lock ./requirements.lock
+RUN pip install --no-cache-dir "pytest>=9.1.1,<10" "pytest-asyncio>=1.4.0,<2" "httpx>=0.28.1,<1" \
+    && pip install --no-cache-dir --require-hashes -r requirements.lock \
+    && pip check
+ENV PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1
+# Sources are mounted read-only by the runner, never baked into the test image.

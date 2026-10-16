@@ -140,8 +140,10 @@ class BusinessAnalysis(unittest.TestCase):
 
     def test_all_current_categories_have_exact_profile_and_example_coverage(self):
         r = analysis.catalogue_analysis()
-        self.assertEqual((r['groups'], r['leaves'], r['seeded_working_leaves']), (12, 47, 9))
+        self.assertEqual((r['groups'], r['leaves'], r['seeded_working_leaves']), (12, 47, 46))
         self.assertEqual(r['admission_states'], {'existing_rules': 46, 'unsupported': 1})
+        self.assertEqual({row['id'] for row in r['categories'] if row['seeded_working_leaf']},
+                         {row['id'] for row in r['categories'] if row['admission_state'] != 'unsupported'})
         for row in r['categories']:
             self.assertTrue(row['required_fields'])
             self.assertTrue(row['example_incompatible_fields'])

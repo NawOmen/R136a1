@@ -26,7 +26,7 @@ jobs:
       - uses: actions/checkout@v7
       - uses: actions/setup-python@v7
         with:
-          python-version: "3.12"
+          python-version: "3.14"
       - name: Ephemeral service keys for this job
         run: |
           python - <<'PY'
@@ -100,6 +100,20 @@ jobs:
           python3 scripts/contest_evidence.py
           "$RUNNER_TEMP/scripts.xml" "$RUNNER_TEMP/marketplace.xml" "$RUNNER_TEMP/llm-gateway.xml"
           --require K1 K2 K3 K4 > "$RUNNER_TEMP/stage17-verification.json"
+      - name: Linux container runner and real PNG decoder
+        run: >-
+          python3 scripts/test-backend.py --service marketplace -- -q
+          tests/test_stage5_supplier.py::test_product_characteristics_limit_and_photo_bounds
+      - name: Publish sanitized stage 17 evidence for the tested commit
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: stage17-evidence-${{ github.sha }}-${{ github.run_attempt }}
+          path: |
+            ${{ runner.temp }}/stage17-trace.json
+            ${{ runner.temp }}/stage17-verification.json
+          if-no-files-found: error
+          retention-days: 30
 
   frontend:
     runs-on: ubuntu-latest

@@ -1,0 +1,6 @@
+**
+!services/
+!services/*/
+!services/*/requirements.lock
+!infra/
+!infra/Dockerfile.backend-tests
