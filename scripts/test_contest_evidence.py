@@ -29,7 +29,8 @@ class EvidenceTests(unittest.TestCase):
                 for relative in documents:
                     destination = root / relative
                     destination.parent.mkdir(parents=True, exist_ok=True)
-                    shutil.copyfile(module.ROOT / relative, destination)
+                    if (module.ROOT / relative).is_file():
+                        shutil.copyfile(module.ROOT / relative, destination)
             with patch.object(module, "ROOT", root), patch.object(module.acceptance, "ROOT", root):
                 yield root
 
@@ -70,6 +71,16 @@ class EvidenceTests(unittest.TestCase):
         self.assertTrue(all(c["automated_slice_status"] == "unverified" for c in report["criteria"]))
         self.assertTrue(all(c["readiness"] == "requires_human_review" for c in report["criteria"]))
         self.assertNotIn("score", report)
+
+    def test_missing_document_prevents_passing_even_with_green_tests(self):
+        with self.isolated_sources() as root:
+            (root / "README.md").unlink()
+            with patch.object(module, "test_status", return_value={"status": "passed"}):
+                report = module.build_report([])
+            for criterion in report["criteria"]:
+                self.assertEqual(criterion["automated_slice_status"], "unverified")
+                self.assertIn("README.md", criterion["missing_documents"])
+            self.assertNotIn("README.md", report["source_digests"])
 
     def test_both_privacy_permission_branches_are_required(self):
         ref = module.CRITERIA[2][2][0]
