@@ -1,7 +1,7 @@
 """Map JUnit evidence to T01–T46 without treating missing/skipped tests as passed.
 
 The output is an automated slice only. Manual hardware/contest acceptance remains
-in NEXT_STEPS.md and must not be inferred from test collection or route existence.
+in README.md#development-plan and must not be inferred from test collection or route existence.
 """
 import argparse
 import ast
@@ -36,8 +36,10 @@ def build_report(paths):
     ids=[r['id'] for r in matrix['conditions']]
     assert ids==[f'T{i:02d}' for i in range(1,47)]
     evidence=test_evidence(paths)
-    expected={parts[1].strip():parts[3].strip() for line in (ROOT/'NEXT_STEPS.md').read_text().splitlines()
+    expected={parts[1].strip():parts[3].strip() for line in (ROOT/'README.md').read_text().splitlines()
               if line.startswith('| T') and len(parts:=line.split('|'))>=5}
+    if set(expected) != set(ids):
+        raise ValueError('README должен содержать все условия T01–T46 без потери критериев')
     rows=[]
     for row in matrix['conditions']:
         states=[]
