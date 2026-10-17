@@ -28,6 +28,13 @@ export default function CharacteristicSuggestions({ category, subcategory, keys,
   const full = countUserCharacteristics(keys.map((key) => ({ key })), category, subcategory) >= 25;
   return (
     <>
+      {suggestions.some(field => field.required) && <>
+        <p className="hint" role="status">Для описания выбранного изделия уточните: {suggestions.filter(field => field.required).map(field => field.label).join(", ")}. Значения из материалов проверяйте по источнику.</p>
+        <button type="button" className="btn btn-secondary btn-sm" disabled={disabled}
+          onClick={() => { suggestions.filter(field => field.required).forEach(field => onAdd(field.key)); setLimitMessage(null); }}>
+          Добавить недостающие обязательные поля
+        </button>
+      </>}
       <select aria-label="Добавить характеристику категории" value="" disabled={disabled}
         onChange={(event) => {
           if (!event.target.value) return;

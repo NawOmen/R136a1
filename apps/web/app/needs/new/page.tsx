@@ -29,7 +29,7 @@ import {
 } from "../../lib/marketplace";
 import { useCompanySelector } from "../../lib/useMe";
 import CharacteristicSuggestions from "../../components/CharacteristicSuggestions";
-import { characteristicField } from "../../lib/categoryProfiles";
+import { characteristicField, countUserCharacteristics, requiredCharacteristicKeys, resolveAgentCategory } from "../../lib/categoryProfiles";
 import { CapabilityDescription } from "../../components/CapabilityDescription";
 import { ValidatedFields } from "../../components/ValidatedFields";
 
@@ -116,7 +116,7 @@ export default function NewNeedPage() {
             setCategory(value.category);
             if (PRODUCT_CATEGORY_TREE[value.category].includes(value.subcategory)) setSubcategory(value.subcategory);
           }
-          if (Array.isArray(value.rows) && value.rows.length <= 25 && value.rows.every((r: CharacteristicRow) => typeof r.key === "string" && typeof r.value === "string")) setRows(value.rows);
+          if (Array.isArray(value.rows) && value.rows.length <= 100 && value.rows.every((r: CharacteristicRow) => typeof r.key === "string" && typeof r.value === "string")) setRows(value.rows);
           setVolumeUnits(String(value.volume ?? "")); setBudgetRub(String(value.budget ?? ""));
           setDeadlineDate(String(value.deadline ?? "")); setDeliveryAddressId(String(value.address ?? ""));
           if (value.visibility === "open_anonymized" || value.visibility === "selected_producers" || value.visibility === "closed") setVisibility(value.visibility);
@@ -249,8 +249,8 @@ export default function NewNeedPage() {
   function validate(): string | null {
     if (agentRun && agentRun.state !== "confirmed_by_user") return "Разрешите конфликты и подтвердите требования анализа или явно выберите ручное заполнение.";
     if (!PRODUCT_CATEGORY_TREE[category]?.includes(subcategory)) return "Выберите подкатегорию товара для проверки требований.";
-    if (rows.length < 1 || rows.length > 25) {
-      return "Добавьте от 1 до 25 характеристик.";
+    if (rows.length < 1 || countUserCharacteristics(rows, category, subcategory) > 25) {
+      return "Можно добавить до 25 пользовательских характеристик сверх системных и обязательных.";
     }
     if (rows.some((row) => !row.key.trim() || !row.value.trim())) {
       return "Заполните ключ и значение каждой характеристики.";
@@ -359,13 +359,21 @@ export default function NewNeedPage() {
         .filter((property) => property.value !== null)
         .map((property) => [property.key, property.value] as const),
     );
-    const normalizedCategory = result.category.toLocaleLowerCase("ru");
-    const detectedCategory = PRODUCT_CATEGORIES.find((item) =>
-      item.toLocaleLowerCase("ru") === normalizedCategory || PRODUCT_CATEGORY_TREE[item].some((subcategory) => subcategory.toLocaleLowerCase("ru") === normalizedCategory),
-    );
-    setCategory(detectedCategory ?? "Другое");
-    const detectedSubcategory = detectedCategory && PRODUCT_CATEGORY_TREE[detectedCategory].find((item) => item.toLocaleLowerCase("ru") === normalizedCategory);
-    setSubcategory(detectedSubcategory || "");
+    const detected = resolveAgentCategory(result.category, String(values.get("product_type") ?? ""));
+    if (detected) {
+      setCategory(detected.category);
+      setSubcategory(detected.subcategory);
+    } else {
+      // Preserve the buyer's selection; unknown model text is not a decision.
+      setDraftNotice("ИИ не определил категорию из каталога. Выберите её самостоятельно; введённые поля сохранены.");
+    }
+    if (values.has("delivery_city")) {
+      const city = String(values.get("delivery_city")).trim().toLocaleLowerCase("ru");
+      const matchingAddresses = addresses.filter(address => address.city.trim().toLocaleLowerCase("ru") === city);
+      // Only an existing unique address can be suggested; city alone is not a street.
+      setDeliveryAddressId(matchingAddresses.length === 1 ? matchingAddresses[0].id : "");
+      if (matchingAddresses.length !== 1) setDraftNotice("Проверьте адрес доставки: город распознан, но точный адрес нужно выбрать или добавить.");
+    }
     if (values.has("quantity_units")) setVolumeUnits(String(values.get("quantity_units")));
     if (values.has("budget_rub")) setBudgetRub(String(values.get("budget_rub")));
     if (values.has("lead_time_days")) {
@@ -429,7 +437,15 @@ export default function NewNeedPage() {
         setError("Черновик уже создан. Откройте его по ссылке ниже: повторная отправка изменённых полей не должна создать второй заказ.");
         return;
       }
-      const selectedFiles = files.map(file => `${file.name}:${file.size}:${file.lastModified}`);
+      const omittedHashes = new Set(agentRun?.result.omitted_source_hashes ?? []);
+      const acceptedFiles: File[] = [];
+      for (const file of files) {
+        const digest = await crypto.subtle.digest("SHA-256", await file.arrayBuffer());
+        const hash = Array.from(new Uint8Array(digest), value => value.toString(16).padStart(2, "0")).join("");
+        if (!omittedHashes.has(hash)) acceptedFiles.push(file);
+      }
+      if (activeScope.current !== scope) return;
+      const selectedFiles = acceptedFiles.map(file => `${file.name}:${file.size}:${file.lastModified}`);
       if (savedNeed?.expectedFiles.some(signature => !savedNeed.uploaded.includes(signature) && !selectedFiles.includes(signature))) {
         setError("Для продолжения выберите ещё не загруженные файлы повторно. Публикация без исходных вложений остановлена.");
         return;
@@ -439,7 +455,7 @@ export default function NewNeedPage() {
       let progress = savedNeed ?? { id: need.id, payload: fingerprint, uploaded: [], expectedFiles: selectedFiles };
       setSavedNeed(progress);
       // Retry resumes the same draft. Already uploaded files are not sent twice.
-      for (const file of files) {
+      for (const file of acceptedFiles) {
         const signature = `${file.name}:${file.size}:${file.lastModified}`;
         if (progress.uploaded.includes(signature)) continue;
         await marketplace.uploadNeedFile(token, need.id, file);
@@ -570,6 +586,9 @@ export default function NewNeedPage() {
               accept="image/*,application/pdf,audio/*,text/plain,text/markdown"
               onChange={(event) => { analysisGeneration.current += 1; setFiles(Array.from(event.target.files ?? [])); setAgentRun(null); setAnswers({}); }}
             />
+            {!!agentRun?.result.omitted_source_hashes?.length && (
+              <p className="hint" role="status">По вашему решению непрочитанные материалы не будут приложены к потребности: {agentRun.result.unreadable_sources?.filter(source => agentRun.result.omitted_source_hashes?.includes(source.content_hash)).map(source => source.name).join(", ")}. Остальные материалы сохранятся.</p>
+            )}
             {files.length > 0 && (
               <p className="hint mode-hint">
                 Восстановленные или выбранные файлы: {files.length} · {files.map((file) => file.name).join(", ")}
@@ -762,7 +781,13 @@ export default function NewNeedPage() {
             Характеристики<span className="req">*</span>
           </label>
           <CharacteristicSuggestions category={category} subcategory={subcategory} keys={rows.map((row) => row.key)}
-            onAdd={(key) => setRows((current) => current.length < 25 ? [...current, newRow(key)] : current)} />
+            onAdd={(key) => setRows((current) => {
+              const empty = current.findIndex(row => !row.key.trim() && !row.value.trim());
+              if (empty >= 0) return current.map((row, index) => index === empty ? newRow(key) : row);
+              const required = requiredCharacteristicKeys(category, subcategory);
+              if (countUserCharacteristics(current, category, subcategory) < 25 || required.has(key.trim().toLowerCase().replaceAll("ё", "е"))) return [...current, newRow(key)];
+              return current;
+            })} />
           {rows.map((row, index) => (
             <div key={index} className="char-row">
               <input
@@ -794,7 +819,7 @@ export default function NewNeedPage() {
           <button
             type="button"
             className="btn btn-secondary btn-sm"
-            disabled={rows.length >= 25}
+            disabled={countUserCharacteristics(rows, category, subcategory) >= 25}
             onClick={() => setRows((current) => [...current, newRow()])}
           >
             + Добавить характеристику

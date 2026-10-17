@@ -11,6 +11,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 SOURCE = ROOT / "services/marketplace/app/category_registry.py"
 TARGET = ROOT / "apps/web/app/lib/category-registry.generated.json"
+AI_TARGET = ROOT / "services/llm-gateway/app/category-grounding.generated.json"
 
 
 def expected_snapshot() -> str:
@@ -36,13 +37,27 @@ def main() -> int:
     parser.add_argument("--check", action="store_true")
     args = parser.parse_args()
     content = expected_snapshot()
+    web = json.loads(content)
+    grounding = {
+        "registry_version": web["registry_version"],
+        "fields": web["characteristic_fields"],
+        "categories": [{"parent": parent, "label": label, "id": leaf_id,
+                        "fields": web["technical_profiles"][leaf_id]["fields"],
+                        "required": web["technical_profiles"][leaf_id]["required_for_product"]}
+                       for parent, leaves in web["leaf_ids"].items() for label, leaf_id in leaves.items()],
+    }
+    ai_content = json.dumps(grounding, ensure_ascii=False, indent=2) + "\n"
     if args.check:
         if not TARGET.exists() or TARGET.read_text(encoding="utf-8") != content:
             print("Каталог интерфейса устарел: выполните python3 scripts/sync_category_registry.py")
             return 1
-        print("Реестры категорий сервера и интерфейса согласованы")
+        if not AI_TARGET.exists() or AI_TARGET.read_text(encoding="utf-8") != ai_content:
+            print("Словарь ИИ устарел: выполните python3 scripts/sync_category_registry.py")
+            return 1
+        print("Реестры категорий сервера, интерфейса и ИИ согласованы")
     else:
         TARGET.write_text(content, encoding="utf-8")
+        AI_TARGET.write_text(ai_content, encoding="utf-8")
     return 0
 
 

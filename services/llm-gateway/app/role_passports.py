@@ -8,7 +8,7 @@
 
 from typing import Literal
 
-PROMPT_VERSION = "buyer-extraction-1"
+PROMPT_VERSION = "buyer-extraction-2"
 SELLER_PROMPT_VERSION = "seller-explain-1"
 SCHEMA_VERSION = "buyer-evidence-1"
 TASK_CONTRACT_VERSION = 1

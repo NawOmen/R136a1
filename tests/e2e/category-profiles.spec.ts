@@ -54,3 +54,14 @@ test("exact base-unit prices remain visible below one kopeck", async () => {
   expect(formatRub(1.123456789012, 12)).toBe("1,123456789012 ₽");
   expect(formatRub(125.256)).toBe("125,26 ₽");
 });
+
+test("AI category aliases and product facts resolve without silently choosing Other", async () => {
+  const { resolveAgentCategory } = await import("../../apps/web/app/lib/categoryProfiles");
+  expect(resolveAgentCategory("упаковка", "гофрокороб")).toEqual({ category: "Упаковка и тара", subcategory: "Коробки" });
+  expect(resolveAgentCategory("упаковка")).toEqual({ category: "Упаковка и тара", subcategory: "" });
+  expect(resolveAgentCategory("packaging.boxes")).toEqual({ category: "Упаковка и тара", subcategory: "Коробки" });
+  expect(resolveAgentCategory("Неизвестный материал")).toBeNull();
+  const { characteristicLabel } = await import("../../apps/web/app/lib/marketplace");
+  expect(characteristicLabel("print")).toBe("Печать");
+  expect(characteristicLabel("top_diameter_mm")).toBe("Диаметр верха, мм");
+});

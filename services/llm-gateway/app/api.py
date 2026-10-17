@@ -13,6 +13,7 @@ from fastapi.responses import Response, JSONResponse
 from sqlalchemy import select, text, func
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from .extractors import canonical_media_type
 from .agents import BuyerAgent, SellerAgent, log_tool, merge_facts, search_capabilities, _without_placeholders
 from .buyer_comparison import buyer_summary
 from .config import settings
@@ -160,17 +161,12 @@ async def transcribe_audio(
 ):
     del user  # аутентификация обязательна; содержимое не сохраняется
     content_type = file.content_type or ""
-    if not content_type.startswith("audio/"):
-        raise HTTPException(status.HTTP_415_UNSUPPORTED_MEDIA_TYPE, detail="Требуется аудиофайл")
     data = await file.read(settings.max_upload_bytes + 1)
     if not data:
         raise HTTPException(status.HTTP_400_BAD_REQUEST, detail="Аудиозапись пустая")
     if len(data) > settings.max_upload_bytes:
         raise HTTPException(status.HTTP_413_REQUEST_ENTITY_TOO_LARGE, detail="Аудиозапись больше 25 МБ")
-    suffix = {
-        "audio/webm": ".webm", "audio/ogg": ".ogg", "audio/wav": ".wav",
-        "audio/x-wav": ".wav", "audio/mpeg": ".mp3", "audio/mp4": ".m4a",
-    }.get(content_type.split(";", 1)[0].lower(), ".audio")
+    content_type = canonical_media_type(data, content_type, file.filename or "")
     if not _audio_signature_ok(data, content_type):
         raise HTTPException(status.HTTP_415_UNSUPPORTED_MEDIA_TYPE, detail="Содержимое не является аудиозаписью")
     try:
@@ -302,6 +298,9 @@ async def analyze_buyer_request(
         total_size += len(data)
         if not data:
             warnings.append(f"{upload.filename or 'Файл'}: файл пуст")
+            db.add(AgentSource(run_id=run.id, source_id=f"file_{index}", name=(upload.filename or f"Материал {index}")[:255],
+                kind="document", content_type="application/octet-stream", content_hash=hashlib.sha256(data).hexdigest(),
+                original=data, extracted_text="", active=False))
             continue
         if len(data) > settings.max_upload_bytes or total_size > settings.max_upload_bytes * 4:
             run.state = "failed"
@@ -347,6 +346,7 @@ async def analyze_buyer_request(
             safe_error = str(exc)[:200] if isinstance(exc, UnreadableMaterial) else "Материал не прочитан или превышает предел обработки"
             warning = f"{upload.filename or f'Материал {index}'}: {safe_error}"
             warnings.append(warning)
+            stored.active = False
             await log_tool(
                 db,
                 run.id,
@@ -442,6 +442,10 @@ async def analyze_buyer_request(
                 "DeepSeek",
                 f"Выполнен возврат к локальной Qwen: {fallback}",
             )
+        unreadable = (await db.scalars(select(AgentSource).where(
+            AgentSource.run_id == run.id, AgentSource.active.is_(False), AgentSource.extracted_text == ""
+        ))).all()
+        result.unreadable_sources = [{"source_id": item.source_id, "name": item.name, "content_hash": item.content_hash} for item in unreadable]
         run.result = result.model_dump(mode="json")
         run.initial_result = result.model_dump(mode="json")
         run.duration_ms = round((perf_counter() - started_at) * 1000)
@@ -531,6 +535,7 @@ async def clarify_agent_run(
     now = datetime.now(timezone.utc)
     for key, value in data.answers.items():
         if key == "unreadable_materials":
+            result.omitted_source_hashes = [item["content_hash"] for item in result.unreadable_sources]
             continue
         prop = properties.get(key)
         if prop is None:
@@ -578,6 +583,9 @@ async def clarify_agent_run(
             )
         )
         queued_keys.add(prop.key)
+    if result.unreadable_sources and not result.omitted_source_hashes and len(result.questions) < 3 and "unreadable_materials" not in queued_keys:
+        result.questions.append(ClarificationQuestion(key="unreadable_materials",
+            question="Часть материалов не прочитана. Продолжить без них?", options=["Да, продолжить без них"]))
     has_unresolved = any(
         item.status == "needs_clarification" for item in result.properties
     )

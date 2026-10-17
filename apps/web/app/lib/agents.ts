@@ -45,6 +45,8 @@ export interface CapabilityMatch {
 }
 
 export interface BuyerAgentResult {
+  unreadable_sources?: { source_id: string; name: string; content_hash: string }[];
+  omitted_source_hashes?: string[];
   category: string;
   properties: RequirementProperty[];
   conflicts: { key: string; label: string; values: FactValue[]; source_ids: string[] }[];

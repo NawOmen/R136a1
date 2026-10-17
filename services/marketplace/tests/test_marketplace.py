@@ -199,6 +199,15 @@ async def test_need_file_download_is_available_only_to_buyer(
         for item in text_uploaded.json()["files"]
     )
 
+    from pathlib import Path
+    audio = (Path(__file__).resolve().parents[3] / "packages/test-fixtures/buyer-evidence/voice-message.m4a").read_bytes()
+    for index, mime in enumerate(["audio/x-m4a", "application/octet-stream"]):
+        audio_uploaded = await client.post(f"/api/v1/needs/{need_id}/files", headers=_auth(make_token(buyer)),
+            files={"file": (f"voice-{index}.m4a", audio, mime)})
+        assert audio_uploaded.status_code == 201, audio_uploaded.text
+        audio_file = next(item for item in audio_uploaded.json()["files"] if item["file_name"] == f"voice-{index}.m4a")
+        assert audio_file["content_type"] == "audio/mp4"
+
     downloaded = await client.get(
         f"/api/v1/need-files/{file_id}/download", headers=_auth(make_token(buyer))
     )

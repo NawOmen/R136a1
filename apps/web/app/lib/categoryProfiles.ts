@@ -53,3 +53,30 @@ export function countUserCharacteristics(rows: { key: string }[], category: stri
   const skip = requiredCharacteristicKeys(category, subcategory);
   return rows.filter((row) => !skip.has(normalize(row.key))).length;
 }
+
+/** Exact catalogue names/IDs and a small unambiguous product vocabulary.
+ * A broad parent never silently picks its first child or becomes Other.
+ */
+export function resolveAgentCategory(category: string, productType = ""): { category: string; subcategory: string } | null {
+  const aliases: Record<string, string> = {
+    "упаковка": "Упаковка и тара", "тара": "Упаковка и тара",
+    "гофрокороб": "Коробки", "гофрокороба": "Коробки", "гофрокоробки": "Коробки",
+    "коробка": "Коробки", "картонные коробки": "Коробки",
+    "бумажные стаканчики": "Бумажные стаканы", "крафтовые стаканы": "Бумажные стаканы",
+  };
+  function resolve(raw: string) {
+    const value = normalize(aliases[normalize(raw)] ?? raw);
+    for (const [parent, leaves] of Object.entries(ids)) {
+      for (const [label, id] of Object.entries(leaves)) {
+        if ([label, id].some(item => normalize(item) === value)) return { category: parent, subcategory: label };
+      }
+      if (normalize(parent) === value) return { category: parent, subcategory: "" };
+    }
+    return null;
+  }
+  const detected = resolve(category);
+  const product = resolve(productType);
+  if (detected?.subcategory) return detected;
+  if (product?.subcategory && (!detected || detected.category === product.category)) return product;
+  return detected;
+}

@@ -805,6 +805,12 @@ export const DOCUMENT_STATUS_LABELS: Record<string, string> = {
 };
 
 const CHARACTERISTIC_LABELS: Record<string, string> = {
+  print: "Печать",
+  top_diameter_mm: "Диаметр верха, мм",
+  bottom_diameter_mm: "Диаметр дна, мм",
+  width_mm: "Ширина, мм",
+  length_mm: "Длина, мм",
+  dimensions_mm: "Габариты, мм",
   volume_ml: "Объём, мл",
   coating: "Покрытие",
   material: "Материал",

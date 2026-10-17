@@ -8,6 +8,17 @@ from pathlib import Path
 from .providers import ModelUnavailable, OllamaProvider
 
 
+def canonical_media_type(data: bytes, content_type: str, name: str = "") -> str:
+    media = (content_type or "").split(";", 1)[0].strip().lower()
+    media = {"audio/x-m4a": "audio/mp4", "audio/m4a": "audio/mp4", "audio/mp3": "audio/mpeg"}.get(media, media)
+    # Browsers sometimes omit MIME for M4A. Extension AND container signature are
+    # required; the bounded decoder still checks the actual stream afterwards.
+    if media in {"", "application/octet-stream"} and name.lower().endswith(".m4a"):
+        if len(data) >= 12 and data[4:8] == b"ftyp":
+            return "audio/mp4"
+    return media
+
+
 class UnreadableMaterial(ValueError):
     pass
 
@@ -98,6 +109,7 @@ async def validated_audio(data, media_type):
 
 
 async def transcribe_material(data, media_type, transcriber):
+    media_type = canonical_media_type(data, media_type)
     from .config import settings
     async def work():
         await validated_audio(data, media_type)
@@ -109,7 +121,7 @@ async def transcribe_material(data, media_type, transcriber):
 
 
 async def _material_to_text(name, content_type, data, provider, transcriber) -> tuple[str, str]:
-    media_type = content_type.split(";", 1)[0].strip().lower()
+    media_type = canonical_media_type(data, content_type, name)
     try:
         if media_type in {"text/plain", "text/markdown", "text/csv"}:
             value = data.decode("utf-8")
