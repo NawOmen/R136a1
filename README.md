@@ -18,6 +18,11 @@
 
 Очередь разработки и статусы хранятся только в [NEXT_STEPS.md](NEXT_STEPS.md). README описывает текущее устройство и границы функций; он не создаёт вторую очередь задач. Подготовка показа, измерения команды и физический стенд находятся в ответственности команды.
 
+**Запуск приложения — через Docker.** Быстрый старт ниже рассчитан на один компьютер.
+Для размещения сайта на сервере, закрытого подключения модельных ноутбуков,
+ручного переключения, резервирования и распределения запросов см.
+[DEPLOYMENT.md](DEPLOYMENT.md). Второй ноутбук не требуется для локального стенда.
+
 <a id="agent-environment"></a>
 ## 1. Маркетплейс как среда координации ИИ-агентов
 
@@ -464,17 +469,24 @@ CI запускает сервисные тесты и миграции, про�
 <a id="docker-start"></a>
 ## Запуск через Docker
 
-Нужны Docker Desktop / Docker Engine с Compose и Python 3 для вспомогательных скриптов. Python 3.14, Node.js и зависимости сервисов устанавливаются в образах; запускать сервисы через локальные `.venv` не требуется.
+Нужны Docker Desktop / Docker Engine с Compose, Git и терминал bash/zsh (в Windows — WSL2). Python 3.14, Node.js и зависимости сервисов устанавливаются в образах; запускать сервисы через локальные `.venv` не требуется. Python 3 на хосте используется только для дополнительных административных и тестовых утилит.
+
+Для **нового** стенда создайте секреты контейнерной утилитой. Она не перезаписывает
+существующий `.env` и не видит прежние тома Docker; если стенд уже запускался,
+сначала выполните порядок обновления и ротации ниже.
 
 ```bash
-python3 scripts/init-local-env.py  # новый .env со случайными секретами, без перезаписи
-docker compose --env-file .env -f infra/docker-compose.yml up --build
+docker run --rm --user "$(id -u):$(id -g)" \
+  -v "$PWD:/workspace" -w /workspace \
+  python:3.14-slim python scripts/init-local-env.py
+docker compose --project-name infra --env-file .env -f infra/docker-compose.yml up -d --build
 ```
 
 MinIO собирается из исходников фиксированного коммита с проверкой SHA-256, поэтому первый запуск требует загрузки Go-модулей и занимает больше времени. Готовый образ MinIO из удалённого registry не требуется. Происхождение сборки и соответствующие исходники: [infra/minio/README.md](infra/minio/README.md).
 
 Если стенд уже запускался раньше (на компьютере остался том PostgreSQL),
-`init-local-env.py` предупредит об этом, а сервисы упадут с
+сначала сохраните резервную копию и существующий `.env`. При несовпадении
+пароля сохранённой БД и `.env` сервисы завершатся с
 `password authentication failed for user "sborka"`: PostgreSQL применяет
 `POSTGRES_PASSWORD` только при первой инициализации тома, и смена `.env` пароль
 роли не меняет. Перед запуском выполните один раз:
@@ -491,7 +503,7 @@ docker volume rm infra_postgres_data   # имя тома уточните: docke
 ```
 
 Тот же шаг нужен после ротации `POSTGRES_PASSWORD` на существующем стенде;
-подробности — в [docs/security/hardening.md](#secure-deployment).
+подробности — в [защищённом развёртывании](#secure-deployment).
 
 Локальная модель также запускается через Docker. Сохраните следующий дополнительный Compose-файл **вне репозитория**, например `/tmp/porukam-ollama.compose.yml`:
 
@@ -540,7 +552,7 @@ docker compose -f infra/docker-compose.yml exec llm-gateway python -c 'from fast
 | Gateway Auth | http://localhost:8001 | аккаунты, вход, компании, проверка (OpenAPI: `/docs`) |
 | Marketplace | http://localhost:8002 | каталог, потребности, предложения, сделки, уведомления (OpenAPI: `/docs`) |
 | LLM Gateway | http://localhost:8003 | восстановление требований и агенты (OpenAPI: `/docs`) |
-| Optimizer | http://localhost:8004 | детерминированные варианты, MOQ, скидки и коалиции (OpenAPI: `/docs`) |
+| Optimizer | Только внутри Compose: `http://optimizer:8004` | детерминированные варианты, MOQ, скидки и коалиции (OpenAPI: `/docs`) |
 | MinIO | http://localhost:9000 | объектное хранилище файлов (консоль: :9001) |
 | PostgreSQL | http://localhost:5433 | БД (внутри Docker — хост `postgres:5432`) |
 | pgAdmin | http://localhost:5050 | веб-интерфейс для просмотра локальной PostgreSQL |
@@ -560,6 +572,25 @@ Docker volume `pgadmin_data` и не попадают в Git.
 Базовый Compose доступен только на localhost. Для других устройств включите
 [HTTPS-прокси и доверенный сертификат](#secure-deployment).
 Прямые API и служебные порты в сеть не публикуйте.
+
+### Синтетическое наполнение, остановка и обновление
+
+Порядок наполнения с явным `ENABLE_DEMO_SEED=true`, допуском и сохранением
+пользовательских изменений — в [инструкции](#sample-data).
+Новые ассортиментные карточки остаются черновиками до обычного допуска; две
+начальные карточки стаканов seed публикует штатным обработчиком после проверок.
+
+Для базового стенда:
+
+```bash
+docker compose --project-name infra --env-file .env -f infra/docker-compose.yml down
+docker compose --project-name infra --env-file .env -f infra/docker-compose.yml up -d --build
+```
+
+Для варианта с Ollama в общей Docker-сети сохраняйте дополнительный `-f` во всех
+командах. Для сервера сохраняйте HTTPS/LLM-дополнения из [DEPLOYMENT.md](DEPLOYMENT.md).
+При обычном обновлении не удаляйте volumes; пароль существующей БД меняется
+отдельно по [инструкции](#secure-deployment).
 
 ### Демо-аккаунты (синтетические)
 
@@ -1186,6 +1217,7 @@ Cookie: «Прототип использует необходимые техн�
 |---|---|
 | [Потребности бизнеса](docs/research/business-needs.md), [обзор конкурентов](docs/research/competitors.md) | общие исследования, экономика, источники и ограничения; без отчётов реализации этапов |
 | [NEXT_STEPS.md](NEXT_STEPS.md) | единственная очередь незавершённых задач и критериев, без второго roadmap |
+| [DEPLOYMENT.md](DEPLOYMENT.md) | серверное развёртывание Docker, HTTPS и закрытое подключение модельных ноутбуков |
 | [AGENTS.md](AGENTS.md), [SKILL.md](SKILL.md) | рабочие правила ИИ и инструменты сопровождения |
 | [Положение](Положение%20RLT.StartUp.md) | неизменённый предоставленный первоисточник конкурса |
 | [Лицензионный реестр](docs/legal/license-inventory.md), [происхождение MinIO](infra/minio/README.md) | лицензии, атрибуция и доступ к соответствующим исходникам компонентов |
