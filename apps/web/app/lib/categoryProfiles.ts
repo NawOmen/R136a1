@@ -80,3 +80,9 @@ export function resolveAgentCategory(category: string, productType = ""): { cate
   if (product?.subcategory && (!detected || detected.category === product.category)) return product;
   return detected;
 }
+
+/** Russian input labels and legacy aliases serialize to stable API keys. */
+export function canonicalCharacteristicKey(value: string): string {
+  const wanted = normalize(value);
+  return Object.entries(fields).find(([name, field]) => [name, field.label, ...field.aliases].some(alias => normalize(alias) === wanted))?.[0] ?? value;
+}

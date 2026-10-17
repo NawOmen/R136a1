@@ -202,7 +202,7 @@ async def test_csv_matches_screen_injection_safe_and_guarded(client, db_session)
     assert "\"'=ГИПЕРССЫЛКА(1)" in text
     assert "Итого по отчёту" in text
     assert str(ctx["deal"].id) in text
-    assert "Отчёт сформирован (UTC)" in text
+    assert "Отчёт сформирован (всемирное время)" in text
     stranger = await make_user(db_session)
     assert (await client.get(f"/api/v1/companies/{ctx['sc']}/commercial-report.csv?role=seller",
                              headers=_auth(make_token(stranger)))).status_code in (403, 404)

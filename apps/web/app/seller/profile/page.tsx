@@ -2,6 +2,7 @@
 
 // Производственный профиль продавца (GET/PUT /companies/{id}/production-profile).
 
+import { russianMessage } from "../../lib/russianMessages";
 import Link from "next/link";
 import { FormEvent, useEffect, useState } from "react";
 import { getToken } from "../../lib/api";
@@ -56,7 +57,7 @@ export default function SellerProfilePage() {
           // Профиль ещё не заполнен
           setProfile({ ...EMPTY_PROFILE, company_id: companyId });
         } else {
-          setError(err instanceof ApiError ? err.message : "Не удалось загрузить профиль.");
+          setError(err instanceof ApiError ? russianMessage(err.message) : "Не удалось загрузить профиль.");
         }
       })
       .finally(() => {
@@ -83,7 +84,7 @@ export default function SellerProfilePage() {
       if (photo) await marketplace.uploadProductionPhoto(token, company.id, photo);
       setSaved(true);
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : "Не удалось сохранить профиль.");
+      setError(err instanceof ApiError ? russianMessage(err.message) : "Не удалось сохранить профиль.");
     } finally {
       setSaving(false);
     }

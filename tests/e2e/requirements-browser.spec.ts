@@ -180,12 +180,13 @@ test("category guidance adds its required fields without cup-specific defaults",
   await prepare(page);
   await page.route("**/categories/profiles", route => route.fulfill({ json: registry }));
   await page.reload();
+  await page.getByRole("button", { name: "Заполнить вручную", exact: true }).click();
   await page.locator("#category").selectOption("Товары для бизнеса");
   await page.locator("#subcategory").selectOption("Мебель");
   await page.getByRole("button", { name: "Добавить недостающие обязательные поля" }).click();
   const keys = await page.locator('input[placeholder="Характеристика (например, материал)"]').evaluateAll(inputs => inputs.map(input => (input as HTMLInputElement).value));
-  expect(keys).toContain("dimensions_mm");
-  expect(keys).not.toContain("volume_ml");
+  expect(keys).toContain("Габариты, мм");
+  expect(keys).not.toContain("Объём, мл");
   expect(new Set(keys).size).toBe(keys.length);
   await expect(page.getByRole("button", { name: "Добавить недостающие обязательные поля" })).toHaveCount(0);
 });

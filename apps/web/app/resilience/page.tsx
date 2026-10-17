@@ -1,4 +1,6 @@
 "use client";
+import { russianMessage } from "../lib/russianMessages";
+import { russianLabel } from "../lib/presentation";
 import CommercialEstimate from "../components/CommercialEstimate";
 
 import Link from "next/link";
@@ -26,7 +28,7 @@ export default function ResiliencePage() {
 
   useEffect(() => {
     void reload().catch((err: unknown) =>
-      setError(err instanceof ApiError ? err.message : "Не удалось загрузить планы."),
+      setError(err instanceof ApiError ? russianMessage(err.message) : "Не удалось загрузить планы."),
     ).finally(() => setLoading(false));
   }, []);
 
@@ -37,7 +39,7 @@ export default function ResiliencePage() {
     setError(null);
     setWorking(plan.id);
     try { await marketplace.confirmResiliencePlan(token, plan.id, plan.version); await reload(); }
-    catch (err) { setError(err instanceof ApiError ? err.message : "Не удалось подтвердить план."); }
+    catch (err) { setError(err instanceof ApiError ? russianMessage(err.message) : "Не удалось подтвердить план."); }
     finally { setWorking(null); }
   }
 
@@ -55,7 +57,7 @@ export default function ResiliencePage() {
         `задержка ${scenario.result.delay_days} дн. Сделка не изменена.`,
       );
       await reload();
-    } catch (err) { setError(err instanceof ApiError ? err.message : "Симуляция не выполнена."); }
+    } catch (err) { setError(err instanceof ApiError ? russianMessage(err.message) : "Симуляция не выполнена."); }
     finally { setWorking(null); }
   }
 
@@ -66,7 +68,7 @@ export default function ResiliencePage() {
     setError(null);
     setWorking(plan.id);
     try { await marketplace.approveRecovery(token, scenarioId, plan.version); await reload(); }
-    catch (err) { setError(err instanceof ApiError ? err.message : "Не удалось активировать замену."); }
+    catch (err) { setError(err instanceof ApiError ? russianMessage(err.message) : "Не удалось активировать замену."); }
     finally { setWorking(null); }
   }
 
@@ -76,7 +78,7 @@ export default function ResiliencePage() {
     setError(null);
     setWorking(plan.id);
     try { await marketplace.recalculateResiliencePlan(token, plan.id); await reload(); }
-    catch (err) { setError(err instanceof ApiError ? err.message : "Не удалось пересчитать план."); }
+    catch (err) { setError(err instanceof ApiError ? russianMessage(err.message) : "Не удалось пересчитать план."); }
     finally { setWorking(null); }
   }
 
@@ -107,7 +109,7 @@ export default function ResiliencePage() {
           {plan.current_allocations.map((item, index) => <p key={`${item.company_id}-${index}`}>Текущее назначение #{item.company_id.slice(0, 8)}: {formatUnits(item.units)}{item.role === "executed" ? " · уже исполнено" : ""}{item.deal_id && <> · <Link href="/deals">Отгрузка и приёмка в сделках</Link></>}</p>)}
           {plan.scenarios.some(item => item.status === "calculated" && !item.is_current) && <p className="alert alert-error">Расчёт устарел: условия резерва или исполнение изменились. Пересчитайте план перед подтверждением.</p>}
           <p><strong>N-1:</strong> {n1.length} сценариев · <strong>N-2:</strong> {n2.length} сценариев</p>
-          <ul className="evidence-list">{[...n1, ...n2].map((s) => <li key={s.id}>{s.scenario_type} ({s.failed_company_ids.map((id) => `#${id.slice(0, 8)}`).join(" + ")}): подтверждено {formatUnits(s.result.confirmed_covered_units)}, дефицит {formatUnits(s.result.uncovered_units)}, изменение полной цены {s.result.cost_comparison_applicable ? formatRub(s.result.price_delta_rub) : "неприменимо"}, +{s.result.delay_days} дн.{s.result.solver_status === "timeout" ? " · расчёт не уложился в лимит: это не отсутствие решения" : ""}{s.result.solver_status === "infeasible" ? " · допустимого распределения нет" : ""}</li>)}</ul>
+          <ul className="evidence-list">{[...n1, ...n2].map((s) => <li key={s.id}>{russianLabel(s.scenario_type, "Сценарий отказа")} ({s.failed_company_ids.map((id) => `#${id.slice(0, 8)}`).join(" + ")}): подтверждено {formatUnits(s.result.confirmed_covered_units)}, дефицит {formatUnits(s.result.uncovered_units)}, изменение полной цены {s.result.cost_comparison_applicable ? formatRub(s.result.price_delta_rub) : "неприменимо"}, +{s.result.delay_days} дн.{s.result.solver_status === "timeout" ? " · расчёт не уложился в лимит: это не отсутствие решения" : ""}{s.result.solver_status === "infeasible" ? " · допустимого распределения нет" : ""}</li>)}</ul>
           <div className="actions">
             <button className="btn btn-secondary btn-sm" disabled={working !== null || plan.status === "stale"} onClick={() => void recalculate(plan)}>Пересчитать резерв</button>
             {plan.status === "ready_for_confirmation" && <button className="btn btn-success" disabled={working !== null} onClick={() => void confirm(plan)}>Подтвердить план</button>}

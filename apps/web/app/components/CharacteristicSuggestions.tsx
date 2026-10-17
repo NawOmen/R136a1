@@ -1,5 +1,6 @@
 "use client";
 
+import { russianMessage } from "../lib/russianMessages";
 import { useEffect, useState } from "react";
 import { marketplace, EditorRegistry } from "../lib/marketplace";
 import { countUserCharacteristics, requiredCharacteristicKeys } from "../lib/categoryProfiles";
@@ -13,7 +14,7 @@ export default function CharacteristicSuggestions({ category, subcategory, keys,
   const [retry,setRetry]=useState(0);
   useEffect(()=>{
     let active=true; setError(null);
-    marketplace.getCategoryRegistry().then(data=>{if(active)setRegistry(data);}).catch(err=>{if(active)setError(err instanceof Error?err.message:"Не удалось загрузить правила.");});
+    marketplace.getCategoryRegistry().then(data=>{if(active)setRegistry(data);}).catch(err=>{if(active)setError(err instanceof Error?russianMessage(err.message):"Не удалось загрузить правила.");});
     return()=>{active=false;};
   },[retry]);
   if(error)return <p role="alert" className="hint">{error} <button type="button" onClick={()=>setRetry(value=>value+1)}>Повторить загрузку правил</button></p>;

@@ -1,4 +1,5 @@
 "use client";
+import { displayValue } from "../lib/presentation";
 import { useEffect, useState } from "react";
 import { getToken } from "../lib/api";
 import { marketplace, Need, characteristicLabel } from "../lib/marketplace";
@@ -16,7 +17,7 @@ export default function NeedRequirements({ need }: { need: Need }) {
   const evidence = need.requirements_evidence;
   const labels: Record<string, string> = { quantity_units: "Количество", budget_rub: "Бюджет, ₽", deadline_date: "Срок поставки", category: "Категория", subcategory: "Подкатегория", delivery_address_id: "Адрес доставки", volume_units: "Количество", valid_until: "Актуальность", characteristics: "Характеристики", evidence: "Подтверждение требований" };
   const label = (key: string) => labels[key] ?? characteristicLabel(key, need.category_profile);
-  const show = (value: unknown) => value == null || value === "" ? "Не указано" : typeof value === "object" ? JSON.stringify(value) : String(value);
+  const show = (value: unknown) => value == null || value === "" ? "Не указано" : displayValue(value);
   return <section className="card">
     <h2>Требования и история версий</h2>
     <p>Текущая версия: {need.revision}</p>

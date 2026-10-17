@@ -4,6 +4,9 @@
 // категория, характеристики (пары «ключ/значение»), объём, бюджет, срок,
 // адрес доставки (+ добавление адреса через prompt), видимость, файлы.
 
+import { canonicalCharacteristicKey } from "../../lib/categoryProfiles";
+import { russianMessage } from "../../lib/russianMessages";
+import { russianLabel, displayValue, fieldName, systemText } from "../../lib/presentation";
 import RequirementSource from "../../components/RequirementSource";
 import { draftFiles } from "../../lib/draftFiles";
 
@@ -43,6 +46,8 @@ function newRow(key = "", value = ""): CharacteristicRow {
 }
 
 export default function NewNeedPage() {
+  const manualRef = useRef<HTMLDetailsElement>(null);
+  const [manualExpanded, setManualExpanded] = useState(false);
   const [quantityApproved, setQuantityApproved] = useState(false);
   const router = useRouter();
   const {
@@ -102,7 +107,7 @@ export default function NewNeedPage() {
     setAnalyzing(false); setSubmitting(false); setTranscribing(false); setRecording(false);
     void draftFiles(draftKey).then(saved => { if (!cancelled) { setFiles(saved); setLoadedFilesKey(draftKey); } })
       .catch(() => { if (!cancelled) { setLoadedFilesKey(draftKey); setDraftNotice("Не удалось восстановить файлы в браузере. Выберите их повторно."); } });
-    setAgentRun(null); setAnswers({}); setFiles([]); setSavedNeed(null);
+    setAgentRun(null); setAnswers({}); setFiles([]); setSavedNeed(null); setManualExpanded(false);
     setRequestDescription(""); setRows([newRow("unit", "шт"), newRow()]); setCategory(PRODUCT_CATEGORIES[0]); setSubcategory("");
     setVolumeUnits(""); setBudgetRub(""); setDeadlineDate(""); setDeliveryAddressId("");
     setVisibility("open_anonymized"); setDraftNotice(""); creationKey.current = crypto.randomUUID();
@@ -117,6 +122,7 @@ export default function NewNeedPage() {
             if (PRODUCT_CATEGORY_TREE[value.category].includes(value.subcategory)) setSubcategory(value.subcategory);
           }
           if (Array.isArray(value.rows) && value.rows.length <= 100 && value.rows.every((r: CharacteristicRow) => typeof r.key === "string" && typeof r.value === "string")) setRows(value.rows);
+          setManualExpanded(Boolean(value.volume || value.savedNeed));
           setVolumeUnits(String(value.volume ?? "")); setBudgetRub(String(value.budget ?? ""));
           setDeadlineDate(String(value.deadline ?? "")); setDeliveryAddressId(String(value.address ?? ""));
           if (value.visibility === "open_anonymized" || value.visibility === "selected_producers" || value.visibility === "closed") setVisibility(value.visibility);
@@ -163,7 +169,7 @@ export default function NewNeedPage() {
       })
       .catch((err: unknown) => {
         if (!cancelled) {
-          setError(err instanceof MarketplaceError ? err.message : "Не удалось загрузить адреса доставки.");
+          setError(err instanceof MarketplaceError ? russianMessage(err.message) : "Не удалось загрузить адреса доставки.");
         }
       });
     return () => {
@@ -230,7 +236,7 @@ export default function NewNeedPage() {
       const added = updated.find((item) => item.address === address.trim());
       setDeliveryAddressId(added?.id ?? updated[0]?.id ?? "");
     } catch (err) {
-      setError(err instanceof MarketplaceError ? err.message : "Не удалось добавить адрес.");
+      setError(err instanceof MarketplaceError ? russianMessage(err.message) : "Не удалось добавить адрес.");
     } finally {
       if (activeScope.current === scope) setBusyAddress(false);
     }
@@ -242,7 +248,7 @@ export default function NewNeedPage() {
     if (!token) return;
     setTrial(null); setTrialError(null);
     agents.trial(token).then((value) => { if (!cancelled) { setTrial(value); setTrialError(null); } })
-      .catch((err: unknown) => { if (!cancelled) setTrialError(err instanceof Error ? err.message : "Не удалось проверить пробный доступ."); });
+      .catch((err: unknown) => { if (!cancelled) setTrialError(err instanceof Error ? russianMessage(err.message) : "Не удалось проверить пробный доступ."); });
     return () => { cancelled = true; };
   }, [user?.id, analyzing]);
 
@@ -300,7 +306,7 @@ export default function NewNeedPage() {
       setAnswers({});
     } catch (err) {
       if (activeScope.current !== scope) return;
-      setError(`${err instanceof MarketplaceError ? err.message : "Не удалось разобрать материалы."} Текст и введённые поля сохранены в этой вкладке. Заполните карточку ниже вручную или повторите анализ.`);
+      setError(`${err instanceof MarketplaceError ? russianMessage(err.message) : "Не удалось разобрать материалы."} Текст и введённые поля сохранены в этой вкладке. Заполните карточку ниже вручную или повторите анализ.`);
     } finally {
       if (activeScope.current === scope) setAnalyzing(false);
     }
@@ -330,10 +336,18 @@ export default function NewNeedPage() {
       setAnswers({});
     } catch (err) {
       if (activeScope.current !== scope) return;
-      setError(err instanceof MarketplaceError ? err.message : "Не удалось сохранить уточнения.");
+      setError(err instanceof MarketplaceError ? russianMessage(err.message) : "Не удалось сохранить уточнения.");
     } finally {
       if (activeScope.current === scope) setAnalyzing(false);
     }
+  }
+
+  function openManual() {
+    setManualExpanded(true);
+    requestAnimationFrame(() => {
+      manualRef.current?.scrollIntoView({ block: "start", behavior: "auto" });
+      manualRef.current?.querySelector("summary")?.focus();
+    });
   }
 
   async function applyAgentResult() {
@@ -349,7 +363,7 @@ export default function NewNeedPage() {
       setAgentRun(confirmedRun);
     } catch (err) {
       if (activeScope.current !== scope) return;
-      setError(err instanceof MarketplaceError ? err.message : "Не удалось подтвердить требования.");
+      setError(err instanceof MarketplaceError ? russianMessage(err.message) : "Не удалось подтвердить требования.");
       setAnalyzing(false);
       return;
     }
@@ -395,6 +409,7 @@ export default function NewNeedPage() {
       );
     if (extractedRows.length > 0) setRows(extractedRows);
     setError(null);
+    openManual();
     setAnalyzing(false);
   }
 
@@ -472,7 +487,7 @@ export default function NewNeedPage() {
       router.push(`/needs/${need.id}`);
     } catch (err) {
       if (activeScope.current !== scope) return;
-      setError(err instanceof MarketplaceError ? err.message : "Не удалось создать потребность.");
+      setError(err instanceof MarketplaceError ? russianMessage(err.message) : "Не удалось создать потребность.");
     } finally {
       if (activeScope.current === scope) setSubmitting(false);
     }
@@ -520,11 +535,11 @@ export default function NewNeedPage() {
         </Link>
       </div>
       <p className="subtitle">
-        Опишите, что нужно купить, — производители смогут предложить свои условия
+        Опишите закупку. ИИ заполнит карточку, а вы проверите её перед отправкой.
       </p>
 
       {error && <div className="alert alert-error" role="alert">{error}</div>}
-      <p className="hint">ИИ не обязателен: карточку можно заполнить вручную. Текст и поля автоматически сохраняются в этой вкладке отдельно для каждой компании.</p>
+      <p className="hint">1. Опишите → 2. Проверьте → 3. Отправьте. Ввод сохраняется в этой вкладке.</p>
       {draftNotice && <p className="hint" role="status">{draftNotice}</p>}
       {savedNeed && <p className="alert alert-warning">Черновик уже создан. <Link href={`/needs/${savedNeed.id}`}>Открыть сохранённую потребность</Link>. Повторная отправка продолжит загрузку в этот черновик.</p>}
 
@@ -557,7 +572,7 @@ export default function NewNeedPage() {
         )}
 
         <section className="agent-panel" aria-labelledby="materials-heading">
-          <h2 id="materials-heading">ИИ-аналитика — требования и кандидаты</h2>
+          <h2 id="materials-heading">1. Опишите закупку</h2>
           <p className="hint">
             Опишите задачу обычными словами и приложите материалы. Система покажет источники,
             предположения и противоречия; карточка изменится только после вашего подтверждения.
@@ -628,13 +643,14 @@ export default function NewNeedPage() {
 
           {trial && <p className="hint" role="status">{trial.enabled ? `Пробные сценарии: ${trial.used} из ${trial.limit} использовано, ${trial.remaining} осталось.` : "Лимит пробных сценариев отключён настройкой платформы."}</p>}
           {trialError && <p className="hint">{trialError}</p>}
-          <p className="hint">Ручное создание бесплатно. При включённом пробном лимите доступны два сценария разбора; повтор запроса и уточнения не расходуют новый сценарий.</p>
+          <details className="workflow-details"><summary>Лимит и сохранение данных</summary><p className="hint">Ручное создание бесплатно. Доступны два пробных разбора, если лимит включён. Повтор и уточнение не расходуют новый сценарий. Ввод хранится в этой вкладке отдельно для компании.</p></details>
+          <button type="button" className="btn btn-secondary btn-sm" onClick={openManual}>Заполнить вручную</button>
 
           {agentRun && (
             <div className="agent-result">
-              <button type="button" className="btn btn-secondary btn-sm" onClick={() => { analysisGeneration.current += 1; setAgentRun(null); setAnswers({}); }}>Продолжить заполнение вручную</button>
+              <button type="button" className="btn btn-secondary btn-sm" onClick={() => { analysisGeneration.current += 1; setAgentRun(null); setAnswers({}); openManual(); }}>Продолжить заполнение вручную</button>
               <p className="hint">Версия требований: {agentRun.revision}. Предположения и источники нужно проверить перед переносом в карточку.</p>
-              <h3>Краткий результат подбора</h3>
+              <h3>2. Проверьте результат</h3>
               <p>{agentRun.result.summary}</p>
               <h3>Восстановленные требования</h3>
               {agentRun.result.warnings.map((warning) => (
@@ -644,12 +660,12 @@ export default function NewNeedPage() {
                 {agentRun.result.properties.map((property) => (
                   <li key={property.key}>
                     <div className="company-row">
-                      <strong>{property.label}</strong>
+                      <strong>{/[а-яё]/i.test(property.label) ? property.label : russianLabel(property.key, "Дополнительная характеристика")}</strong>
                       <span className={`badge evidence-${property.status}`}>
-                        {PROPERTY_STATUS_LABELS[property.status]}
+                        {PROPERTY_STATUS_LABELS[property.status] ?? "Требуется проверка"}
                       </span>
                     </div>
-                    <div>{property.value === null ? "—" : String(property.value)}</div>
+                    <div>{property.value === null ? "—" : displayValue(property.value)}</div>
                     {property.sources.length > 0 && (
                       <details>
                         <summary>Откуда взята характеристика?</summary>
@@ -658,7 +674,7 @@ export default function NewNeedPage() {
                             onInvalidate={() => {
                               const token = getToken(); if (!token || !window.confirm("Удалить источник и отменить связанные подтверждения?")) return;
                               const scope = draftKey;
-                              void agents.invalidateSource(token, agentRun.id, source.source_id, agentRun.revision).then(run => { if (activeScope.current === scope) setAgentRun(run); }).catch(reason => { if (activeScope.current === scope) setError(reason instanceof Error ? reason.message : "Не удалось удалить источник"); });
+                              void agents.invalidateSource(token, agentRun.id, source.source_id, agentRun.revision).then(run => { if (activeScope.current === scope) setAgentRun(run); }).catch(reason => { if (activeScope.current === scope) setError(reason instanceof Error ? russianMessage(reason.message) : "Не удалось удалить источник"); });
                             }} />
                         ))}
                       </details>
@@ -683,7 +699,7 @@ export default function NewNeedPage() {
                         >
                           <option value="">— выберите —</option>
                           {question.options.map((option, index) => (
-                            <option key={index} value={String(option)}>{String(option)}</option>
+                            <option key={index} value={String(option)}>{displayValue(option)}</option>
                           ))}
                         </select>
                       ) : (
@@ -745,7 +761,7 @@ export default function NewNeedPage() {
                 <summary>Журнал обработки</summary>
                 {agentRun.tool_calls.map((call) => (
                   <p key={call.id} className="hint">
-                    {call.status === "success" ? "Выполнено" : "Ошибка"}: {call.tool_name} — {call.output_summary}
+                    {call.status === "success" ? "Выполнено" : "Ошибка"}: {russianLabel(call.tool_name, "Обработка материалов")} — {systemText(call.output_summary)}
                   </p>
                 ))}
               </details>
@@ -753,6 +769,8 @@ export default function NewNeedPage() {
           )}
         </section>
 
+        <details className="workflow-details" ref={manualRef} open={manualExpanded} onToggle={event => setManualExpanded(event.currentTarget.open)}>
+        <summary>3. Карточка запроса — проверьте и отправьте</summary>
         <ValidatedFields>
         <div className="field">
           <label htmlFor="category">
@@ -795,8 +813,8 @@ export default function NewNeedPage() {
                 placeholder="Характеристика (например, материал)"
                 aria-label={`Характеристика ${index + 1}: название`}
                 required
-                value={row.key}
-                onChange={(event) => updateRow(index, { key: event.target.value })}
+                value={fieldName(row.key)}
+                onChange={(event) => updateRow(index, { key: canonicalCharacteristicKey(event.target.value) })}
               />
               <input
                 type="text"
@@ -936,6 +954,7 @@ export default function NewNeedPage() {
           </Link>
         </div>
         </ValidatedFields>
+        </details>
       </form>
     </div>
   );

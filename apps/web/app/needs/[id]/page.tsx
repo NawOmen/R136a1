@@ -1,4 +1,5 @@
 "use client";
+import { russianMessage } from "../../lib/russianMessages";
 import CommercialEstimate from "../../components/CommercialEstimate";
 
 // Деталь потребности: характеристики, файлы, список предложений.
@@ -63,7 +64,7 @@ export default function NeedDetailPage() {
         if (err instanceof ApiError && err.status === 404) {
           setNotFound(true);
         } else {
-          setError(err instanceof ApiError ? err.message : "Не удалось загрузить потребность.");
+          setError(err instanceof ApiError ? russianMessage(err.message) : "Не удалось загрузить потребность.");
         }
       })
       .finally(() => {
@@ -104,7 +105,7 @@ export default function NeedDetailPage() {
       setNeed(needData);
       setOffers(offersData);
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : "Не удалось выбрать предложение.");
+      setError(err instanceof ApiError ? russianMessage(err.message) : "Не удалось выбрать предложение.");
     } finally {
       setSelectingId(null);
     }
@@ -124,7 +125,7 @@ export default function NeedDetailPage() {
       anchor.click();
       URL.revokeObjectURL(url);
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : "Не удалось скачать файл.");
+      setError(err instanceof ApiError ? russianMessage(err.message) : "Не удалось скачать файл.");
     } finally {
       setDownloadingId(null);
     }
@@ -139,7 +140,7 @@ export default function NeedDetailPage() {
     try {
       setNeed(await marketplace.publishNeed(token, need.id));
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : "Не удалось опубликовать потребность.");
+      setError(err instanceof ApiError ? russianMessage(err.message) : "Не удалось опубликовать потребность.");
     } finally {
       setPublishing(false);
     }
@@ -153,7 +154,7 @@ export default function NeedDetailPage() {
     try {
       setVariants(await marketplace.optimizeNeed(token, need.id));
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : "Не удалось рассчитать варианты.");
+      setError(err instanceof ApiError ? russianMessage(err.message) : "Не удалось рассчитать варианты.");
     } finally {
       setOptimizing(false);
     }
@@ -180,7 +181,7 @@ export default function NeedDetailPage() {
       await marketplace.createResiliencePlan(token, need.id, variant.id, price, delay, autoReplace);
       window.location.href = "/resilience";
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : "Не удалось подготовить план устойчивости.");
+      setError(err instanceof ApiError ? russianMessage(err.message) : "Не удалось подготовить план устойчивости.");
     } finally {
       setPreparingResilience(null);
     }
@@ -351,7 +352,7 @@ export default function NeedDetailPage() {
                     </div>
                     <div className="company-meta">
                       КП {offer.id} · Цена: {formatRub(offer.price_rub, 12)} · Объём: {formatUnits(offer.available_units, itemUnit(need.characteristics))} ·
-                      MOQ: {formatUnits(offer.moq_units, itemUnit(need.characteristics))} · Логистика: {formatRub(offer.delivery_cost_rub)} ·
+                      минимальный заказ: {formatUnits(offer.moq_units, itemUnit(need.characteristics))} · Логистика: {formatRub(offer.delivery_cost_rub)} ·
                       Срок: {offer.lead_time_days} дн. · Действует до: {offer.valid_until ?? "не ограничено"}
                     </div>
                   </div>

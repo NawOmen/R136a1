@@ -1,3 +1,4 @@
+import { canonicalCharacteristicKey } from "./categoryProfiles";
 import type { CapabilityDetails } from "./marketplace";
 
 export const EMPTY_CAPABILITY_DETAILS: CapabilityDetails = {
@@ -20,7 +21,8 @@ export function parseSizeRanges(value: string): Record<string, [number, number]>
   const result: Record<string, [number, number]> = {};
   for (const line of value.split("\n").filter((item) => item.trim())) {
     const parts = line.split(":").map((item) => item.trim());
-    const [key, low, high] = parts;
+    const [rawKey, low, high] = parts;
+    const key = canonicalCharacteristicKey(rawKey);
     const min = Number(low), max = Number(high);
     if (parts.length !== 3 || !key || !low || !high || !Number.isFinite(min) || !Number.isFinite(max) || min < 0 || max < min || Object.hasOwn(result, key)) {
       throw new Error("Размеры: укажите уникальное название с единицей, минимум и максимум через двоеточие.");

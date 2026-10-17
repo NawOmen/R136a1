@@ -1,5 +1,6 @@
 "use client";
 
+import { russianMessage } from "../lib/russianMessages";
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { api, Company, getToken } from "../lib/api";
@@ -16,7 +17,7 @@ export default function CatalogPage() {
   useEffect(() => {
     const initialQuery = new URLSearchParams(window.location.search).get("q") ?? "";
     setQuery(initialQuery);
-    marketplace.getCatalog().then(setProducts).catch((err: unknown) => setError(err instanceof Error ? err.message : "Не удалось загрузить каталог.")).finally(() => setLoading(false));
+    marketplace.getCatalog().then(setProducts).catch((err: unknown) => setError(err instanceof Error ? russianMessage(err.message) : "Не удалось загрузить каталог.")).finally(() => setLoading(false));
     const token = getToken();
     if (token) void api.me(token).then((result) => setMyCompanies(result.companies)).catch(() => undefined);
   }, []);
@@ -38,7 +39,7 @@ export default function CatalogPage() {
     {error && <div className="alert alert-error">{error}</div>}
     {loading ? <div className="market-loading"><span /><p>Загружаем предложения...</p></div> : !error && visible.length === 0 ? <div className="empty-market"><span aria-hidden="true">⌕</span><div><b>Подходящих товаров пока нет</b><p>Измените запрос или создайте карточку потребности — производители смогут предложить условия.</p></div><Link className="btn btn-primary" href="/needs/new">Создать потребность</Link></div> : <div className="product-grid">{visible.map((product) => <Link className="market-product" href={`/catalog/${product.id}`} key={product.id}>
       <div className="market-product__visual">{product.images[0] ? <img src={marketplace.productImageUrl(product.images[0].id)} alt={product.name} /> : <span aria-hidden="true">{product.category.slice(0, 1)}</span>}<small>РОССИЯ</small></div>
-      <div className="market-product__body"><strong className="market-price">{formatRub(product.price_rub, 12)}</strong><span className="market-muted">за единицу · MOQ {formatUnits(product.moq_units, itemUnit(product.characteristics))}</span><h2>{product.name}</h2><p>{product.category}{product.subcategory ? ` · ${product.subcategory}` : ""}</p><span className="market-supplier">★ {companyName(product.company_id)}</span>{product.price_tiers[0] && <span className="volume-price">От {formatUnits(product.price_tiers[0].min_units, itemUnit(product.characteristics))} — {formatRub(product.price_tiers[0].unit_price_rub)}/{itemUnit(product.characteristics)}</span>}{product.quantity_conversion && <span className="market-muted">1 {product.quantity_conversion.from_unit} = {product.quantity_conversion.factor} {product.quantity_conversion.to_unit}</span>}<span className="market-product__cta">Открыть товар</span></div>
+      <div className="market-product__body"><strong className="market-price">{formatRub(product.price_rub, 12)}</strong><span className="market-muted">за единицу · минимальный заказ {formatUnits(product.moq_units, itemUnit(product.characteristics))}</span><h2>{product.name}</h2><p>{product.category}{product.subcategory ? ` · ${product.subcategory}` : ""}</p><span className="market-supplier">★ {companyName(product.company_id)}</span>{product.price_tiers[0] && <span className="volume-price">От {formatUnits(product.price_tiers[0].min_units, itemUnit(product.characteristics))} — {formatRub(product.price_tiers[0].unit_price_rub)}/{itemUnit(product.characteristics)}</span>}{product.quantity_conversion && <span className="market-muted">1 {product.quantity_conversion.from_unit} = {product.quantity_conversion.factor} {product.quantity_conversion.to_unit}</span>}<span className="market-product__cta">Открыть товар</span></div>
     </Link>)}</div>}
   </div>;
 }

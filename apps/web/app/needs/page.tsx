@@ -4,6 +4,7 @@
 // переход к деталям. Повтор — новый черновик с новыми датами:
 // старые файлы, допуски, резервы и согласия не переносятся.
 
+import { russianMessage } from "../lib/russianMessages";
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { getToken } from "../lib/api";
@@ -47,7 +48,7 @@ export default function MyNeedsPage() {
     try {
       setNeeds(await marketplace.getMyNeeds(token));
     } catch (err: unknown) {
-      setError(err instanceof ApiError ? err.message : "Не удалось загрузить потребности.");
+      setError(err instanceof ApiError ? russianMessage(err.message) : "Не удалось загрузить потребности.");
     } finally {
       setLoading(false);
     }
@@ -67,7 +68,7 @@ export default function MyNeedsPage() {
     marketplace.previewRepeat(token, repeatId, deadline, validUntil).then((result) => {
       if (previewGeneration.current === generation) setPreview(result);
     }).catch((err: unknown) => {
-      if (previewGeneration.current === generation) setPreviewError(err instanceof ApiError ? err.message : "Не удалось сравнить условия повтора.");
+      if (previewGeneration.current === generation) setPreviewError(err instanceof ApiError ? russianMessage(err.message) : "Не удалось сравнить условия повтора.");
     }).finally(() => {
       if (previewGeneration.current === generation) setPreviewLoading(false);
     });
@@ -105,7 +106,7 @@ export default function MyNeedsPage() {
       setRepeatId(null);
       setPreview(null);
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : "Не удалось повторить потребность.");
+      setError(err instanceof ApiError ? russianMessage(err.message) : "Не удалось повторить потребность.");
     } finally {
       setRepeating(false);
     }

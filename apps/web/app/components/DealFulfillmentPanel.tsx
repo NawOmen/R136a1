@@ -1,5 +1,6 @@
 "use client";
 
+import { russianMessage } from "../lib/russianMessages";
 import { FormEvent, useCallback, useEffect, useRef, useState } from "react";
 import { getToken } from "../lib/api";
 import { FulfillmentCommand, FulfillmentRecord, FulfillmentState, fulfillmentApi, formatRub, marketplace } from "../lib/marketplace";
@@ -44,7 +45,7 @@ export default function DealFulfillmentPanel({ dealId, companyId, isBuyer, canMa
     if (busy.current) return;
     const token = getToken(); if (!token) { setError("Войдите в аккаунт."); return; }
     busy.current = true; setPending(true); setError(""); setNotice("");
-    try { await work(token); } catch (e) { if (alive.current) setError(e instanceof Error ? e.message : "Действие не выполнено."); }
+    try { await work(token); } catch (e) { if (alive.current) setError(e instanceof Error ? russianMessage(e.message) : "Действие не выполнено."); }
     finally { busy.current = false; if (alive.current) setPending(false); }
   }
   function payload(): Record<string, unknown> {

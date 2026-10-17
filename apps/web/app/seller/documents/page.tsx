@@ -5,6 +5,8 @@
 // Рядом — отчёт о категорийном допуске: загрузка файла сама допуск не выдаёт,
 // решение принимает проверяющий площадки.
 
+import { russianMessage } from "../../lib/russianMessages";
+import { russianLabel } from "../../lib/presentation";
 import Link from "next/link";
 import { FormEvent, useEffect, useRef, useState } from "react";
 import { getToken } from "../../lib/api";
@@ -81,7 +83,7 @@ export default function SellerDocumentsPage() {
       })
       .catch((err: unknown) => {
         if (!cancelled) {
-          setError(err instanceof ApiError ? err.message : "Не удалось загрузить документы.");
+          setError(err instanceof ApiError ? russianMessage(err.message) : "Не удалось загрузить документы.");
         }
       })
       .finally(() => {
@@ -94,7 +96,7 @@ export default function SellerDocumentsPage() {
       })
       .catch((err: unknown) => {
         if (!cancelled) setExpiryState({ companyId, status: "error", list: [],
-          error: err instanceof ApiError ? err.message : "Не удалось проверить сроки документов." });
+          error: err instanceof ApiError ? russianMessage(err.message) : "Не удалось проверить сроки документов." });
       });
     return () => {
       cancelled = true;
@@ -121,7 +123,7 @@ export default function SellerDocumentsPage() {
       setFile(null);
       setValidUntil("");
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : "Не удалось загрузить документ.");
+      setError(err instanceof ApiError ? russianMessage(err.message) : "Не удалось загрузить документ.");
     } finally {
       setUploading(false);
     }
@@ -140,7 +142,7 @@ export default function SellerDocumentsPage() {
       setExpiryState((current) => ({ ...current, list: current.list.filter((item) => item.id !== document.id) }));
       setAdmission(null);
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : "Не удалось удалить документ.");
+      setError(err instanceof ApiError ? russianMessage(err.message) : "Не удалось удалить документ.");
     } finally {
       setDeletingId(null);
     }
@@ -162,7 +164,7 @@ export default function SellerDocumentsPage() {
       setAdmission(report);
     } catch (err) {
       setAdmission(null);
-      setAdmissionError(err instanceof ApiError ? err.message : "Не удалось проверить допуск.");
+      setAdmissionError(err instanceof ApiError ? russianMessage(err.message) : "Не удалось проверить допуск.");
     } finally {
       setCheckingAdmission(false);
     }
@@ -509,7 +511,7 @@ export default function SellerDocumentsPage() {
                         <div className="company-meta">Решение проверяющего: {document.verification_note}</div>
                       )}
                       <span className={`badge badge-${document.verification_status}`}>
-                        {DOCUMENT_STATUS_LABELS[document.verification_status] ?? document.verification_status}
+                        {DOCUMENT_STATUS_LABELS[document.verification_status] ?? russianLabel(document.verification_status, "Статус уточняется")}
                       </span>
                     </div>
                     <button

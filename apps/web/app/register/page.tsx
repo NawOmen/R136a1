@@ -1,5 +1,6 @@
 "use client";
 
+import { russianMessage } from "../lib/russianMessages";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { FormEvent, useEffect, useState } from "react";
@@ -39,7 +40,7 @@ export default function RegisterPage() {
       router.push("/dashboard");
     } catch (err) {
       setError(
-        err instanceof ApiError ? err.message : "Не удалось зарегистрироваться. Попробуйте ещё раз.",
+        err instanceof ApiError ? russianMessage(err.message) : "Не удалось зарегистрироваться. Попробуйте ещё раз.",
       );
     } finally {
       setSubmitting(false);
@@ -47,7 +48,7 @@ export default function RegisterPage() {
   }
 
   return (
-    <div className="auth-shell"><aside className="auth-aside"><span className="eyebrow">Начните за несколько минут</span><h2>Покупайте и продавайте в одном аккаунте</h2><p>После регистрации создайте компанию и включите нужные возможности: покупка, продажа или оба режима одновременно.</p><ul><li>Каталог оптовых товаров</li><li>Карточки потребностей покупателей</li><li>Коалиции для доступного MOQ</li></ul></aside><div className="auth-page">
+    <div className="auth-shell"><aside className="auth-aside"><span className="eyebrow">Начните за несколько минут</span><h2>Покупайте и продавайте в одном аккаунте</h2><p>После регистрации создайте компанию и включите нужные возможности: покупка, продажа или оба режима одновременно.</p><ul><li>Каталог оптовых товаров</li><li>Карточки потребностей покупателей</li><li>Коалиции для доступного минимальный заказ</li></ul></aside><div className="auth-page">
       <span className="eyebrow">Новый аккаунт</span><h1 className="page-title">Регистрация</h1>
       <p className="subtitle">Создайте личный профиль для работы с компаниями</p>
       <p className="hint" style={{ marginTop: -14, marginBottom: 16 }}>
@@ -90,7 +91,7 @@ export default function RegisterPage() {
           />
         </div>
         <div className="field">
-          <label htmlFor="email">Email<span className="req">*</span></label>
+          <label htmlFor="email">Электронная почта<span className="req">*</span></label>
           <input
             id="email"
             type="email"

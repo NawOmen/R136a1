@@ -1,5 +1,6 @@
 "use client";
 
+import { russianMessage } from "../lib/russianMessages";
 import { useEffect, useState } from "react";
 import { useMe } from "../lib/useMe";
 import { getToken } from "../lib/api";
@@ -20,7 +21,7 @@ export default function SettingsPage() {
     if(!token){setLoading(false);return;}
     setLoading(true);setError(null);
     try{setWatches(await marketplace.getMarketWatches(token));}
-    catch(e){setError(e instanceof Error?e.message:"Не удалось загрузить подписки.");}
+    catch(e){setError(e instanceof Error?russianMessage(e.message):"Не удалось загрузить подписки.");}
     finally{setLoading(false);}
   }
 
@@ -36,7 +37,7 @@ export default function SettingsPage() {
     const token=getToken();if(!token||saving||loading)return;
     setSaving(true);setError(null);
     try{const watch=await marketplace.createMarketWatch(token,category);setWatches((current)=>[...current.filter((item)=>item.id!==watch.id),watch]);}
-    catch(e){setError(e instanceof Error?e.message:"Не удалось сохранить подписку.");}
+    catch(e){setError(e instanceof Error?russianMessage(e.message):"Не удалось сохранить подписку.");}
     finally{setSaving(false);}
   }
 
@@ -44,7 +45,7 @@ export default function SettingsPage() {
     const token=getToken();if(!token)return;
     setRemovingId(id);setError(null);
     try{await marketplace.deleteMarketWatch(token,id);setWatches((current)=>current.filter((item)=>item.id!==id));}
-    catch(e){setError(e instanceof Error?e.message:"Не удалось отключить подписку.");}
+    catch(e){setError(e instanceof Error?russianMessage(e.message):"Не удалось отключить подписку.");}
     finally{setRemovingId(null);}
   }
 

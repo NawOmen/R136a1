@@ -1,4 +1,5 @@
 "use client";
+import { russianMessage } from "../lib/russianMessages";
 import { useEffect, useState } from "react";
 import { RuleValue } from "./CategoryPassportDetails";
 import { getToken } from "../lib/api";
@@ -19,7 +20,7 @@ export default function ProfileRevisionPanel({ kind, id, revision, draft, onAdop
     if (!token) return;
     setLoading(true);
     marketplace.getProfileRevision(token, kind, id).then((value) => { if (!cancelled) setPreview(value); })
-      .catch((err: unknown) => { if (!cancelled) setError(err instanceof Error ? err.message : "Не удалось сравнить правила."); })
+      .catch((err: unknown) => { if (!cancelled) setError(err instanceof Error ? russianMessage(err.message) : "Не удалось сравнить правила."); })
       .finally(() => { if (!cancelled) setLoading(false); });
     return () => { cancelled = true; };
   }, [kind, id, revision, retry]);
@@ -31,7 +32,7 @@ export default function ProfileRevisionPanel({ kind, id, revision, draft, onAdop
       await marketplace.adoptProfileRevision(token, kind, id, preview, revision);
       // Refresh the record first: a failed refresh must remain visible and retryable.
       await onAdopted(); setRetry((value) => value + 1);
-    } catch (err) { setError(err instanceof Error ? err.message : "Не удалось принять правила."); }
+    } catch (err) { setError(err instanceof Error ? russianMessage(err.message) : "Не удалось принять правила."); }
     finally { setSaving(false); }
   }
   return <details className="card">

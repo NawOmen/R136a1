@@ -1,5 +1,6 @@
 "use client";
 
+import { russianMessage } from "../lib/russianMessages";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { FormEvent, useEffect, useState } from "react";
@@ -25,7 +26,7 @@ export default function LoginPage() {
       setToken(result.access_token);
       router.push("/dashboard");
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : "Не удалось войти. Попробуйте ещё раз.");
+      setError(err instanceof ApiError ? russianMessage(err.message) : "Не удалось войти. Попробуйте ещё раз.");
     } finally {
       setSubmitting(false);
     }
@@ -34,13 +35,13 @@ export default function LoginPage() {
   return (
     <div className="auth-shell"><aside className="auth-aside"><span className="eyebrow">ПоРукам для бизнеса</span><h2>Один аккаунт для закупок и продаж</h2><p>Работайте от имени компании, публикуйте товары и потребности, следите за предложениями и сделками.</p><ul><li>Проверенные российские компании</li><li>Объяснимый подбор производителей</li><li>Контроль критичных действий</li></ul></aside><div className="auth-page">
       <span className="eyebrow">С возвращением</span><h1 className="page-title">Войти в аккаунт</h1>
-      <p className="subtitle">Продолжите работу на B2B-маркетплейсе</p>
+      <p className="subtitle">Продолжите работу на Маркетплейс для бизнесае</p>
 
       {error && <div className="alert alert-error">{error}</div>}
 
       <form className="card" onSubmit={handleSubmit}>
         <div className="field">
-          <label htmlFor="email">Email<span className="req">*</span></label>
+          <label htmlFor="email">Электронная почта<span className="req">*</span></label>
           <input
             id="email"
             type="email"

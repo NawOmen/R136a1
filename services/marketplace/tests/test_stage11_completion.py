@@ -113,7 +113,7 @@ async def test_next_step_respects_selected_company_mode_and_revocation(client, d
     await _make_need(client, user, buyer)
     response = await client.get(f'/api/v1/next-step?company_id={seller}&mode=sell', headers=_auth(make_token(user)))
     assert response.status_code == 200
-    assert response.json()['href'] == '/seller/products'
+    assert response.json()['href'] == '/seller/profile'
     invalid = await client.get(f'/api/v1/next-step?company_id={seller}&mode=buy', headers=_auth(make_token(user)))
     assert invalid.status_code == 403
     await db_session.execute(text('DELETE FROM auth.company_members WHERE company_id=:cid'), {'cid': seller})

@@ -1,3 +1,4 @@
+import { russianFetch, russianMessage, validationMessage } from "./russianMessages";
 // Минимальный клиент gateway-auth. Все запросы — JSON,
 // аутентификация — JWT Bearer, токен хранится в localStorage ("token").
 
@@ -117,7 +118,7 @@ export class ApiError extends Error {
   readonly status: number;
 
   constructor(message: string, status: number) {
-    super(message);
+    super(russianMessage(message));
     this.name = "ApiError";
     this.status = status;
   }
@@ -129,7 +130,7 @@ const FIELD_LABELS: Record<string, string> = {
   last_name: "Фамилия",
   first_name: "Имя",
   middle_name: "Отчество",
-  email: "Email",
+  email: "Электронная почта",
   password: "Пароль",
   phone: "Телефон",
   full_name: "Название",
@@ -142,33 +143,8 @@ const FIELD_LABELS: Record<string, string> = {
   legal_address: "Юридический адрес",
 };
 
-interface ValidationErrorItem {
-  loc?: unknown[];
-  msg?: string;
-  ctx?: { min_length?: number };
-}
-
-function describeValidationError(item: ValidationErrorItem): string {
-  const loc = Array.isArray(item.loc) ? item.loc : [];
-  const field = String(loc[loc.length - 1] ?? "");
-  const label = FIELD_LABELS[field] ?? field;
-  const msg = item.msg ?? "";
-
-  if (msg.toLowerCase().includes("at least")) {
-    const min = item.ctx?.min_length;
-    return min ? `«${label}» должно быть не короче ${min} символов` : `«${label}» слишком короткое`;
-  }
-  if (msg.toLowerCase().includes("valid email")) {
-    return "Введите корректный email";
-  }
-  if (msg.toLowerCase().includes("string type")) {
-    return `«${label}» должно быть строкой`;
-  }
-  if (label) {
-    return `«${label}»: ${msg}`;
-  }
-  return msg;
-}
+interface ValidationErrorItem { loc?: unknown[]; msg?: string; type?: string; ctx?: Record<string, unknown> }
+function describeValidationError(item: ValidationErrorItem): string { return validationMessage(item, FIELD_LABELS); }
 
 // ---------- Работа с токеном ----------
 
@@ -207,7 +183,7 @@ async function request<T>(path: string, options: RequestOptions = {}): Promise<T
   if (init.body !== undefined) headers.set("Content-Type", "application/json");
   if (token) headers.set("Authorization", `Bearer ${token}`);
 
-  const response = await fetch(`${apiBaseUrl()}${path}`, { ...init, headers });
+  const response = await russianFetch(`${apiBaseUrl()}${path}`, { ...init, headers });
 
   if (!response.ok) {
     if (
@@ -221,7 +197,7 @@ async function request<T>(path: string, options: RequestOptions = {}): Promise<T
     try {
       const body = (await response.json()) as { detail?: unknown };
       if (typeof body.detail === "string" && body.detail) {
-        message = body.detail;
+        message = russianMessage(body.detail, message);
       } else if (Array.isArray(body.detail)) {
         message = body.detail.map((item) => describeValidationError(item as ValidationErrorItem)).join("; ");
       }

@@ -1,4 +1,5 @@
 "use client";
+import { russianMessage } from "../lib/russianMessages";
 import { useState } from "react";
 import { agents, EvidenceItem } from "../lib/agents";
 import { getToken } from "../lib/api";
@@ -21,7 +22,7 @@ export default function RequirementSource({ runId, source, onInvalidate }: {
         anchor.href = url; anchor.download = source.source_name; anchor.click();
         setTimeout(() => URL.revokeObjectURL(url), 1000);
       }
-    } catch (reason) { setError(reason instanceof Error ? reason.message : "Не удалось открыть источник"); }
+    } catch (reason) { setError(reason instanceof Error ? russianMessage(reason.message) : "Не удалось открыть источник"); }
     finally { setBusy(false); }
   }
   const start = source.locator?.start, end = source.locator?.end;

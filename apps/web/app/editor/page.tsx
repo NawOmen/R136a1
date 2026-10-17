@@ -1,4 +1,7 @@
 "use client";
+import { canonicalCharacteristicKey } from "../lib/categoryProfiles";
+import { russianMessage } from "../lib/russianMessages";
+import { russianLabel, fieldName } from "../lib/presentation";
 import { useEffect, useState } from "react";
 import CategoryPassportDetails from "../components/CategoryPassportDetails";
 import { api, getToken } from "../lib/api";
@@ -26,7 +29,7 @@ export default function EditorPage() {
         if (cancelled) return;
         if (!me.user.is_category_editor && !me.user.is_marketplace_admin) throw new Error("Требуются полномочия редактора.");
         setRegistry(data); setDocuments(docs); setError(null);
-      }).catch((err: unknown) => { if (!cancelled) setError(err instanceof Error ? err.message : "Не удалось загрузить кабинет."); })
+      }).catch((err: unknown) => { if (!cancelled) setError(err instanceof Error ? russianMessage(err.message) : "Не удалось загрузить кабинет."); })
       .finally(() => { if (!cancelled) setLoaded(true); });
     return () => { cancelled = true; };
   }, [reload,documentStatus]);
@@ -62,7 +65,7 @@ export default function EditorPage() {
       const next = await marketplace.reviewCategoryRules(token, publication(), publish);
       if (publish) { setRegistry(next); setPreview(null); setApproved(false); setDraft(null); setSelected(""); }
       else setPreview(next);
-    } catch (err) { setError(err instanceof Error ? err.message : "Не удалось сохранить правила."); }
+    } catch (err) { setError(err instanceof Error ? russianMessage(err.message) : "Не удалось сохранить правила."); }
     finally { setBusy(false); }
   }
   async function documentDecision(doc: PendingDocument, verified: boolean) {
@@ -76,14 +79,14 @@ export default function EditorPage() {
       for (const line of values.confirms.split("\n").filter(line => line.trim())) {
         const separator = line.indexOf(":");
         if (separator < 1) throw new Error("Подтверждения: название поля и значения через двоеточие; варианты разделяйте символом |.");
-        const key = line.slice(0,separator).trim();
+        const key = canonicalCharacteristicKey(line.slice(0,separator).trim());
         if (Object.hasOwn(confirms,key)) throw new Error("Подтверждаемые поля не должны повторяться.");
         confirms[key] = line.slice(separator+1).split("|").map(value => value.trim()).filter(Boolean);
       }
       await marketplace.verifyDocument(token, doc.id, { decision: verified ? "verified" : "rejected", scope_category: values.category,
         scope_subcategory: values.subcategory || null, valid_until: values.until || null, confirms, note: values.note });
       setDocuments(await marketplace.getEditorDocuments(token,documentStatus));
-    } catch (err) { setError(err instanceof Error ? err.message : "Не удалось проверить документ."); }
+    } catch (err) { setError(err instanceof Error ? russianMessage(err.message) : "Не удалось проверить документ."); }
     finally { setBusy(false); }
   }
   async function download(doc: PendingDocument) {
@@ -92,7 +95,7 @@ export default function EditorPage() {
     try {
       const blob = await marketplace.downloadEditorDocument(token, doc.id); const url = URL.createObjectURL(blob);
       const link = document.createElement("a"); link.href = url; link.download = doc.name; link.click(); URL.revokeObjectURL(url);
-    } catch (err) { setError(err instanceof Error ? err.message : "Не удалось получить документ."); }
+    } catch (err) { setError(err instanceof Error ? russianMessage(err.message) : "Не удалось получить документ."); }
     finally { setBusy(false); }
   }
   if (!loaded) return <p role="status" className="hint">Загрузка кабинета…</p>;
@@ -103,12 +106,12 @@ export default function EditorPage() {
         <label>Категория<select disabled={busy} value={selected} onChange={event => select(event.target.value)}><option value="">Выберите категорию</option>{leaves.map(leaf => <option key={leaf.id} value={leaf.id} disabled={leaf.admission_state === "unsupported"}>{leaf.group} / {leaf.label}</option>)}</select></label>
         {draft && <fieldset disabled={busy}>
           <h3>Свойства категории</h3>{Object.entries(registry.registry.characteristic_fields).map(([key,field])=><label key={key}><input type="checkbox" checked={draft.profile.fields.includes(key)} onChange={event=>change({...draft,profile:{...draft.profile,fields:event.target.checked?[...draft.profile.fields,key]:draft.profile.fields.filter(item=>item!==key),required_for_product:event.target.checked?draft.profile.required_for_product:draft.profile.required_for_product.filter(item=>item!==key)}})} />{field.label}</label>)}
-          <h3>Обязательные свойства</h3>{draft.profile.fields.map(key => <label key={key}><input type="checkbox" checked={draft.profile.required_for_product.includes(key)} onChange={event => change({ ...draft, profile: { ...draft.profile, required_for_product: event.target.checked ? [...draft.profile.required_for_product,key] : draft.profile.required_for_product.filter(item => item !== key) } })} />{registry.registry.characteristic_fields[key]?.label ?? key}</label>)}
+          <h3>Обязательные свойства</h3>{draft.profile.fields.map(key => <label key={key}><input type="checkbox" checked={draft.profile.required_for_product.includes(key)} onChange={event => change({ ...draft, profile: { ...draft.profile, required_for_product: event.target.checked ? [...draft.profile.required_for_product,key] : draft.profile.required_for_product.filter(item => item !== key) } })} />{registry.registry.characteristic_fields[key]?.label ?? russianLabel(key)}</label>)}
           <details><summary>Зависимости обязательных свойств</summary>
             {((draft.profile.passport.identification as {required_when?:{field:string;values:string[];required:string[]}[]}).required_when ?? []).map((condition,index)=><fieldset key={index}>
-              <label>Если свойство<select value={condition.field} onChange={event=>updateCondition(index,{...condition,field:event.target.value})}>{draft.profile.fields.map(key=><option key={key} value={key}>{registry.registry.characteristic_fields[key]?.label ?? key}</option>)}</select></label>
+              <label>Если свойство<select value={condition.field} onChange={event=>updateCondition(index,{...condition,field:event.target.value})}>{draft.profile.fields.map(key=><option key={key} value={key}>{registry.registry.characteristic_fields[key]?.label ?? russianLabel(key)}</option>)}</select></label>
               <label>Принимает одно из значений, через |<input value={condition.values.join(" | ")} onChange={event=>updateCondition(index,{...condition,values:event.target.value.split("|").map(value=>value.trim())})} /></label>
-              <p>Тогда обязательны:</p>{draft.profile.fields.map(key=><label key={key}><input type="checkbox" checked={condition.required.includes(key)} onChange={event=>updateCondition(index,{...condition,required:event.target.checked?[...condition.required,key]:condition.required.filter(value=>value!==key)})} />{registry.registry.characteristic_fields[key]?.label ?? key}</label>)}
+              <p>Тогда обязательны:</p>{draft.profile.fields.map(key=><label key={key}><input type="checkbox" checked={condition.required.includes(key)} onChange={event=>updateCondition(index,{...condition,required:event.target.checked?[...condition.required,key]:condition.required.filter(value=>value!==key)})} />{registry.registry.characteristic_fields[key]?.label ?? russianLabel(key)}</label>)}
               <button type="button" onClick={()=>updateCondition(index,null)}>Удалить зависимость</button>
             </fieldset>)}
             <button type="button" onClick={()=>updateCondition(-1,{field:draft.profile.fields[0],values:[],required:[]})}>Добавить зависимость</button>
@@ -125,13 +128,13 @@ export default function EditorPage() {
         </fieldset>}
       </section>
       <section className="card"><h2>Проверка документов</h2><label>Состояние<select value={documentStatus} disabled={busy} onChange={event=>{setDocuments([]);setDocumentStatus(event.target.value as typeof documentStatus);}}><option value="unverified">Ожидают проверки</option><option value="verified">Подтверждены — пересмотр и отзыв</option><option value="rejected">Отклонены</option></select></label>{!documents.length && <p className="hint">В выбранном состоянии документов нет.</p>}
-        {documents.map(doc => { const values=docInputs[doc.id] ?? {category:doc.scope_category ?? "",subcategory:doc.scope_subcategory ?? "",until:doc.valid_until ?? "",confirms:Object.entries(doc.confirms ?? {}).map(([key,values])=>key+": "+values.join(" | ")).join("\n"),note:doc.verification_note ?? ""};
+        {documents.map(doc => { const values=docInputs[doc.id] ?? {category:doc.scope_category ?? "",subcategory:doc.scope_subcategory ?? "",until:doc.valid_until ?? "",confirms:Object.entries(doc.confirms ?? {}).map(([key,values])=>fieldName(key)+": "+values.join(" | ")).join("\n"),note:doc.verification_note ?? ""};
           const update=(patch:Partial<typeof values>) => setDocInputs(previous => ({...previous,[doc.id]:{...values,...patch}}));
-          return <fieldset key={doc.id} disabled={busy}><h3>{doc.name}</h3><p>{doc.company_display_name ?? "Компания"} · {doc.document_type}</p><button type="button" onClick={() => void download(doc)}>Скачать для проверки</button>
+          return <fieldset key={doc.id} disabled={busy}><h3>{doc.name}</h3><p>{doc.company_display_name ?? "Компания"} · {russianLabel(doc.document_type, "Документ")}</p><button type="button" onClick={() => void download(doc)}>Скачать для проверки</button>
             <label>Раздел<select value={values.category} onChange={event => update({category:event.target.value,subcategory:""})}><option value="">Выберите раздел</option>{registry.registry.groups.map(group => <option key={group.label}>{group.label}</option>)}</select></label>
             <label>Подкатегория<select value={values.subcategory} onChange={event => update({subcategory:event.target.value})}><option value="">Весь раздел — только при подтверждённой применимости</option>{registry.registry.groups.find(group => group.label===values.category)?.leaves.map(leaf => <option key={leaf.id}>{leaf.label}</option>)}</select></label>
             <label>Действителен до<input type="date" value={values.until} onChange={event => update({until:event.target.value})} /></label>
-            <label>Подтверждённые характеристики<textarea placeholder={"material: сталь | латунь\nlength_mm: 40"} value={values.confirms} onChange={event => update({confirms:event.target.value})} /></label>
+            <label>Подтверждённые характеристики<textarea placeholder={"Материал: сталь | латунь\nДлина, мм: 40"} value={values.confirms} onChange={event => update({confirms:event.target.value})} /></label>
             <label>Заключение<textarea maxLength={500} value={values.note} onChange={event => update({note:event.target.value})} /></label>
             <button type="button" className="btn btn-primary" onClick={() => void documentDecision(doc,true)}>Применимость проверена — подтвердить</button><button type="button" className="btn btn-secondary" onClick={() => void documentDecision(doc,false)}>{doc.verification_status === "verified" ? "Отозвать с причиной" : "Отклонить с причиной"}</button>
           </fieldset>; })}

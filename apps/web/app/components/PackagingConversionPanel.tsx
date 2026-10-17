@@ -1,4 +1,5 @@
 "use client";
+import { russianMessage } from "../lib/russianMessages";
 import { useEffect, useState } from "react";
 import {getToken} from "../lib/api";
 import {marketplace,PackagingDefinition,Product} from "../lib/marketplace";
@@ -10,7 +11,7 @@ export default function PackagingConversionPanel({product,onSaved}:{product:Prod
   const [error,setError]=useState<string|null>(null);
   const specification = JSON.stringify([product.characteristics,product.category_profile]);
   useEffect(()=>{setPreview(null);},[specification]);
-  async function review(approved:boolean){const token=getToken();if(!token || busy)return;setBusy(true);setError(null);try{const result=await marketplace.reviewPackaging(token,product.id,{target_unit:target,factor:Number(factor),approved,expected_specification_hash:preview?.specification_hash,expected_review_hash:preview?.review_hash});if(approved){await onSaved();setPreview(null);}else setPreview(result);}catch(err){setError(err instanceof Error?err.message:"Не удалось проверить содержимое упаковки.");}finally{setBusy(false);}}
+  async function review(approved:boolean){const token=getToken();if(!token || busy)return;setBusy(true);setError(null);try{const result=await marketplace.reviewPackaging(token,product.id,{target_unit:target,factor:Number(factor),approved,expected_specification_hash:preview?.specification_hash,expected_review_hash:preview?.review_hash});if(approved){await onSaved();setPreview(null);}else setPreview(result);}catch(err){setError(err instanceof Error?russianMessage(err.message):"Не удалось проверить содержимое упаковки.");}finally{setBusy(false);}}
   return <details><summary>Содержимое упаковки и пересчёт</summary>
     <p className="hint">Коэффициент относится к этому товару и его спецификации. Цена, минимальный заказ, склад и сделка сохраняют единицу упаковки; эквивалент содержимого показывается отдельно. При изменении спецификации подтверждение снимается.</p>
     {product.quantity_conversion && <p>Подтверждено: 1 {product.quantity_conversion.from_unit} = {product.quantity_conversion.factor} {product.quantity_conversion.to_unit}.</p>}
