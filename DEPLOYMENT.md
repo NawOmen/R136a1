@@ -15,11 +15,13 @@ SSH, настройка ОС, домена и сертификата — инф�
 | Место | Компоненты |
 | --- | --- |
 | Linux-сервер | Docker Compose: сайт, Auth, Marketplace, LLM Gateway, Optimizer, PostgreSQL, MinIO, pgAdmin; nginx HTTPS |
-| Ноутбук из ТЗ | Intel Core Ultra 7 255H, RTX 5060 8 ГБ VRAM, 32 ГБ RAM; Docker Ollama с Qwen3.5 9B, основной узел |
-| MacBook из ТЗ | MacBook Pro 16, M1 Pro, 16 ГБ unified memory; второй Docker Ollama с той же моделью |
+| Основной ноутбук | Intel Core Ultra 7 255H, RTX 5060 8 ГБ VRAM, 32 ГБ RAM; Docker Ollama с Qwen3.5 9B, основной узел |
+| Резервный ноутбук | MacBook Pro 16, M1 Pro, 16 ГБ unified memory; второй Docker Ollama с той же моделью |
 | Сервер, при автоматическом режиме | Внутренний Docker nginx `llm-router`, обращающийся к двум SSH-туннелям |
 
-Характеристики взяты из [раздела 9 ТЗ](plan_sborka_b2b.md#9-окончательный-выбор-оборудования-и-моделей).
+Это выбранная конфигурация стенда. Фактическая проверка RTX-ноутбука
+описана в [комментарии PR #132](https://github.com/NawOmen/R136a1/pull/132#issuecomment-6211060164);
+она относится к прежнему коммиту и хостовой Ollama, а не к GPU-контейнеру.
 Whisper/OCR остаются внутри серверного LLM Gateway; Qwen выполняется на ноутбуках.
 Файлы и состояние процесса хранятся на сервере. Gateway отправляет нужные для
 локального инференса данные выбранному ноутбуку по шифрованному соединению.
@@ -78,7 +80,7 @@ docker run --rm --user "$(id -u):$(id -g)" \
 
 Инициализация предназначена для нового стенда. При переносе существующего сначала
 сохраните `.env`, файлы, тома и резервную копию; используйте
-[проверенный порядок восстановления](docs/operations/stage-15.md).
+[проверенный порядок восстановления](README.md#operations).
 Скрипт внутри контейнера не проверяет старые Docker volumes хоста.
 
 Сертификат с SAN вашего домена и цепочкой доверия положите **вне Git**, например:
@@ -257,6 +259,7 @@ Match User ollama-gpu,ollama-mac
     AllowTcpForwarding remote
     GatewayPorts clientspecified
     AllowAgentForwarding no
+    AllowStreamLocalForwarding no
     X11Forwarding no
     PermitTTY no
     MaxSessions 0
@@ -508,11 +511,11 @@ dc_models exec llm-router nginx -s reload
   сервера оператор повторяет `dc up -d` или `dc_models up -d`; для автоматического
   старта настройте инфраструктурную службу с теми же файлами и рабочим каталогом.
 - До обновления сохраните checkout/commit, `.env`, TLS/туннельную конфигурацию,
-  дамп PostgreSQL и файлы MinIO. Выполните [backup/restore](docs/operations/stage-15.md)
+  дамп PostgreSQL и файлы MinIO. Выполните [backup/restore](README.md#operations)
   с тем же Compose-проектом. Модельные volumes отдельно находятся на ноутбуках.
 - Обновляйте через `git pull --ff-only` и выбранный `up -d --build` после проверки CI.
   Миграции применяются контейнерами; откат образа сам по себе не откатывает БД.
-- Для ротации PostgreSQL используйте [порядок смены секретов](docs/security/hardening.md#существующая-база-и-ротация).
+- Для ротации PostgreSQL используйте [порядок смены секретов](README.md#secure-deployment).
   Новый `POSTGRES_PASSWORD` не меняет пароль существующего тома автоматически.
 - Продление TLS: после обновления файлов — `dc exec edge nginx -t`, затем
   `dc exec edge nginx -s reload` (либо те же команды через `dc_models`).

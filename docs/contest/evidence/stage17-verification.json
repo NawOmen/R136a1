@@ -2,13 +2,9 @@
   "schema": "contest-evidence-1",
   "scope": "Синтетическая программная проверка, не оценка жюри и не полная приёмка критериев.",
   "source_digests": {
-    "README.md": "8b4129f68748af3fbdaa9ebefd59230c0ab4abec4cf0f882dd7a8b32366b0deb",
-    "docs/analysis/stage-16-scenarios.md": "c79342df78e3ae54f387eb18639460b8b4df1e57a10b8a2528b7a94df9e478fe",
-    "docs/analysis/stage-16.md": "044b392ddad75e710d265db74a1e6d14d8b7d9c9f80b52f361e37cf4dc93401b",
-    "docs/analytics/role-quality-method.md": "452833f11ffe6256436a37bd5b40009373ca87a93d9d853a0b3983a4d5e53c1f",
+    "README.md": "6c1e70e587e05c8c974e3544adac941d419e0f60bf458caecb48ba8302cd72dc",
     "docs/contest/Porukam-pitch.pptx": "874e6c3859e4c4ee9aef3746dde31a198f978accb587a53ffe3fb5eace6720cc",
-    "docs/operations/stage-15.md": "4f842fe0c8e17a759e3348ed06e73a370dd360f000fb40dcd26dec298d4795d5",
-    "scripts/test_business_analysis.py": "411a50e1e8e22cfbea2ed7b1bae19e2bf797c50f204d57fcfb7a4764d4cf3f05",
+    "scripts/test_business_analysis.py": "0b70326d1e62570467c40073ddea5a0b0f942fec6d91c983ba4b0b59d7a4c46b",
     "services/llm-gateway/tests/test_stage13_review_regressions.py": "d1dc925761da201d75464a04c6c64c2a0a63f6b2ffcc3b728cb21e52520a7995",
     "services/llm-gateway/tests/test_stage17_trace.py": "fc1b2e5d36576fa0862d9de4ff0efe05396b657477cf7310ac17b475d31bb165",
     "services/marketplace/tests/test_commerce.py": "e776e41abc514d41d26eaa0fb245c558f9926c14a8379db7ee1a2a99dcb180ee",
@@ -43,8 +39,7 @@
         }
       ],
       "documents": [
-        "docs/analysis/stage-16.md",
-        "docs/analysis/stage-16-scenarios.md"
+        "README.md"
       ],
       "readiness": "requires_human_review"
     },
@@ -73,7 +68,6 @@
         }
       ],
       "documents": [
-        "docs/analytics/role-quality-method.md",
         "README.md"
       ],
       "readiness": "requires_human_review"
@@ -103,7 +97,6 @@
         }
       ],
       "documents": [
-        "docs/operations/stage-15.md",
         "README.md"
       ],
       "readiness": "requires_human_review"
@@ -133,8 +126,7 @@
         }
       ],
       "documents": [
-        "README.md",
-        "docs/analysis/stage-16.md"
+        "README.md"
       ],
       "readiness": "requires_human_review"
     },
@@ -168,9 +160,9 @@
     }
   ],
   "implementation_digests": {
-    "scripts": "a55a8ddae37d3cb66e2717c78ca76335d6a32b568c51d1b06e16178f9a313c80",
-    "marketplace": "aedf4cbe348465d225b91c09b2a91443745c464392461235d4a68e2a9353358b",
-    "llm-gateway": "98bdd6a3fc48cfa35aba77fd355abbd1ccfb64944590173c8c7bc2a39607b3df"
+    "scripts": "3f6e3355ca04d1e37a6991266fb19a544169cd751681513e55cdf0b50cc2a5f9",
+    "marketplace": "d37a00a1eac22b35107f748ad52dd8a599515093ff551b86d11cc58e27a33f7a",
+    "llm-gateway": "76f22d9f6b379920fce230ebdad3cb2a6d7149b6392e88c8286a104364c85bd8"
   },
   "working_leaf_ids": [
     "assembly_bracket",

@@ -79,7 +79,7 @@ def main() -> int:
         print(
             "Не удалось определить IP локальной сети.\n"
             "Проверьте, что машина подключена к Wi-Fi/роутеру, и укажите адрес вручную,\n"
-            "Настройте HTTPS по docs/security/hardening.md.",
+            "Настройте HTTPS по README.md.",
             file=sys.stderr,
         )
         return 1
@@ -92,7 +92,7 @@ def main() -> int:
         ))
     print(
         "Это определение IP, а не проверка доступности сайта.\n"
-        "Для сети нужны HTTPS-прокси и доверенный сертификат: docs/security/hardening.md.\n"
+        "Для сети нужны HTTPS-прокси и доверенный сертификат: README.md.\n"
         "Базовый Compose доступен только на localhost."
     )
     return 0

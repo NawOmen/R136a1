@@ -1,5 +1,8 @@
 """S16: unknown, comparability, negative outcomes and exact economic boundaries."""
 import copy
+from contextlib import redirect_stderr
+from io import StringIO
+from unittest.mock import patch
 from decimal import Decimal
 import importlib.util
 import json
@@ -15,6 +18,19 @@ spec.loader.exec_module(analysis)
 class BusinessAnalysis(unittest.TestCase):
     def setUp(self):
         self.data = json.loads(analysis.DEFAULT_INPUT.read_text())
+
+    def test_readme_check_accepts_only_one_current_generated_block(self):
+        expected = analysis.markdown(analysis.build_report(self.data))
+        start, end = '<!-- business-model:start -->', '<!-- business-model:end -->'
+        valid = start + '\n' + expected + end
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / 'README.md'
+            for content, status in ((valid, 0), (valid.replace('RUB', 'FAKE') + start, 1),
+                                    (start + '\nincorrect\n' + end, 1), (expected, 1)):
+                with self.subTest(status=status, content=content[:50]):
+                    path.write_text(content)
+                    with patch('sys.argv', ['business_analysis.py', '--check-readme', str(path)]), redirect_stderr(StringIO()):
+                        self.assertEqual(analysis.main(), status)
 
     def case(self, identifier='direct'):
         return copy.deepcopy(next(c for c in self.data['cases'] if c['id'] == identifier))
