@@ -549,3 +549,49 @@ async def test_seller_agent_combines_rules_and_explanation(
     assert response.json()["eligible"] is True
     assert response.json()["used_route"] == "local_qwen"
     assert "Возможности" in response.json()["explanation"]
+
+
+@pytest.mark.asyncio
+async def test_unreadable_sources_require_explicit_omission_by_hash(client, token, monkeypatch, db_session):
+    import hashlib
+    from app.models import AgentSource
+    from sqlalchemy import select
+    async def unreadable(*args, **kwargs):
+        raise UnreadableMaterial("Файл не читается")
+    monkeypatch.setattr("app.api.material_to_text", unreadable)
+    data = b"synthetic-corrupt-file"
+    response = await client.post("/api/v3/buyer-agent/runs", headers=auth(token),
+        data={"request_text":"Нужно 5000 стаканов в Москву за 10 дней", "request_key":str(uuid.uuid4())},
+        files={"files":("bad.m4a", data, "audio/x-m4a")})
+    assert response.status_code == 201, response.text
+    run = response.json()
+    result = run["result"]
+    digest = hashlib.sha256(data).hexdigest()
+    assert result["unreadable_sources"] == [{"source_id":"file_1", "name":"bad.m4a", "content_hash":digest}]
+    assert result["omitted_source_hashes"] == []
+    source = await db_session.scalar(select(AgentSource).where(AgentSource.run_id == uuid.UUID(run["id"]),AgentSource.source_id=="file_1"))
+    assert not source.active
+    blocked = await client.post(f"/api/v2/agent-runs/{run['id']}/confirm",headers=auth(token),json={"expected_revision":run["revision"]})
+    assert blocked.status_code == 409
+    clarified = await client.post(f"/api/v2/agent-runs/{run['id']}/clarify",headers=auth(token),
+        json={"expected_revision":run["revision"],"answers":{"unreadable_materials":"Да, продолжить без них"}})
+    assert clarified.status_code == 200, clarified.text
+    assert clarified.json()["result"]["omitted_source_hashes"] == [digest]
+    assert clarified.json()["result"]["can_confirm"]
+
+
+@pytest.mark.asyncio
+async def test_omission_question_is_not_lost_after_three_required_answers(client, token, fake_provider, monkeypatch):
+    fake_provider.extraction = RawExtraction(category="Коробки", facts=[])
+    async def unreadable(*args, **kwargs):
+        raise UnreadableMaterial("Файл повреждён")
+    monkeypatch.setattr("app.api.material_to_text", unreadable)
+    response = await client.post("/api/v1/buyer-agent/runs",headers=auth(token),
+        data={"request_text":"Нужны коробки"}, files={"files":("bad.pdf",b"broken","application/pdf")})
+    run=response.json()
+    assert {q["key"] for q in run["result"]["questions"]} == {"quantity_units","lead_time_days","delivery_city"}
+    clarified=await client.post(f"/api/v2/agent-runs/{run['id']}/clarify",headers=auth(token),
+        json={"expected_revision":run["revision"],"answers":{"quantity_units":250,"lead_time_days":14,"delivery_city":"Москва"}})
+    assert clarified.status_code == 200, clarified.text
+    assert not clarified.json()["result"]["can_confirm"]
+    assert [q["key"] for q in clarified.json()["result"]["questions"]] == ["unreadable_materials"]

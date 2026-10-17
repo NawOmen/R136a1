@@ -1,3 +1,5 @@
+import { russianLabel, displayValue } from "./presentation";
+import { russianFetch, russianMessage, validationMessage } from "./russianMessages";
 import { displayMoney, type Money } from "./money";
 export type { Money } from "./money";
 // Клиент marketplace-сервиса (этап 3). Аутентификация — тот же JWT Bearer, что и у
@@ -805,6 +807,12 @@ export const DOCUMENT_STATUS_LABELS: Record<string, string> = {
 };
 
 const CHARACTERISTIC_LABELS: Record<string, string> = {
+  print: "Печать",
+  top_diameter_mm: "Диаметр верха, мм",
+  bottom_diameter_mm: "Диаметр дна, мм",
+  width_mm: "Ширина, мм",
+  length_mm: "Длина, мм",
+  dimensions_mm: "Габариты, мм",
   volume_ml: "Объём, мл",
   coating: "Покрытие",
   material: "Материал",
@@ -827,7 +835,7 @@ export function characteristicLabel(key: string, profile?: CategoryProfileSnapsh
 export function formatCharacteristics(characteristics: Record<string, unknown>, profile?: CategoryProfileSnapshot | null): string {
   const entries = Object.entries(characteristics);
   if (entries.length === 0) return "—";
-  return entries.map(([key, value]) => `${characteristicLabel(key, profile)}: ${String(value)}`).join(" · ");
+  return entries.map(([key, value]) => `${characteristicLabel(key, profile)}: ${displayValue(value)}`).join(" · ");
 }
 
 export function formatRub(value: Money | null | undefined, maximumFractionDigits = 2): string {
@@ -884,30 +892,8 @@ const FIELD_LABELS: Record<string, string> = {
   files: "Файлы",
 };
 
-interface ValidationErrorItem {
-  loc?: unknown[];
-  msg?: string;
-  ctx?: { min_length?: number };
-}
-
-function describeValidationError(item: ValidationErrorItem): string {
-  const loc = Array.isArray(item.loc) ? item.loc : [];
-  const field = String(loc[loc.length - 1] ?? "");
-  const label = FIELD_LABELS[field] ?? field;
-  const msg = item.msg ?? "";
-
-  if (msg.toLowerCase().includes("at least")) {
-    const min = item.ctx?.min_length;
-    return min ? `«${label}» должно быть не короче ${min} символов` : `«${label}» слишком короткое`;
-  }
-  if (msg.toLowerCase().includes("string type")) {
-    return `«${label}» должно быть строкой`;
-  }
-  if (label) {
-    return `«${label}»: ${msg}`;
-  }
-  return msg;
-}
+interface ValidationErrorItem { loc?: unknown[]; msg?: string; type?: string; ctx?: Record<string, unknown> }
+function describeValidationError(item: ValidationErrorItem): string { return validationMessage(item, FIELD_LABELS); }
 
 // ---------- HTTP ----------
 
@@ -922,7 +908,7 @@ async function marketplaceFetch<T>(path: string, options: RequestOptions = {}): 
   if (init.body !== undefined && !isFormData) headers.set("Content-Type", "application/json");
   if (token) headers.set("Authorization", `Bearer ${token}`);
 
-  const response = await fetch(`${marketplaceBaseUrl()}${path.replace("/api/v1", "/api/v3").replace("/api/v2", "/api/v3/physical")}`, { ...init, headers });
+  const response = await russianFetch(`${marketplaceBaseUrl()}${path.replace("/api/v1", "/api/v3").replace("/api/v2", "/api/v3/physical")}`, { ...init, headers });
 
   if (!response.ok) {
     if (response.status === 401) handleUnauthorized();
@@ -930,7 +916,7 @@ async function marketplaceFetch<T>(path: string, options: RequestOptions = {}): 
     try {
       const body = (await response.json()) as { detail?: unknown };
       if (typeof body.detail === "string" && body.detail) {
-        message = body.detail;
+        message = russianMessage(body.detail, message);
       } else if (Array.isArray(body.detail)) {
         message = body.detail
           .map((item) => describeValidationError(item as ValidationErrorItem))
@@ -947,7 +933,7 @@ async function marketplaceFetch<T>(path: string, options: RequestOptions = {}): 
 }
 
 async function marketplaceFetchBlob(path: string, token: string): Promise<Blob> {
-  const response = await fetch(`${marketplaceBaseUrl()}${path.replace("/api/v1", "/api/v3").replace("/api/v2", "/api/v3/physical")}`, {
+  const response = await russianFetch(`${marketplaceBaseUrl()}${path.replace("/api/v1", "/api/v3").replace("/api/v2", "/api/v3/physical")}`, {
     headers: { Authorization: `Bearer ${token}` },
   });
   if (!response.ok) {
@@ -955,7 +941,7 @@ async function marketplaceFetchBlob(path: string, token: string): Promise<Blob> 
     let message = `Ошибка запроса: ${response.status}`;
     try {
       const body = (await response.json()) as { detail?: unknown };
-      if (typeof body.detail === "string") message = body.detail;
+      if (typeof body.detail === "string") message = russianMessage(body.detail, message);
     } catch {
       // Не-JSON ответ — оставляем стандартное сообщение.
     }

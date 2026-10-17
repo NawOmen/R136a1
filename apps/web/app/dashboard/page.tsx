@@ -1,5 +1,6 @@
 "use client";
 
+import { russianMessage } from "../lib/russianMessages";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
@@ -28,6 +29,8 @@ export default function DashboardPage() {
   const [mode, setMode] = useState<Mode>(null);
   const [companyId, setCompanyId] = useState("");
   const [unreadCount, setUnreadCount] = useState(0);
+  const [nextError, setNextError] = useState(false);
+  const [stepRetry, setStepRetry] = useState(0);
   const [nextStep, setNextStep] = useState<{ title: string; description: string; href: string } | null>(null);
 
   useEffect(() => {
@@ -55,7 +58,7 @@ export default function DashboardPage() {
 
       })
       .catch((err: unknown) => {
-        setError(err instanceof ApiError ? err.message : "Не удалось загрузить данные аккаунта.");
+        setError(err instanceof ApiError ? russianMessage(err.message) : "Не удалось загрузить данные аккаунта.");
       })
       .finally(() => setLoading(false));
   }, [router]);
@@ -78,11 +81,11 @@ export default function DashboardPage() {
   useEffect(() => {
     if (!user) return;
     let cancelled = false;
-    setNextStep(null);
+    setNextStep(null); setNextError(false);
     marketplace.getNextStep(getToken()!, user.is_marketplace_admin ? undefined : companyId || undefined, mode)
-      .then((result) => { if (!cancelled) setNextStep(result); }).catch(() => {});
+      .then((result) => { if (!cancelled) setNextStep(result); }).catch(() => { if (!cancelled) setNextError(true); });
     return () => { cancelled = true; };
-  }, [user, companyId, mode]);
+  }, [user, companyId, mode, stepRetry]);
 
   // При смене компаний сбрасываем чужой режим: нельзя оставаться в режиме без прав.
   useEffect(() => {
@@ -116,19 +119,6 @@ export default function DashboardPage() {
 
   return (
     <div className="dashboard-page">
-      <OnboardingTour canBuy={canBuy} canSell={canSell} scope={`${user.id}:${companyId}:${mode}`} companyId={companyId || undefined} />
-      {nextStep && (
-        <section className="card" aria-live="polite">
-          <span className="eyebrow">Следующий шаг</span>
-          <h2>{nextStep.title}</h2>
-          <p className="subtitle">{nextStep.description}</p>
-          <div className="actions">
-            <Link href={nextStep.href} className="btn btn-primary btn-sm">
-              Перейти
-            </Link>
-          </div>
-        </section>
-      )}
       <div className="dashboard-head">
         <div>
           <span className="eyebrow">Центр управления</span>
@@ -142,7 +132,7 @@ export default function DashboardPage() {
             Поддержка
           </Link>
           <Link href="/kpi" className="btn btn-secondary">
-            KPI и доверие
+            Показатели и доверие
           </Link>
           <Link href="/notifications" className="btn btn-secondary">
             Уведомления{unreadCount > 0 ? ` (${unreadCount})` : ""}
@@ -187,6 +177,26 @@ export default function DashboardPage() {
             Продаю
           </button>
         </div></div>
+        <p className="hint">Выберите компанию и режим. Ниже — ближайшее действие именно для них.</p>
+      {nextStep && (
+        <section className="card" aria-live="polite">
+          <span className="eyebrow">Следующий шаг</span>
+          <h2>{nextStep.title}</h2>
+          <p className="subtitle">{nextStep.description}</p>
+          <div className="actions">
+            <Link href={nextStep.href} className="btn btn-primary btn-sm">
+              Продолжить
+            </Link>
+          </div>
+        </section>
+      )}
+        {nextError && <p role="alert">Не удалось определить следующий шаг. <button type="button" onClick={() => setStepRetry(value => value + 1)}>Повторить</button></p>}
+        {!nextStep && !nextError && <p role="status">Подбираем следующий шаг…</p>}
+        {mode && <div className="actions">
+          <Link className="btn btn-secondary" href={mode === "buy" ? "/needs/new" : "/seller/requests"}>{mode === "buy" ? "Новый запрос с ИИ" : "Запросы покупателей"}</Link>
+          <Link className="btn btn-secondary" href={mode === "buy" ? "/needs" : "/seller/products"}>{mode === "buy" ? "Мои запросы" : "Мои товары"}</Link>
+        </div>}
+        <details className="workflow-details"><summary>Все рабочие разделы</summary>
         {mode === "buy" && (
           <ul className="company-list">
             <li><Link href="/buyer/analytics" className="company-item"><span className="company-item__name">Закупки и статистика</span><span className="company-meta">Цены, приёмка, возвраты и отмены</span></Link></li>
@@ -286,9 +296,11 @@ export default function DashboardPage() {
         {mode === null && (
           <p className="hint mode-hint">Выберите режим, чтобы открыть разделы маркетплейса.</p>
         )}
+        </details>
       </section>
 
-      <BuyerSavingsPanel companyId={buyerCompany?.id} />
+      {buyerCompany && <details className="workflow-details"><summary>Экономия на закупках</summary><BuyerSavingsPanel companyId={buyerCompany.id} /></details>}
+      <OnboardingTour canBuy={canBuy} canSell={canSell} mode={mode} scope={`${user.id}:${companyId}:${mode}`} companyId={companyId || undefined} />
 
       <section className="card">
         <div className="company-row">

@@ -1,5 +1,6 @@
 "use client";
 
+import { russianMessage } from "../lib/russianMessages";
 import Link from "next/link";
 import { FormEvent, useEffect, useState } from "react";
 import { getToken } from "../lib/api";
@@ -29,7 +30,7 @@ export default function SupportPage() {
       setTickets(await marketplace.getMySupportTickets(token));
       setError(null);
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : "Не удалось загрузить обращения.");
+      setError(err instanceof ApiError ? russianMessage(err.message) : "Не удалось загрузить обращения.");
     } finally {
       setLoading(false);
     }
@@ -55,7 +56,7 @@ export default function SupportPage() {
       setTickets((current) => [ticket, ...current.filter((item) => item.id !== ticket.id)]);
       setSentId(ticket.id); setSubject(""); setMessage("");
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : "Не удалось отправить обращение.");
+      setError(err instanceof ApiError ? russianMessage(err.message) : "Не удалось отправить обращение.");
     } finally { setBusy(false); }
   }
 

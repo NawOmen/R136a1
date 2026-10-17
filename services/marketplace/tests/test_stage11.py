@@ -171,7 +171,7 @@ async def test_next_step_ordering(client, db_session):
     seller = await make_user(db_session)
     await make_company(db_session, seller, can_buy=False, can_sell=True, verified=True)
     r = await client.get("/api/v1/next-step", headers=_auth(make_token(seller)))
-    assert r.json()["href"] == "/seller/products"
+    assert r.json()["href"] == "/seller/profile"
 
 
 async def test_blocked_user_cannot_repeat_preview_or_next_step(client, db_session):

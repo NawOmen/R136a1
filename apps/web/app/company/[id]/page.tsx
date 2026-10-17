@@ -1,5 +1,6 @@
 "use client";
 
+import { russianMessage } from "../../lib/russianMessages";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { FormEvent, useCallback, useEffect, useRef, useState } from "react";
@@ -52,7 +53,7 @@ export default function CompanyPage() {
       setCompany(found);
       setError(null);
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : "Не удалось загрузить компанию.");
+      setError(err instanceof ApiError ? russianMessage(err.message) : "Не удалось загрузить компанию.");
     } finally {
       setLoading(false);
     }
@@ -105,7 +106,7 @@ export default function CompanyPage() {
       await api.updateCompany(token, company.id, buildUpdateInput());
       await load();
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : "Не удалось сохранить изменения.");
+      setError(err instanceof ApiError ? russianMessage(err.message) : "Не удалось сохранить изменения.");
     } finally {
       setSaving(false);
     }
@@ -120,7 +121,7 @@ export default function CompanyPage() {
       await api.updateMembership(token, company.id, { can_buy: canBuy, can_sell: canSell });
       await load();
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : "Не удалось сохранить режимы.");
+      setError(err instanceof ApiError ? russianMessage(err.message) : "Не удалось сохранить режимы.");
     } finally {
       setSavingPermissions(false);
     }
@@ -138,7 +139,7 @@ export default function CompanyPage() {
       await api.submitCompanyForReview(token, company.id);
       await load();
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : "Не удалось отправить компанию на проверку.");
+      setError(err instanceof ApiError ? russianMessage(err.message) : "Не удалось отправить компанию на проверку.");
     } finally {
       setSubmittingReview(false);
     }

@@ -1,4 +1,6 @@
 "use client";
+import { russianMessage } from "../../lib/russianMessages";
+import { russianLabel } from "../../lib/presentation";
 import CommercialTermsFields, { emptyCommercialTerms } from "../../components/CommercialTermsFields";
 import type { CommercialTerms } from "../../lib/marketplace";
 
@@ -90,7 +92,7 @@ export default function SellerRequestsPage() {
       })
       .catch((err: unknown) => {
         if (!cancelled) {
-          setError(err instanceof ApiError ? err.message : "Не удалось загрузить запросы.");
+          setError(err instanceof ApiError ? russianMessage(err.message) : "Не удалось загрузить запросы.");
         }
       })
       .finally(() => {
@@ -137,7 +139,7 @@ export default function SellerRequestsPage() {
         setError(`Отправка заблокирована: ${preview.blockers.join("; ")}`);
       }
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : "Не удалось проверить условия.");
+      setError(err instanceof ApiError ? russianMessage(err.message) : "Не удалось проверить условия.");
     } finally {
       setSubmitting(false);
     }
@@ -161,7 +163,7 @@ export default function SellerRequestsPage() {
         setChecks((current) => { const rest = { ...current }; delete rest[need.id]; return rest; });
       }
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : "Не удалось отправить предложение.");
+      setError(err instanceof ApiError ? russianMessage(err.message) : "Не удалось отправить предложение.");
     } finally {
       setConfirming(false);
     }
@@ -186,7 +188,7 @@ export default function SellerRequestsPage() {
       setLeadTime(draft.payload.lead_time_days != null ? String(draft.payload.lead_time_days) : "");
       setDeliveryCost(draft.payload.delivery_cost_rub != null ? String(draft.payload.delivery_cost_rub) : "");
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : "Не удалось подготовить черновик.");
+      setError(err instanceof ApiError ? russianMessage(err.message) : "Не удалось подготовить черновик.");
     } finally {
       setDraftingId(null);
     }
@@ -220,7 +222,7 @@ export default function SellerRequestsPage() {
         [need.id]: `${result.reasons.join(" ")} ${result.explanation}`,
       }));
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : "Не удалось объяснить совпадение.");
+      setError(err instanceof ApiError ? russianMessage(err.message) : "Не удалось объяснить совпадение.");
     } finally {
       setExplainingId(null);
     }
@@ -315,7 +317,7 @@ export default function SellerRequestsPage() {
                       <li key={field.name}>
                         <b>{field.label}:</b>{" "}
                         {field.value != null ? String(field.value) : "нужно указать"}
-                        <span className="draft-source"> источник: {field.source}</span>
+                        <span className="draft-source"> источник: {russianLabel(field.source, "Данные предложения")}</span>
                         {!field.confirmed && <span className="draft-manual"> решение человека</span>}
                         {field.note && <span className="draft-note"> {field.note}</span>}
                       </li>
@@ -371,7 +373,7 @@ export default function SellerRequestsPage() {
                   </div>
                   <div className="field">
                     <label htmlFor={`offer_moq_${need.id}`}>
-                      MOQ предложения, {itemUnit(need.characteristics)}<span className="req">*</span>
+                      минимальный заказ предложения, {itemUnit(need.characteristics)}<span className="req">*</span>
                     </label>
                     <input
                       id={`offer_moq_${need.id}`}

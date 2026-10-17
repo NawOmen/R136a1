@@ -1,5 +1,6 @@
 "use client";
 
+import { russianMessage } from "../lib/russianMessages";
 import Link from "next/link";
 import { FormEvent, useState } from "react";
 import { agents } from "../lib/agents";
@@ -30,7 +31,7 @@ export default function KnowledgePage() {
       const result=await agents.askPlatform(token,question);
       setAnswer(result.answer);
       setLinks((result.links ?? []).filter((link) => ["/needs/new", "/dashboard", "/deals", "/support"].includes(link)));
-    }catch(e){setError(e instanceof Error?e.message:"Помощник недоступен. Проверьте соединение и повторите.");}
+    }catch(e){setError(e instanceof Error?russianMessage(e.message):"Помощник недоступен. Проверьте соединение и повторите.");}
     finally{setBusy(false);}
   }
 

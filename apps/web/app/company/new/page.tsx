@@ -1,5 +1,6 @@
 "use client";
 
+import { russianMessage } from "../../lib/russianMessages";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { FormEvent, useEffect, useState } from "react";
@@ -52,7 +53,7 @@ export default function NewCompanyPage() {
       router.push("/dashboard");
     } catch (err) {
       setError(
-        err instanceof ApiError ? err.message : "Не удалось создать компанию. Попробуйте ещё раз.",
+        err instanceof ApiError ? russianMessage(err.message) : "Не удалось создать компанию. Попробуйте ещё раз.",
       );
     } finally {
       setSubmitting(false);

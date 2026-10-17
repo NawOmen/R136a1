@@ -1,5 +1,7 @@
 "use client";
 
+import { russianMessage } from "../lib/russianMessages";
+import { russianLabel } from "../lib/presentation";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
@@ -84,7 +86,7 @@ export default function AdminPage() {
         await refreshPending(token, statusFilter, search);
       }
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : "Не удалось загрузить данные.");
+      setError(err instanceof ApiError ? russianMessage(err.message) : "Не удалось загрузить данные.");
     } finally {
       setLoading(false);
     }
@@ -106,7 +108,7 @@ export default function AdminPage() {
       await api.decideCompanyVerification(token, company.id, "approve", comment.trim() || undefined);
       await refreshPending(token, statusFilter, search);
     } catch (err) {
-      setActionError(err instanceof ApiError ? err.message : "Не удалось подтвердить компанию.");
+      setActionError(err instanceof ApiError ? russianMessage(err.message) : "Не удалось подтвердить компанию.");
     } finally {
       setBusyId(null);
     }
@@ -128,7 +130,7 @@ export default function AdminPage() {
       setRejectingId(null);
       await refreshPending(token, statusFilter, search);
     } catch (err) {
-      setActionError(err instanceof ApiError ? err.message : "Не удалось отклонить компанию.");
+      setActionError(err instanceof ApiError ? russianMessage(err.message) : "Не удалось отклонить компанию.");
     } finally {
       setBusyId(null);
     }
@@ -192,7 +194,7 @@ export default function AdminPage() {
       });
       await refreshPending(token, statusFilter, search);
     } catch (err) {
-      setActionError(err instanceof ApiError ? err.message : "Не удалось сохранить решение по документу.");
+      setActionError(err instanceof ApiError ? russianMessage(err.message) : "Не удалось сохранить решение по документу.");
     } finally {
       setDocBusyId(null);
     }
@@ -418,10 +420,10 @@ export default function AdminPage() {
         )}
       </section>
 
-      <section className="card" style={{ marginTop: 24 }}><h2>Пользователи ({users.length})</h2><div className="admin-user-grid">{users.map((item) => <div className="company-row" key={item.id}><div><b>{item.last_name} {item.first_name}</b><p className="hint mode-hint">{item.email} · {item.is_marketplace_admin ? "Администратор" : item.is_category_editor ? "Редактор категорий" : "Пользователь"}</p></div>{!item.is_marketplace_admin && <div><label>Основание назначения или снятия роли редактора<input maxLength={500} value={editorReasons[item.id] ?? ""} onChange={event=>setEditorReasons(previous=>({...previous,[item.id]:event.target.value}))} /></label><button type="button" className="btn btn-secondary btn-sm" disabled={busyId===item.id || (editorReasons[item.id] ?? "").trim().length<3} onClick={async()=>{const token=getToken();if(!token)return;setBusyId(item.id);setActionError(null);try{const updated=await api.appointCategoryEditor(token,item.id,!item.is_category_editor,editorReasons[item.id]);setUsers(previous=>previous.map(value=>value.id===updated.id?updated:value));}catch(err){setActionError(err instanceof Error?err.message:"Не удалось изменить роль.");}finally{setBusyId(null);}}}>{item.is_category_editor ? "Снять роль редактора" : "Назначить редактором"}</button></div>}{!item.is_marketplace_admin && <button className="btn btn-secondary btn-sm" onClick={() => { const token=getToken(); if(!token)return; void api.setUserBlocked(token,item.id,item.account_status!=="blocked").then(() => refreshPending(token,statusFilter,search)); }}>{item.account_status === "blocked" ? "Разблокировать" : "Заблокировать"}</button>}</div>)}</div></section>
+      <section className="card" style={{ marginTop: 24 }}><h2>Пользователи ({users.length})</h2><div className="admin-user-grid">{users.map((item) => <div className="company-row" key={item.id}><div><b>{item.last_name} {item.first_name}</b><p className="hint mode-hint">{item.email} · {item.is_marketplace_admin ? "Администратор" : item.is_category_editor ? "Редактор категорий" : "Пользователь"}</p></div>{!item.is_marketplace_admin && <div><label>Основание назначения или снятия роли редактора<input maxLength={500} value={editorReasons[item.id] ?? ""} onChange={event=>setEditorReasons(previous=>({...previous,[item.id]:event.target.value}))} /></label><button type="button" className="btn btn-secondary btn-sm" disabled={busyId===item.id || (editorReasons[item.id] ?? "").trim().length<3} onClick={async()=>{const token=getToken();if(!token)return;setBusyId(item.id);setActionError(null);try{const updated=await api.appointCategoryEditor(token,item.id,!item.is_category_editor,editorReasons[item.id]);setUsers(previous=>previous.map(value=>value.id===updated.id?updated:value));}catch(err){setActionError(err instanceof Error?russianMessage(err.message):"Не удалось изменить роль.");}finally{setBusyId(null);}}}>{item.is_category_editor ? "Снять роль редактора" : "Назначить редактором"}</button></div>}{!item.is_marketplace_admin && <button className="btn btn-secondary btn-sm" onClick={() => { const token=getToken(); if(!token)return; void api.setUserBlocked(token,item.id,item.account_status!=="blocked").then(() => refreshPending(token,statusFilter,search)); }}>{item.account_status === "blocked" ? "Разблокировать" : "Заблокировать"}</button>}</div>)}</div></section>
 
       <h2 id="tickets" style={{ marginTop: 32 }}>Обращения пользователей ({tickets.length})</h2>
-      {tickets.length === 0 ? <p className="hint">Обращений нет.</p> : <ul className="company-list">{tickets.map((ticket) => <li className="card" key={ticket.id}><div className="company-row"><strong>{ticket.subject}</strong><span className="badge">{ticket.status}</span></div><p>{ticket.message}</p><div className="field"><label htmlFor={`response-${ticket.id}`}>Ответ</label><textarea id={`response-${ticket.id}`} value={response[ticket.id] ?? ticket.admin_response ?? ""} onChange={(event) => setResponse((current) => ({ ...current, [ticket.id]: event.target.value }))} /></div><div className="actions"><button className="btn btn-secondary btn-sm" onClick={() => { const token = getToken(); if (!token) return; void marketplace.updateAdminSupportTicket(token, ticket.id, { status: "in_progress", admin_response: response[ticket.id] }).then(() => refreshPending(token, statusFilter, search)); }}>В работу</button><button className="btn btn-success btn-sm" onClick={() => { const token = getToken(); if (!token) return; void marketplace.updateAdminSupportTicket(token, ticket.id, { status: "resolved", admin_response: response[ticket.id] }).then(() => refreshPending(token, statusFilter, search)); }}>Ответить и решить</button></div></li>)}</ul>}
+      {tickets.length === 0 ? <p className="hint">Обращений нет.</p> : <ul className="company-list">{tickets.map((ticket) => <li className="card" key={ticket.id}><div className="company-row"><strong>{ticket.subject}</strong><span className="badge">{russianLabel(ticket.status, "Статус уточняется")}</span></div><p>{ticket.message}</p><div className="field"><label htmlFor={`response-${ticket.id}`}>Ответ</label><textarea id={`response-${ticket.id}`} value={response[ticket.id] ?? ticket.admin_response ?? ""} onChange={(event) => setResponse((current) => ({ ...current, [ticket.id]: event.target.value }))} /></div><div className="actions"><button className="btn btn-secondary btn-sm" onClick={() => { const token = getToken(); if (!token) return; void marketplace.updateAdminSupportTicket(token, ticket.id, { status: "in_progress", admin_response: response[ticket.id] }).then(() => refreshPending(token, statusFilter, search)); }}>В работу</button><button className="btn btn-success btn-sm" onClick={() => { const token = getToken(); if (!token) return; void marketplace.updateAdminSupportTicket(token, ticket.id, { status: "resolved", admin_response: response[ticket.id] }).then(() => refreshPending(token, statusFilter, search)); }}>Ответить и решить</button></div></li>)}</ul>}
     </div>
   );
 }

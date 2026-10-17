@@ -110,12 +110,17 @@ def build_report(paths):
     digests = {}
     for key, weight, tests, documents in CRITERIA:
         checks = [test_status(ref, evidence) for ref in tests]
+        missing_documents = [path for path in documents if not (ROOT / path).is_file()]
         for path in documents + [ref.split("::")[0] for ref in tests]:
+            if path in missing_documents:
+                continue
             digests[path] = hashlib.sha256((ROOT / path).read_bytes()).hexdigest()
         states = {c["status"] for c in checks}
         status = "failed" if "failed" in states else "passed" if checks and states == {"passed"} else "unverified"
+        if missing_documents and status != "failed":
+            status = "unverified"
         criteria.append({"id": key, "weight": weight, "automated_slice_status": status,
-                         "checks": checks, "documents": documents,
+                         "checks": checks, "documents": documents, "missing_documents": missing_documents,
                          "readiness": "requires_human_review"})
     return {"schema": "contest-evidence-1", "scope": "Синтетическая программная проверка, не оценка жюри и не полная приёмка критериев.",
             "source_digests": dict(sorted(digests.items())), "criteria": criteria,

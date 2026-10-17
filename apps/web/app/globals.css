@@ -973,3 +973,11 @@ h2 {
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; scroll-behavior: auto !important; }
 }
+
+/* Compact guidance uses the existing typography and colours. */
+.workflow-guide { margin-bottom: 1.25rem; padding: .75rem 1rem; border-left: 3px solid var(--color-primary, #297f76); }
+.workflow-guide p { margin: 0 0 .25rem; font-size: .95rem; }
+.workflow-guide summary, .workflow-details > summary { cursor: pointer; }
+.workflow-guide ol { margin-bottom: 0; padding-left: 1.25rem; }
+.workflow-details { margin-block: 1rem; }
+.workflow-details > summary { font-weight: 600; padding-block: .5rem; }

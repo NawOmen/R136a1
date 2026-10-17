@@ -93,6 +93,8 @@ class CapabilityMatch(BaseModel):
 
 
 class BuyerAgentResult(BaseModel):
+    unreadable_sources: list[dict[str, str]] = Field(default_factory=list)
+    omitted_source_hashes: list[str] = Field(default_factory=list)
     buyer_company_id: uuid.UUID | None = None
     category: str
     properties: list[RequirementProperty]

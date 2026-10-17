@@ -14,7 +14,7 @@ function password(role: "BUYER" | "SELLER" | "ADMIN"): string {
 async function login(page: Page, role: "BUYER" | "SELLER" | "ADMIN") {
   page.setDefaultTimeout(15_000);
   await page.goto("/login");
-  await page.getByLabel("Email", { exact: false }).fill(role === "BUYER" ? "demo@demo.ru" : role === "SELLER" ? "seller@demo.ru" : "admin@demo.ru");
+  await page.getByLabel("Электронная почта", { exact: false }).fill(role === "BUYER" ? "demo@demo.ru" : role === "SELLER" ? "seller@demo.ru" : "admin@demo.ru");
   await page.getByLabel("Пароль", { exact: false }).fill(password(role));
   await page.getByRole("button", { name: "Войти", exact: true }).click();
   await expect(page).toHaveURL(/\/dashboard/);
@@ -52,6 +52,7 @@ test(`${classified ? "Точная классификация через API" : 
       needUrl = new URL(`/needs/${need.id}`, page.url()).toString();
     } else {
     await page.goto("/needs/new");
+    await page.getByRole("button", { name: "Заполнить вручную", exact: true }).click();
     await page.locator("#category").selectOption("Строительство");
     await page.getByLabel("Подкатегория", { exact: false }).selectOption("Крепёж");
     await page.getByLabel("Характеристика 2: название", { exact: true }).fill("thread");

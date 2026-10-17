@@ -1,4 +1,5 @@
 "use client";
+import { russianMessage } from "../../lib/russianMessages";
 import CommercialTermsFields, { emptyCommercialTerms } from "../../components/CommercialTermsFields";
 import type { CommercialTerms } from "../../lib/marketplace";
 
@@ -55,7 +56,7 @@ export default function MarketOpportunitiesPage() {
     if (!companyId) return;
     setError(null);
     void reload().catch((err: unknown) =>
-      setError(err instanceof ApiError ? err.message : "Не удалось загрузить возможности."),
+      setError(err instanceof ApiError ? russianMessage(err.message) : "Не удалось загрузить возможности."),
     );
     // reload использует только выбранную компанию.
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -84,7 +85,7 @@ export default function MarketOpportunitiesPage() {
         );
       }
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : "Не удалось подготовить черновик.");
+      setError(err instanceof ApiError ? russianMessage(err.message) : "Не удалось подготовить черновик.");
     } finally {
       setWorking(false);
     }
@@ -104,7 +105,7 @@ export default function MarketOpportunitiesPage() {
       setItems((current) => current.filter((entry) => entry.id !== item.id));
       setDismissingId(null);
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : "Не удалось отклонить рекомендацию.");
+      setError(err instanceof ApiError ? russianMessage(err.message) : "Не удалось отклонить рекомендацию.");
     } finally {
       setWorking(false);
     }
@@ -153,7 +154,7 @@ export default function MarketOpportunitiesPage() {
       setDraft(null);
       await reload();
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : "Не удалось опубликовать предложение.");
+      setError(err instanceof ApiError ? russianMessage(err.message) : "Не удалось опубликовать предложение.");
     } finally {
       setWorking(false);
     }

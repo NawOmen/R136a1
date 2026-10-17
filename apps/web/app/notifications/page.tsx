@@ -2,6 +2,7 @@
 
 // Уведомления (GET /notifications): список, «Прочитать» и «Прочитать все».
 
+import { russianMessage } from "../lib/russianMessages";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { getToken } from "../lib/api";
@@ -23,7 +24,7 @@ export default function NotificationsPage() {
       .getNotifications(token)
       .then(setNotifications)
       .catch((err: unknown) =>
-        setError(err instanceof ApiError ? err.message : "Не удалось загрузить уведомления."),
+        setError(err instanceof ApiError ? russianMessage(err.message) : "Не удалось загрузить уведомления."),
       )
       .finally(() => setLoading(false));
   }, []);
@@ -39,7 +40,7 @@ export default function NotificationsPage() {
         current.map((item) => (item.id === notification.id ? { ...item, is_read: true } : item)),
       );
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : "Не удалось отметить уведомление.");
+      setError(err instanceof ApiError ? russianMessage(err.message) : "Не удалось отметить уведомление.");
     } finally {
       setBusyId(null);
     }
@@ -54,7 +55,7 @@ export default function NotificationsPage() {
       await marketplace.markAllNotificationsRead(token);
       setNotifications((current) => current.map((item) => ({ ...item, is_read: true })));
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : "Не удалось отметить уведомления.");
+      setError(err instanceof ApiError ? russianMessage(err.message) : "Не удалось отметить уведомления.");
     } finally {
       setMarkingAll(false);
     }
