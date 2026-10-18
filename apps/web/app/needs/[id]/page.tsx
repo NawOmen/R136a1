@@ -23,6 +23,7 @@ import {
   itemUnit,
   marketplace,
   Need,
+  NeedFeedItem,
   NEED_STATUS_LABELS,
   NEED_VISIBILITY_LABELS,
   Offer,
@@ -36,10 +37,11 @@ export default function NeedDetailPage() {
   const needId = typeof params.id === "string" ? params.id : "";
   const me = useMe();
 
-  const [need, setNeed] = useState<Need | null>(null);
+  const [need, setNeed] = useState<Need | NeedFeedItem | null>(null);
   const [offers, setOffers] = useState<Offer[]>([]);
   const [deal, setDeal] = useState<Deal | null>(null);
   const [loading, setLoading] = useState(true);
+  const [loadRetry, setLoadRetry] = useState(0);
   const [notFound, setNotFound] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [selectingId, setSelectingId] = useState<string | null>(null);
@@ -53,6 +55,8 @@ export default function NeedDetailPage() {
     const token = getToken();
     if (!token || !needId) return;
     let cancelled = false;
+    setLoading(true); setError(null); setNotFound(false);
+    setNeed(null); setOffers([]); setDeal(null); setVariants([]);
     Promise.all([marketplace.getNeed(token, needId), marketplace.getOffers(token, needId)])
       .then(([needData, offersData]) => {
         if (cancelled) return;
@@ -73,7 +77,7 @@ export default function NeedDetailPage() {
     return () => {
       cancelled = true;
     };
-  }, [needId]);
+  }, [needId, loadRetry]);
 
   async function handleSelect(offer: Offer) {
     const token = getToken();
@@ -189,6 +193,8 @@ export default function NeedDetailPage() {
 
   if (loading) return <p className="hint">Загрузка...</p>;
 
+  if (error && !need) return <div><h1 className="page-title">Не удалось загрузить потребность</h1><div className="alert alert-error" role="alert">{error}</div><button type="button" className="btn btn-secondary" onClick={() => setLoadRetry(value => value + 1)}>Повторить загрузку</button></div>;
+
   if (notFound || !need) {
     return (
       <div>
@@ -200,7 +206,8 @@ export default function NeedDetailPage() {
     );
   }
 
-  const buyerCompany = me.companies.find((company) => company.id === need.company_id);
+  const ownedNeed = "company_id" in need ? need : null;
+  const buyerCompany = me.companies.find((company) => company.id === ownedNeed?.company_id);
   const isBuyer = buyerCompany?.membership?.can_buy === true;
 
   return (
@@ -219,22 +226,22 @@ export default function NeedDetailPage() {
 
       {error && <div className="alert alert-error">{error}</div>}
 
-      {need.no_match_reason && (
+      {ownedNeed?.no_match_reason && (
         <div className="alert alert-warning">
-          <strong>Почему вариант пока не найден:</strong> {need.no_match_reason}
+          <strong>Почему вариант пока не найден:</strong> {ownedNeed?.no_match_reason}
         </div>
       )}
 
       {!isBuyer && !!need.requirement_decisions?.length && <section className="card"><h2>Уточнения покупателя</h2><p>В текущей версии покупатель разрешил противоречия в этих требованиях:</p>{need.requirement_decisions.map(item => <p key={item.field}>{formatCharacteristics({ [item.field]: item.confirmed_value }, need.category_profile)}</p>)}</section>}
-      {isBuyer && <NeedRequirements key={`${need.id}:${need.revision}`} need={need} />}
-      {isBuyer && buyerCompany?.membership?.is_admin && ["open_for_offers", "waiting_for_match", "coalition_candidate", "awaiting_approvals"].includes(need.status) && (
-        <section className="card"><NeedDraftEditor key={`${need.id}:${need.revision}`} need={need} onSaved={async value => { setNeed(value); const token = getToken(); if (token) setOffers(await marketplace.getOffers(token, value.id)); }} /></section>
+      {isBuyer && ownedNeed && <NeedRequirements key={`${need.id}:${need.revision}`} need={ownedNeed} />}
+      {isBuyer && ownedNeed && buyerCompany?.membership?.is_admin && ["open_for_offers", "waiting_for_match", "coalition_candidate", "awaiting_approvals"].includes(need.status) && (
+        <section className="card"><NeedDraftEditor key={`${need.id}:${need.revision}`} need={ownedNeed} onSaved={async value => { setNeed(value); const token = getToken(); if (token) setOffers(await marketplace.getOffers(token, value.id)); }} /></section>
       )}
-      {isBuyer && need.status === "draft" && (
+      {isBuyer && ownedNeed && need.status === "draft" && (
         <section className="card">
           <h2>Черновик потребности</h2>
-          {buyerCompany?.membership?.is_admin && <NeedDraftEditor key={`${need.id}:${need.revision}`} need={need} onSaved={setNeed} />}
-          {buyerCompany?.membership?.is_admin && <ProfileRevisionPanel kind="needs" id={need.id} revision={need.revision} draft={need.status === "draft"} onAdopted={async () => { const token = getToken(); if (token) setNeed(await marketplace.getNeed(token, need.id)); }} />}
+          {ownedNeed && buyerCompany?.membership?.is_admin && <NeedDraftEditor key={`${need.id}:${need.revision}`} need={ownedNeed} onSaved={setNeed} />}
+          {ownedNeed && buyerCompany?.membership?.is_admin && <ProfileRevisionPanel kind="needs" id={need.id} revision={need.revision} draft={need.status === "draft"} onAdopted={async () => { const token = getToken(); if (token) setNeed(await marketplace.getNeed(token, need.id)); }} />}
           {buyerCompany?.verification_status === "verified" ? (
             <div className="actions">
               <button
@@ -280,7 +287,7 @@ export default function NeedDetailPage() {
           </div>
           <div>
             <dt>Бюджет</dt>
-            <dd>{formatRub(need.budget_rub)}</dd>
+            <dd>{ownedNeed ? formatRub(ownedNeed.budget_rub) : "Доступен покупателю"}</dd>
           </div>
           <div>
             <dt>Срок выполнения</dt>
@@ -301,11 +308,11 @@ export default function NeedDetailPage() {
         </dl>
 
         <h2 style={{ marginTop: 8 }}>Файлы</h2>
-        {need.files.length === 0 ? (
+        {!ownedNeed ? <p className="hint">Вложения доступны только компании-покупателю.</p> : ownedNeed.files.length === 0 ? (
           <p className="hint">Файлов нет.</p>
         ) : (
           <ul className="company-list">
-            {need.files.map((file) => (
+            {ownedNeed.files.map((file) => (
               <li key={file.id} className="company-item">
                 <span>
                   <span className="company-item__name">{file.file_name}</span>
@@ -327,7 +334,7 @@ export default function NeedDetailPage() {
 
       <section className="card">
         <div className="company-row">
-          <h2>Предложения ({offers.length})</h2>
+          <h2>{isBuyer ? "Предложения" : "Ваши предложения"} ({offers.length})</h2>
           {isBuyer && offers.length > 0 && need.status !== "matched" && (
             <button
               type="button"
@@ -340,7 +347,7 @@ export default function NeedDetailPage() {
           )}
         </div>
         {offers.length === 0 ? (
-          <p className="hint mode-hint">Предложений пока нет.</p>
+          <p className="hint mode-hint">{isBuyer ? "Предложений пока нет." : "Вы ещё не отправляли предложения по этой потребности."}</p>
         ) : (
           <ul className="company-list">
             {offers.map((offer) => (

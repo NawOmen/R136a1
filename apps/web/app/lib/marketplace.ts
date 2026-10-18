@@ -290,6 +290,8 @@ export interface Need {
 }
 
 export interface NeedFeedItem {
+  revision: number;
+  requirement_decisions?: Need["requirement_decisions"];
   id: string;
   category: string;
   subcategory?: string | null;
@@ -1429,7 +1431,7 @@ export const marketplace = {
     return marketplaceFetch(`/api/v1/needs/${needId}/publish`, { method: "POST", token });
   },
 
-  getNeed(token: string, needId: string): Promise<Need> {
+  getNeed(token: string, needId: string): Promise<Need | NeedFeedItem> {
     return marketplaceFetch(`/api/v1/needs/${needId}`, { token });
   },
 

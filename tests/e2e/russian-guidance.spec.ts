@@ -102,3 +102,38 @@ test("guest mobile access includes login, usable theme and reachable form before
   await expect(page.getByRole("button", { name: "Включить тёмную тему" })).toBeVisible();
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
 });
+
+test("seller opens anonymized need without owner fields or buyer actions", async ({ page }) => {
+  const feed = { id: "00000000-0000-4000-8000-000000000080", revision: 1, category: "Строительство", subcategory: "Крепёж", characteristics: { unit: "шт", thread: "М8" }, volume_units: 200, deadline_date: "2026-11-20", visibility: "open_anonymized", status: "open_for_offers", valid_until: null };
+  const errors: string[] = [];
+  page.on("pageerror", error => errors.push(error.message));
+  await page.addInitScript(() => localStorage.setItem("token", "synthetic-seller"));
+  await page.route("**/api/**", route => {
+    const path = new URL(route.request().url()).pathname;
+    if (path.endsWith("/auth/me")) return route.fulfill({ json: { user, companies: [{ ...company, membership: { can_sell: true, can_buy: false, is_admin: true } }] } });
+    if (path.endsWith(`/needs/${feed.id}`)) return route.fulfill({ json: feed });
+    return route.fulfill({ json: [] });
+  });
+  await page.goto(`/needs/${feed.id}`);
+  await expect(page.getByRole("heading", { name: feed.category, exact: true })).toBeVisible();
+  await expect(page.getByText("Вложения доступны только компании-покупателю.", { exact: true })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Ваши предложения (0)" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Скачать", exact: true })).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "Выбрать предложение", exact: true })).toHaveCount(0);
+  expect(errors).toEqual([]);
+});
+
+test("need outage is retryable and is not reported as a missing need", async ({ page }) => {
+  let failed = true;
+  await page.addInitScript(() => localStorage.setItem("token", "synthetic-buyer"));
+  await page.route("**/api/**", route => {
+    if (new URL(route.request().url()).pathname.endsWith("/auth/me")) return route.fulfill({ json: { user, companies: [company] } });
+    return route.fulfill({ status: failed ? 503 : 404, json: { detail: failed ? "Сервис временно недоступен" : "Потребность не найдена" } });
+  });
+  await page.goto("/needs/00000000-0000-4000-8000-000000000080");
+  await expect(page.getByRole("heading", { name: "Не удалось загрузить потребность", exact: true })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Потребность не найдена", exact: true })).toHaveCount(0);
+  failed = false;
+  await page.getByRole("button", { name: "Повторить загрузку", exact: true }).click();
+  await expect(page.getByRole("heading", { name: "Потребность не найдена", exact: true })).toBeVisible();
+});
