@@ -96,3 +96,36 @@
   .story[data-still="true"] .chapter { display:flex; }
 }
 @keyframes chapterEnter{from{opacity:0;transform:translateY(10px);}to{opacity:1;transform:translateY(0);}}
+/* The home page opens directly into the animated scene. */
+.landing .intro { display:flex;justify-content:space-between;align-items:center;gap:20px;padding:0 0 12px; }
+.landing .intro :global(.eyebrow),.landing .introBottom p { display:none; }
+.landing .intro h1 { font-size:clamp(28px,3vw,42px);line-height:1.08;letter-spacing:-.04em;margin:0; }
+.landing .introBottom { flex-shrink:0; }
+.landing .toolbar { padding:8px 0;font-size:11px; }
+.landing .toolbar button { padding:7px 14px;font-size:11px; }
+.landing .steps { margin-bottom:12px;padding-bottom:8px; }
+.landing .visual { height:calc(100svh - 320px);min-height:260px;max-height:740px; }
+.landing .chapter:first-child { min-height:calc(100svh - 320px); }
+@media(max-width:650px){
+  .landing .intro { gap:12px;padding:0 0 10px; }
+  .landing .intro h1 { font-size:27px; }
+  .landing .introBottom { gap:0; }
+  .landing .introBottom :global(.btn) { padding:10px 12px;font-size:12px; }
+  .landing .steps { gap:4px;margin-bottom:10px; }
+  .landing .steps button { min-height:36px;padding:8px;font-size:10px; }
+  .landing .visual { height:calc(100svh - 375px);min-height:260px;max-height:430px; }
+  .landing .chapter:first-child { min-height:auto; }
+  .landing .sceneCaption { top:15px;font-size:8px; }
+}
+@media(prefers-reduced-motion:reduce){.landing .chapter:first-child{min-height:auto;}}
+@media(max-width:650px){
+  .landing .steps { grid-template-columns:repeat(4,minmax(0,1fr)); }
+  .landing .steps button { padding:8px 5px;font-size:10px; }
+  .landing .steps span { position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%); }
+}
+.landing[data-preview="true"] .chapter { display:none; }
+.landing[data-preview="true"][data-current="0"] .chapter[data-chapter="0"],
+.landing[data-preview="true"][data-current="1"] .chapter[data-chapter="1"],
+.landing[data-preview="true"][data-current="2"] .chapter[data-chapter="2"],
+.landing[data-preview="true"][data-current="3"] .chapter[data-chapter="3"] { display:flex;min-height:calc(100svh - 320px);animation:chapterEnter .4s cubic-bezier(.2,0,0,1); }
+@media(max-width:650px){.landing[data-preview="true"] .chapter { min-height:auto !important; }}

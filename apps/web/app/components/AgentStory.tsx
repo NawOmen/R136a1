@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import dynamic from "next/dynamic";
-import { useEffect, useRef, useState } from "react";
+import { type ReactNode, useEffect, useRef, useState } from "react";
 import styles from "./AgentStory.module.css";
 import { AgentIllustration } from "./AgentIllustration";
 
@@ -15,7 +15,8 @@ const chapters = [
   { name: "Сотрудничество", title: "От отдельного запроса — к общей работе.", text: "Товары, производство и совместные закупки — в одном пространстве.", state: "Связь", detail: "Запрос → подбор → согласование сторонами." },
 ];
 
-export function AgentStory() {
+export function AgentStory({ landing = false, children }: { landing?: boolean; children?: ReactNode }) {
+  const [preview, setPreview] = useState(landing);
   const root = useRef<HTMLDivElement>(null);
   const scene = useRef<HTMLDivElement>(null);
   const [paused, setPaused] = useState(true);
@@ -41,7 +42,7 @@ export function AgentStory() {
   }, []);
 
   useEffect(() => {
-    if (staticView || reduced || compact) return;
+    if (staticView || reduced || compact || preview) return;
     const sections = root.current?.querySelectorAll<HTMLElement>("[data-chapter]");
     if (!sections) return;
     const observer = new IntersectionObserver((entries) => {
@@ -49,7 +50,7 @@ export function AgentStory() {
     }, { rootMargin: window.matchMedia("(max-width: 650px)").matches ? "-65% 0px -5% 0px" : "-25% 0px -45% 0px", threshold: 0 });
     sections.forEach((section) => observer.observe(section));
     return () => observer.disconnect();
-  }, [staticView, reduced, compact]);
+  }, [staticView, reduced, compact, preview]);
 
   useEffect(() => {
     const element = scene.current;
@@ -64,14 +65,24 @@ export function AgentStory() {
 
   const still = !interactive || staticView || reduced;
   const step = still ? 3 : chapter;
+  useEffect(() => {
+    if (!preview || still) return;
+    const timers = [1600, 6000, 10500].map((delay, index) => window.setTimeout(() => setChapter(index + 1), delay));
+    const stop = () => { if (window.scrollY > 60) setPreview(false); };
+    window.addEventListener("scroll", stop, { passive: true });
+    stop();
+    return () => { timers.forEach(window.clearTimeout); window.removeEventListener("scroll", stop); };
+  }, [preview, still]);
+
   const selectChapter = (index: number) => {
+    setPreview(false);
     setChapter(index);
     if (window.matchMedia("(max-width: 650px)").matches) return;
-    document.getElementById(`story-chapter-${index}`)?.scrollIntoView({ behavior: reduced ? "instant" : "smooth", block: "center" });
+    window.requestAnimationFrame(() => document.getElementById(`story-chapter-${index}`)?.scrollIntoView({ behavior: reduced ? "instant" : "smooth", block: "center" }));
   };
 
-  return <div ref={root} className={styles.story} data-still={still} data-current={step}>
-    <header className={styles.intro}><span className="eyebrow">Как работает ПоРукам</span><h1>Между спросом<br />и производством — <em>связь.</em></h1><div className={styles.introBottom}><p>ИИ помогает найти друг друга.<br />Решение остаётся за компаниями.</p><Link href="/catalog" className="btn btn-secondary">Сразу в каталог →</Link></div></header>
+  return <div ref={root} className={`${styles.story} ${landing ? styles.landing : ""}`} data-still={still} data-current={step} data-preview={preview && !still}>
+    <header className={styles.intro}><span className="eyebrow">Как работает ПоРукам</span><h1>{landing ? <>Ваш бизнес.<br /><em>Новые связи.</em></> : <>Между спросом<br />и производством — <em>связь.</em></>}</h1><div className={styles.introBottom}><p>ИИ помогает найти друг друга.<br />Решение остаётся за компаниями.</p><Link href="/catalog" className="btn btn-secondary">Каталог товаров →</Link></div></header>
     <div className={styles.toolbar}><span>История взаимодействия</span><button type="button" aria-pressed={staticView || reduced} disabled={reduced} onClick={() => setStaticView(!staticView)}>{reduced ? "Движение уменьшено в настройках" : staticView ? "Включить анимацию" : "Без анимации"}</button></div>
     {!still && <nav className={styles.steps} aria-label="Этапы взаимодействия">{chapters.map((item, index) => <button key={item.name} type="button" aria-current={chapter === index ? "step" : undefined} onClick={() => selectChapter(index)}><span>0{index + 1}</span>{" "}{item.name}</button>)}</nav>}
     <div className={styles.journey}>
@@ -86,9 +97,10 @@ export function AgentStory() {
         {insight && <div className={styles.insight} role="status">{insight === "factory" ? "Товары, параметры и доступные возможности производства." : insight === "buyer" ? "Требования, количество и срок закупки." : "Подготовка запроса и объяснение подбора. Подтверждают условия стороны."}<button type="button" aria-label="Закрыть пояснение" onClick={() => setInsight(null)}>×</button></div>}
         <div className={styles.sceneStatus}><span className={styles.dot} />{chapters[step].detail}</div>
       </div>
-      <div className={styles.chapters}>{chapters.map((item, index) => <section key={item.name} id={`story-chapter-${index}`} data-chapter={index} className={styles.chapter}><span className={styles.number}>0{index + 1} / {item.name}</span><h2>{item.title}</h2><p>{item.text}</p>{index === 2 && <span className={styles.approval}>✓ Условия подтверждают обе стороны</span>}{index === 3 && <Link className="btn btn-primary" href="/register">Начать сотрудничество →</Link>}</section>)}</div>
+      <div className={styles.chapters}>{chapters.map((item, index) => <section key={item.name} id={`story-chapter-${index}`} data-chapter={index} className={styles.chapter}><span className={styles.number}>0{index + 1} / {item.name}</span><h2>{item.title}</h2><p>{item.text}</p>{index === 2 && <span className={styles.approval}>✓ Условия подтверждают обе стороны</span>}{index === 3 && !landing && <Link className="btn btn-primary" href="/register">Начать сотрудничество →</Link>}</section>)}</div>
     </div>
 
-    <section className={styles.outro}><span className="eyebrow">Следующий шаг — ваш</span><h2>Найдите товар.<br />Или расскажите, что нужно.</h2><div className="actions"><Link href="/catalog" className="btn btn-secondary">Открыть каталог</Link><Link href="/register" className="btn btn-primary">Создать запрос →</Link></div><p>Только российские компании. Расчёты в рублях.</p></section>
+    {children}
+    <section className={styles.outro}><span className="eyebrow">Следующий шаг — ваш</span><h2>Найдите товар.<br />Или расскажите, что нужно.</h2><div className="actions"><Link href="/catalog" className="btn btn-secondary">Открыть каталог</Link><Link href="/needs/new" className="btn btn-primary">Создать потребность →</Link></div><p>Только российские компании. Расчёты в рублях.</p></section>
   </div>;
 }
