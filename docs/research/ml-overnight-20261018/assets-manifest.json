@@ -1,0 +1,31 @@
+{
+  "parts": [
+    {
+      "name": "porukam-ml-overnight-delta.tar.part001",
+      "bytes": 1073741824,
+      "sha256": "a604e38ea88125f485e3cf7feb763cfbd28ea9efc2528db2e212c295759d7c1a"
+    },
+    {
+      "name": "porukam-ml-overnight-delta.tar.part002",
+      "bytes": 1073741824,
+      "sha256": "e896e39f9fe80b5dd51bbf24c30c6c6ffc979ae5580de41ff0008bb47bd5ef1e"
+    },
+    {
+      "name": "porukam-ml-overnight-delta.tar.part003",
+      "bytes": 1073741824,
+      "sha256": "6d5d3ece1a2221e3c5ded9da8e84ce58876041e815f50291ca6020e5e7e0a610"
+    },
+    {
+      "name": "porukam-ml-overnight-delta.tar.part004",
+      "bytes": 1073741824,
+      "sha256": "dc26985d607e81be82c660cf8475d99c4bee130651c3755e1cbe80bd61202d84"
+    },
+    {
+      "name": "porukam-ml-overnight-delta.tar.part005",
+      "bytes": 131713024,
+      "sha256": "959e90cf473a363054df18352dbd20d9b5c9c2763fa8ffd81c503491396c75d5"
+    }
+  ],
+  "file_count": 473,
+  "unpacked_bytes": 4426207633
+}
