@@ -26,6 +26,8 @@ export default function DashboardPage() {
   const [companies, setCompanies] = useState<Company[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [loggingOut, setLoggingOut] = useState(false);
+  const [logoutError, setLogoutError] = useState("");
   const [mode, setMode] = useState<Mode>(null);
   const [companyId, setCompanyId] = useState("");
   const [unreadCount, setUnreadCount] = useState(0);
@@ -63,10 +65,19 @@ export default function DashboardPage() {
       .finally(() => setLoading(false));
   }, [router]);
 
-  function handleLogout() {
-    clearToken();
-    window.localStorage.removeItem("porukam-work-mode");
-    router.push("/login");
+  async function handleLogout() {
+    if (loggingOut || !window.confirm("Выйти из аккаунта на всех устройствах?")) return;
+    const token = getToken();
+    setLoggingOut(true); setLogoutError("");
+    try {
+      if (token) await api.logout(token);
+      clearToken();
+      window.localStorage.removeItem("porukam-work-mode");
+      router.replace("/login");
+      router.refresh();
+    } catch (err) {
+      setLogoutError(err instanceof Error ? russianMessage(err.message) : "Не удалось завершить сеансы. Повторите выход.");
+    } finally { setLoggingOut(false); }
   }
 
   function selectMode(next: Exclude<Mode, null>) {
@@ -111,7 +122,7 @@ export default function DashboardPage() {
   if (!user) return null;
 
   if (user.is_marketplace_admin) {
-    return <div><div className="dashboard-head"><div><h1 className="page-title">Рабочее место администратора</h1><p className="subtitle">Управление компаниями, пользователями и обращениями платформы</p></div><button type="button" className="btn btn-secondary" onClick={handleLogout}>Выйти</button></div><section className="journey-grid"><Link className="journey-card" href="/admin"><span>01</span><b>Заявки компаний</b><small>Проверка, причины решений и история</small></Link><Link className="journey-card" href="/admin#tickets"><span>02</span><b>Обращения пользователей</b><small>Очередь поддержки и ответы</small></Link><Link className="journey-card" href="/notifications"><span>03</span><b>Уведомления</b><small>Системные события администратора</small></Link></section></div>;
+    return <div><div className="dashboard-head"><div><h1 className="page-title">Рабочее место администратора</h1><p className="subtitle">Управление компаниями, пользователями и обращениями платформы</p></div><button type="button" className="btn btn-secondary" disabled={loggingOut} onClick={() => void handleLogout()}>{loggingOut ? "Выходим…" : "Выйти"}</button></div>{logoutError && <p className="alert alert-error" role="alert">{logoutError}</p>}<section className="journey-grid"><Link className="journey-card" href="/admin"><span>01</span><b>Заявки компаний</b><small>Проверка, причины решений и история</small></Link><Link className="journey-card" href="/admin#tickets"><span>02</span><b>Обращения пользователей</b><small>Очередь поддержки и ответы</small></Link><Link className="journey-card" href="/notifications"><span>03</span><b>Уведомления</b><small>Системные события администратора</small></Link></section></div>;
   }
 
   const fullName = [user.last_name, user.first_name, user.middle_name].filter(Boolean).join(" ");
@@ -120,6 +131,7 @@ export default function DashboardPage() {
 
   return (
     <div className="dashboard-page">
+      {logoutError && <p className="alert alert-error" role="alert">{logoutError}</p>}
       <div className="dashboard-head">
         <div>
           <span className="eyebrow">Центр управления</span>
@@ -144,8 +156,8 @@ export default function DashboardPage() {
               Панель администратора
             </Link>
           )}
-          <button type="button" className="btn btn-secondary" onClick={handleLogout}>
-            Выйти
+          <button type="button" className="btn btn-secondary" disabled={loggingOut} onClick={() => void handleLogout()}>
+            {loggingOut ? "Выходим…" : "Выйти"}
           </button>
         </div>
       </div>
