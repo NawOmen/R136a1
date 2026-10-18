@@ -113,7 +113,7 @@ async def test_next_step_respects_selected_company_mode_and_revocation(client, d
     await _make_need(client, user, buyer)
     response = await client.get(f'/api/v1/next-step?company_id={seller}&mode=sell', headers=_auth(make_token(user)))
     assert response.status_code == 200
-    assert response.json()['href'] == '/seller/products'
+    assert response.json()['href'] == '/seller/profile'
     invalid = await client.get(f'/api/v1/next-step?company_id={seller}&mode=buy', headers=_auth(make_token(user)))
     assert invalid.status_code == 403
     await db_session.execute(text('DELETE FROM auth.company_members WHERE company_id=:cid'), {'cid': seller})
@@ -183,3 +183,28 @@ async def test_repeat_preview_handles_offer_without_expiry(client, db_session):
     response = await client.post(f"/api/v1/needs/{need['id']}/repeat-preview", headers=_auth(make_token(buyer)))
     assert response.status_code == 200, response.text
     assert any('срок прошлого КП не указан' in warning for warning in response.json()['warnings'])
+
+
+async def test_support_resolution_requires_answer_and_status_only_patch_preserves_it(client, db_session):
+    admin = await make_marketplace_admin(db_session)
+    user = await make_user(db_session)
+    response = await client.post('/api/v1/support/tickets', json={'subject':'Вопрос по заказу','message':'Пожалуйста, уточните порядок получения.'}, headers=_auth(make_token(user)))
+    route = f"/api/v1/admin/support/tickets/{response.json()['id']}"
+    headers = _auth(make_token(admin))
+    for answer in (None, '', '   '):
+        rejected = await client.patch(route, headers=headers, json={'status':'resolved','admin_response':answer})
+        assert rejected.status_code == 422
+    saved = await client.patch(route, headers=headers, json={'status':'in_progress','admin_response':'Уточняем условия получения.'})
+    assert saved.status_code == 200
+    closed = await client.patch(route, headers=headers, json={'status':'resolved'})
+    assert closed.status_code == 200
+    assert closed.json()['admin_response'] == 'Уточняем условия получения.'
+
+
+async def test_password_session_revocation_reaches_marketplace(client, db_session):
+    user = await make_user(db_session)
+    headers = _auth(make_token(user))
+    assert (await client.get('/api/v1/needs/mine', headers=headers)).status_code == 200
+    await db_session.execute(text('UPDATE auth.users SET token_version=1 WHERE id=:id'), {'id':user})
+    await db_session.commit()
+    assert (await client.get('/api/v1/needs/mine', headers=headers)).status_code == 401

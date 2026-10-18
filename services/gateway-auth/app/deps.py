@@ -35,6 +35,8 @@ async def get_current_user(
     user = await db.get(User, parsed_id)
     if user is None:
         raise HTTPException(status.HTTP_401_UNAUTHORIZED, detail="Пользователь не найден")
+    if payload.get("ver", 0) != user.token_version:
+        raise HTTPException(status.HTTP_401_UNAUTHORIZED, detail="Сеанс завершён. Войдите снова.")
     if user.account_status == "blocked":
         raise HTTPException(status.HTTP_401_UNAUTHORIZED, detail="Аккаунт заблокирован")
     return user
@@ -69,7 +71,7 @@ async def require_verified_company(company_id: uuid.UUID, user: User, db: AsyncS
     """Защита публикации: действовать может только проверенная компания.
 
     Будущие endpoint'ы публикации потребностей, товаров и предложений обязаны
-    использовать этот guard (см. docs/api/auth-api.md).
+    использовать этот guard (см. README.md).
     """
     await get_membership(company_id, user, db)
     company = await db.get(Company, company_id)

@@ -130,7 +130,7 @@ test("mobile market, keyboard navigation and reduced motion at 320, 390 and 768 
     await page.mouse.move(width - 10, 20);
     expect(await page.locator(".liquid-atmosphere").evaluate(el => getComputedStyle(el).transform)).toBe("none");
     await page.goto("/login");
-    await expect(page.getByLabel("Email", { exact: false })).toBeVisible();
+    await expect(page.getByLabel("Электронная почта", { exact: false })).toBeVisible();
     await noOverflow(page);
     await page.goto("/catalog");
     await expect(page.locator(".market-product")).toHaveCount(4);

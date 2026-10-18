@@ -20,22 +20,22 @@ CRITERIA = [
         "scripts/test_business_analysis.py::test_all_current_categories_have_exact_profile_and_example_coverage",
         "scripts/test_business_analysis.py::test_full_cost_and_first_use_training_without_waiting_in_labour",
         "scripts/test_business_analysis.py::test_corrections_retries_and_losses_are_retained"],
-     ["docs/analysis/stage-16.md", "docs/analysis/stage-16-scenarios.md"]),
+     ["README.md"]),
     ("K2", 20, [
         "services/llm-gateway/tests/test_stage17_trace.py::test_actual_task_trace_denial_recovery_and_artifact",
         "services/marketplace/tests/test_stage12.py::test_role_quality_gates_scoping_and_versions",
         "services/marketplace/tests/test_stage12.py::test_scorecard_empty_denominator_none_and_buyer_access"],
-     ["docs/analytics/role-quality-method.md", "README.md"]),
+     ["README.md"]),
     ("K3", 15, [
         "services/llm-gateway/tests/test_stage13_review_regressions.py::test_external_boundary_has_only_counters_and_separate_permission",
         "services/marketplace/tests/test_commerce.py::test_control_example_partial_delivery_return_profit_and_privacy",
         "services/marketplace/tests/test_resource_ledger.py::test_concurrent_buyers_cannot_reserve_same_stock"],
-     ["docs/operations/stage-15.md", "README.md"]),
+     ["README.md"]),
     ("K4", 25, [
         "services/marketplace/tests/test_stage15_acceptance.py::test_working_leaf_order_report_repeat_and_denials",
         "services/marketplace/tests/test_stage5_supplier.py::test_catalog_import_tiers_external_id_diff_and_rollback",
         "services/marketplace/tests/test_stage5_supplier.py::test_unknown_delivery_is_not_zero_and_blocks_select"],
-     ["README.md", "docs/analysis/stage-16.md"]),
+     ["README.md"]),
     ("K5", 30, [], ["docs/contest/Porukam-pitch.pptx", "README.md"]),
 ]
 
@@ -110,12 +110,17 @@ def build_report(paths):
     digests = {}
     for key, weight, tests, documents in CRITERIA:
         checks = [test_status(ref, evidence) for ref in tests]
+        missing_documents = [path for path in documents if not (ROOT / path).is_file()]
         for path in documents + [ref.split("::")[0] for ref in tests]:
+            if path in missing_documents:
+                continue
             digests[path] = hashlib.sha256((ROOT / path).read_bytes()).hexdigest()
         states = {c["status"] for c in checks}
         status = "failed" if "failed" in states else "passed" if checks and states == {"passed"} else "unverified"
+        if missing_documents and status != "failed":
+            status = "unverified"
         criteria.append({"id": key, "weight": weight, "automated_slice_status": status,
-                         "checks": checks, "documents": documents,
+                         "checks": checks, "documents": documents, "missing_documents": missing_documents,
                          "readiness": "requires_human_review"})
     return {"schema": "contest-evidence-1", "scope": "Синтетическая программная проверка, не оценка жюри и не полная приёмка критериев.",
             "source_digests": dict(sorted(digests.items())), "criteria": criteria,

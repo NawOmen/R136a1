@@ -1,0 +1,1253 @@
+{
+  "registry_version": "catalog-4",
+  "fields": {
+    "unit": {
+      "label": "Единица заказа",
+      "type": "text",
+      "aliases": [
+        "единица измерения"
+      ],
+      "max_length": 32
+    },
+    "material": {
+      "label": "Материал",
+      "type": "text",
+      "aliases": [
+        "материал",
+        "body_material",
+        "материал корпуса"
+      ]
+    },
+    "volume_ml": {
+      "label": "Объём, мл",
+      "type": "number",
+      "aliases": [
+        "объём",
+        "объем"
+      ],
+      "unit": "мл",
+      "positive": true
+    },
+    "coating": {
+      "label": "Покрытие",
+      "type": "text",
+      "aliases": [
+        "покрытие",
+        "inner_coating",
+        "внутреннее покрытие"
+      ]
+    },
+    "purpose": {
+      "label": "Назначение",
+      "type": "text",
+      "aliases": [
+        "назначение"
+      ]
+    },
+    "model": {
+      "label": "Модель",
+      "type": "text",
+      "aliases": []
+    },
+    "grade": {
+      "label": "Марка / сорт",
+      "type": "text",
+      "aliases": []
+    },
+    "composition": {
+      "label": "Состав",
+      "type": "text",
+      "aliases": []
+    },
+    "color": {
+      "label": "Цвет",
+      "type": "text",
+      "aliases": []
+    },
+    "size": {
+      "label": "Размер",
+      "type": "text",
+      "aliases": []
+    },
+    "format": {
+      "label": "Формат",
+      "type": "text",
+      "aliases": []
+    },
+    "process": {
+      "label": "Технология / операция",
+      "type": "text",
+      "aliases": []
+    },
+    "standard": {
+      "label": "Стандарт / спецификация",
+      "type": "text",
+      "aliases": []
+    },
+    "thread": {
+      "label": "Резьба",
+      "type": "text",
+      "aliases": []
+    },
+    "storage_conditions": {
+      "label": "Условия хранения",
+      "type": "text",
+      "aliases": []
+    },
+    "packaging": {
+      "label": "Фасовка",
+      "type": "text",
+      "aliases": []
+    },
+    "finish": {
+      "label": "Отделка",
+      "type": "text",
+      "aliases": []
+    },
+    "interface": {
+      "label": "Интерфейс",
+      "type": "text",
+      "aliases": []
+    },
+    "compatibility": {
+      "label": "Совместимые модели",
+      "type": "text",
+      "aliases": []
+    },
+    "service_scope": {
+      "label": "Состав услуги",
+      "type": "text",
+      "aliases": []
+    },
+    "output": {
+      "label": "Результат работы",
+      "type": "text",
+      "aliases": []
+    },
+    "width_mm": {
+      "label": "Ширина, мм",
+      "type": "number",
+      "aliases": [],
+      "unit": "мм",
+      "positive": true
+    },
+    "length_mm": {
+      "label": "Длина, мм",
+      "type": "number",
+      "aliases": [],
+      "unit": "мм",
+      "positive": true
+    },
+    "thickness_mm": {
+      "label": "Толщина, мм",
+      "type": "number",
+      "aliases": [],
+      "unit": "мм",
+      "positive": true
+    },
+    "diameter_mm": {
+      "label": "Диаметр, мм",
+      "type": "number",
+      "aliases": [],
+      "unit": "мм",
+      "positive": true
+    },
+    "weight_kg": {
+      "label": "Масса единицы, кг",
+      "type": "number",
+      "aliases": [],
+      "unit": "кг",
+      "positive": true
+    },
+    "power_kw": {
+      "label": "Мощность, кВт",
+      "type": "number",
+      "aliases": [],
+      "unit": "кВт",
+      "positive": true
+    },
+    "voltage_v": {
+      "label": "Напряжение, В",
+      "type": "number",
+      "aliases": [],
+      "unit": "В",
+      "positive": true
+    },
+    "density_kg_m3": {
+      "label": "Плотность, кг/м³",
+      "type": "number",
+      "aliases": [],
+      "unit": "кг/м³",
+      "positive": true
+    },
+    "shelf_life_days": {
+      "label": "Срок годности, дней",
+      "type": "integer",
+      "aliases": [],
+      "unit": "дней",
+      "positive": true
+    },
+    "temperature_min_c": {
+      "label": "Минимальная температура, °C",
+      "type": "number",
+      "aliases": [],
+      "unit": "°C"
+    },
+    "temperature_max_c": {
+      "label": "Максимальная температура, °C",
+      "type": "number",
+      "aliases": [],
+      "unit": "°C"
+    },
+    "dimensions_mm": {
+      "label": "Габариты, мм",
+      "type": "text",
+      "aliases": []
+    },
+    "dimensions_cm": {
+      "label": "Габариты, см",
+      "type": "text",
+      "aliases": []
+    },
+    "width_cm": {
+      "label": "Ширина, см",
+      "type": "number",
+      "aliases": [],
+      "unit": "см",
+      "positive": true
+    },
+    "grammage_g_m2": {
+      "label": "Масса на площадь, г/м²",
+      "type": "number",
+      "aliases": [],
+      "unit": "г/м²",
+      "positive": true
+    },
+    "dimensions": {
+      "label": "Габариты",
+      "type": "text",
+      "aliases": []
+    },
+    "order_multiple": {
+      "label": "Кратность заказа",
+      "type": "integer",
+      "aliases": [
+        "кратность"
+      ],
+      "positive": true
+    },
+    "pack_units": {
+      "label": "Количество в упаковке",
+      "type": "integer",
+      "aliases": [
+        "штук в упаковке"
+      ],
+      "positive": true
+    },
+    "tax_basis": {
+      "label": "Налоговая база цены",
+      "type": "text",
+      "aliases": [
+        "налоговая база"
+      ],
+      "max_length": 500
+    },
+    "delivery_region": {
+      "label": "Регион доставки",
+      "type": "text",
+      "aliases": [
+        "регион доставки"
+      ],
+      "max_length": 500
+    },
+    "product_kind": {
+      "label": "Вид изделия",
+      "type": "text",
+      "aliases": [
+        "вид изделия",
+        "тип изделия"
+      ],
+      "max_length": 500
+    },
+    "inner_diameter_mm": {
+      "label": "Внутренний диаметр, мм",
+      "type": "number",
+      "aliases": [
+        "внутренний диаметр"
+      ],
+      "unit": "мм",
+      "positive": true
+    }
+  },
+  "categories": [
+    {
+      "parent": "Упаковка и тара",
+      "label": "Бумажные стаканы",
+      "id": "packaging.paper-cups",
+      "fields": [
+        "unit",
+        "material",
+        "volume_ml",
+        "coating",
+        "purpose",
+        "order_multiple",
+        "pack_units",
+        "tax_basis",
+        "delivery_region"
+      ],
+      "required": [
+        "material",
+        "volume_ml"
+      ]
+    },
+    {
+      "parent": "Упаковка и тара",
+      "label": "Пищевая упаковка",
+      "id": "packaging.food-packaging",
+      "fields": [
+        "unit",
+        "material",
+        "dimensions_mm",
+        "purpose",
+        "order_multiple",
+        "pack_units",
+        "tax_basis",
+        "delivery_region"
+      ],
+      "required": [
+        "material",
+        "dimensions_mm",
+        "purpose"
+      ]
+    },
+    {
+      "parent": "Упаковка и тара",
+      "label": "Пакеты",
+      "id": "packaging.bags",
+      "fields": [
+        "unit",
+        "material",
+        "dimensions_mm",
+        "thickness_mm",
+        "order_multiple",
+        "pack_units",
+        "tax_basis",
+        "delivery_region"
+      ],
+      "required": [
+        "material",
+        "dimensions_mm",
+        "thickness_mm"
+      ]
+    },
+    {
+      "parent": "Упаковка и тара",
+      "label": "Коробки",
+      "id": "packaging.boxes",
+      "fields": [
+        "unit",
+        "material",
+        "dimensions_mm",
+        "order_multiple",
+        "pack_units",
+        "tax_basis",
+        "delivery_region"
+      ],
+      "required": [
+        "material",
+        "dimensions_mm"
+      ]
+    },
+    {
+      "parent": "Упаковка и тара",
+      "label": "Бутылки и канистры",
+      "id": "packaging.bottles-canisters",
+      "fields": [
+        "unit",
+        "material",
+        "volume_ml",
+        "purpose",
+        "order_multiple",
+        "pack_units",
+        "tax_basis",
+        "delivery_region"
+      ],
+      "required": [
+        "material",
+        "volume_ml",
+        "purpose"
+      ]
+    },
+    {
+      "parent": "Упаковка и тара",
+      "label": "Плёнка",
+      "id": "packaging.film",
+      "fields": [
+        "unit",
+        "material",
+        "width_mm",
+        "thickness_mm",
+        "order_multiple",
+        "pack_units",
+        "tax_basis",
+        "delivery_region"
+      ],
+      "required": [
+        "material",
+        "width_mm",
+        "thickness_mm"
+      ]
+    },
+    {
+      "parent": "Сырьё и материалы",
+      "label": "Бумага и картон",
+      "id": "materials.paper-cardboard",
+      "fields": [
+        "unit",
+        "material",
+        "format",
+        "grammage_g_m2",
+        "order_multiple",
+        "pack_units",
+        "tax_basis",
+        "delivery_region"
+      ],
+      "required": [
+        "material",
+        "format",
+        "grammage_g_m2"
+      ]
+    },
+    {
+      "parent": "Сырьё и материалы",
+      "label": "Полимеры",
+      "id": "materials.polymers",
+      "fields": [
+        "unit",
+        "material",
+        "grade",
+        "process",
+        "order_multiple",
+        "pack_units",
+        "tax_basis",
+        "delivery_region"
+      ],
+      "required": [
+        "material",
+        "grade"
+      ]
+    },
+    {
+      "parent": "Сырьё и материалы",
+      "label": "Металлы",
+      "id": "materials.metals",
+      "fields": [
+        "unit",
+        "material",
+        "grade",
+        "dimensions_mm",
+        "standard",
+        "order_multiple",
+        "pack_units",
+        "tax_basis",
+        "delivery_region"
+      ],
+      "required": [
+        "material",
+        "grade",
+        "dimensions_mm",
+        "standard"
+      ]
+    },
+    {
+      "parent": "Сырьё и материалы",
+      "label": "Текстиль",
+      "id": "materials.textile",
+      "fields": [
+        "unit",
+        "material",
+        "composition",
+        "width_cm",
+        "order_multiple",
+        "pack_units",
+        "tax_basis",
+        "delivery_region"
+      ],
+      "required": [
+        "composition",
+        "width_cm"
+      ]
+    },
+    {
+      "parent": "Сырьё и материалы",
+      "label": "Химическое сырьё",
+      "id": "materials.chemical-feedstock",
+      "fields": [
+        "unit",
+        "composition",
+        "grade",
+        "purpose",
+        "storage_conditions",
+        "order_multiple",
+        "pack_units",
+        "tax_basis",
+        "delivery_region"
+      ],
+      "required": [
+        "composition",
+        "grade",
+        "purpose",
+        "storage_conditions"
+      ]
+    },
+    {
+      "parent": "Оборудование",
+      "label": "Производственное",
+      "id": "equipment.manufacturing",
+      "fields": [
+        "unit",
+        "model",
+        "process",
+        "power_kw",
+        "order_multiple",
+        "pack_units",
+        "tax_basis",
+        "delivery_region"
+      ],
+      "required": [
+        "model",
+        "process",
+        "power_kw"
+      ]
+    },
+    {
+      "parent": "Оборудование",
+      "label": "Торговое",
+      "id": "equipment.retail",
+      "fields": [
+        "unit",
+        "model",
+        "dimensions_mm",
+        "purpose",
+        "order_multiple",
+        "pack_units",
+        "tax_basis",
+        "delivery_region"
+      ],
+      "required": [
+        "model",
+        "dimensions_mm",
+        "purpose"
+      ]
+    },
+    {
+      "parent": "Оборудование",
+      "label": "Складское",
+      "id": "equipment.warehouse",
+      "fields": [
+        "unit",
+        "model",
+        "dimensions_mm",
+        "weight_kg",
+        "order_multiple",
+        "pack_units",
+        "tax_basis",
+        "delivery_region"
+      ],
+      "required": [
+        "model",
+        "dimensions_mm",
+        "weight_kg"
+      ]
+    },
+    {
+      "parent": "Оборудование",
+      "label": "Пищевое",
+      "id": "equipment.food",
+      "fields": [
+        "unit",
+        "model",
+        "process",
+        "power_kw",
+        "order_multiple",
+        "pack_units",
+        "tax_basis",
+        "delivery_region"
+      ],
+      "required": [
+        "model",
+        "process",
+        "power_kw"
+      ]
+    },
+    {
+      "parent": "Оборудование",
+      "label": "Запасные части",
+      "id": "equipment.spare-parts",
+      "fields": [
+        "unit",
+        "model",
+        "compatibility",
+        "material",
+        "order_multiple",
+        "pack_units",
+        "tax_basis",
+        "delivery_region"
+      ],
+      "required": [
+        "model",
+        "compatibility",
+        "material"
+      ]
+    },
+    {
+      "parent": "Строительство",
+      "label": "Отделочные материалы",
+      "id": "construction.finishing",
+      "fields": [
+        "unit",
+        "material",
+        "dimensions_mm",
+        "finish",
+        "order_multiple",
+        "pack_units",
+        "tax_basis",
+        "delivery_region",
+        "purpose",
+        "product_kind",
+        "thickness_mm",
+        "composition"
+      ],
+      "required": [
+        "material",
+        "purpose",
+        "product_kind"
+      ]
+    },
+    {
+      "parent": "Строительство",
+      "label": "Крепёж",
+      "id": "construction.fasteners",
+      "fields": [
+        "unit",
+        "material",
+        "diameter_mm",
+        "length_mm",
+        "thread",
+        "standard",
+        "order_multiple",
+        "pack_units",
+        "tax_basis",
+        "delivery_region",
+        "product_kind",
+        "inner_diameter_mm",
+        "thickness_mm"
+      ],
+      "required": [
+        "material",
+        "standard",
+        "product_kind"
+      ]
+    },
+    {
+      "parent": "Строительство",
+      "label": "Инженерные системы",
+      "id": "construction.engineering",
+      "fields": [
+        "unit",
+        "model",
+        "dimensions_mm",
+        "purpose",
+        "order_multiple",
+        "pack_units",
+        "tax_basis",
+        "delivery_region"
+      ],
+      "required": [
+        "model",
+        "dimensions_mm",
+        "purpose"
+      ]
+    },
+    {
+      "parent": "Строительство",
+      "label": "Инструмент",
+      "id": "construction.tools",
+      "fields": [
+        "unit",
+        "model",
+        "material",
+        "purpose",
+        "order_multiple",
+        "pack_units",
+        "tax_basis",
+        "delivery_region"
+      ],
+      "required": [
+        "model",
+        "material",
+        "purpose"
+      ]
+    },
+    {
+      "parent": "Продукты питания",
+      "label": "Напитки",
+      "id": "food.drinks",
+      "fields": [
+        "unit",
+        "composition",
+        "volume_ml",
+        "packaging",
+        "storage_conditions",
+        "shelf_life_days",
+        "order_multiple",
+        "pack_units",
+        "tax_basis",
+        "delivery_region"
+      ],
+      "required": [
+        "composition",
+        "volume_ml",
+        "storage_conditions",
+        "shelf_life_days"
+      ]
+    },
+    {
+      "parent": "Продукты питания",
+      "label": "Бакалея",
+      "id": "food.groceries",
+      "fields": [
+        "unit",
+        "composition",
+        "grade",
+        "packaging",
+        "storage_conditions",
+        "shelf_life_days",
+        "order_multiple",
+        "pack_units",
+        "tax_basis",
+        "delivery_region"
+      ],
+      "required": [
+        "composition",
+        "grade",
+        "storage_conditions",
+        "shelf_life_days"
+      ]
+    },
+    {
+      "parent": "Продукты питания",
+      "label": "Замороженная продукция",
+      "id": "food.frozen",
+      "fields": [
+        "unit",
+        "composition",
+        "packaging",
+        "storage_conditions",
+        "temperature_min_c",
+        "temperature_max_c",
+        "shelf_life_days",
+        "order_multiple",
+        "pack_units",
+        "tax_basis",
+        "delivery_region"
+      ],
+      "required": [
+        "composition",
+        "storage_conditions",
+        "temperature_min_c",
+        "temperature_max_c",
+        "shelf_life_days"
+      ]
+    },
+    {
+      "parent": "Продукты питания",
+      "label": "Ингредиенты",
+      "id": "food.ingredients",
+      "fields": [
+        "unit",
+        "composition",
+        "grade",
+        "purpose",
+        "storage_conditions",
+        "shelf_life_days",
+        "order_multiple",
+        "pack_units",
+        "tax_basis",
+        "delivery_region"
+      ],
+      "required": [
+        "composition",
+        "grade",
+        "purpose",
+        "storage_conditions",
+        "shelf_life_days"
+      ]
+    },
+    {
+      "parent": "Товары для бизнеса",
+      "label": "Канцелярия",
+      "id": "business-supplies.stationery",
+      "fields": [
+        "unit",
+        "material",
+        "format",
+        "color",
+        "order_multiple",
+        "pack_units",
+        "tax_basis",
+        "delivery_region"
+      ],
+      "required": [
+        "material",
+        "format"
+      ]
+    },
+    {
+      "parent": "Товары для бизнеса",
+      "label": "Хозяйственные товары",
+      "id": "business-supplies.household",
+      "fields": [
+        "unit",
+        "material",
+        "purpose",
+        "dimensions_mm",
+        "order_multiple",
+        "pack_units",
+        "tax_basis",
+        "delivery_region"
+      ],
+      "required": [
+        "material",
+        "purpose",
+        "dimensions_mm"
+      ]
+    },
+    {
+      "parent": "Товары для бизнеса",
+      "label": "Спецодежда",
+      "id": "business-supplies.workwear",
+      "fields": [
+        "unit",
+        "material",
+        "composition",
+        "size",
+        "purpose",
+        "order_multiple",
+        "pack_units",
+        "tax_basis",
+        "delivery_region"
+      ],
+      "required": [
+        "composition",
+        "size",
+        "purpose"
+      ]
+    },
+    {
+      "parent": "Товары для бизнеса",
+      "label": "Мебель",
+      "id": "business-supplies.furniture",
+      "fields": [
+        "unit",
+        "material",
+        "dimensions_mm",
+        "finish",
+        "order_multiple",
+        "pack_units",
+        "tax_basis",
+        "delivery_region"
+      ],
+      "required": [
+        "material",
+        "dimensions_mm",
+        "finish"
+      ]
+    },
+    {
+      "parent": "Электроника",
+      "label": "Компоненты",
+      "id": "electronics.components",
+      "fields": [
+        "unit",
+        "model",
+        "voltage_v",
+        "interface",
+        "order_multiple",
+        "pack_units",
+        "tax_basis",
+        "delivery_region",
+        "product_kind"
+      ],
+      "required": [
+        "model",
+        "product_kind"
+      ]
+    },
+    {
+      "parent": "Электроника",
+      "label": "Компьютерная техника",
+      "id": "electronics.computers",
+      "fields": [
+        "unit",
+        "model",
+        "interface",
+        "dimensions_mm",
+        "order_multiple",
+        "pack_units",
+        "tax_basis",
+        "delivery_region"
+      ],
+      "required": [
+        "model",
+        "interface"
+      ]
+    },
+    {
+      "parent": "Электроника",
+      "label": "Связь",
+      "id": "electronics.communication",
+      "fields": [
+        "unit",
+        "model",
+        "interface",
+        "purpose",
+        "order_multiple",
+        "pack_units",
+        "tax_basis",
+        "delivery_region"
+      ],
+      "required": [
+        "model",
+        "interface",
+        "purpose"
+      ]
+    },
+    {
+      "parent": "Электроника",
+      "label": "Автоматизация",
+      "id": "electronics.automation",
+      "fields": [
+        "unit",
+        "model",
+        "voltage_v",
+        "interface",
+        "process",
+        "order_multiple",
+        "pack_units",
+        "tax_basis",
+        "delivery_region"
+      ],
+      "required": [
+        "model",
+        "voltage_v",
+        "interface",
+        "process"
+      ]
+    },
+    {
+      "parent": "Транспорт и логистика",
+      "label": "Тара для перевозки",
+      "id": "transport.containers",
+      "fields": [
+        "unit",
+        "material",
+        "dimensions_mm",
+        "weight_kg",
+        "order_multiple",
+        "pack_units",
+        "tax_basis",
+        "delivery_region"
+      ],
+      "required": [
+        "material",
+        "dimensions_mm",
+        "weight_kg"
+      ]
+    },
+    {
+      "parent": "Транспорт и логистика",
+      "label": "Комплектующие",
+      "id": "transport.components",
+      "fields": [
+        "unit",
+        "model",
+        "compatibility",
+        "material",
+        "order_multiple",
+        "pack_units",
+        "tax_basis",
+        "delivery_region"
+      ],
+      "required": [
+        "model",
+        "compatibility",
+        "material"
+      ]
+    },
+    {
+      "parent": "Транспорт и логистика",
+      "label": "Складские услуги",
+      "id": "transport.warehousing",
+      "fields": [
+        "unit",
+        "service_scope",
+        "storage_conditions",
+        "output",
+        "order_multiple",
+        "pack_units",
+        "tax_basis",
+        "delivery_region"
+      ],
+      "required": [
+        "service_scope",
+        "storage_conditions",
+        "output"
+      ]
+    },
+    {
+      "parent": "Полиграфия и реклама",
+      "label": "Этикетки",
+      "id": "printing.labels",
+      "fields": [
+        "unit",
+        "material",
+        "dimensions_mm",
+        "finish",
+        "order_multiple",
+        "pack_units",
+        "tax_basis",
+        "delivery_region"
+      ],
+      "required": [
+        "material",
+        "dimensions_mm",
+        "finish"
+      ]
+    },
+    {
+      "parent": "Полиграфия и реклама",
+      "label": "Печать",
+      "id": "printing.printing",
+      "fields": [
+        "unit",
+        "material",
+        "format",
+        "process",
+        "color",
+        "order_multiple",
+        "pack_units",
+        "tax_basis",
+        "delivery_region"
+      ],
+      "required": [
+        "material",
+        "format",
+        "process",
+        "color"
+      ]
+    },
+    {
+      "parent": "Полиграфия и реклама",
+      "label": "Вывески",
+      "id": "printing.signs",
+      "fields": [
+        "unit",
+        "material",
+        "dimensions_mm",
+        "process",
+        "order_multiple",
+        "pack_units",
+        "tax_basis",
+        "delivery_region"
+      ],
+      "required": [
+        "material",
+        "dimensions_mm",
+        "process"
+      ]
+    },
+    {
+      "parent": "Полиграфия и реклама",
+      "label": "Сувенирная продукция",
+      "id": "printing.merchandise",
+      "fields": [
+        "unit",
+        "material",
+        "dimensions_mm",
+        "process",
+        "order_multiple",
+        "pack_units",
+        "tax_basis",
+        "delivery_region"
+      ],
+      "required": [
+        "material",
+        "dimensions_mm",
+        "process"
+      ]
+    },
+    {
+      "parent": "Услуги производства",
+      "label": "Контрактное производство",
+      "id": "manufacturing-services.contract-manufacturing",
+      "fields": [
+        "unit",
+        "process",
+        "material",
+        "output",
+        "order_multiple",
+        "pack_units",
+        "tax_basis",
+        "delivery_region"
+      ],
+      "required": [
+        "process",
+        "material",
+        "output"
+      ]
+    },
+    {
+      "parent": "Услуги производства",
+      "label": "Фасовка",
+      "id": "manufacturing-services.packing",
+      "fields": [
+        "unit",
+        "process",
+        "packaging",
+        "output",
+        "order_multiple",
+        "pack_units",
+        "tax_basis",
+        "delivery_region"
+      ],
+      "required": [
+        "process",
+        "packaging",
+        "output"
+      ]
+    },
+    {
+      "parent": "Услуги производства",
+      "label": "Обработка",
+      "id": "manufacturing-services.processing",
+      "fields": [
+        "unit",
+        "process",
+        "material",
+        "dimensions_mm",
+        "standard",
+        "order_multiple",
+        "pack_units",
+        "tax_basis",
+        "delivery_region"
+      ],
+      "required": [
+        "process",
+        "material",
+        "dimensions_mm",
+        "standard"
+      ]
+    },
+    {
+      "parent": "Услуги производства",
+      "label": "Сборка",
+      "id": "manufacturing-services.assembly",
+      "fields": [
+        "unit",
+        "process",
+        "compatibility",
+        "output",
+        "order_multiple",
+        "pack_units",
+        "tax_basis",
+        "delivery_region"
+      ],
+      "required": [
+        "process",
+        "compatibility",
+        "output"
+      ]
+    },
+    {
+      "parent": "Медицина и гигиена",
+      "label": "Расходные материалы",
+      "id": "medical-hygiene.consumables",
+      "fields": [
+        "unit",
+        "material",
+        "size",
+        "purpose",
+        "order_multiple",
+        "pack_units",
+        "tax_basis",
+        "delivery_region"
+      ],
+      "required": [
+        "material",
+        "size",
+        "purpose"
+      ]
+    },
+    {
+      "parent": "Медицина и гигиена",
+      "label": "Средства защиты",
+      "id": "medical-hygiene.protection",
+      "fields": [
+        "unit",
+        "material",
+        "size",
+        "purpose",
+        "order_multiple",
+        "pack_units",
+        "tax_basis",
+        "delivery_region"
+      ],
+      "required": [
+        "material",
+        "size",
+        "purpose"
+      ]
+    },
+    {
+      "parent": "Медицина и гигиена",
+      "label": "Гигиеническая продукция",
+      "id": "medical-hygiene.hygiene",
+      "fields": [
+        "unit",
+        "composition",
+        "purpose",
+        "packaging",
+        "order_multiple",
+        "pack_units",
+        "tax_basis",
+        "delivery_region"
+      ],
+      "required": [
+        "composition",
+        "purpose",
+        "packaging"
+      ]
+    },
+    {
+      "parent": "Другое",
+      "label": "Другая продукция",
+      "id": "other.other-products",
+      "fields": [
+        "unit",
+        "purpose",
+        "material",
+        "dimensions_mm",
+        "order_multiple",
+        "pack_units",
+        "tax_basis",
+        "delivery_region"
+      ],
+      "required": [
+        "purpose",
+        "material",
+        "dimensions_mm"
+      ]
+    }
+  ]
+}

@@ -1,3 +1,5 @@
+import { russianLabel, displayValue } from "./presentation";
+import { russianFetch, russianMessage, validationMessage } from "./russianMessages";
 import { displayMoney, type Money } from "./money";
 export type { Money } from "./money";
 // Клиент marketplace-сервиса (этап 3). Аутентификация — тот же JWT Bearer, что и у
@@ -292,6 +294,8 @@ export interface Need {
 }
 
 export interface NeedFeedItem {
+  revision: number;
+  requirement_decisions?: Need["requirement_decisions"];
   id: string;
   category: string;
   subcategory?: string | null;
@@ -707,24 +711,6 @@ export interface AgentScorecard {
   notes: string[];
 }
 
-export interface RoleQualityRole {
-  role: string; passport: string; sample: number; status: "evaluated" | "not_evaluated";
-  completed_runs: number; completed_share_pct: number | null;
-  critical_fields_total: number; critical_fields_confirmed: number; critical_completeness_pct: number | null;
-  conflicts_found: number; clarification_runs: number; human_corrections: number; blocked_actions: number;
-  average_duration_ms: number | null; known_cost_rub: Money | null; costed_share_pct: number | null;
-  model_versions: string[]; prompt_versions: string[];
-  cohort_key: string; task_scope: string; expert_verified_runs: number; initial_result_known_runs: number;
-  critical_correctness_pct: number | null; critical_fields_correct: number; open_runs: number; failed_runs: number;
-  fallback_runs: number; timed_runs: number; corrections_known_runs: number;
-}
-
-export interface RoleQuality {
-  scope: string; window_days: number; method_version: string; min_observations: number;
-  benchmark: { bank: string; tasks: number; compares: string[]; available: boolean };
-  roles: RoleQualityRole[]; notes: string[];
-}
-
 export interface AuditEvent {
   id: string;
   sequence: number;
@@ -809,6 +795,12 @@ export const DOCUMENT_STATUS_LABELS: Record<string, string> = {
 };
 
 const CHARACTERISTIC_LABELS: Record<string, string> = {
+  print: "Печать",
+  top_diameter_mm: "Диаметр верха, мм",
+  bottom_diameter_mm: "Диаметр дна, мм",
+  width_mm: "Ширина, мм",
+  length_mm: "Длина, мм",
+  dimensions_mm: "Габариты, мм",
   volume_ml: "Объём, мл",
   coating: "Покрытие",
   material: "Материал",
@@ -831,7 +823,7 @@ export function characteristicLabel(key: string, profile?: CategoryProfileSnapsh
 export function formatCharacteristics(characteristics: Record<string, unknown>, profile?: CategoryProfileSnapshot | null): string {
   const entries = Object.entries(characteristics);
   if (entries.length === 0) return "—";
-  return entries.map(([key, value]) => `${characteristicLabel(key, profile)}: ${String(value)}`).join(" · ");
+  return entries.map(([key, value]) => `${characteristicLabel(key, profile)}: ${displayValue(value)}`).join(" · ");
 }
 
 export function formatRub(value: Money | null | undefined, maximumFractionDigits = 2): string {
@@ -888,30 +880,8 @@ const FIELD_LABELS: Record<string, string> = {
   files: "Файлы",
 };
 
-interface ValidationErrorItem {
-  loc?: unknown[];
-  msg?: string;
-  ctx?: { min_length?: number };
-}
-
-function describeValidationError(item: ValidationErrorItem): string {
-  const loc = Array.isArray(item.loc) ? item.loc : [];
-  const field = String(loc[loc.length - 1] ?? "");
-  const label = FIELD_LABELS[field] ?? field;
-  const msg = item.msg ?? "";
-
-  if (msg.toLowerCase().includes("at least")) {
-    const min = item.ctx?.min_length;
-    return min ? `«${label}» должно быть не короче ${min} символов` : `«${label}» слишком короткое`;
-  }
-  if (msg.toLowerCase().includes("string type")) {
-    return `«${label}» должно быть строкой`;
-  }
-  if (label) {
-    return `«${label}»: ${msg}`;
-  }
-  return msg;
-}
+interface ValidationErrorItem { loc?: unknown[]; msg?: string; type?: string; ctx?: Record<string, unknown> }
+function describeValidationError(item: ValidationErrorItem): string { return validationMessage(item, FIELD_LABELS); }
 
 // ---------- HTTP ----------
 
@@ -926,15 +896,15 @@ async function marketplaceFetch<T>(path: string, options: RequestOptions = {}): 
   if (init.body !== undefined && !isFormData) headers.set("Content-Type", "application/json");
   if (token) headers.set("Authorization", `Bearer ${token}`);
 
-  const response = await fetch(`${marketplaceBaseUrl()}${path.replace("/api/v1", "/api/v3").replace("/api/v2", "/api/v3/physical")}`, { ...init, headers });
+  const response = await russianFetch(`${marketplaceBaseUrl()}${path.replace("/api/v1", "/api/v3").replace("/api/v2", "/api/v3/physical")}`, { ...init, headers });
 
   if (!response.ok) {
-    if (response.status === 401) handleUnauthorized();
+    if (response.status === 401) handleUnauthorized(token);
     let message = `Ошибка запроса: ${response.status}`;
     try {
       const body = (await response.json()) as { detail?: unknown };
       if (typeof body.detail === "string" && body.detail) {
-        message = body.detail;
+        message = russianMessage(body.detail, message);
       } else if (Array.isArray(body.detail)) {
         message = body.detail
           .map((item) => describeValidationError(item as ValidationErrorItem))
@@ -951,15 +921,15 @@ async function marketplaceFetch<T>(path: string, options: RequestOptions = {}): 
 }
 
 async function marketplaceFetchBlob(path: string, token: string): Promise<Blob> {
-  const response = await fetch(`${marketplaceBaseUrl()}${path.replace("/api/v1", "/api/v3").replace("/api/v2", "/api/v3/physical")}`, {
+  const response = await russianFetch(`${marketplaceBaseUrl()}${path.replace("/api/v1", "/api/v3").replace("/api/v2", "/api/v3/physical")}`, {
     headers: { Authorization: `Bearer ${token}` },
   });
   if (!response.ok) {
-    if (response.status === 401) handleUnauthorized();
+    if (response.status === 401) handleUnauthorized(token);
     let message = `Ошибка запроса: ${response.status}`;
     try {
       const body = (await response.json()) as { detail?: unknown };
-      if (typeof body.detail === "string") message = body.detail;
+      if (typeof body.detail === "string") message = russianMessage(body.detail, message);
     } catch {
       // Не-JSON ответ — оставляем стандартное сообщение.
     }
@@ -1447,7 +1417,7 @@ export const marketplace = {
     return marketplaceFetch(`/api/v1/needs/${needId}/publish`, { method: "POST", token });
   },
 
-  getNeed(token: string, needId: string): Promise<Need> {
+  getNeed(token: string, needId: string): Promise<Need | NeedFeedItem> {
     return marketplaceFetch(`/api/v1/needs/${needId}`, { token });
   },
 
@@ -1504,20 +1474,6 @@ export const marketplace = {
 
   getPlatformAgentScorecard(token: string): Promise<AgentScorecard> {
     return marketplaceFetch("/api/v1/platform/agent-scorecard", { token });
-  },
-
-  getQualityEvidence(token: string, companyId: string): Promise<{company_id:string;bank_tasks:{id:string;input_text:string;critical_fields:Record<string,unknown>;expected_category:string}[];runs:{run_id:string;role:string;state:string;initial_result:unknown}[]}> {
-    return marketplaceFetch(`/api/v3/companies/${companyId}/quality-evidence`, {token});
-  },
-  saveQualityEvidence(token: string, companyId: string, data: {run_id:string;task_scope:string;source:string;bank_task_id?:string;bank_applicability_confirmed:boolean;critical_fields:Record<string,unknown>;expected_category?:string;human_approved:true}): Promise<{assessment:{total:number;correct:number;present:number}}> {
-    return marketplaceFetch(`/api/v3/companies/${companyId}/quality-evidence`, {token,method:"POST",body:JSON.stringify(data)});
-  },
-  getRoleQuality(token: string, companyId: string): Promise<RoleQuality> {
-    return marketplaceFetch(`/api/v1/companies/${companyId}/role-quality`, { token });
-  },
-
-  getPlatformRoleQuality(token: string): Promise<RoleQuality> {
-    return marketplaceFetch("/api/v1/platform/role-quality", { token });
   },
 
   optimizeNeed(token: string, needId: string): Promise<OptimizationVariant[]> {

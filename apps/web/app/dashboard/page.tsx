@@ -1,5 +1,6 @@
 "use client";
 
+import { russianMessage } from "../lib/russianMessages";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
@@ -9,7 +10,7 @@ import {
   ApiError,
   clearToken,
   Company,
-  getToken,
+  getToken, WORKSPACE_CHANGED_EVENT,
   User,
   VERIFICATION_STATUS_LABELS,
 } from "../lib/api";
@@ -25,9 +26,13 @@ export default function DashboardPage() {
   const [companies, setCompanies] = useState<Company[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [loggingOut, setLoggingOut] = useState(false);
+  const [logoutError, setLogoutError] = useState("");
   const [mode, setMode] = useState<Mode>(null);
   const [companyId, setCompanyId] = useState("");
   const [unreadCount, setUnreadCount] = useState(0);
+  const [nextError, setNextError] = useState(false);
+  const [stepRetry, setStepRetry] = useState(0);
   const [nextStep, setNextStep] = useState<{ title: string; description: string; href: string } | null>(null);
 
   useEffect(() => {
@@ -55,20 +60,30 @@ export default function DashboardPage() {
 
       })
       .catch((err: unknown) => {
-        setError(err instanceof ApiError ? err.message : "Не удалось загрузить данные аккаунта.");
+        setError(err instanceof ApiError ? russianMessage(err.message) : "Не удалось загрузить данные аккаунта.");
       })
       .finally(() => setLoading(false));
   }, [router]);
 
-  function handleLogout() {
-    clearToken();
-    window.localStorage.removeItem("porukam-work-mode");
-    router.push("/login");
+  async function handleLogout() {
+    if (loggingOut || !window.confirm("Выйти из аккаунта на всех устройствах?")) return;
+    const token = getToken();
+    setLoggingOut(true); setLogoutError("");
+    try {
+      if (token) await api.logout(token);
+      clearToken();
+      window.localStorage.removeItem("porukam-work-mode");
+      router.replace("/login");
+      router.refresh();
+    } catch (err) {
+      setLogoutError(err instanceof Error ? russianMessage(err.message) : "Не удалось завершить сеансы. Повторите выход.");
+    } finally { setLoggingOut(false); }
   }
 
   function selectMode(next: Exclude<Mode, null>) {
     setMode(next);
     if (user) window.localStorage.setItem(`porukam:work-mode:${user.id}:${companyId}`, next);
+    window.dispatchEvent(new Event(WORKSPACE_CHANGED_EVENT));
   }
 
   const selectedCompany = companies.find((item) => item.id === companyId);
@@ -78,11 +93,11 @@ export default function DashboardPage() {
   useEffect(() => {
     if (!user) return;
     let cancelled = false;
-    setNextStep(null);
+    setNextStep(null); setNextError(false);
     marketplace.getNextStep(getToken()!, user.is_marketplace_admin ? undefined : companyId || undefined, mode)
-      .then((result) => { if (!cancelled) setNextStep(result); }).catch(() => {});
+      .then((result) => { if (!cancelled) setNextStep(result); }).catch(() => { if (!cancelled) setNextError(true); });
     return () => { cancelled = true; };
-  }, [user, companyId, mode]);
+  }, [user, companyId, mode, stepRetry]);
 
   // При смене компаний сбрасываем чужой режим: нельзя оставаться в режиме без прав.
   useEffect(() => {
@@ -107,7 +122,7 @@ export default function DashboardPage() {
   if (!user) return null;
 
   if (user.is_marketplace_admin) {
-    return <div><div className="dashboard-head"><div><h1 className="page-title">Рабочее место администратора</h1><p className="subtitle">Управление компаниями, пользователями и обращениями платформы</p></div><button type="button" className="btn btn-secondary" onClick={handleLogout}>Выйти</button></div><section className="journey-grid"><Link className="journey-card" href="/admin"><span>01</span><b>Заявки компаний</b><small>Проверка, причины решений и история</small></Link><Link className="journey-card" href="/admin#tickets"><span>02</span><b>Обращения пользователей</b><small>Очередь поддержки и ответы</small></Link><Link className="journey-card" href="/notifications"><span>03</span><b>Уведомления</b><small>Системные события администратора</small></Link></section></div>;
+    return <div><div className="dashboard-head"><div><h1 className="page-title">Рабочее место администратора</h1><p className="subtitle">Управление компаниями, пользователями и обращениями платформы</p></div><button type="button" className="btn btn-secondary" disabled={loggingOut} onClick={() => void handleLogout()}>{loggingOut ? "Выходим…" : "Выйти"}</button></div>{logoutError && <p className="alert alert-error" role="alert">{logoutError}</p>}<section className="journey-grid"><Link className="journey-card" href="/admin"><span>01</span><b>Заявки компаний</b><small>Проверка, причины решений и история</small></Link><Link className="journey-card" href="/admin#tickets"><span>02</span><b>Обращения пользователей</b><small>Очередь поддержки и ответы</small></Link><Link className="journey-card" href="/notifications"><span>03</span><b>Уведомления</b><small>Системные события администратора</small></Link></section></div>;
   }
 
   const fullName = [user.last_name, user.first_name, user.middle_name].filter(Boolean).join(" ");
@@ -116,19 +131,7 @@ export default function DashboardPage() {
 
   return (
     <div className="dashboard-page">
-      <OnboardingTour canBuy={canBuy} canSell={canSell} scope={`${user.id}:${companyId}:${mode}`} companyId={companyId || undefined} />
-      {nextStep && (
-        <section className="card" aria-live="polite">
-          <span className="eyebrow">Следующий шаг</span>
-          <h2>{nextStep.title}</h2>
-          <p className="subtitle">{nextStep.description}</p>
-          <div className="actions">
-            <Link href={nextStep.href} className="btn btn-primary btn-sm">
-              Перейти
-            </Link>
-          </div>
-        </section>
-      )}
+      {logoutError && <p className="alert alert-error" role="alert">{logoutError}</p>}
       <div className="dashboard-head">
         <div>
           <span className="eyebrow">Центр управления</span>
@@ -142,7 +145,7 @@ export default function DashboardPage() {
             Поддержка
           </Link>
           <Link href="/kpi" className="btn btn-secondary">
-            KPI и доверие
+            Показатели и доверие
           </Link>
           <Link href="/notifications" className="btn btn-secondary">
             Уведомления{unreadCount > 0 ? ` (${unreadCount})` : ""}
@@ -153,8 +156,8 @@ export default function DashboardPage() {
               Панель администратора
             </Link>
           )}
-          <button type="button" className="btn btn-secondary" onClick={handleLogout}>
-            Выйти
+          <button type="button" className="btn btn-secondary" disabled={loggingOut} onClick={() => void handleLogout()}>
+            {loggingOut ? "Выходим…" : "Выйти"}
           </button>
         </div>
       </div>
@@ -162,6 +165,7 @@ export default function DashboardPage() {
       {companies.length > 0 && <div className="field"><label htmlFor="dashboard-company">Рабочая компания</label><select id="dashboard-company" value={companyId} onChange={(event) => {
         setNextStep(null); setCompanyId(event.target.value);
         window.localStorage.setItem(`porukam:dashboard-company:${user.id}`, event.target.value);
+        window.dispatchEvent(new Event(WORKSPACE_CHANGED_EVENT));
         const selected = companies.find((item) => item.id === event.target.value);
         const saved = window.localStorage.getItem(`porukam:work-mode:${user.id}:${event.target.value}`);
         setMode(saved === "sell" && selected?.membership?.can_sell ? "sell" : selected?.membership?.can_buy ? "buy" : selected?.membership?.can_sell ? "sell" : null);
@@ -170,8 +174,8 @@ export default function DashboardPage() {
         <div className="workspace-card__head"><div><h2>Рабочие разделы</h2><p>Один аккаунт может покупать и продавать от имени компании</p></div><div className="mode-toggle" role="group" aria-label="Режим работы">
           <button
             type="button"
-            className={mode === "buy" ? "active" : ""}
             aria-pressed={mode === "buy"}
+            className={mode === "buy" ? "active" : ""}
             disabled={!canBuy}
             title={canBuy ? undefined : "Нет компании с правом покупки"}
             onClick={() => selectMode("buy")}
@@ -180,8 +184,8 @@ export default function DashboardPage() {
           </button>
           <button
             type="button"
-            className={mode === "sell" ? "active" : ""}
             aria-pressed={mode === "sell"}
+            className={mode === "sell" ? "active" : ""}
             disabled={!canSell}
             title={canSell ? undefined : "Нет компании с правом продажи"}
             onClick={() => selectMode("sell")}
@@ -189,6 +193,26 @@ export default function DashboardPage() {
             Продаю
           </button>
         </div></div>
+        <p className="hint">Выберите компанию и режим. Ниже — ближайшее действие именно для них.</p>
+      {nextStep && (
+        <section className="card" aria-live="polite">
+          <span className="eyebrow">Следующий шаг</span>
+          <h2>{nextStep.title}</h2>
+          <p className="subtitle">{nextStep.description}</p>
+          <div className="actions">
+            <Link href={nextStep.href} className="btn btn-primary btn-sm">
+              Продолжить
+            </Link>
+          </div>
+        </section>
+      )}
+        {nextError && <p role="alert">Не удалось определить следующий шаг. <button type="button" onClick={() => setStepRetry(value => value + 1)}>Повторить</button></p>}
+        {!nextStep && !nextError && <p role="status">Подбираем следующий шаг…</p>}
+        {mode && <div className="actions">
+          <Link className="btn btn-secondary" href={mode === "buy" ? "/needs/new" : "/seller/requests"}>{mode === "buy" ? "Новый запрос с ИИ" : "Запросы покупателей"}</Link>
+          <Link className="btn btn-secondary" href={mode === "buy" ? "/needs" : "/seller/products"}>{mode === "buy" ? "Мои запросы" : "Мои товары"}</Link>
+        </div>}
+        <details className="workflow-details"><summary>Все рабочие разделы</summary>
         {mode === "buy" && (
           <ul className="company-list">
             <li><Link href="/buyer/analytics" className="company-item"><span className="company-item__name">Закупки и статистика</span><span className="company-meta">Цены, приёмка, возвраты и отмены</span></Link></li>
@@ -288,9 +312,11 @@ export default function DashboardPage() {
         {mode === null && (
           <p className="hint mode-hint">Выберите режим, чтобы открыть разделы маркетплейса.</p>
         )}
+        </details>
       </section>
 
-      <BuyerSavingsPanel companyId={buyerCompany?.id} />
+      {buyerCompany && <details className="workflow-details"><summary>Экономия на закупках</summary><BuyerSavingsPanel companyId={buyerCompany.id} /></details>}
+      <OnboardingTour canBuy={canBuy} canSell={canSell} mode={mode} scope={`${user.id}:${companyId}:${mode}`} companyId={companyId || undefined} />
 
       <section className="card">
         <div className="company-row">

@@ -1,4 +1,6 @@
 "use client";
+import { russianMessage } from "../lib/russianMessages";
+import { russianLabel, displayValue } from "../lib/presentation";
 import { useEffect, useRef, useState } from "react";
 import { getToken } from "../lib/api";
 import { formatCharacteristics, formatRub, itemUnit, marketplace, Product } from "../lib/marketplace";
@@ -45,7 +47,7 @@ export default function CatalogImport({ companyId, onImported }: { companyId: st
         const products = await marketplace.getCompanyProducts(token, companyId);
         if (alive.current) onImported(products);
       }
-    } catch (reason) { if (alive.current) setError(reason instanceof Error ? reason.message : "Не удалось загрузить таблицу."); }
+    } catch (reason) { if (alive.current) setError(reason instanceof Error ? russianMessage(reason.message) : "Не удалось загрузить таблицу."); }
     finally { if (alive.current) setBusy(false); }
   }
   async function rollback() {
@@ -60,7 +62,7 @@ export default function CatalogImport({ companyId, onImported }: { companyId: st
       setLastImportId(null);
       const products = await marketplace.getCompanyProducts(token, companyId);
       if (alive.current) onImported(products);
-    } catch (reason) { if (alive.current) setError(reason instanceof Error ? reason.message : "Не удалось откатить импорт."); }
+    } catch (reason) { if (alive.current) setError(reason instanceof Error ? russianMessage(reason.message) : "Не удалось откатить импорт."); }
     finally { if (alive.current) setBusy(false); }
   }
   return <section className="card">
@@ -77,7 +79,7 @@ export default function CatalogImport({ companyId, onImported }: { companyId: st
     {preview && <>
       {preview.errors.length > 0 && <div role="alert" className="alert alert-error"><p>Исправьте строки и загрузите файл повторно:</p><ul>{preview.errors.map(item => <li key={item.line}>Строка {item.line}: {item.message}</li>)}</ul></div>}
       <p>Корректных строк: {preview.rows.length}. Ошибок: {preview.errors.length}.</p>
-      <div style={{ overflowX: "auto" }}><table><thead><tr><th>Строка</th><th>Товар / характеристики</th><th>Категория</th><th>Цена</th><th>Минимум</th><th>Остаток</th><th>Срок, дней</th><th>Решение</th></tr></thead><tbody>{preview.rows.map(({ line, product, import_status, diff, note }) => <tr key={line}><td>{line}</td><td>{product.name}<br/>{formatCharacteristics(product.characteristics)}</td><td>{product.category} / {product.subcategory}</td><td>{formatRub(product.price_rub, 12)} / {itemUnit(product.characteristics)}</td><td>{product.moq_units}</td><td>{product.stock_units ?? "Не указан"}</td><td>{product.lead_time_days}</td><td>{STATUS_LABELS[import_status] ?? import_status}{diff.length > 0 && <ul>{diff.map((item, index) => <li key={index}>{item.field}: {String(item.was)} → {String(item.now)}</li>)}</ul>}{note && <><br/>{note}</>}</td></tr>)}</tbody></table></div>
+      <div style={{ overflowX: "auto" }}><table><thead><tr><th>Строка</th><th>Товар / характеристики</th><th>Категория</th><th>Цена</th><th>Минимум</th><th>Остаток</th><th>Срок, дней</th><th>Решение</th></tr></thead><tbody>{preview.rows.map(({ line, product, import_status, diff, note }) => <tr key={line}><td>{line}</td><td>{product.name}<br/>{formatCharacteristics(product.characteristics)}</td><td>{product.category} / {product.subcategory}</td><td>{formatRub(product.price_rub, 12)} / {itemUnit(product.characteristics)}</td><td>{product.moq_units}</td><td>{product.stock_units ?? "Не указан"}</td><td>{product.lead_time_days}</td><td>{STATUS_LABELS[import_status] ?? russianLabel(import_status, "Требуется проверка")}{diff.length > 0 && <ul>{diff.map((item, index) => <li key={index}>{russianLabel(item.field)}: {displayValue(item.was)} → {displayValue(item.now)}</li>)}</ul>}{note && <><br/>{note}</>}</td></tr>)}</tbody></table></div>
       {file && !preview.errors.length && preview.rows.length > 0 && <><label><input type="checkbox" checked={approved} disabled={busy} onChange={event => setApproved(event.target.checked)} /> Проверил строки и подтверждаю создание товаров на этих условиях</label><button className="btn btn-primary" type="button" disabled={!approved || busy} onClick={() => void run(true)}>Создать товары</button></>}
     </>}
   </section>;

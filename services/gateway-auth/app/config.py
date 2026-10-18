@@ -16,6 +16,15 @@ class Settings(BaseSettings):
             raise ValueError("JWT_SECRET должен быть случайным секретом длиной не менее 48 символов")
         return value
 
+    legacy_registration_enabled: bool = False
+    smtp_host: str = ""
+    smtp_port: int = Field(default=587, ge=1, le=65535)
+    smtp_username: str = ""
+    smtp_password: str = Field(default="", repr=False)
+    smtp_from: str = ""
+    smtp_starttls: bool = True
+    smtp_use_ssl: bool = False
+
     jwt_algorithm: Literal["HS256"] = "HS256"
     access_token_expire_minutes: int = 1440
     cors_origins: str = "http://localhost:3000,http://127.0.0.1:3000"

@@ -1,5 +1,8 @@
 "use client";
 
+import { canonicalCharacteristicKey } from "../lib/categoryProfiles";
+import { russianMessage } from "../lib/russianMessages";
+import { russianLabel, displayValue, fieldName } from "../lib/presentation";
 import CharacteristicSuggestions from "./CharacteristicSuggestions";
 import PhysicalQuantityReview from "./PhysicalQuantityReview";
 import { FormEvent, useEffect, useState } from "react";
@@ -18,7 +21,7 @@ export default function NeedDraftEditor({ need, onSaved }: { need: Need; onSaved
   const [address, setAddress] = useState(need.delivery_address_id ?? "");
   const [visibility, setVisibility] = useState(need.visibility);
   const [addresses, setAddresses] = useState<DeliveryAddress[]>([]);
-  const [rows, setRows] = useState(Object.entries(need.characteristics).map(([key, value]) => ({ key, value: typeof value === "object" ? JSON.stringify(value) : String(value), original: value })));
+  const [rows, setRows] = useState(Object.entries(need.characteristics).map(([key, value]) => ({ key, value: typeof value === "boolean" ? displayValue(value) : typeof value === "object" ? JSON.stringify(value) : String(value), original: value })));
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
   const [impact, setImpact] = useState<NeedEditImpact | null>(null);
@@ -37,8 +40,8 @@ export default function NeedDraftEditor({ need, onSaved }: { need: Need; onSaved
     for (const row of rows) {
       const key = row.key.trim();
       if (!key || !row.value.trim() || Object.hasOwn(characteristics, key)) { setError("Заполните характеристики без повторяющихся названий."); return; }
-      const initial = typeof row.original === "object" ? JSON.stringify(row.original) : String(row.original);
-      characteristics[key] = row.value === initial ? row.original : row.value.trim();
+      const initial = typeof row.original === "boolean" ? displayValue(row.original) : typeof row.original === "object" ? JSON.stringify(row.original) : String(row.original);
+      characteristics[key] = row.value === initial ? row.original : typeof row.original === "boolean" && ["да", "нет"].includes(row.value.trim().toLowerCase()) ? row.value.trim().toLowerCase() === "да" : row.value.trim();
     }
     setSaving(true); setError("");
     try {
@@ -57,7 +60,7 @@ export default function NeedDraftEditor({ need, onSaved }: { need: Need; onSaved
       if (impact?.requires_confirmation && !impactApproved) { setError("Подтвердите последствия изменения."); return; }
       onSaved(await marketplace.editNeed(token, need.id, { ...input, impact_hash: impact?.impact_hash }));
       setEditing(false);
-    } catch (reason) { setError(reason instanceof Error ? reason.message : "Не удалось сохранить черновик."); }
+    } catch (reason) { setError(reason instanceof Error ? russianMessage(reason.message) : "Не удалось сохранить черновик."); }
     finally { setSaving(false); }
   }
   if (!editing) return <button type="button" className="btn btn-secondary" onClick={() => setEditing(true)}>{need.status === "draft" ? "Изменить черновик" : "Изменить спецификацию"}</button>;
@@ -69,7 +72,7 @@ export default function NeedDraftEditor({ need, onSaved }: { need: Need; onSaved
       <div className="field"><label htmlFor="edit-subcategory">Подкатегория</label><select id="edit-subcategory" required value={subcategory} onChange={e => setSubcategory(e.target.value)}><option value="">Выберите подкатегорию</option>{(PRODUCT_CATEGORY_TREE[category] ?? []).map(item => <option key={item}>{item}</option>)}</select></div>
       <CharacteristicSuggestions category={category} subcategory={subcategory} keys={rows.map(row => row.key)} onAdd={key => setRows([...rows, {key,value:"",original:""}])} />
       {rows.map((row, index) => <div className="field" key={index}>
-        <input aria-label={`Название характеристики ${index + 1}`} required maxLength={120} value={row.key} onChange={e => setRows(rows.map((item, i) => i === index ? { ...item, key: e.target.value } : item))} />
+        <input aria-label={`Название характеристики ${index + 1}`} required maxLength={120} value={fieldName(row.key)} onChange={e => setRows(rows.map((item, i) => i === index ? { ...item, key: canonicalCharacteristicKey(e.target.value) } : item))} />
         <input aria-label={`Значение характеристики ${index + 1}`} required value={row.value} readOnly={typeof row.original === "object" && row.original !== null} onChange={e => setRows(rows.map((item, i) => i === index ? { ...item, value: e.target.value } : item))} />
         <button type="button" className="btn btn-secondary btn-sm" onClick={() => setRows(rows.filter((_, i) => i !== index))}>Удалить характеристику</button>
       </div>)}
@@ -83,7 +86,7 @@ export default function NeedDraftEditor({ need, onSaved }: { need: Need; onSaved
       <PhysicalQuantityReview kind="need" values={{ characteristics: Object.fromEntries(rows.filter(row => row.key.trim()).map(row => [row.key.trim(), row.value])), volume_units: quantity }} approved={quantityApproved} onApproval={setQuantityApproved} />
       {impact && <section aria-label="Последствия изменения">
         <h3>Что изменится</h3>
-        {Object.entries(impact.changes).map(([key, diff]) => <p key={key}>{({ category: "Категория", subcategory: "Подкатегория", characteristics: "Характеристики", volume_units: "Количество", budget_rub: "Бюджет", deadline_date: "Срок поставки", valid_until: "Актуальность", delivery_address_id: "Адрес доставки", evidence: "Подтверждение требований" } as Record<string, string>)[key] ?? key}: {JSON.stringify(diff.before)} → {JSON.stringify(diff.after)}</p>)}
+        {Object.entries(impact.changes).map(([key, diff]) => <p key={key}>{({ category: "Категория", subcategory: "Подкатегория", characteristics: "Характеристики", volume_units: "Количество", budget_rub: "Бюджет", deadline_date: "Срок поставки", valid_until: "Актуальность", delivery_address_id: "Адрес доставки", evidence: "Подтверждение требований" } as Record<string, string>)[key] ?? russianLabel(key)}: {displayValue(diff.before)} → {displayValue(diff.after)}</p>)}
         <p>Потребуют пересчёта: КП — {impact.affected.offers.length}; черновики КП — {impact.affected.offer_drafts.length}; группы — {impact.affected.coalitions.length}; ресурсные планы — {impact.affected.resource_plans.length}; варианты подбора — {impact.affected.optimization_variants.length}. Участники получат уведомления, прежние условия сохранятся в истории.</p>
         {impact.requires_confirmation && <label><input type="checkbox" checked={impactApproved} onChange={event => setImpactApproved(event.target.checked)} />Подтверждаю новые требования и отмену прежних предварительных согласий</label>}
       </section>}

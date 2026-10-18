@@ -1,8 +1,10 @@
 "use client";
 
+import { russianMessage } from "../lib/russianMessages";
+import { russianLabel } from "../lib/presentation";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   api,
   ApiError,
@@ -17,6 +19,10 @@ import { CONFIRMABLE_ATTRIBUTES, DOCUMENT_TYPES, marketplace, PendingDocument, S
 
 export default function AdminPage() {
   const router = useRouter();
+  const refreshVersion = useRef(0);
+  const actionPending = useRef(false);
+  const [agreements, setAgreements] = useState<Record<string, {document:string;version:string;accepted_at:string}[]>>({});
+  const [notice, setNotice] = useState("");
   const [user, setUser] = useState<User | null>(null);
   const [companies, setCompanies] = useState<Company[]>([]);
   const [loading, setLoading] = useState(true);
@@ -32,7 +38,7 @@ export default function AdminPage() {
   const [response, setResponse] = useState<Record<string, string>>({});
   const [users, setUsers] = useState<User[]>([]);
   const [editorReasons, setEditorReasons] = useState<Record<string,string>>({});
-  const [security, setSecurity] = useState<{event: string; created_at: string; correlation_id: string}[]>([]);
+  const [security, setSecurity] = useState<{event: string; created_at: string; correlation_id: string; actor_id?: string; target_id?: string; reason?: string}[]>([]);
   const [securityError, setSecurityError] = useState(false);
   const [securityAlert, setSecurityAlert] = useState(false);
   const [pendingDocuments, setPendingDocuments] = useState<PendingDocument[]>([]);
@@ -61,14 +67,19 @@ export default function AdminPage() {
   }, [user?.is_marketplace_admin]);
 
   const refreshPending = useCallback(async (token: string, selectedStatus: VerificationStatus = "pending_review", query = "") => {
-    const result = await api.getAdminCompanies(token, selectedStatus, query || undefined);
-    setCompanies(result.companies);
-    const [support, userResult, documents] = await Promise.all([
-      marketplace.getAdminSupportTickets(token),
-      api.getAdminUsers(token),
-      marketplace.getPendingDocuments(token),
+    const version = ++refreshVersion.current;
+    const results = await Promise.allSettled([
+      api.getAdminCompanies(token, selectedStatus, query.trim().length >= 2 ? query.trim() : undefined),
+      marketplace.getAdminSupportTickets(token), api.getAdminUsers(token), marketplace.getPendingDocuments(token),
     ]);
-    setTickets(support); setUsers(userResult.users); setPendingDocuments(documents);
+    if (version !== refreshVersion.current) return;
+    const [companyResult, support, userResult, documents] = results;
+    if (companyResult.status === "fulfilled") setCompanies(companyResult.value.companies);
+    if (support.status === "fulfilled") setTickets(support.value);
+    if (userResult.status === "fulfilled") setUsers(userResult.value.users);
+    if (documents.status === "fulfilled") setPendingDocuments(documents.value);
+    const failures = results.flatMap((result, index) => result.status === "rejected" ? [["компании", "обращения", "пользователи", "документы"][index]] : []);
+    setError(failures.length ? `Не удалось обновить: ${failures.join(", ")}. Показаны ранее загруженные данные. Повторите загрузку.` : null);
   }, []);
 
   const load = useCallback(async () => {
@@ -84,7 +95,7 @@ export default function AdminPage() {
         await refreshPending(token, statusFilter, search);
       }
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : "Не удалось загрузить данные.");
+      setError(err instanceof ApiError ? russianMessage(err.message) : "Не удалось загрузить данные.");
     } finally {
       setLoading(false);
     }
@@ -94,22 +105,52 @@ export default function AdminPage() {
     void load();
   }, [load]);
 
+  async function performAction(id: string, work: () => Promise<void>, message: string) {
+    if (actionPending.current) return;
+    actionPending.current = true; setBusyId(id); setActionError(null); setNotice("");
+    try { await work(); setNotice(message); }
+    catch (err) { setActionError(err instanceof Error ? russianMessage(err.message) : "Не удалось выполнить действие. Попробуйте ещё раз."); }
+    finally { actionPending.current = false; setBusyId(null); }
+  }
+  async function ticketDecision(ticket: SupportTicket, status: "in_progress" | "resolved") {
+    const token = getToken(); if (!token) return;
+    const answer = (response[ticket.id] ?? ticket.admin_response ?? "").trim();
+    if (status === "resolved" && !answer) { setActionError("Напишите ответ пользователю перед закрытием обращения."); return; }
+    await performAction(ticket.id, async () => {
+      await marketplace.updateAdminSupportTicket(token, ticket.id, {status, admin_response: answer || undefined});
+      await refreshPending(token, statusFilter, search);
+    }, status === "resolved" ? "Ответ сохранён. Обращение решено." : "Обращение взято в работу.");
+  }
+  async function toggleBlocked(item: User) {
+    const token = getToken(); if (!token) return;
+    if (!window.confirm(item.account_status === "blocked" ? "Разблокировать вход пользователя?" : "Заблокировать вход пользователя и завершить его сеансы?")) return;
+    await performAction(item.id, async () => {
+      await api.setUserBlocked(token, item.id, item.account_status !== "blocked");
+      await refreshPending(token, statusFilter, search);
+    }, item.account_status === "blocked" ? "Вход пользователя разблокирован." : "Вход пользователя заблокирован.");
+  }
+  async function downloadDocument(document: PendingDocument) {
+    const token = getToken(); if (!token) return;
+    await performAction(document.id, async () => {
+      const blob = await marketplace.downloadEditorDocument(token, document.id);
+      const url = URL.createObjectURL(blob); const link = window.document.createElement("a");
+      link.href = url; link.download = document.name; link.click(); URL.revokeObjectURL(url);
+    }, "Документ скачан для проверки.");
+  }
+  async function showHistory(company: Company) {
+    const token = getToken(); if (!token) return;
+    await performAction(company.id, async () => { const items = await api.getCompanyVerificationHistory(token, company.id); setHistory(current => ({...current, [company.id]: items})); }, "История проверки загружена.");
+  }
   async function handleApprove(company: Company) {
     const token = getToken();
     if (!token) return;
     const comment = window.prompt("Причина подтверждения компании (обязательно):", "");
     if (comment === null) return;
     if (!comment.trim()) { setActionError("Укажите причину подтверждения компании."); return; }
-    setBusyId(company.id);
-    setActionError(null);
-    try {
-      await api.decideCompanyVerification(token, company.id, "approve", comment.trim() || undefined);
+    await performAction(company.id, async () => {
+      await api.decideCompanyVerification(token, company.id, "approve", comment.trim());
       await refreshPending(token, statusFilter, search);
-    } catch (err) {
-      setActionError(err instanceof ApiError ? err.message : "Не удалось подтвердить компанию.");
-    } finally {
-      setBusyId(null);
-    }
+    }, "Компания подтверждена.");
   }
 
   function handleStartReject(company: Company) {
@@ -121,17 +162,19 @@ export default function AdminPage() {
   async function handleConfirmReject(company: Company) {
     const token = getToken();
     if (!token) return;
-    setBusyId(company.id);
-    setActionError(null);
-    try {
+    await performAction(company.id, async () => {
       await api.decideCompanyVerification(token, company.id, "reject", reason.trim() || undefined);
       setRejectingId(null);
       await refreshPending(token, statusFilter, search);
-    } catch (err) {
-      setActionError(err instanceof ApiError ? err.message : "Не удалось отклонить компанию.");
-    } finally {
-      setBusyId(null);
-    }
+    }, "Компания отклонена. Причина сохранена.");
+  }
+
+  async function changeEditorRole(item: User) {
+    const token = getToken(); if (!token) return;
+    await performAction(item.id, async () => {
+      const updated = await api.appointCategoryEditor(token, item.id, !item.is_category_editor, editorReasons[item.id]);
+      setUsers(previous => previous.map(value => value.id === updated.id ? updated : value));
+    }, item.is_category_editor ? "Роль редактора снята." : "Роль редактора назначена.");
   }
 
   function documentDecision(document: PendingDocument) {
@@ -180,22 +223,19 @@ export default function AdminPage() {
       setActionError("Укажите причину решения по документу.");
       return;
     }
-    setDocBusyId(document.id);
-    setActionError(null);
-    try {
-      await marketplace.verifyDocument(token, document.id, {
-        decision,
-        scope_category: value.category.trim() || null,
-        scope_subcategory: value.subcategory.trim() || null,
-        confirms: decision === "verified" ? parseConfirms(document) : null,
-        note: value.note.trim() || null,
-      });
-      await refreshPending(token, statusFilter, search);
-    } catch (err) {
-      setActionError(err instanceof ApiError ? err.message : "Не удалось сохранить решение по документу.");
-    } finally {
-      setDocBusyId(null);
-    }
+    await performAction(document.id, async () => {
+      setDocBusyId(document.id);
+      try {
+        await marketplace.verifyDocument(token, document.id, {
+          decision,
+          scope_category: value.category.trim() || null,
+          scope_subcategory: value.subcategory.trim() || null,
+          confirms: decision === "verified" ? parseConfirms(document) : null,
+          note: value.note.trim(),
+        });
+        await refreshPending(token, statusFilter, search);
+      } finally { setDocBusyId(null); }
+    }, decision === "verified" ? "Документ подтверждён." : "Документ отклонён. Причина сохранена.");
   }
 
   if (loading) return <p className="hint">Загрузка...</p>;
@@ -206,7 +246,7 @@ export default function AdminPage() {
         <h1 className="page-title">Панель администратора</h1>
         <div className="alert alert-error">{error ?? "Не удалось загрузить данные."}</div>
         <Link href="/dashboard" className="btn btn-secondary">
-          На главную
+          В личный кабинет
         </Link>
       </div>
     );
@@ -218,7 +258,7 @@ export default function AdminPage() {
         <h1 className="page-title">Панель администратора</h1>
         <div className="alert alert-error">Нет доступа</div>
         <Link href="/dashboard" className="btn btn-secondary">
-          На главную
+          В личный кабинет
         </Link>
       </div>
     );
@@ -239,13 +279,24 @@ export default function AdminPage() {
             "auth.login_success": "Успешный вход",
             "auth.blocked_login": "Вход заблокированного пользователя",
             "admin.account_status": "Изменён статус пользователя",
+            "admin.category_editor_role": "Изменены полномочия редактора",
+            "auth.password_changed": "Пароль изменён пользователем",
+            "auth.password_reset": "Доступ восстановлен по почте",
+            "auth.sessions_ended": "Сеансы завершены пользователем",
+            "auth.recovery_delivery_failed": "Не удалось отправить письмо восстановления",
+            "auth.recovery_requested": "Запрошено восстановление доступа",
+            "auth.recovery_sent": "Отправлено письмо восстановления",
+            "auth.logout": "Завершены все сеансы",
+            "admin.first_operator": "Назначен первый администратор",
           }[item.event] ?? "Событие безопасности"}
+          {(item.target_id || item.actor_id) && ` · ${users.find(user => user.id === (item.target_id || item.actor_id))?.email ?? "Аккаунт " + (item.target_id || item.actor_id)?.slice(0,8)}`}
+          {item.reason && ` · ${item.reason}`}
         </p>)}
       </section>
       <div className="company-row">
         <h1 className="page-title">Панель администратора</h1>
         <Link href="/dashboard" className="btn btn-secondary btn-sm">
-          На главную
+          В личный кабинет
         </Link>
       </div>
       <p className="subtitle">Очередь и история проверки компаний ({companies.length})</p>
@@ -253,14 +304,14 @@ export default function AdminPage() {
       <div className="card form-grid">
         <div className="field"><label htmlFor="admin-status">Статус</label><select id="admin-status" value={statusFilter} onChange={(event) => setStatusFilter(event.target.value as VerificationStatus)}>{Object.entries(VERIFICATION_STATUS_LABELS).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></div>
         <div className="field"><label htmlFor="admin-search">Название или ИНН</label><input id="admin-search" type="text" value={search} onChange={(event) => setSearch(event.target.value)} /></div>
-        <button type="button" className="btn btn-secondary" onClick={() => { const token = getToken(); if (token) void refreshPending(token, statusFilter, search); }}>Применить фильтр</button>
+        <button type="button" className="btn btn-secondary" onClick={() => { if(search.trim().length === 1){setError("Для поиска введите не менее двух символов.");return;} const token = getToken(); if (token) void refreshPending(token, statusFilter, search); }}>Применить фильтр</button>
       </div>
 
-      {error && <div className="alert alert-error">{error}</div>}
+      {error && <div className="alert alert-error" role="alert">{error}<button type="button" className="btn btn-secondary" onClick={() => {const token=getToken(); if(token) void refreshPending(token,statusFilter,search);}}>Повторить загрузку</button></div>}{notice && <p className="alert alert-success" role="status">{notice}</p>}
       {actionError && <div className="alert alert-error">{actionError}</div>}
 
       {companies.length === 0 ? (
-        <p className="hint">Нет компаний со статусом «На проверке».</p>
+        <p className="hint">Нет компаний по выбранному фильтру.</p>
       ) : (
         <ul className="company-list">
           {companies.map((company) => (
@@ -278,14 +329,14 @@ export default function AdminPage() {
                 </span>
               </div>
               <div className="actions">
-                <button type="button" className="btn btn-secondary btn-sm" onClick={() => { const token = getToken(); if (!token) return; void api.getCompanyVerificationHistory(token, company.id).then((items) => setHistory((current) => ({ ...current, [company.id]: items }))); }}>История</button>
+                <button type="button" className="btn btn-secondary btn-sm" disabled={busyId !== null} onClick={() => void showHistory(company)}>История проверки</button>
                 {company.verification_status === "pending_review" && <button
                   type="button"
                   className="btn btn-success btn-sm"
                   disabled={busyId === company.id}
                   onClick={() => void handleApprove(company)}
                 >
-                  {busyId === company.id ? "..." : "Подтвердить"}
+                  {busyId === company.id ? "Сохраняем…" : "Подтвердить компанию"}
                 </button>}
                 {company.verification_status === "pending_review" && (rejectingId !== company.id ? (
                   <button
@@ -348,6 +399,7 @@ export default function AdminPage() {
                       <div className="company-meta">{document.company_display_name ?? "Компания"} · {typeLabel}</div>
                     </div>
                   </div>
+                  <div className="actions"><button type="button" className="btn btn-secondary btn-sm" disabled={busyId !== null} onClick={() => void downloadDocument(document)}>Скачать документ</button><Link href="/editor" className="btn btn-secondary btn-sm">Все характеристики и срок действия</Link></div>
                   <div className="form-grid">
                     <div className="field">
                       <label htmlFor={`doc-category-${document.id}`}>Область действия: категория<span className="req">*</span></label>
@@ -418,10 +470,10 @@ export default function AdminPage() {
         )}
       </section>
 
-      <section className="card" style={{ marginTop: 24 }}><h2>Пользователи ({users.length})</h2><div className="admin-user-grid">{users.map((item) => <div className="company-row" key={item.id}><div><b>{item.last_name} {item.first_name}</b><p className="hint mode-hint">{item.email} · {item.is_marketplace_admin ? "Администратор" : item.is_category_editor ? "Редактор категорий" : "Пользователь"}</p></div>{!item.is_marketplace_admin && <div><label>Основание назначения или снятия роли редактора<input maxLength={500} value={editorReasons[item.id] ?? ""} onChange={event=>setEditorReasons(previous=>({...previous,[item.id]:event.target.value}))} /></label><button type="button" className="btn btn-secondary btn-sm" disabled={busyId===item.id || (editorReasons[item.id] ?? "").trim().length<3} onClick={async()=>{const token=getToken();if(!token)return;setBusyId(item.id);setActionError(null);try{const updated=await api.appointCategoryEditor(token,item.id,!item.is_category_editor,editorReasons[item.id]);setUsers(previous=>previous.map(value=>value.id===updated.id?updated:value));}catch(err){setActionError(err instanceof Error?err.message:"Не удалось изменить роль.");}finally{setBusyId(null);}}}>{item.is_category_editor ? "Снять роль редактора" : "Назначить редактором"}</button></div>}{!item.is_marketplace_admin && <button className="btn btn-secondary btn-sm" onClick={() => { const token=getToken(); if(!token)return; void api.setUserBlocked(token,item.id,item.account_status!=="blocked").then(() => refreshPending(token,statusFilter,search)); }}>{item.account_status === "blocked" ? "Разблокировать" : "Заблокировать"}</button>}</div>)}</div></section>
+      <section className="card" style={{ marginTop: 24 }}><h2>Пользователи ({users.length})</h2><div className="admin-user-grid">{users.map((item) => <div className="company-row" key={item.id}><div><b>{item.last_name} {item.first_name}</b><p className="hint mode-hint">{item.email} · {item.is_marketplace_admin ? "Администратор" : item.is_category_editor ? "Редактор категорий" : "Пользователь"}</p></div>{!item.is_marketplace_admin && <div><label>Основание назначения или снятия роли редактора<input maxLength={500} value={editorReasons[item.id] ?? ""} onChange={event=>setEditorReasons(previous=>({...previous,[item.id]:event.target.value}))} /></label><button type="button" className="btn btn-secondary btn-sm" disabled={busyId !== null || (editorReasons[item.id] ?? "").trim().length<3} onClick={() => void changeEditorRole(item)}>{item.is_category_editor ? "Снять роль редактора" : "Назначить редактором"}</button></div>}{!item.is_marketplace_admin && <button className="btn btn-secondary btn-sm" disabled={busyId !== null} onClick={() => void toggleBlocked(item)}>{item.account_status === "blocked" ? "Разблокировать" : "Заблокировать"}</button>}<button type="button" className="btn btn-secondary btn-sm" disabled={busyId !== null} onClick={() => {const token=getToken(); if(token) void performAction(item.id, async () => {const records = await api.getUserAgreements(token,item.id); setAgreements(current => ({...current, [item.id]: records}));}, "Подтверждения пользователя загружены.");}}>Принятые правила</button>{agreements[item.id] && <p>{agreements[item.id].length ? agreements[item.id].map(row => `${row.document === "rules" ? "Правила работы" : "Условия обработки данных"}: ${new Date(row.accepted_at).toLocaleString("ru-RU")} (${row.version})`).join("; ") : "Подтверждения не сохранены."}</p>}</div>)}</div></section>
 
       <h2 id="tickets" style={{ marginTop: 32 }}>Обращения пользователей ({tickets.length})</h2>
-      {tickets.length === 0 ? <p className="hint">Обращений нет.</p> : <ul className="company-list">{tickets.map((ticket) => <li className="card" key={ticket.id}><div className="company-row"><strong>{ticket.subject}</strong><span className="badge">{ticket.status}</span></div><p>{ticket.message}</p><div className="field"><label htmlFor={`response-${ticket.id}`}>Ответ</label><textarea id={`response-${ticket.id}`} value={response[ticket.id] ?? ticket.admin_response ?? ""} onChange={(event) => setResponse((current) => ({ ...current, [ticket.id]: event.target.value }))} /></div><div className="actions"><button className="btn btn-secondary btn-sm" onClick={() => { const token = getToken(); if (!token) return; void marketplace.updateAdminSupportTicket(token, ticket.id, { status: "in_progress", admin_response: response[ticket.id] }).then(() => refreshPending(token, statusFilter, search)); }}>В работу</button><button className="btn btn-success btn-sm" onClick={() => { const token = getToken(); if (!token) return; void marketplace.updateAdminSupportTicket(token, ticket.id, { status: "resolved", admin_response: response[ticket.id] }).then(() => refreshPending(token, statusFilter, search)); }}>Ответить и решить</button></div></li>)}</ul>}
+      {tickets.length === 0 ? <p className="hint">Обращений нет.</p> : <ul className="company-list">{tickets.map((ticket) => <li className="card" key={ticket.id}><div className="company-row"><strong>{ticket.subject}</strong><span className="badge">{russianLabel(ticket.status, "Статус уточняется")}</span></div><p>{ticket.message}</p><div className="field"><label htmlFor={`response-${ticket.id}`}>Ответ</label><textarea id={`response-${ticket.id}`} value={response[ticket.id] ?? ticket.admin_response ?? ""} onChange={(event) => setResponse((current) => ({ ...current, [ticket.id]: event.target.value }))} /></div><div className="actions"><button className="btn btn-secondary btn-sm" disabled={busyId !== null || ticket.status === "in_progress" || ticket.status === "resolved"} onClick={() => void ticketDecision(ticket, "in_progress")}>Взять в работу</button><button className="btn btn-success btn-sm" disabled={busyId !== null || ticket.status === "resolved"} onClick={() => void ticketDecision(ticket, "resolved")}>Отправить ответ и закрыть</button></div></li>)}</ul>}
     </div>
   );
 }

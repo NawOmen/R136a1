@@ -1,4 +1,7 @@
 "use client";
+import { canonicalCharacteristicKey } from "../../lib/categoryProfiles";
+import { russianMessage } from "../../lib/russianMessages";
+import { displayValue, fieldName } from "../../lib/presentation";
 import { lineAmount, previewLineAmount } from "../../lib/money";
 
 // Товары компании (GET/POST /companies/{id}/products): список, форма создания,
@@ -91,7 +94,7 @@ export default function SellerProductsPage() {
       })
       .catch((err: unknown) => {
         if (!cancelled) {
-          setError(err instanceof ApiError ? err.message : "Не удалось загрузить товары.");
+          setError(err instanceof ApiError ? russianMessage(err.message) : "Не удалось загрузить товары.");
         }
       })
       .finally(() => {
@@ -144,8 +147,8 @@ export default function SellerProductsPage() {
       if (!validation.valid) { setError(validation.errors.join(". ")); return; }
       if (editingId) {
         const previous = products.find(item=>item.id === editingId);
-        const labels: Record<string,string> = {name:"Название",category:"Категория",subcategory:"Подкатегория",characteristics:"Характеристики",price_rub:"Цена",price_tiers:"Ценовые ступени",moq_units:"MOQ",lead_time_days:"Срок",stock_units:"Остаток"};
-        const changes = previous ? Object.entries(labels).filter(([key])=>JSON.stringify(previous[key as keyof Product]) !== JSON.stringify(preview.normalized[key])).map(([key,label])=>`${label}: ${JSON.stringify(previous[key as keyof Product])} → ${JSON.stringify(preview.normalized[key])}`) : [];
+        const labels: Record<string,string> = {name:"Название",category:"Категория",subcategory:"Подкатегория",characteristics:"Характеристики",price_rub:"Цена",price_tiers:"Ценовые ступени",moq_units:"минимальный заказ",lead_time_days:"Срок",stock_units:"Остаток"};
+        const changes = previous ? Object.entries(labels).filter(([key])=>JSON.stringify(previous[key as keyof Product]) !== JSON.stringify(preview.normalized[key])).map(([key,label])=>`${label}: ${displayValue(previous[key as keyof Product])} → ${displayValue(preview.normalized[key])}`) : [];
         if (changes.length && !window.confirm(`Сохранить новую версию каталога?\n${changes.join("\n")}\nСогласованные сделки сохранят свои цены и условия.`)) return;
       }
       const saved = editingId
@@ -161,7 +164,7 @@ export default function SellerProductsPage() {
         try {
           await marketplace.uploadProductImage(token, saved.id, image);
         } catch (uploadError) {
-          setError(uploadError instanceof ApiError ? uploadError.message : "Карточка сохранена, но фото не загрузилось. Повторите загрузку отдельно.");
+          setError(uploadError instanceof ApiError ? russianMessage(uploadError.message) : "Карточка сохранена, но фото не загрузилось. Повторите загрузку отдельно.");
         }
       }
       const updated = await marketplace.getCompanyProducts(token, company.id);
@@ -179,7 +182,7 @@ export default function SellerProductsPage() {
       setEditingRevision(1);
       setSources([]);
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : "Не удалось создать товар.");
+      setError(err instanceof ApiError ? russianMessage(err.message) : "Не удалось создать товар.");
     } finally {
       setCreating(false);
     }
@@ -211,7 +214,7 @@ export default function SellerProductsPage() {
       const updated = await marketplace.getCompanyProducts(token, companyId);
       setProducts(updated);
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : "Не удалось изменить публикацию.");
+      setError(err instanceof ApiError ? russianMessage(err.message) : "Не удалось изменить публикацию.");
     } finally {
       setPublishingId(null);
     }
@@ -227,7 +230,7 @@ export default function SellerProductsPage() {
       const updated = await marketplace.getCompanyProducts(token, companyId);
       setProducts(updated);
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : "Не удалось создать черновик из шаблона.");
+      setError(err instanceof ApiError ? russianMessage(err.message) : "Не удалось создать черновик из шаблона.");
     } finally {
       setDuplicatingId(null);
     }
@@ -259,7 +262,7 @@ export default function SellerProductsPage() {
             Создать компанию
           </Link>
           <Link href="/dashboard" className="btn btn-secondary">
-            На главную
+            В личный кабинет
           </Link>
         </div>
       </div>
@@ -271,7 +274,7 @@ export default function SellerProductsPage() {
       <div className="company-row">
         <h1 className="page-title">Мои товары</h1>
         <Link href="/dashboard" className="btn btn-secondary btn-sm">
-          На главную
+          В личный кабинет
         </Link>
       </div>
       <p className="subtitle">Товары компании и управление публикацией</p>
@@ -350,8 +353,8 @@ export default function SellerProductsPage() {
                   type="text"
                   placeholder="Характеристика (например, материал)"
                   aria-label={`Характеристика ${index + 1}: название`}
-                  value={row.key}
-                  onChange={(event) => updateRow(index, { key: event.target.value })}
+                  value={fieldName(row.key)}
+                  onChange={(event) => updateRow(index, { key: canonicalCharacteristicKey(event.target.value) })}
                 />
                 <input
                   type="text"

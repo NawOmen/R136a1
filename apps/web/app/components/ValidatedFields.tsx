@@ -15,8 +15,8 @@ export function ValidatedFields({ children }: { children: ReactNode }) {
     });
   });
   return <section ref={ref} className="manual-requirements" aria-labelledby="manual-heading">
-    <h2 id="manual-heading">Условия закупки</h2>
-    <p id="manual-format-hint" className="hint">Зелёный — верный формат, красный — ошибка, приглушённый — пусто. Достоверность требований проверяете вы.</p>
+    <h2 id="manual-heading">Проверьте карточку</h2>
+    <p id="manual-format-hint" className="hint">Проверьте количество, срок и адрес. Исправьте выделенные ошибки перед отправкой.</p>
     {children}
   </section>;
 }

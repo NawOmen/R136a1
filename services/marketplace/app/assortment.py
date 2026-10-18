@@ -1,7 +1,7 @@
 """Synthetic local fixture catalogue. A unit is one named piece or sealed package.
 
 No automatic conversion from package counts to metres, kilograms or square metres.
-Source/provenance and legal limitations are documented in docs/synthetic-assortment.md.
+Source/provenance and legal limitations are documented in README.md.
 """
 # key, business family, category, subcategory, name, attributes, price, MOQ, stock, lead days
 ASSORTMENT = [

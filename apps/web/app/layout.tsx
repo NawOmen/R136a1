@@ -5,6 +5,8 @@ import "./design.css";
 import localFont from "next/font/local";
 import Link from "next/link";
 import { AccountDrawer } from "./components/AccountDrawer";
+import { WorkflowGuide } from "./components/WorkflowGuide";
+import { RussianValidation } from "./components/RussianValidation";
 import { SiteNavigation } from "./components/SiteNavigation";
 import { LiquidAtmosphere } from "./components/LiquidAtmosphere";
 import { PageSurface } from "./components/PageSurface";
@@ -14,7 +16,7 @@ const manrope = localFont({ src: "./fonts/Manrope-variable.ttf", display: "swap"
 
 export const metadata: Metadata = {
   title: "ПоРукам",
-  description: "B2B-маркетплейс коалиций покупателей и производителей",
+  description: "Маркетплейс для бизнеса коалиций покупателей и производителей",
 };
 
 export default function RootLayout({ children }: Readonly<{ children: ReactNode }>) {
@@ -23,6 +25,7 @@ export default function RootLayout({ children }: Readonly<{ children: ReactNode 
       <head><script dangerouslySetInnerHTML={{ __html: 'try{document.documentElement.dataset.theme=localStorage.getItem("porukam-theme")==="dark"?"dark":"light"}catch{}' }} /></head>
       <body className={manrope.variable}>
         <LiquidAtmosphere />
+        <RussianValidation />
         <a className="skip-link" href="#main-content">К содержимому</a>
         <header className="site-header">
           <div className="container site-header__inner">
@@ -34,7 +37,7 @@ export default function RootLayout({ children }: Readonly<{ children: ReactNode 
             <AccountDrawer />
           </div>
         </header>
-        <main id="main-content" tabIndex={-1} className="container main"><PageSurface>{children}</PageSurface></main>
+        <main id="main-content" tabIndex={-1} className="container main"><PageSurface><WorkflowGuide />{children}</PageSurface></main>
         <footer className="site-footer">
           <div className="container footer-grid">
             <Link className="site-header__logo" href="/"><img src="/icon.png" alt="" width="42" height="32" /><span>ПоРукам</span></Link>

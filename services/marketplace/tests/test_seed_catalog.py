@@ -7,7 +7,7 @@ from sqlalchemy import select, text
 import seed
 from app.assortment import ASSORTMENT
 from app.models import Document, Product, ProductPriceObservation, TrustAuditEvent
-from conftest import make_company, make_marketplace_admin, make_user
+from conftest import make_company, make_marketplace_admin, make_user, make_token
 
 
 async def seller_fixture(db, monkeypatch, *, verified=True, admin=True):
@@ -73,3 +73,62 @@ async def test_seed_requires_explicit_synthetic_flag(monkeypatch):
     monkeypatch.delenv("ENABLE_DEMO_SEED", raising=False)
     with pytest.raises(RuntimeError, match="ENABLE_DEMO_SEED=true"):
         await seed.seed()
+
+
+async def test_seeded_capability_scopes_are_readable_and_stable(client, db_session, session_factory, monkeypatch):
+    company = await seller_fixture(db_session, monkeypatch)
+    monkeypatch.setattr(seed, "SessionLocal", session_factory)
+    await seed.seed()
+    user = (await db_session.execute(text("SELECT id FROM auth.users WHERE email='seller@demo.ru'"))).scalar_one()
+    headers = {"Authorization": f"Bearer {make_token(user)}"}
+    for _ in range(2):
+        private = await client.get(f"/api/v3/companies/{company}/capability-passport", headers=headers)
+        public = await client.get(f"/api/v3/producers/{company}")
+        assert private.status_code == 200, private.text
+        assert public.status_code == 200, public.text
+        scopes = private.json()["details"]["category_scopes"]
+        assert len(scopes) == 1 + len(ASSORTMENT)
+        assert public.json()["capability_details"]["category_scopes"] == scopes
+        await seed.seed()
+
+
+def test_capability_scopes_remain_bounded():
+    from app.schemas import CapabilityDetails
+    from pydantic import ValidationError
+    scope = {"category_id": "construction.fasteners", "unit": "шт"}
+    assert len(CapabilityDetails(category_scopes=[scope] * 128).category_scopes) == 128
+    with pytest.raises(ValidationError):
+        CapabilityDetails(category_scopes=[scope] * 129)
+
+
+async def test_seeded_seller_feed_includes_moscow_but_not_outside_district(client, db_session, session_factory, monkeypatch):
+    from datetime import date, timedelta
+    from app.models import DeliveryAddress
+    company = await seller_fixture(db_session, monkeypatch)
+    monkeypatch.setattr(seed, "SessionLocal", session_factory)
+    await seed.seed()
+    seller = (await db_session.execute(text("SELECT id FROM auth.users WHERE email='seller@demo.ru'"))).scalar_one()
+    buyer = await make_user(db_session)
+    buyer_company = await make_company(db_session, buyer, can_buy=True, can_sell=False)
+    buyer_headers = {"Authorization": f"Bearer {make_token(buyer)}"}
+    ids = []
+    for region in ("г. Москва", "Свердловская область"):
+        address = DeliveryAddress(company_id=buyer_company, address="ул. Синтетическая, д. 1", city="Синтетический город", region=region)
+        db_session.add(address)
+        await db_session.commit()
+        created = await client.post("/api/v3/needs", headers=buyer_headers, json={
+            "company_id": str(buyer_company), "category": "Строительство", "subcategory": "Крепёж",
+            "characteristics": {"unit": "шт", "thread": "М8"}, "volume_units": 200,
+            "budget_rub": "5000", "deadline_date": str(date.today() + timedelta(days=30)),
+            "delivery_address_id": str(address.id), "visibility": "open_anonymized",
+        })
+        assert created.status_code == 201, created.text
+        need_id = created.json()["id"]
+        published = await client.post(f"/api/v3/needs/{need_id}/publish", headers=buyer_headers)
+        assert published.status_code == 200, published.text
+        ids.append(need_id)
+    feed = await client.get(f"/api/v3/needs?seller_company_id={company}", headers={"Authorization": f"Bearer {make_token(seller)}"})
+    assert feed.status_code == 200, feed.text
+    visible = {item["id"] for item in feed.json()}
+    assert ids[0] in visible
+    assert ids[1] not in visible

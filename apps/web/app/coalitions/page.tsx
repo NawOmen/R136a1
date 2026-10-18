@@ -1,4 +1,6 @@
 "use client";
+import { russianMessage } from "../lib/russianMessages";
+import { russianLabel } from "../lib/presentation";
 import CommercialEstimate from "../components/CommercialEstimate";
 
 import Link from "next/link";
@@ -32,7 +34,7 @@ export default function CoalitionsPage() {
       .getCoalitions(token)
       .then(setItems)
       .catch((err: unknown) =>
-        setError(err instanceof ApiError ? err.message : "Не удалось загрузить коалиции."),
+        setError(err instanceof ApiError ? russianMessage(err.message) : "Не удалось загрузить коалиции."),
       )
       .finally(() => setLoading(false));
   }, []);
@@ -41,13 +43,13 @@ export default function CoalitionsPage() {
     const token=getToken();if(!token)return;
     setWorkingId(coalition.id);setError(null);
     try {const offers=await marketplace.getOffers(token,needId);setBaselineChoices(current=>({...current,[coalition.id]:offers}));}
-    catch(err){setError(err instanceof Error?err.message:'Не удалось загрузить КП');}finally{setWorkingId(null);}
+    catch(err){setError(err instanceof Error?russianMessage(err.message):'Не удалось загрузить КП');}finally{setWorkingId(null);}
   }
   async function chooseBaseline(coalition:Coalition,companyId:string) {
     const token=getToken();if(!token)return;
     setWorkingId(coalition.id);setError(null);
     try {const updated=await marketplace.chooseBaseline(token,coalition.id,{company_id:companyId,offer_id:baselineSelection[coalition.id]||null,expected_revision:coalition.version});setItems(current=>current.map(item=>item.id===updated.id?updated:item));}
-    catch(err){setError(err instanceof Error?err.message:'Не удалось выбрать альтернативу');}finally{setWorkingId(null);}
+    catch(err){setError(err instanceof Error?russianMessage(err.message):'Не удалось выбрать альтернативу');}finally{setWorkingId(null);}
   }
 
   async function decide(coalition: Coalition, companyId: string, decision: "approved" | "rejected") {
@@ -72,7 +74,7 @@ export default function CoalitionsPage() {
       const updated = await marketplace.decideCoalition(token, coalition.id, companyId, decision, coalition.version, requestKey);
       setItems((current) => current.map((item) => (item.id === updated.id ? updated : item)));
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : "Не удалось сохранить решение.");
+      setError(err instanceof ApiError ? russianMessage(err.message) : "Не удалось сохранить решение.");
     } finally {
       setWorkingId(null);
     }
@@ -91,7 +93,7 @@ export default function CoalitionsPage() {
           <h1 className="page-title">Объединённые партии</h1>
           <p className="subtitle">Отдельные условия и подтверждения каждого участника</p>
         </div>
-        <Link href="/dashboard" className="btn btn-secondary btn-sm">На главную</Link>
+        <Link href="/dashboard" className="btn btn-secondary btn-sm">В личный кабинет</Link>
       </div>
       {error && <div className="alert alert-error">{error}</div>}
       {items.length === 0 ? (
@@ -107,11 +109,11 @@ export default function CoalitionsPage() {
                 <div className="company-row">
                   <h2>{coalition.category}</h2>
                   <span className={`badge badge-${coalition.status}`}>
-                    {STATUS_LABELS[coalition.status] ?? coalition.status}
+                    {STATUS_LABELS[coalition.status] ?? russianLabel(coalition.status, "Статус уточняется")}
                   </span>
                 </div>
                 <p>
-                  Общая партия: {formatUnits(coalition.combined_volume_units, coalition.unit)} · MOQ: {coalition.target_moq_units ? formatUnits(coalition.target_moq_units, coalition.unit) : "—"} · Версия условий: {coalition.version}
+                  Общая партия: {formatUnits(coalition.combined_volume_units, coalition.unit)} · минимальный заказ: {coalition.target_moq_units ? formatUnits(coalition.target_moq_units, coalition.unit) : "—"} · Версия условий: {coalition.version}
                 </p>
                 <ul>{coalition.explanation.map((reason) => <li key={reason}>{reason}</li>)}</ul>
                 {ownMember && (

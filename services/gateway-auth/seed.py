@@ -1,7 +1,7 @@
 """Explicit, repeatable synthetic accounts for local development.
 
 Passwords are supplied by the operator. Existing passwords and memberships are
-never overwritten. See docs/synthetic-assortment.md for data provenance.
+never overwritten. See README.md for data provenance.
 """
 import asyncio
 import os

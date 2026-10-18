@@ -1,5 +1,6 @@
 "use client";
 
+import { russianMessage } from "../lib/russianMessages";
 import { FormEvent, useEffect, useRef, useState } from "react";
 import { getToken } from "../lib/api";
 import { DealExecution, ExecutionKind, formatRub, marketplace } from "../lib/marketplace";
@@ -32,7 +33,7 @@ export default function DealExecutionPanel({ dealId, companyId, isBuyer, canMana
     if (busy) return;
     setBusy(true); setError(null); setNotice("");
     try { await action(); setNotice(success); await reload(); }
-    catch (e) { setError(e instanceof Error ? e.message : "Операция не выполнена. Повторите запрос."); }
+    catch (e) { setError(e instanceof Error ? russianMessage(e.message) : "Операция не выполнена. Повторите запрос."); }
     finally { setBusy(false); }
   }
   function submit(event: FormEvent) {

@@ -1,3 +1,4 @@
+import { russianFetch, russianMessage, validationMessage } from "./russianMessages";
 // Минимальный клиент gateway-auth. Все запросы — JSON,
 // аутентификация — JWT Bearer, токен хранится в localStorage ("token").
 
@@ -5,6 +6,7 @@ import { serviceUrl } from "./serviceUrl";
 const apiBaseUrl = () => serviceUrl(process.env.NEXT_PUBLIC_API_URL, 8001);
 const TOKEN_KEY = "token";
 export const AUTH_CHANGED_EVENT = "porukam-auth-changed";
+export const WORKSPACE_CHANGED_EVENT = "porukam:workspace-changed";
 
 // ---------- Типы домена ----------
 
@@ -74,6 +76,10 @@ export interface MeResponse {
 // ---------- Входные данные ----------
 
 export interface RegisterInput {
+  rules_version: "rules-1";
+  privacy_version: "privacy-1";
+  rules_accepted: true;
+  privacy_acknowledged: true;
   last_name: string;
   first_name: string;
   middle_name?: string;
@@ -117,7 +123,7 @@ export class ApiError extends Error {
   readonly status: number;
 
   constructor(message: string, status: number) {
-    super(message);
+    super(russianMessage(message));
     this.name = "ApiError";
     this.status = status;
   }
@@ -129,7 +135,7 @@ const FIELD_LABELS: Record<string, string> = {
   last_name: "Фамилия",
   first_name: "Имя",
   middle_name: "Отчество",
-  email: "Email",
+  email: "Электронная почта",
   password: "Пароль",
   phone: "Телефон",
   full_name: "Название",
@@ -142,33 +148,8 @@ const FIELD_LABELS: Record<string, string> = {
   legal_address: "Юридический адрес",
 };
 
-interface ValidationErrorItem {
-  loc?: unknown[];
-  msg?: string;
-  ctx?: { min_length?: number };
-}
-
-function describeValidationError(item: ValidationErrorItem): string {
-  const loc = Array.isArray(item.loc) ? item.loc : [];
-  const field = String(loc[loc.length - 1] ?? "");
-  const label = FIELD_LABELS[field] ?? field;
-  const msg = item.msg ?? "";
-
-  if (msg.toLowerCase().includes("at least")) {
-    const min = item.ctx?.min_length;
-    return min ? `«${label}» должно быть не короче ${min} символов` : `«${label}» слишком короткое`;
-  }
-  if (msg.toLowerCase().includes("valid email")) {
-    return "Введите корректный email";
-  }
-  if (msg.toLowerCase().includes("string type")) {
-    return `«${label}» должно быть строкой`;
-  }
-  if (label) {
-    return `«${label}»: ${msg}`;
-  }
-  return msg;
-}
+interface ValidationErrorItem { loc?: unknown[]; msg?: string; type?: string; ctx?: Record<string, unknown> }
+function describeValidationError(item: ValidationErrorItem): string { return validationMessage(item, FIELD_LABELS); }
 
 // ---------- Работа с токеном ----------
 
@@ -187,9 +168,9 @@ export function clearToken(): void {
   window.dispatchEvent(new Event(AUTH_CHANGED_EVENT));
 }
 
-// При истёкшем/недействительном токене (401) сбрасываем токен и отправляем на вход.
-export function handleUnauthorized(): void {
-  if (typeof window === "undefined") return;
+// A late response for a revoked token must not clear its newer replacement.
+export function handleUnauthorized(requestToken: string | null | undefined): void {
+  if (typeof window === "undefined" || !requestToken || getToken() !== requestToken) return;
   clearToken();
   if (window.location.pathname !== "/login") {
     window.location.replace("/login");
@@ -207,21 +188,21 @@ async function request<T>(path: string, options: RequestOptions = {}): Promise<T
   if (init.body !== undefined) headers.set("Content-Type", "application/json");
   if (token) headers.set("Authorization", `Bearer ${token}`);
 
-  const response = await fetch(`${apiBaseUrl()}${path}`, { ...init, headers });
+  const response = await russianFetch(`${apiBaseUrl()}${path}`, { ...init, headers });
 
   if (!response.ok) {
     if (
       response.status === 401 &&
       path !== "/api/v1/auth/login" &&
-      path !== "/api/v1/auth/register"
+      path !== "/api/v1/auth/register" && path !== "/api/v2/auth/register"
     ) {
-      handleUnauthorized();
+      handleUnauthorized(token);
     }
     let message = `Ошибка запроса: ${response.status}`;
     try {
       const body = (await response.json()) as { detail?: unknown };
       if (typeof body.detail === "string" && body.detail) {
-        message = body.detail;
+        message = russianMessage(body.detail, message);
       } else if (Array.isArray(body.detail)) {
         message = body.detail.map((item) => describeValidationError(item as ValidationErrorItem)).join("; ");
       }
@@ -238,15 +219,25 @@ async function request<T>(path: string, options: RequestOptions = {}): Promise<T
 // ---------- Эндпоинты ----------
 
 export const api = {
+  logout(token: string): Promise<void> {return request("/api/v2/auth/logout", {token, method:"POST"});},
+  getUserAgreements(token: string, userId: string): Promise<{document: string; version: string; accepted_at: string}[]> {
+    return request(`/api/v1/admin/users/${userId}/agreements`, {token});
+  },
+  changePassword(token: string, current_password: string, password: string): Promise<AuthResponse> {
+    return request("/api/v2/auth/password/change", {token, method: "POST", body: JSON.stringify({current_password, password})});
+  },
+  endOtherSessions(token: string): Promise<AuthResponse> { return request("/api/v2/auth/sessions/end", {token, method: "POST"}); },
+  requestRecovery(email: string): Promise<{message: string}> { return request("/api/v2/auth/password/recovery", {method: "POST", body: JSON.stringify({email})}); },
+  resetPassword(code: string, password: string): Promise<{message: string}> { return request("/api/v2/auth/password/reset", {method: "POST", body: JSON.stringify({code, password})}); },
   appointCategoryEditor(token: string, userId: string, enabled: boolean, reason: string): Promise<User> {
     return request(`/api/v1/admin/users/${userId}/category-editor`, { token, method: "PUT", body: JSON.stringify({ enabled, reason }) });
   },
-  getSecurityEvents(token: string, alertsOnly = false): Promise<{event: string; created_at: string; correlation_id: string}[]> {
+  getSecurityEvents(token: string, alertsOnly = false): Promise<{event: string; created_at: string; correlation_id: string; actor_id?: string; target_id?: string; reason?: string}[]> {
     return request("/api/v1/admin/security-events" + (alertsOnly ? "?alerts_only=true" : ""), {token});
   },
   // 1. Регистрация
   register(input: RegisterInput): Promise<AuthResponse> {
-    return request("/api/v1/auth/register", { method: "POST", body: JSON.stringify(input) });
+    return request("/api/v2/auth/register", { method: "POST", body: JSON.stringify(input) });
   },
 
   // 2. Вход

@@ -1,16 +1,21 @@
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.exc import IntegrityError
 
 from ..database import get_db
 from ..deps import get_current_user
-from ..models import Company, CompanyMember, User
+from ..models import AccountAgreement, Company, CompanyMember, User
+from ..config import settings
 from ..schemas import (
     CompanyWithMembership,
     LoginIn,
     MeOut,
     MembershipOut,
     RegisterIn,
+    RegisterV2In,
+    RULES_VERSION,
+    PRIVACY_VERSION,
     TokenResponse,
     UserOut,
 )
@@ -18,11 +23,18 @@ from ..security import create_access_token, hash_password, verify_password
 from ..security_events import audit, throttle
 
 router = APIRouter(prefix="/auth", tags=["auth"])
+v2_router = APIRouter(prefix="/auth", tags=["auth"])
 _dummy_hash = hash_password("not-an-account-password")
 
 
 @router.post("/register", response_model=TokenResponse, status_code=status.HTTP_201_CREATED)
 async def register(data: RegisterIn, request: Request, db: AsyncSession = Depends(get_db)):
+    if not settings.legacy_registration_enabled:
+        raise HTTPException(410, "Откройте актуальную страницу регистрации и подтвердите правила работы.")
+    return await register_account(data, request, db)
+
+
+async def register_account(data: RegisterIn, request: Request, db: AsyncSession, *, acknowledged: bool = False):
     await throttle(db, request, str(data.email), "register")
     existing = await db.execute(select(User).where(User.email == data.email))
     if existing.scalar_one_or_none() is not None:
@@ -38,11 +50,24 @@ async def register(data: RegisterIn, request: Request, db: AsyncSession = Depend
         account_status="active",
     )
     db.add(user)
+    try:
+        await db.flush()
+    except IntegrityError:
+        await db.rollback()
+        raise HTTPException(409, "Email уже занят")
+    if acknowledged:
+        db.add_all([AccountAgreement(user_id=user.id, document="rules", version=RULES_VERSION),
+                    AccountAgreement(user_id=user.id, document="privacy", version=PRIVACY_VERSION)])
     await db.commit()
     await db.refresh(user)
 
-    token = create_access_token(user.id)
+    token = create_access_token(user.id, user.token_version)
     return TokenResponse(user=UserOut.model_validate(user), access_token=token)
+
+
+@v2_router.post("/register", response_model=TokenResponse, status_code=201)
+async def register_v2(data: RegisterV2In, request: Request, db: AsyncSession = Depends(get_db)):
+    return await register_account(data, request, db, acknowledged=True)
 
 
 @router.post("/login", response_model=TokenResponse)
@@ -62,7 +87,7 @@ async def login(data: LoginIn, request: Request, db: AsyncSession = Depends(get_
 
     await audit(db, request, "auth.login_success", actor=user.id)
     await db.commit()
-    token = create_access_token(user.id)
+    token = create_access_token(user.id, user.token_version)
     return TokenResponse(user=UserOut.model_validate(user), access_token=token)
 
 

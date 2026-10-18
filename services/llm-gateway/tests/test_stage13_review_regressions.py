@@ -198,3 +198,12 @@ async def test_unprepared_local_whisper_is_service_unavailable(client, token, tm
         data={"request_text": "Нужно 5000 стаканов в Москву"},
         files={"files": ("synthetic.wav", real_wav(), "audio/wav")})
     assert response.status_code == 201 and response.json()["state"] == "needs_clarification"
+
+
+async def test_password_session_revocation_reaches_agent_gateway(client, token, user_id, db_session):
+    headers = {'Authorization': f'Bearer {token}'}
+    response = await client.get('/api/v2/agent-runs/00000000-0000-4000-8000-000000000099', headers=headers)
+    assert response.status_code != 401
+    await db_session.execute(text('UPDATE auth.users SET token_version=1 WHERE id=:id'), {'id': user_id})
+    await db_session.commit()
+    assert (await client.get('/api/v2/agent-runs/00000000-0000-4000-8000-000000000099', headers=headers)).status_code == 401

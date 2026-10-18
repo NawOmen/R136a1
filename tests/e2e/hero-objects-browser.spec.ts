@@ -1,5 +1,8 @@
 import { expect, test } from "@playwright/test";
 
+// Software WebGL can spend time compiling physical glass materials on CI.
+test.setTimeout(120_000);
+
 test("first paint shows the current model even while the 3D JavaScript is delayed", async ({ browser }) => {
   for (const [path, kind] of [["/knowledge", "help"], ["/ai-procurement", "procurement"]]) {
     const context = await browser.newContext({ baseURL: String(test.info().project.use.baseURL), viewport: { width: 1440, height: 946 } });

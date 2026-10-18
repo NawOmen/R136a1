@@ -1,5 +1,6 @@
 "use client";
 
+import { russianMessage } from "../lib/russianMessages";
 import Link from "next/link";
 import { FormEvent, useState } from "react";
 import { agents } from "../lib/agents";
@@ -33,7 +34,7 @@ export default function KnowledgePage() {
       const result=await agents.askPlatform(token,question);
       setAnswer(result.answer);
       setLinks((result.links ?? []).filter((link) => ["/needs/new", "/dashboard", "/deals", "/support"].includes(link)));
-    }catch(e){setError(e instanceof Error?e.message:"Помощник недоступен. Проверьте соединение и повторите.");}
+    }catch(e){setError(e instanceof Error?russianMessage(e.message):"Помощник недоступен. Проверьте соединение и повторите.");}
     finally{setBusy(false);}
   }
 
@@ -50,7 +51,7 @@ export default function KnowledgePage() {
       <section className="help-questions" aria-labelledby="faq-heading"><h2 id="faq-heading">Частые вопросы</h2><div className="guidance-disclosures">{FAQ.map(([title,body]) => <details className="guidance-disclosure" key={title}><summary><span>{title}</span><Icon name="arrow" size={19} /></summary><div className="guidance-disclosure__body"><p>{body}</p></div></details>)}</div></section>
       <aside className="help-assistant">
         <h2><Icon name="spark" size={25} />Спросить помощника</h2>
-        <p className="hint">Отвечает по проверенной справке со ссылкой на источник. Не принимает финансовых решений. Вопрос не считается инструкцией для системы.</p>
+        <p className="hint">Отвечает по проверенной справке со ссылкой на источник. Не принимает финансовых решений. Не указывайте пароли и персональные данные.</p>
         <form onSubmit={ask}><div className="field"><label htmlFor="assistant-question">Ваш вопрос</label><textarea id="assistant-question" disabled={busy} maxLength={1000} minLength={3} required value={question} onChange={(e)=>setQuestion(e.target.value)} placeholder="Например, как согласовать условия сделки?" /></div><button className="btn btn-primary" disabled={busy}>{busy?"Думаю…":"Спросить"}<Icon name="arrow" size={18} /></button></form>
         {error && <div className="alert alert-error" role="alert">{error} <button type="button" className="btn btn-secondary btn-sm" onClick={()=>setError(null)}>Понятно</button></div>}
         {answer && <div className="assistant-answer" aria-live="polite"><p>{answer}</p><p className="hint">Источник: справка ПоРукам.</p>{links.length>0 && <ul>{links.map(link => <li key={link}><Link href={link}>{({"/needs/new":"Создать потребность","/dashboard":"Компании и права","/deals":"Согласование и исполнение","/support":"Поддержка"} as Record<string,string>)[link]}</Link></li>)}</ul>}</div>}

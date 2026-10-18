@@ -3,6 +3,7 @@
 // Календарь мощностей (GET/PUT /companies/{id}/capacity).
 // Таблица на ближайшие 30 дней для выбранного ресурса и единицы измерения.
 
+import { russianMessage } from "../../lib/russianMessages";
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { getToken } from "../../lib/api";
@@ -50,7 +51,7 @@ export default function SellerCapacityPage() {
   useEffect(() => {
     let active=true;
     marketplace.getCategoryRegistry().then(data => {if(active)setLeafOptions(data.groups.flatMap(group=>group.leaves.filter(leaf=>leaf.admission_state!=="unsupported").map(leaf=>({id:leaf.id,label:group.label+" / "+leaf.label}))));})
-      .catch(err=>{if(active)setError(err instanceof Error?err.message:"Не удалось загрузить категории.");});
+      .catch(err=>{if(active)setError(err instanceof Error?russianMessage(err.message):"Не удалось загрузить категории.");});
     return ()=>{active=false;};
   }, []);
   const [loaded, setLoaded] = useState(false);
@@ -72,7 +73,7 @@ export default function SellerCapacityPage() {
       })
       .catch((err: unknown) => {
         if (!cancelled) {
-          setError(err instanceof ApiError ? err.message : "Не удалось загрузить мощности.");
+          setError(err instanceof ApiError ? russianMessage(err.message) : "Не удалось загрузить мощности.");
         }
       })
       .finally(() => {
@@ -115,7 +116,7 @@ export default function SellerCapacityPage() {
       setAllEntries(updated);
       setSaved(true);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Не удалось сохранить мощности.");
+      setError(err instanceof Error ? russianMessage(err.message) : "Не удалось сохранить мощности.");
     } finally {
       setSaving(false);
     }
@@ -147,7 +148,7 @@ export default function SellerCapacityPage() {
             Создать компанию
           </Link>
           <Link href="/dashboard" className="btn btn-secondary">
-            На главную
+            В личный кабинет
           </Link>
         </div>
       </div>
@@ -159,7 +160,7 @@ export default function SellerCapacityPage() {
       <div className="company-row">
         <h1 className="page-title">Мощности</h1>
         <Link href="/dashboard" className="btn btn-secondary btn-sm">
-          На главную
+          В личный кабинет
         </Link>
       </div>
       <p className="subtitle">Мощность производства по категориям и единицам измерения (ближайшие {DAYS_COUNT} дней)</p>

@@ -4,6 +4,9 @@
 // категория, характеристики (пары «ключ/значение»), объём, бюджет, срок,
 // адрес доставки (+ добавление адреса через prompt), видимость, файлы.
 
+import { canonicalCharacteristicKey } from "../../lib/categoryProfiles";
+import { russianMessage } from "../../lib/russianMessages";
+import { russianLabel, displayValue, fieldName, systemText } from "../../lib/presentation";
 import RequirementSource from "../../components/RequirementSource";
 import { Icon } from "../../components/Icon";
 import { FilePicker } from "../../components/FilePicker";
@@ -31,7 +34,7 @@ import {
 } from "../../lib/marketplace";
 import { useCompanySelector } from "../../lib/useMe";
 import CharacteristicSuggestions from "../../components/CharacteristicSuggestions";
-import { characteristicField } from "../../lib/categoryProfiles";
+import { characteristicField, countUserCharacteristics, requiredCharacteristicKeys, resolveAgentCategory } from "../../lib/categoryProfiles";
 import { CapabilityDescription } from "../../components/CapabilityDescription";
 import { ValidatedFields } from "../../components/ValidatedFields";
 
@@ -45,6 +48,8 @@ function newRow(key = "", value = ""): CharacteristicRow {
 }
 
 export default function NewNeedPage() {
+  const manualRef = useRef<HTMLDetailsElement>(null);
+  const [manualExpanded, setManualExpanded] = useState(false);
   const [quantityApproved, setQuantityApproved] = useState(false);
   const router = useRouter();
   const {
@@ -104,7 +109,7 @@ export default function NewNeedPage() {
     setAnalyzing(false); setSubmitting(false); setTranscribing(false); setRecording(false);
     void draftFiles(draftKey).then(saved => { if (!cancelled) { setFiles(saved); setLoadedFilesKey(draftKey); } })
       .catch(() => { if (!cancelled) { setLoadedFilesKey(draftKey); setDraftNotice("Не удалось восстановить файлы в браузере. Выберите их повторно."); } });
-    setAgentRun(null); setAnswers({}); setFiles([]); setSavedNeed(null);
+    setAgentRun(null); setAnswers({}); setFiles([]); setSavedNeed(null); setManualExpanded(false);
     setRequestDescription(""); setRows([newRow("unit", "шт"), newRow()]); setCategory(PRODUCT_CATEGORIES[0]); setSubcategory("");
     setVolumeUnits(""); setBudgetRub(""); setDeadlineDate(""); setDeliveryAddressId("");
     setVisibility("open_anonymized"); setDraftNotice(""); creationKey.current = crypto.randomUUID();
@@ -118,7 +123,8 @@ export default function NewNeedPage() {
             setCategory(value.category);
             if (PRODUCT_CATEGORY_TREE[value.category].includes(value.subcategory)) setSubcategory(value.subcategory);
           }
-          if (Array.isArray(value.rows) && value.rows.length <= 25 && value.rows.every((r: CharacteristicRow) => typeof r.key === "string" && typeof r.value === "string")) setRows(value.rows);
+          if (Array.isArray(value.rows) && value.rows.length <= 100 && value.rows.every((r: CharacteristicRow) => typeof r.key === "string" && typeof r.value === "string")) setRows(value.rows);
+          setManualExpanded(Boolean(value.volume || value.savedNeed));
           setVolumeUnits(String(value.volume ?? "")); setBudgetRub(String(value.budget ?? ""));
           setDeadlineDate(String(value.deadline ?? "")); setDeliveryAddressId(String(value.address ?? ""));
           if (value.visibility === "open_anonymized" || value.visibility === "selected_producers" || value.visibility === "closed") setVisibility(value.visibility);
@@ -165,7 +171,7 @@ export default function NewNeedPage() {
       })
       .catch((err: unknown) => {
         if (!cancelled) {
-          setError(err instanceof MarketplaceError ? err.message : "Не удалось загрузить адреса доставки.");
+          setError(err instanceof MarketplaceError ? russianMessage(err.message) : "Не удалось загрузить адреса доставки.");
         }
       });
     return () => {
@@ -232,7 +238,7 @@ export default function NewNeedPage() {
       const added = updated.find((item) => item.address === address.trim());
       setDeliveryAddressId(added?.id ?? updated[0]?.id ?? "");
     } catch (err) {
-      setError(err instanceof MarketplaceError ? err.message : "Не удалось добавить адрес.");
+      setError(err instanceof MarketplaceError ? russianMessage(err.message) : "Не удалось добавить адрес.");
     } finally {
       if (activeScope.current === scope) setBusyAddress(false);
     }
@@ -244,15 +250,15 @@ export default function NewNeedPage() {
     if (!token) return;
     setTrial(null); setTrialError(null);
     agents.trial(token).then((value) => { if (!cancelled) { setTrial(value); setTrialError(null); } })
-      .catch((err: unknown) => { if (!cancelled) setTrialError(err instanceof Error ? err.message : "Не удалось проверить пробный доступ."); });
+      .catch((err: unknown) => { if (!cancelled) setTrialError(err instanceof Error ? russianMessage(err.message) : "Не удалось проверить пробный доступ."); });
     return () => { cancelled = true; };
   }, [user?.id, analyzing]);
 
   function validate(): string | null {
     if (agentRun && agentRun.state !== "confirmed_by_user") return "Разрешите конфликты и подтвердите требования анализа или явно выберите ручное заполнение.";
     if (!PRODUCT_CATEGORY_TREE[category]?.includes(subcategory)) return "Выберите подкатегорию товара для проверки требований.";
-    if (rows.length < 1 || rows.length > 25) {
-      return "Добавьте от 1 до 25 характеристик.";
+    if (rows.length < 1 || countUserCharacteristics(rows, category, subcategory) > 25) {
+      return "Можно добавить до 25 пользовательских характеристик сверх системных и обязательных.";
     }
     if (rows.some((row) => !row.key.trim() || !row.value.trim())) {
       return "Заполните ключ и значение каждой характеристики.";
@@ -302,7 +308,7 @@ export default function NewNeedPage() {
       setAnswers({});
     } catch (err) {
       if (activeScope.current !== scope) return;
-      setError(`${err instanceof MarketplaceError ? err.message : "Не удалось разобрать материалы."} Текст и введённые поля сохранены в этой вкладке. Заполните карточку ниже вручную или повторите анализ.`);
+      setError(`${err instanceof MarketplaceError ? russianMessage(err.message) : "Не удалось разобрать материалы."} Текст и введённые поля сохранены в этой вкладке. Заполните карточку ниже вручную или повторите анализ.`);
     } finally {
       if (activeScope.current === scope) setAnalyzing(false);
     }
@@ -332,10 +338,18 @@ export default function NewNeedPage() {
       setAnswers({});
     } catch (err) {
       if (activeScope.current !== scope) return;
-      setError(err instanceof MarketplaceError ? err.message : "Не удалось сохранить уточнения.");
+      setError(err instanceof MarketplaceError ? russianMessage(err.message) : "Не удалось сохранить уточнения.");
     } finally {
       if (activeScope.current === scope) setAnalyzing(false);
     }
+  }
+
+  function openManual() {
+    setManualExpanded(true);
+    requestAnimationFrame(() => {
+      manualRef.current?.scrollIntoView({ block: "start", behavior: "auto" });
+      manualRef.current?.querySelector("summary")?.focus();
+    });
   }
 
   async function applyAgentResult() {
@@ -351,7 +365,7 @@ export default function NewNeedPage() {
       setAgentRun(confirmedRun);
     } catch (err) {
       if (activeScope.current !== scope) return;
-      setError(err instanceof MarketplaceError ? err.message : "Не удалось подтвердить требования.");
+      setError(err instanceof MarketplaceError ? russianMessage(err.message) : "Не удалось подтвердить требования.");
       setAnalyzing(false);
       return;
     }
@@ -361,13 +375,21 @@ export default function NewNeedPage() {
         .filter((property) => property.value !== null)
         .map((property) => [property.key, property.value] as const),
     );
-    const normalizedCategory = result.category.toLocaleLowerCase("ru");
-    const detectedCategory = PRODUCT_CATEGORIES.find((item) =>
-      item.toLocaleLowerCase("ru") === normalizedCategory || PRODUCT_CATEGORY_TREE[item].some((subcategory) => subcategory.toLocaleLowerCase("ru") === normalizedCategory),
-    );
-    setCategory(detectedCategory ?? "Другое");
-    const detectedSubcategory = detectedCategory && PRODUCT_CATEGORY_TREE[detectedCategory].find((item) => item.toLocaleLowerCase("ru") === normalizedCategory);
-    setSubcategory(detectedSubcategory || "");
+    const detected = resolveAgentCategory(result.category, String(values.get("product_type") ?? ""));
+    if (detected) {
+      setCategory(detected.category);
+      setSubcategory(detected.subcategory);
+    } else {
+      // Preserve the buyer's selection; unknown model text is not a decision.
+      setDraftNotice("ИИ не определил категорию из каталога. Выберите её самостоятельно; введённые поля сохранены.");
+    }
+    if (values.has("delivery_city")) {
+      const city = String(values.get("delivery_city")).trim().toLocaleLowerCase("ru");
+      const matchingAddresses = addresses.filter(address => address.city.trim().toLocaleLowerCase("ru") === city);
+      // Only an existing unique address can be suggested; city alone is not a street.
+      setDeliveryAddressId(matchingAddresses.length === 1 ? matchingAddresses[0].id : "");
+      if (matchingAddresses.length !== 1) setDraftNotice("Проверьте адрес доставки: город распознан, но точный адрес нужно выбрать или добавить.");
+    }
     if (values.has("quantity_units")) setVolumeUnits(String(values.get("quantity_units")));
     if (values.has("budget_rub")) setBudgetRub(String(values.get("budget_rub")));
     if (values.has("lead_time_days")) {
@@ -389,6 +411,7 @@ export default function NewNeedPage() {
       );
     if (extractedRows.length > 0) setRows(extractedRows);
     setError(null);
+    openManual();
     setAnalyzing(false);
   }
 
@@ -431,7 +454,15 @@ export default function NewNeedPage() {
         setError("Черновик уже создан. Откройте его по ссылке ниже: повторная отправка изменённых полей не должна создать второй заказ.");
         return;
       }
-      const selectedFiles = files.map(file => `${file.name}:${file.size}:${file.lastModified}`);
+      const omittedHashes = new Set(agentRun?.result.omitted_source_hashes ?? []);
+      const acceptedFiles: File[] = [];
+      for (const file of files) {
+        const digest = await crypto.subtle.digest("SHA-256", await file.arrayBuffer());
+        const hash = Array.from(new Uint8Array(digest), value => value.toString(16).padStart(2, "0")).join("");
+        if (!omittedHashes.has(hash)) acceptedFiles.push(file);
+      }
+      if (activeScope.current !== scope) return;
+      const selectedFiles = acceptedFiles.map(file => `${file.name}:${file.size}:${file.lastModified}`);
       if (savedNeed?.expectedFiles.some(signature => !savedNeed.uploaded.includes(signature) && !selectedFiles.includes(signature))) {
         setError("Для продолжения выберите ещё не загруженные файлы повторно. Публикация без исходных вложений остановлена.");
         return;
@@ -441,7 +472,7 @@ export default function NewNeedPage() {
       let progress = savedNeed ?? { id: need.id, payload: fingerprint, uploaded: [], expectedFiles: selectedFiles };
       setSavedNeed(progress);
       // Retry resumes the same draft. Already uploaded files are not sent twice.
-      for (const file of files) {
+      for (const file of acceptedFiles) {
         const signature = `${file.name}:${file.size}:${file.lastModified}`;
         if (progress.uploaded.includes(signature)) continue;
         await marketplace.uploadNeedFile(token, need.id, file);
@@ -458,7 +489,7 @@ export default function NewNeedPage() {
       router.push(`/needs/${need.id}`);
     } catch (err) {
       if (activeScope.current !== scope) return;
-      setError(err instanceof MarketplaceError ? err.message : "Не удалось создать потребность.");
+      setError(err instanceof MarketplaceError ? russianMessage(err.message) : "Не удалось создать потребность.");
     } finally {
       if (activeScope.current === scope) setSubmitting(false);
     }
@@ -490,7 +521,7 @@ export default function NewNeedPage() {
             Создать компанию
           </Link>
           <Link href="/dashboard" className="btn btn-secondary">
-            На главную
+            В личный кабинет
           </Link>
         </div>
       </div>
@@ -506,11 +537,11 @@ export default function NewNeedPage() {
         </Link>
       </div>
       <p className="subtitle">
-        Укажите товар, объём и условия поставки.
+        Опишите закупку. ИИ заполнит карточку, а вы проверите её перед отправкой.
       </p>
 
       {error && <div className="alert alert-error" role="alert">{error}</div>}
-      <p className="hint">Можно заполнить без ИИ. Черновик сохраняется в этой вкладке отдельно для каждой компании.</p>
+      <p className="hint">1. Опишите → 2. Проверьте → 3. Отправьте. Ввод сохраняется в этой вкладке.</p>
       {draftNotice && <p className="hint" role="status">{draftNotice}</p>}
       {savedNeed && <p className="alert alert-warning">Черновик уже создан. <Link href={`/needs/${savedNeed.id}`}>Открыть сохранённую потребность</Link>. Повторная отправка продолжит загрузку в этот черновик.</p>}
 
@@ -543,7 +574,7 @@ export default function NewNeedPage() {
         )}
 
         <section className="agent-panel" aria-labelledby="materials-heading">
-          <h2 id="materials-heading">Разобрать запрос с ИИ</h2>
+          <h2 id="materials-heading">1. Опишите закупку</h2>
           <p className="hint">
             Напишите задачу или приложите материалы. Проверьте источники, предположения и противоречия.
             Карточка изменится только после вашего подтверждения.
@@ -572,6 +603,9 @@ export default function NewNeedPage() {
                   onChange={(event) => { analysisGeneration.current += 1; setFiles(Array.from(event.target.files ?? [])); setAgentRun(null); setAnswers({}); }}
                   status={files.length > 0 ? `Выбрано файлов: ${files.length}` : "Файлы не выбраны"}
             />
+            {!!agentRun?.result.omitted_source_hashes?.length && (
+              <p className="hint" role="status">По вашему решению непрочитанные материалы не будут приложены к потребности: {agentRun.result.unreadable_sources?.filter(source => agentRun.result.omitted_source_hashes?.includes(source.content_hash)).map(source => source.name).join(", ")}. Остальные материалы сохранятся.</p>
+            )}
             {files.length > 0 && (
               <p className="hint mode-hint">
                 Восстановленные или выбранные файлы: {files.length} · {files.map((file) => file.name).join(", ")}
@@ -611,13 +645,14 @@ export default function NewNeedPage() {
 
           {trial && <p className="hint" role="status">{trial.enabled ? `Пробные сценарии: ${trial.used} из ${trial.limit} использовано, ${trial.remaining} осталось.` : "Лимит пробных сценариев отключён настройкой платформы."}</p>}
           {trialError && <p className="hint">{trialError}</p>}
-          <details className="text-details"><summary>Стоимость и лимит разбора</summary><div className="text-details__body"><p>Ручное создание бесплатно. При включённом пробном лимите доступны два сценария разбора; повторы и уточнения не расходуют новый сценарий.</p></div></details>
+          <details className="workflow-details"><summary>Лимит и сохранение данных</summary><p className="hint">Ручное создание бесплатно. Доступны два пробных разбора, если лимит включён. Повтор и уточнение не расходуют новый сценарий. Ввод хранится в этой вкладке отдельно для компании.</p></details>
+          <button type="button" className="btn btn-secondary btn-sm" onClick={openManual}>Заполнить вручную</button>
 
           {agentRun && (
             <div className="agent-result">
-              <button type="button" className="btn btn-secondary btn-sm" onClick={() => { analysisGeneration.current += 1; setAgentRun(null); setAnswers({}); }}>Продолжить заполнение вручную</button>
+              <button type="button" className="btn btn-secondary btn-sm" onClick={() => { analysisGeneration.current += 1; setAgentRun(null); setAnswers({}); openManual(); }}>Продолжить заполнение вручную</button>
               <p className="hint">Версия требований: {agentRun.revision}. Предположения и источники нужно проверить перед переносом в карточку.</p>
-              <h3>Краткий результат подбора</h3>
+              <h3>2. Проверьте результат</h3>
               <p>{agentRun.result.summary}</p>
               <h3>Восстановленные требования</h3>
               {agentRun.result.warnings.map((warning) => (
@@ -627,12 +662,12 @@ export default function NewNeedPage() {
                 {agentRun.result.properties.map((property) => (
                   <li key={property.key}>
                     <div className="company-row">
-                      <strong>{property.label}</strong>
+                      <strong>{/[а-яё]/i.test(property.label) ? property.label : russianLabel(property.key, "Дополнительная характеристика")}</strong>
                       <span className={`badge evidence-${property.status}`}>
-                        {PROPERTY_STATUS_LABELS[property.status]}
+                        {PROPERTY_STATUS_LABELS[property.status] ?? "Требуется проверка"}
                       </span>
                     </div>
-                    <div>{property.value === null ? "—" : String(property.value)}</div>
+                    <div>{property.value === null ? "—" : displayValue(property.value)}</div>
                     {property.sources.length > 0 && (
                       <details>
                         <summary>Откуда взята характеристика?</summary>
@@ -641,7 +676,7 @@ export default function NewNeedPage() {
                             onInvalidate={() => {
                               const token = getToken(); if (!token || !window.confirm("Удалить источник и отменить связанные подтверждения?")) return;
                               const scope = draftKey;
-                              void agents.invalidateSource(token, agentRun.id, source.source_id, agentRun.revision).then(run => { if (activeScope.current === scope) setAgentRun(run); }).catch(reason => { if (activeScope.current === scope) setError(reason instanceof Error ? reason.message : "Не удалось удалить источник"); });
+                              void agents.invalidateSource(token, agentRun.id, source.source_id, agentRun.revision).then(run => { if (activeScope.current === scope) setAgentRun(run); }).catch(reason => { if (activeScope.current === scope) setError(reason instanceof Error ? russianMessage(reason.message) : "Не удалось удалить источник"); });
                             }} />
                         ))}
                       </details>
@@ -666,7 +701,7 @@ export default function NewNeedPage() {
                         >
                           <option value="">— выберите —</option>
                           {question.options.map((option, index) => (
-                            <option key={index} value={String(option)}>{String(option)}</option>
+                            <option key={index} value={String(option)}>{displayValue(option)}</option>
                           ))}
                         </select>
                       ) : (
@@ -728,7 +763,7 @@ export default function NewNeedPage() {
                 <summary>Журнал обработки</summary>
                 {agentRun.tool_calls.map((call) => (
                   <p key={call.id} className="hint">
-                    {call.status === "success" ? "Выполнено" : "Ошибка"}: {call.tool_name} — {call.output_summary}
+                    {call.status === "success" ? "Выполнено" : "Ошибка"}: {russianLabel(call.tool_name, "Обработка материалов")} — {systemText(call.output_summary)}
                   </p>
                 ))}
               </details>
@@ -736,6 +771,8 @@ export default function NewNeedPage() {
           )}
         </section>
 
+        <details className="workflow-details" ref={manualRef} open={manualExpanded} onToggle={event => setManualExpanded(event.currentTarget.open)}>
+        <summary>3. Карточка запроса — проверьте и отправьте</summary>
         <ValidatedFields>
         <div className="field">
           <label htmlFor="category">
@@ -764,7 +801,13 @@ export default function NewNeedPage() {
             Характеристики<span className="req">*</span>
           </label>
           <CharacteristicSuggestions category={category} subcategory={subcategory} keys={rows.map((row) => row.key)}
-            onAdd={(key) => setRows((current) => current.length < 25 ? [...current, newRow(key)] : current)} />
+            onAdd={(key) => setRows((current) => {
+              const empty = current.findIndex(row => !row.key.trim() && !row.value.trim());
+              if (empty >= 0) return current.map((row, index) => index === empty ? newRow(key) : row);
+              const required = requiredCharacteristicKeys(category, subcategory);
+              if (countUserCharacteristics(current, category, subcategory) < 25 || required.has(key.trim().toLowerCase().replaceAll("ё", "е"))) return [...current, newRow(key)];
+              return current;
+            })} />
           {rows.map((row, index) => (
             <div key={index} className="char-row">
               <input
@@ -772,8 +815,8 @@ export default function NewNeedPage() {
                 placeholder="Характеристика (например, материал)"
                 aria-label={`Характеристика ${index + 1}: название`}
                 required
-                value={row.key === "unit" ? "Единица измерения" : row.key}
-                onChange={(event) => updateRow(index, { key: event.target.value === "Единица измерения" ? "unit" : event.target.value })}
+                value={fieldName(row.key)}
+                onChange={(event) => updateRow(index, { key: canonicalCharacteristicKey(event.target.value) })}
               />
               <input
                 type="text"
@@ -796,7 +839,7 @@ export default function NewNeedPage() {
           <button
             type="button"
             className="btn btn-secondary btn-sm"
-            disabled={rows.length >= 25}
+            disabled={countUserCharacteristics(rows, category, subcategory) >= 25}
             onClick={() => setRows((current) => [...current, newRow()])}
           >
             + Добавить характеристику
@@ -913,6 +956,7 @@ export default function NewNeedPage() {
           </Link>
         </div>
         </ValidatedFields>
+        </details>
       </form>
     </div>
   );

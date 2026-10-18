@@ -1,4 +1,6 @@
 "use client";
+import { russianMessage } from "../../lib/russianMessages";
+import { russianLabel } from "../../lib/presentation";
 import CommercialTermsFields, { emptyCommercialTerms } from "../../components/CommercialTermsFields";
 import type { CommercialTerms } from "../../lib/marketplace";
 
@@ -90,7 +92,7 @@ export default function SellerRequestsPage() {
       })
       .catch((err: unknown) => {
         if (!cancelled) {
-          setError(err instanceof ApiError ? err.message : "Не удалось загрузить запросы.");
+          setError(err instanceof ApiError ? russianMessage(err.message) : "Не удалось загрузить запросы.");
         }
       })
       .finally(() => {
@@ -137,7 +139,7 @@ export default function SellerRequestsPage() {
         setError(`Отправка заблокирована: ${preview.blockers.join("; ")}`);
       }
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : "Не удалось проверить условия.");
+      setError(err instanceof ApiError ? russianMessage(err.message) : "Не удалось проверить условия.");
     } finally {
       setSubmitting(false);
     }
@@ -161,7 +163,7 @@ export default function SellerRequestsPage() {
         setChecks((current) => { const rest = { ...current }; delete rest[need.id]; return rest; });
       }
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : "Не удалось отправить предложение.");
+      setError(err instanceof ApiError ? russianMessage(err.message) : "Не удалось отправить предложение.");
     } finally {
       setConfirming(false);
     }
@@ -186,7 +188,7 @@ export default function SellerRequestsPage() {
       setLeadTime(draft.payload.lead_time_days != null ? String(draft.payload.lead_time_days) : "");
       setDeliveryCost(draft.payload.delivery_cost_rub != null ? String(draft.payload.delivery_cost_rub) : "");
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : "Не удалось подготовить черновик.");
+      setError(err instanceof ApiError ? russianMessage(err.message) : "Не удалось подготовить черновик.");
     } finally {
       setDraftingId(null);
     }
@@ -220,7 +222,7 @@ export default function SellerRequestsPage() {
         [need.id]: `${result.reasons.join(" ")} ${result.explanation}`,
       }));
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : "Не удалось объяснить совпадение.");
+      setError(err instanceof ApiError ? russianMessage(err.message) : "Не удалось объяснить совпадение.");
     } finally {
       setExplainingId(null);
     }
@@ -252,7 +254,7 @@ export default function SellerRequestsPage() {
             Создать компанию
           </Link>
           <Link href="/dashboard" className="btn btn-secondary">
-            На главную
+            В личный кабинет
           </Link>
         </div>
       </div>
@@ -268,7 +270,7 @@ export default function SellerRequestsPage() {
   return (
     <div className="market-page">
       <header className="market-page__head">
-        <div><span className="eyebrow">Рынок спроса</span><h1>Потребности покупателей</h1><p>Реальные запросы российских компаний — предложите производство на своих условиях</p></div>
+        <div><span className="eyebrow">Рынок спроса</span><h1>Потребности покупателей</h1><p>Опубликованные запросы российских компаний — предложите производство на своих условиях</p></div>
         <Link href="/seller/opportunities" className="btn btn-secondary">Аналитика спроса</Link>
       </header>
       <div className="catalog-toolbar"><label className="catalog-search"><span aria-hidden="true">⌕</span><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Категория или характеристика" aria-label="Поиск потребностей" /></label><span className="result-count">{openNeeds.length} открытых запросов</span></div>
@@ -295,7 +297,7 @@ export default function SellerRequestsPage() {
       ) : (
         <ul className="demand-grid">
           {openNeeds.map((need) => (
-            <li key={need.id} className="demand-card">
+            <li key={need.id} className="demand-card" data-need-id={need.id}>
               <div className="demand-card__top"><span className="demand-kind">Производство</span><span className="demand-deadline">до {need.deadline_date}</span></div>
               <h2>{need.category}</h2>
               <p className="demand-description">{formatCharacteristics(need.characteristics, need.category_profile)}</p>
@@ -315,7 +317,7 @@ export default function SellerRequestsPage() {
                       <li key={field.name}>
                         <b>{field.label}:</b>{" "}
                         {field.value != null ? String(field.value) : "нужно указать"}
-                        <span className="draft-source"> источник: {field.source}</span>
+                        <span className="draft-source"> источник: {russianLabel(field.source, "Данные предложения")}</span>
                         {!field.confirmed && <span className="draft-manual"> решение человека</span>}
                         {field.note && <span className="draft-note"> {field.note}</span>}
                       </li>
@@ -371,7 +373,7 @@ export default function SellerRequestsPage() {
                   </div>
                   <div className="field">
                     <label htmlFor={`offer_moq_${need.id}`}>
-                      MOQ предложения, {itemUnit(need.characteristics)}<span className="req">*</span>
+                      минимальный заказ предложения, {itemUnit(need.characteristics)}<span className="req">*</span>
                     </label>
                     <input
                       id={`offer_moq_${need.id}`}

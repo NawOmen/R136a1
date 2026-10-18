@@ -137,13 +137,15 @@ test("responsive corners have one source and the active mesh owns the bright edg
       await page.setViewportSize({ width, height: 900 });
       const shell = page.locator(".guidance-hero");
       await expect(shell).toHaveAttribute("data-mesh-ready", "true");
-      await expect.poll(() => shell.evaluate(el => {
-        const canvas = el.querySelector("canvas")!, gl = canvas.getContext("webgl")!;
-        const program = gl.getParameter(gl.CURRENT_PROGRAM) as WebGLProgram;
-        const corners = Array.from(gl.getUniform(program, gl.getUniformLocation(program, "u_radii")) as Float32Array);
+      const cssCorners = await shell.evaluate(el => {
         const style = getComputedStyle(el);
-        return JSON.stringify(corners) === JSON.stringify([style.borderTopLeftRadius, style.borderTopRightRadius, style.borderBottomRightRadius, style.borderBottomLeftRadius].map(parseFloat));
-      })).toBe(true);
+        return [style.borderTopLeftRadius, style.borderTopRightRadius, style.borderBottomRightRadius, style.borderBottomLeftRadius].map(parseFloat);
+      });
+      await expect.poll(() => shell.evaluate(el => {
+        const canvas = el.querySelector(":scope > canvas")!, gl = canvas.getContext("webgl")!;
+        const program = gl.getParameter(gl.CURRENT_PROGRAM) as WebGLProgram;
+        return Array.from(gl.getUniform(program, gl.getUniformLocation(program, "u_radii")) as Float32Array);
+      }), { message: `${path}, ${theme}, ${width}px: mesh corners follow CSS`, timeout: 15000 }).toEqual(cssCorners);
       expect(await shell.locator(".liquid-surface__material").evaluate(el => getComputedStyle(el).boxShadow.includes("inset"))).toBe(false);
     }
     await page.emulateMedia({ reducedMotion: "reduce" });

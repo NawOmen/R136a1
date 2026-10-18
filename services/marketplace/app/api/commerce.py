@@ -348,13 +348,14 @@ from ..analytics import commercial_report as _commercial_report
 
 
 def _report_csv(report: dict) -> str:
+    from ..report_labels import display, label
     role = report["role"]
-    header = ["Тип заказа", "Заказ", "Категория", "Единица измерения", "Создан (UTC)", "Статус", "Заказано", "Принято", "Возвращено", "Отменено", "Ожидается", "Цена за единицу, ₽", "Сумма заказа, ₽", "Товары после возвратов, ₽"]
+    header = ["Тип заказа", "Заказ", "Категория", "Единица измерения", "Создан (всемирное время)", "Статус", "Заказано", "Принято", "Возвращено", "Отменено", "Ожидается", "Цена за единицу, ₽", "Сумма заказа, ₽", "Товары после возвратов, ₽"]
     if role == "seller":
         header += ["Себестоимость принятых товаров, ₽", "Валовая прибыль, ₽", "Прочие затраты, ₽", "Результат после затрат, ₽"]
     lines = [header]
     for row in report["orders"]:
-        values: list = ["Прямой", row["deal_id"], row["category"], row["unit"], row["created_at"], row["status"],
+        values: list = ["Прямой", row["deal_id"], row["category"], row["unit"], row["created_at"], label(row["status"]),
                         row["ordered_units"], row["accepted_units"], row["returned_units"], row["cancelled_units"],
                         row["open_units"], row["unit_price_rub"], row["ordered_value_rub"], row["net_goods_revenue_rub"]]
         if role == "seller":
@@ -362,7 +363,7 @@ def _report_csv(report: dict) -> str:
                        row.get("attributable_expenses_rub"), row.get("contribution_rub")]
         lines.append(values)
     for row in report["group_orders"]:
-        values = ["Групповой", row["order_id"], row["category"], row["unit"], row["created_at"], row["status"],
+        values = ["Групповой", row["order_id"], row["category"], row["unit"], row["created_at"], label(row["status"]),
                   row["units"], None, None, None, None, None, row["contract_value_rub"], None]
         if role == "seller":
             values += [None, None, None, None]
@@ -375,11 +376,10 @@ def _report_csv(report: dict) -> str:
                       totals.get("attributable_expenses_rub"), totals.get("contribution_rub")]
     lines.append(total_row)
     filters = report["filters"]
-    lines.append(["Отчёт сформирован (UTC)", report["built_at"]] + [None] * (len(header) - 2))
+    lines.append(["Отчёт сформирован (всемирное время)", report["built_at"]] + [None] * (len(header) - 2))
     lines.append([f"Период и фильтры: с {filters['start']} по {filters['end']}; категория: {filters['category']}; "
-                  f"статус: {filters['status']}; контрагент: {filters['counterparty']}; товар: {filters['product']}; "
-                  f"источник: {filters['source']}"] + [None] * (len(header) - 1))
-    import json
+                  f"статус: {display(filters['status'])}; контрагент: {filters['counterparty']}; товар: {filters['product']}; "
+                  f"источник: {display(filters['source'])}"] + [None] * (len(header) - 1))
     detail_keys = ["cohort_key", "product_name", "delivery_price_rub", "discount_rub", "charge_lines",
                    "estimate_complete", "source_refs", "events", "missing"]
     if role == "seller": detail_keys += ["cost_revision", "cost_effective_from", "cost_source", "cost_tax_basis", "profit_missing_reason", "cost_history"]
@@ -387,11 +387,10 @@ def _report_csv(report: dict) -> str:
     for row in report["orders"] + report["group_orders"]:
         for key in detail_keys:
             value = row.get(key)
-            lines.append(["Детализация", row.get("deal_id", row.get("order_id")), key,
-                          json.dumps(value, default=str, ensure_ascii=False) if isinstance(value, (dict, list)) else value])
+            lines.append(["Детализация", row.get("deal_id", row.get("order_id")), label(key), display(value)])
     for event in report.get("period_events", []):
-        lines.append(["Событие периода", event["deal_id"], event["event_id"], json.dumps(event, default=str, ensure_ascii=False)])
-    lines.append(["Снимок отчёта", report.get("report_id"), "Исторический пересчёт", report.get("historical_recalculated")])
+        lines.append(["Событие периода", event["deal_id"], event["event_id"], display(event)])
+    lines.append(["Снимок отчёта", report.get("report_id"), "Исторический пересчёт", display(report.get("historical_recalculated"))])
     return "\r\n".join(",".join(_csv_cell(v) for v in row) for row in lines)
 
 

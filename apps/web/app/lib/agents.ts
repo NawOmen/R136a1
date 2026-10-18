@@ -1,4 +1,5 @@
-import { ApiError, clearToken } from "./api";
+import { russianFetch, russianMessage } from "./russianMessages";
+import { ApiError, handleUnauthorized } from "./api";
 import { serviceUrl } from "./serviceUrl";
 
 const agentsBaseUrl = () => serviceUrl(process.env.NEXT_PUBLIC_LLM_GATEWAY_URL, 8003);
@@ -45,6 +46,8 @@ export interface CapabilityMatch {
 }
 
 export interface BuyerAgentResult {
+  unreadable_sources?: { source_id: string; name: string; content_hash: string }[];
+  omitted_source_hashes?: string[];
   category: string;
   properties: RequirementProperty[];
   conflicts: { key: string; label: string; values: FactValue[]; source_ids: string[] }[];
@@ -81,16 +84,18 @@ export interface SellerExplanation {
   used_route: string;
 }
 
+async function agentFetch(token: string, input: RequestInfo | URL, init?: RequestInit): Promise<Response> {
+  const response = await russianFetch(input, init);
+  if (response.status === 401) handleUnauthorized(token);
+  return response;
+}
+
 async function readResponse(response: Response): Promise<AgentRun> {
   if (!response.ok) {
-    if (response.status === 401 && typeof window !== "undefined") {
-      clearToken();
-      window.location.assign("/login");
-    }
     let message = `Ошибка анализа: ${response.status}`;
     try {
       const body = (await response.json()) as { detail?: unknown };
-      if (typeof body.detail === "string") message = body.detail;
+      if (typeof body.detail === "string") message = russianMessage(body.detail, message);
     } catch {
       // Оставляем безопасное стандартное сообщение.
     }
@@ -101,39 +106,39 @@ async function readResponse(response: Response): Promise<AgentRun> {
 
 export const agents = {
   getRun(token: string, runId: string): Promise<AgentRun> {
-    return fetch(`${agentsBaseUrl()}/api/v2/agent-runs/${runId}`, { headers: { Authorization: `Bearer ${token}` } }).then(readResponse);
+    return agentFetch(token, `${agentsBaseUrl()}/api/v2/agent-runs/${runId}`, { headers: { Authorization: `Bearer ${token}` } }).then(readResponse);
   },
   async source(token: string, runId: string, sourceId: string, original = false): Promise<string | Blob> {
-    const response = await fetch(`${agentsBaseUrl()}/api/v2/agent-runs/${runId}/sources/${encodeURIComponent(sourceId)}?original=${original}`, { headers: { Authorization: `Bearer ${token}` } });
+    const response = await agentFetch(token, `${agentsBaseUrl()}/api/v2/agent-runs/${runId}/sources/${encodeURIComponent(sourceId)}?original=${original}`, { headers: { Authorization: `Bearer ${token}` } });
     if (!response.ok) throw new ApiError("Источник недоступен или удалён", response.status);
     if (original) return response.blob();
     return ((await response.json()) as { extracted_text: string }).extracted_text;
   },
   invalidateSource(token: string, runId: string, sourceId: string, revision: number): Promise<AgentRun> {
-    return fetch(`${agentsBaseUrl()}/api/v2/agent-runs/${runId}/sources/${encodeURIComponent(sourceId)}/invalidate`, {
+    return agentFetch(token, `${agentsBaseUrl()}/api/v2/agent-runs/${runId}/sources/${encodeURIComponent(sourceId)}/invalidate`, {
       method: "POST", headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" }, body: JSON.stringify({ expected_revision: revision }),
     }).then(readResponse);
   },
   async askPlatform(token: string, question: string): Promise<{ answer: string; links: string[] }> {
-    const response = await fetch(`${agentsBaseUrl()}/api/v1/platform-assistant`, { method: "POST", headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" }, body: JSON.stringify({ question }) });
-    if (!response.ok) { let message="Помощник временно недоступен"; try { const body=(await response.json()) as {detail?:string}; message=body.detail??message; } catch {} throw new ApiError(message,response.status); }
+    const response = await agentFetch(token, `${agentsBaseUrl()}/api/v1/platform-assistant`, { method: "POST", headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" }, body: JSON.stringify({ question }) });
+    if (!response.ok) { let message="Помощник временно недоступен"; try { const body=(await response.json()) as {detail?:string}; message=russianMessage(body.detail,message); } catch {} throw new ApiError(message,response.status); }
     return response.json();
   },
   async transcribe(token: string, file: File): Promise<string> {
     const form = new FormData();
     form.set("file", file);
-    const response = await fetch(`${agentsBaseUrl()}/api/v1/transcribe`, {
+    const response = await agentFetch(token, `${agentsBaseUrl()}/api/v1/transcribe`, {
       method: "POST", headers: { Authorization: `Bearer ${token}` }, body: form,
     });
     if (!response.ok) {
       let message = "Не удалось распознать речь";
-      try { const body = (await response.json()) as { detail?: string }; message = body.detail ?? message; } catch {}
+      try { const body = (await response.json()) as { detail?: string }; message = russianMessage(body.detail, message); } catch {}
       throw new ApiError(message, response.status);
     }
     return ((await response.json()) as { text: string }).text;
   },
   async trial(token: string): Promise<{ enabled: boolean; limit: number; used: number; remaining: number | null; status: string }> {
-    const response = await fetch(`${agentsBaseUrl()}/api/v1/buyer-agent/trial`, { headers: { Authorization: `Bearer ${token}` } });
+    const response = await agentFetch(token, `${agentsBaseUrl()}/api/v1/buyer-agent/trial`, { headers: { Authorization: `Bearer ${token}` } });
     if (!response.ok) throw new ApiError("Не удалось проверить пробный доступ. Ручное заполнение доступно.", response.status);
     return response.json();
   },
@@ -158,7 +163,7 @@ export const agents = {
     form.set("external_context_allowed", String(externalContextAllowed));
     if (companyId) form.set("company_id", companyId);
     files.forEach((file) => form.append("files", file));
-    let run = await readResponse(await fetch(`${agentsBaseUrl()}/api/v3/buyer-agent/runs`, {
+    let run = await readResponse(await agentFetch(token, `${agentsBaseUrl()}/api/v3/buyer-agent/runs`, {
       method: "POST", headers: { Authorization: `Bearer ${token}` }, body: form,
     }));
     // A replay can arrive while the first request is still processing.
@@ -167,7 +172,7 @@ export const agents = {
       run = await agents.getRun(token, run.id);
     }
     if (["received", "processing_sources", "extracting_requirements", "extracting", "matching", "explaining"].includes(run.state)) throw new ApiError("Разбор ещё выполняется. Повторите запрос позже: новый сценарий не будет списан.", 503);
-    if (run.state === "failed") { sessionStorage.removeItem(storageKey); throw new ApiError(run.error || "Разбор не завершён; пробный сценарий не списан.", 503); }
+    if (run.state === "failed") { sessionStorage.removeItem(storageKey); throw new ApiError(russianMessage(run.error, "Разбор не завершён; пробный сценарий не списан."), 503); }
     return run;
   },
 
@@ -178,7 +183,7 @@ export const agents = {
     revision: number,
   ): Promise<AgentRun> {
     return readResponse(
-      await fetch(`${agentsBaseUrl()}/api/v2/agent-runs/${runId}/clarify`, {
+      await agentFetch(token, `${agentsBaseUrl()}/api/v2/agent-runs/${runId}/clarify`, {
         method: "POST",
         headers: {
           Authorization: `Bearer ${token}`,
@@ -191,7 +196,7 @@ export const agents = {
 
   async confirm(token: string, runId: string, revision: number): Promise<AgentRun> {
     return readResponse(
-      await fetch(`${agentsBaseUrl()}/api/v2/agent-runs/${runId}/confirm`, {
+      await agentFetch(token, `${agentsBaseUrl()}/api/v2/agent-runs/${runId}/confirm`, {
         method: "POST",
         headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
         body: JSON.stringify({ expected_revision: revision }),
@@ -205,7 +210,7 @@ export const agents = {
     category: string,
     requirements: Record<string, FactValue>,
   ): Promise<SellerExplanation> {
-    const response = await fetch(`${agentsBaseUrl()}/api/v1/seller-agent/explain`, {
+    const response = await agentFetch(token, `${agentsBaseUrl()}/api/v1/seller-agent/explain`, {
       method: "POST",
       headers: {
         Authorization: `Bearer ${token}`,
@@ -214,14 +219,10 @@ export const agents = {
       body: JSON.stringify({ company_id: companyId, category, requirements }),
     });
     if (!response.ok) {
-      if (response.status === 401 && typeof window !== "undefined") {
-        clearToken();
-        window.location.assign("/login");
-      }
       let message = `Не удалось объяснить совпадение: ${response.status}`;
       try {
         const body = (await response.json()) as { detail?: unknown };
-        if (typeof body.detail === "string") message = body.detail;
+        if (typeof body.detail === "string") message = russianMessage(body.detail, message);
       } catch {
         // Оставляем стандартное сообщение.
       }

@@ -12,6 +12,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from ..category_admission import catalog_scope
 from ..category_characteristics import validate_profile_values
 from ..category_profile_snapshot import profile_after_specification_change
+from ..delivery_regions import region_is_served
 from ..database import get_db
 from ..deps import (
     CurrentUser,
@@ -27,7 +28,7 @@ from ..matching import ACTIVE_NEED_STATUSES, need_is_current, order_unit, run_ma
 from ..matching import _need_parts, _passport_matches
 from ..experience import notify_market_watchers
 from ..schemas import NeedFeedOut, NeedFileOut, NeedIn, NeedOut, NeedEditIn
-from ..file_safety import validate_upload
+from ..file_safety import canonical_media_type, validate_upload
 from ..storage import download_object, upload_object
 from ..requirements import evidence_snapshot, evidence_is_current, require_current_evidence, revision_impact, invalidate_dependents, store_revision, lock_specification_edit
 from ..models import NeedRevision
@@ -77,19 +78,15 @@ def _need_out(need: Need, files: list[NeedFile] | None = None) -> NeedOut:
     )
 
 
-def _normalize_region(value: str) -> str:
-    return value.strip().lower().replace("г.", "").replace("город", "").strip(" .")
-
-
 async def _region_allowed(db: AsyncSession, passport: CapabilityPassport, need: Need,
                           addresses: dict) -> bool:
-    regions = [_normalize_region(str(item)) for item in (passport.delivery_regions or []) if str(item).strip()]
+    regions = [str(item) for item in (passport.delivery_regions or []) if str(item).strip()]
     if not regions or not need.delivery_address_id:
         return True
     address = addresses.get(need.delivery_address_id)
     if address is None or not address.region:
         return True
-    return _normalize_region(address.region) in regions
+    return region_is_served(regions, address.region)
 
 
 @router.get("/needs", response_model=list[NeedFeedOut])
@@ -419,7 +416,7 @@ async def attach_need_file(
         raise HTTPException(status.HTTP_400_BAD_REQUEST, detail="Файл пуст")
     if len(data) > MAX_SIZE:
         raise HTTPException(status.HTTP_413_REQUEST_ENTITY_TOO_LARGE, detail="Файл больше 25 МБ")
-    content_type = file.content_type or "application/octet-stream"
+    content_type = canonical_media_type(data, file.content_type or "", file.filename or "")
     if not _is_allowed_content_type(content_type):
         raise HTTPException(
             status.HTTP_415_UNSUPPORTED_MEDIA_TYPE,

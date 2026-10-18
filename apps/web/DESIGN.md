@@ -323,4 +323,4 @@ Liquid-действия содержат отдельные материальн
 
 Извлечение основано на текущих `app/design.css`, `app/globals.css`, `app/layout.tsx`, `ProductCatalog`, `ProductCard`, `SiteNavigation`, `LiquidSurface` и `liquidGlassMesh`. Пользовательский макет просмотрен; эта документация не заявляет измеренный pixelmatch или полное пиксельное совпадение. Геометрия, шрифт и товарные данные в реализации проверяются отдельно от документирования.
 
-<!-- Scoped asset update: /knowledge uses procurement-help.webp (clipboard, package, speech bubble); /ai-procurement retains business-link.webp. Both are original decorative alpha images with provenance sidecars. -->
+<!-- Current hero assets: matching hero-{help|procurement}-{light|dark}.png posters, then the original procedural Three.js scenes. Legacy WebP artwork is retained only as provenance and is not requested by these pages. -->

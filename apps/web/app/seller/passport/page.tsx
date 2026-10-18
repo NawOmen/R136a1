@@ -3,6 +3,8 @@
 // Capability Passport (GET/PUT /companies/{id}/capability-passport).
 // Массивы вводятся построчно (каждая строка = элемент), size_ranges — min/max.
 
+import { fieldName } from "../../lib/presentation";
+import { russianMessage } from "../../lib/russianMessages";
 import Link from "next/link";
 import CategoryCapabilitiesEditor from "../../components/CategoryCapabilitiesEditor";
 import { FormEvent, useEffect, useState } from "react";
@@ -64,14 +66,14 @@ export default function SellerPassportPage() {
         setDeliveryRegions(passport.delivery_regions.join("\n"));
         setCompletedOrderTypes(passport.completed_order_types.join("\n"));
         setDetails({ ...EMPTY_CAPABILITY_DETAILS, ...passport.details });
-        setSizeRangesText(Object.entries(passport.size_ranges ?? {}).map(([key, range]) => `${key}: ${range[0]}: ${range[1]}`).join("\n"));
+        setSizeRangesText(Object.entries(passport.size_ranges ?? {}).map(([key, range]) => `${fieldName(key)}: ${range[0]}: ${range[1]}`).join("\n"));
       })
       .catch((err: unknown) => {
         if (cancelled) return;
         if (err instanceof ApiError && err.status === 404) {
           // Паспорт ещё не заполнен — оставляем пустую форму
         } else {
-          setError(err instanceof ApiError ? err.message : "Не удалось загрузить паспорт.");
+          setError(err instanceof ApiError ? russianMessage(err.message) : "Не удалось загрузить паспорт.");
         }
       })
       .finally(() => {
@@ -110,7 +112,7 @@ export default function SellerPassportPage() {
       });
       setSaved(true);
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : "Не удалось сохранить паспорт.");
+      setError(err instanceof ApiError ? russianMessage(err.message) : "Не удалось сохранить паспорт.");
     } finally {
       setSaving(false);
     }
@@ -142,7 +144,7 @@ export default function SellerPassportPage() {
             Создать компанию
           </Link>
           <Link href="/dashboard" className="btn btn-secondary">
-            На главную
+            В личный кабинет
           </Link>
         </div>
       </div>
@@ -154,7 +156,7 @@ export default function SellerPassportPage() {
       <div className="company-row">
         <h1 className="page-title">Паспорт возможностей</h1>
         <Link href="/dashboard" className="btn btn-secondary btn-sm">
-          На главную
+          В личный кабинет
         </Link>
       </div>
       <p className="subtitle">Производство и поставки: возможности, ограничения и условия</p>
@@ -229,8 +231,8 @@ export default function SellerPassportPage() {
           </div>
           <div className="field">
             <label htmlFor="size_ranges">Диапазоны размеров</label>
-            <textarea id="size_ranges" value={sizeRangesText} onChange={(event) => setSizeRangesText(event.target.value)} placeholder={"diameter_mm: 10: 120\nlength_mm: 5: 600"} aria-describedby="size_ranges_hint" />
-            <p className="hint" id="size_ranges_hint">Формат: параметр с единицей: минимум: максимум. Пример: width_mm: 100: 1200.</p>
+            <textarea id="size_ranges" value={sizeRangesText} onChange={(event) => setSizeRangesText(event.target.value)} placeholder={"Диаметр, мм: 10: 120\nДлина, мм: 5: 600"} aria-describedby="size_ranges_hint" />
+            <p className="hint" id="size_ranges_hint">Одна строка: название с единицей измерения: минимум: максимум. Например, Ширина, мм: 100: 1200.</p>
           </div>
           <div className="field">
             <label htmlFor="tolerances">

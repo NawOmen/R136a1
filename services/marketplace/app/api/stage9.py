@@ -330,22 +330,41 @@ async def personal_next_step(
                            description="Запросы опубликованы: новые предложения придут уведомлением.",
                            href="/needs")
     if seller_ids:
-        products = await db.scalar(select(func.count()).select_from(Product).where(
-            Product.company_id.in_(seller_ids)))
+        # A step concerns one company; do not combine a passport from one seller
+        # with products/resources from another when the caller omitted scope.
+        seller_id = sorted(seller_ids, key=str)[0]
+        production = await db.get(ProductionProfile, seller_id)
+        if not production or not production.production_site_address or not production.region:
+            return NextStepOut(title="Заполните профиль компании", description="Укажите адрес и регион производства или склада.", href="/seller/profile")
+        passport = await db.get(CapabilityPassport, seller_id)
+        if not passport or not (passport.details or {}).get("category_scopes"):
+            return NextStepOut(title="Укажите возможности", description="Выберите виды продукции и реальные ограничения производства или поставки.", href="/seller/passport")
+        products = (await db.scalars(select(Product).where(Product.company_id == seller_id).order_by(Product.created_at, Product.id))).all()
         if not products:
-            return NextStepOut(title="Добавьте товар",
-                               description="Карточка товара открывает подбор и предложения.",
-                               href="/seller/products")
-        drafts = await db.scalar(select(func.count()).select_from(Product).where(
-            Product.company_id.in_(seller_ids), Product.is_published.is_(False)))
-        if drafts:
-            return NextStepOut(title="Опубликуйте товары",
-                               description="Черновики не участвуют в подборе до публикации и допуска.",
-                               href="/seller/products")
-        return NextStepOut(title="Ответьте на запросы",
-                           description="Проверьте свежий спрос и подготовьте предложения.",
-                           href="/seller/requests")
-    return NextStepOut(title="Откройте дашборд",
+            return NextStepOut(title="Добавьте товар", description="Заполните предложенные поля или загрузите таблицу товаров.", href="/seller/products")
+        for product in products:
+            errors, _ = validate_characteristics(product.category, product.subcategory, product.characteristics, product.moq_units)
+            if errors:
+                return NextStepOut(title="Уточните карточку товара", description="Заполните обязательные характеристики перед проверкой допуска.", href="/seller/products")
+            admission = await company_admission(db, seller_id, product.category, product.subcategory,
+                characteristics=product.characteristics, moq_units=product.moq_units)
+            if not admission.supported:
+                return NextStepOut(title="Проверьте категорию товара", description="Для выбранного изделия работа пока ограничена. Причина доступна в карточке.", href="/seller/products")
+            if admission.blocking_open:
+                return NextStepOut(title="Подтвердите документы для товара", description="Проверьте недостающие документы и дождитесь решения проверяющего.", href="/seller/documents")
+        if any(not product.is_published for product in products):
+            return NextStepOut(title="Опубликуйте товары", description="Проверьте карточку и подтвердите публикацию.", href="/seller/products")
+        business = (passport.details or {}).get("business_kind", "manufacturer")
+        stock = any((product.stock_units or 0) > 0 for product in products)
+        capacity = await db.scalar(select(CapacityEntry.id).where(CapacityEntry.company_id == seller_id,
+            CapacityEntry.date >= datetime.now(timezone.utc).date(), CapacityEntry.available_units > 0).limit(1))
+        if business == "stock_supplier" and not stock:
+            return NextStepOut(title="Укажите доступный остаток", description="Для поставки со склада нужен положительный остаток в карточке товара.", href="/seller/products")
+        if business != "stock_supplier" and not capacity and not (business == "both" and stock):
+            return NextStepOut(title="Укажите свободную мощность", description="Выберите вид продукции и доступный объём по дням.", href="/seller/capacity")
+        return NextStepOut(title="Ответьте на запросы", description="Откройте подходящий запрос: помощник подготовит черновик предложения для вашей проверки.", href="/seller/requests")
+
+    return NextStepOut(title="Откройте кабинет",
                        description="Продолжите с того места, где остановились.",
                        href="/dashboard")
 

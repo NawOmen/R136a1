@@ -24,7 +24,9 @@ test("503, reload, role and company switching preserve independent input and sou
   await expect(page.locator("#need_files")).toBeEnabled();
   await page.locator("#need_files").focus();
   await expect(page.locator("#need_files")).toBeFocused();
-  await expect(page.getByRole("textbox", { name: "Характеристика 1: название", exact: true })).toHaveValue("Единица измерения");
+  await page.getByRole("button", { name: "Заполнить вручную", exact: true }).click();
+  await expect(page.getByRole("textbox", { name: "Характеристика 1: название", exact: true })).toHaveValue("Единица заказа");
+  await page.getByText("3. Карточка запроса — проверьте и отправьте", { exact: true }).click();
   await description.fill("Нужны столы из дерева, 30 штук, для офиса");
   // A readable label must not rename the persisted API characteristic key.
   await expect.poll(() => page.evaluate(() => Object.values(sessionStorage).some(value => {
@@ -119,4 +121,96 @@ test("S13: external counters need an explicit separate choice and a different re
   expect(submitted[1]).toMatch(/name="external_context_allowed"\r?\n\r?\ntrue/);
   const key = (body: string) => /name="request_key"\r?\n\r?\n([^\r\n]+)/.exec(body)?.[1];
   expect(key(submitted[0])).not.toBe(key(submitted[1]));
+});
+
+test("clarified unreadable material is omitted by content hash while same-name valid file saves", async ({ page }) => {
+  const { createHash } = await import("node:crypto");
+  const { readFileSync } = await import("node:fs");
+  const registry = JSON.parse(readFileSync(require.resolve("../../services/marketplace/app/category_registry.json"), "utf8"));
+  await prepare(page);
+  const bad = Buffer.from("synthetic corrupt content");
+  const hash = createHash("sha256").update(bad).digest("hex");
+  const properties = Object.entries({ product_type: "гофрокороб", dimensions_mm: "400×300×300", body_material: "картон", quantity_units: 250, budget_rub: 25000, lead_time_days: 14, delivery_city: "Москва" })
+    .map(([key, value]) => ({ key, value, label: key, status: "assumed", confidence: 0.9, sources: [] }));
+  let run = { id: "00000000-0000-4000-8000-000000000090", revision: 1, state: "needs_clarification", tool_calls: [],
+    result: { category: "упаковка", properties, warnings: ["source.m4a: файл не прочитан"], matches: [], conflicts: [], summary: "Требуется уточнение", can_confirm: false,
+      questions: [{ key: "unreadable_materials", question: "Часть материалов не прочитана. Продолжить без них?", options: ["Да, продолжить без них"] }],
+      unreadable_sources: [{ source_id: "file_2", name: "source.m4a", content_hash: hash }], omitted_source_hashes: [] as string[] } };
+  const needId = "00000000-0000-4000-8000-000000000091";
+  const uploads: string[] = [];
+  let creations = 0;
+  await page.route("**/api/**", async route => {
+    const request = route.request();
+    const path = new URL(request.url()).pathname;
+    if (path.endsWith("/auth/me")) return route.fulfill({ json: { user, companies: [{ ...companies[0], verification_status: "draft" }] } });
+    if (path.endsWith("/categories/profiles")) return route.fulfill({ json: registry });
+    if (path.endsWith("/addresses")) return route.fulfill({ json: [{ id: "00000000-0000-4000-8000-000000000092", city: "Москва", address: "ул. Синтетическая, д. 1", region: "Москва" }] });
+    if (path.endsWith("/buyer-agent/runs") || path.endsWith(`/agent-runs/${run.id}`)) return route.fulfill({ status: 201, json: run });
+    if (path.endsWith("/clarify")) {
+      run = { ...run, revision: 2, state: "ready_for_review", result: { ...run.result, can_confirm: true, questions: [], omitted_source_hashes: [hash] } };
+      return route.fulfill({ json: run });
+    }
+    if (path.endsWith("/confirm")) {
+      run = { ...run, revision: 3, state: "confirmed_by_user" };
+      return route.fulfill({ json: run });
+    }
+    if (path.endsWith("/physical-quantities/preview")) return route.fulfill({ json: { conversion: { factor: 1 } } });
+    if (path.endsWith("/physical/needs") && request.method() === "POST") {
+      creations++;
+      expect(request.postDataJSON().subcategory).toBe("Коробки");
+      return route.fulfill({ status: 201, json: { id: needId, status: "draft" } });
+    }
+    if (path.endsWith(`/needs/${needId}/files`)) { uploads.push(request.postDataBuffer()!.toString()); return route.fulfill({ status: 201, json: { id: needId } }); }
+    return route.fulfill({ json: [] });
+  });
+  await page.reload();
+  await page.locator("#request_description").fill("Нужно 250 гофрокоробов 400×300×300 мм в Москву за 14 дней, бюджет 25000 рублей");
+  await page.locator("#need_files").setInputFiles([
+    { name: "source.m4a", mimeType: "text/plain", buffer: Buffer.from("valid synthetic source") },
+    { name: "source.m4a", mimeType: "audio/mp4", buffer: bad },
+  ]);
+  await page.getByRole("button", { name: "Разобрать материалы", exact: true }).click();
+  await page.getByLabel("Часть материалов не прочитана. Продолжить без них?").selectOption("Да, продолжить без них");
+  await page.getByRole("button", { name: "Сохранить ответы", exact: true }).click();
+  await expect(page.getByText(/По вашему решению непрочитанные материалы/)).toBeVisible();
+  await page.getByRole("button", { name: "Перенести подтверждённые данные в карточку" }).click();
+  await expect(page.locator("#subcategory")).toHaveValue("Коробки");
+  await expect(page.locator("#delivery_address_id")).toHaveValue("00000000-0000-4000-8000-000000000092");
+  await page.reload();
+  await expect(page.locator("#subcategory")).toHaveValue("Коробки");
+  await expect(page.getByText(/По вашему решению непрочитанные материалы/)).toBeVisible();
+  await page.getByRole("button", { name: "Сохранить черновик", exact: true }).click();
+  await expect(page).toHaveURL(new RegExp(`/needs/${needId}$`));
+  expect(creations).toBe(1);
+  expect(uploads).toHaveLength(1);
+  expect(uploads[0]).toContain("valid synthetic source");
+  expect(uploads[0]).not.toContain("synthetic corrupt content");
+});
+
+test("category guidance adds its required fields without cup-specific defaults", async ({ page }) => {
+  const { readFileSync } = await import("node:fs");
+  const registry = JSON.parse(readFileSync(require.resolve("../../services/marketplace/app/category_registry.json"), "utf8"));
+  await prepare(page);
+  await page.route("**/categories/profiles", route => route.fulfill({ json: registry }));
+  await page.reload();
+  await page.getByRole("button", { name: "Заполнить вручную", exact: true }).click();
+  await page.locator("#category").selectOption("Товары для бизнеса");
+  await page.locator("#subcategory").selectOption("Мебель");
+  await page.getByRole("button", { name: "Добавить недостающие обязательные поля" }).click();
+  const keys = await page.locator('input[placeholder="Характеристика (например, материал)"]').evaluateAll(inputs => inputs.map(input => (input as HTMLInputElement).value));
+  expect(keys).toContain("Габариты, мм");
+  expect(keys).not.toContain("Объём, мл");
+  expect(new Set(keys).size).toBe(keys.length);
+  await expect(page.getByRole("button", { name: "Добавить недостающие обязательные поля" })).toHaveCount(0);
+});
+
+test("narrow request form keeps file selection inside the viewport", async ({ page }) => {
+  await prepare(page);
+  await page.setViewportSize({ width: 320, height: 844 });
+  await page.goto("/needs/new");
+  const files = page.locator("#need_files");
+  await expect(files).toBeVisible();
+  await files.setInputFiles({ name: "Требования-к-закупке.txt", mimeType: "text/plain", buffer: Buffer.from("Синтетические требования") });
+  await expect(page.getByText(/Восстановленные или выбранные файлы: 1/)).toBeVisible();
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
 });
