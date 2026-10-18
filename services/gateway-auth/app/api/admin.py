@@ -112,7 +112,7 @@ async def block_user(
     admin: User = Depends(require_admin),
     db: AsyncSession = Depends(get_db),
 ):
-    user = await db.get(User, user_id)
+    user = await db.scalar(select(User).where(User.id == user_id).with_for_update().execution_options(populate_existing=True))
     if user is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, detail="Пользователь не найден")
 

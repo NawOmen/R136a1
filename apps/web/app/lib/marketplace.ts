@@ -913,7 +913,7 @@ async function marketplaceFetch<T>(path: string, options: RequestOptions = {}): 
   const response = await russianFetch(`${marketplaceBaseUrl()}${path.replace("/api/v1", "/api/v3").replace("/api/v2", "/api/v3/physical")}`, { ...init, headers });
 
   if (!response.ok) {
-    if (response.status === 401) handleUnauthorized();
+    if (response.status === 401) handleUnauthorized(token);
     let message = `Ошибка запроса: ${response.status}`;
     try {
       const body = (await response.json()) as { detail?: unknown };
@@ -939,7 +939,7 @@ async function marketplaceFetchBlob(path: string, token: string): Promise<Blob> 
     headers: { Authorization: `Bearer ${token}` },
   });
   if (!response.ok) {
-    if (response.status === 401) handleUnauthorized();
+    if (response.status === 401) handleUnauthorized(token);
     let message = `Ошибка запроса: ${response.status}`;
     try {
       const body = (await response.json()) as { detail?: unknown };

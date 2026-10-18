@@ -164,8 +164,9 @@ async def reset_password(data: PasswordReset, request: Request, db: AsyncSession
 
 @router.post("/password/change", response_model=TokenResponse)
 async def change_password(data: PasswordChange, request: Request, current: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
+    expected_version = current.token_version
     await throttle(db, request, str(current.id), "password_change")
-    user = await db.scalar(select(User).where(User.id == current.id).with_for_update().execution_options(populate_existing=True))
+    user = await lock_session_user(db, current.id, expected_version)
     if not verify_password(data.current_password, user.password_hash):
         raise HTTPException(400, "Текущий пароль указан неверно.")
     if verify_password(data.password, user.password_hash):
@@ -179,7 +180,7 @@ async def change_password(data: PasswordChange, request: Request, current: User 
 
 @router.post("/sessions/end", response_model=TokenResponse)
 async def end_other_sessions(request: Request, current: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
-    user = await db.scalar(select(User).where(User.id == current.id).with_for_update().execution_options(populate_existing=True))
+    user = await lock_session_user(db, current.id, current.token_version)
     user.token_version += 1
     await audit(db, request, "auth.sessions_ended", actor=user.id)
     await db.commit()
@@ -188,7 +189,16 @@ async def end_other_sessions(request: Request, current: User = Depends(get_curre
 
 @router.post("/logout", status_code=204)
 async def logout(request: Request, current: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
-    user = await db.scalar(select(User).where(User.id == current.id).with_for_update().execution_options(populate_existing=True))
+    user = await lock_session_user(db, current.id, current.token_version)
     user.token_version += 1
     await audit(db, request, "auth.logout", actor=user.id)
     await db.commit()
+
+
+async def lock_session_user(db: AsyncSession, user_id: uuid.UUID, expected_version: int) -> User:
+    # Capture the checked version as a value: populate_existing refreshes the same
+    # ORM instance returned by the authentication dependency while waiting for a lock.
+    user = await db.scalar(select(User).where(User.id == user_id).with_for_update().execution_options(populate_existing=True))
+    if user is None or user.account_status != "active" or user.token_version != expected_version:
+        raise HTTPException(401, "Сеанс завершён. Войдите снова.")
+    return user

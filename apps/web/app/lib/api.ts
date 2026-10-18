@@ -168,9 +168,9 @@ export function clearToken(): void {
   window.dispatchEvent(new Event(AUTH_CHANGED_EVENT));
 }
 
-// При истёкшем/недействительном токене (401) сбрасываем токен и отправляем на вход.
-export function handleUnauthorized(): void {
-  if (typeof window === "undefined") return;
+// A late response for a revoked token must not clear its newer replacement.
+export function handleUnauthorized(requestToken: string | null | undefined): void {
+  if (typeof window === "undefined" || !requestToken || getToken() !== requestToken) return;
   clearToken();
   if (window.location.pathname !== "/login") {
     window.location.replace("/login");
@@ -196,7 +196,7 @@ async function request<T>(path: string, options: RequestOptions = {}): Promise<T
       path !== "/api/v1/auth/login" &&
       path !== "/api/v1/auth/register" && path !== "/api/v2/auth/register"
     ) {
-      handleUnauthorized();
+      handleUnauthorized(token);
     }
     let message = `Ошибка запроса: ${response.status}`;
     try {
