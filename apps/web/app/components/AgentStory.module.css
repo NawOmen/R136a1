@@ -59,3 +59,16 @@
 .webgl { position: absolute; inset: 50px 0 90px; z-index: -1; }
 .toolbar { flex-wrap: wrap; }
 .toolbar button:disabled { cursor: default; opacity: .75; }
+
+/* Keep the narrative alive when WebGL is unavailable. */
+.world { transition: transform 1.2s cubic-bezier(.2,0,0,1); }
+.agent { transition: opacity .8s ease, left 1s ease, top 1s ease; }
+.visual[data-stage="0"] .central { animation: search 5s ease-in-out infinite; }
+.visual[data-stage="1"] .world { transform: scale(1.05) translateY(2%); }
+.visual[data-stage="2"] .bridge i:nth-child(2n) { animation-delay: -.9s; }
+.visual[data-stage="2"] .bridge i:nth-child(3n) { animation-delay: -1.8s; }
+.visual[data-stage="3"] .central { animation: coordinate 5s ease-in-out infinite; }
+.visual[data-stage="3"] .bridge i { animation: cargo 2.4s ease-in-out infinite; }
+.sceneStatus { transition: color .4s ease; }
+@keyframes search { 0%,100% { transform: translate(-25px, 5px) rotate(-15deg); } 30% { transform: translate(20px,-20px) rotate(25deg); } 65% { transform: translate(-5px,18px) rotate(-10deg); } }
+@keyframes coordinate { 0%,100% { transform: translate(-18px,0) rotate(-12deg); } 50% { transform: translate(18px,-20px) rotate(15deg); } }

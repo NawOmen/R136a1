@@ -64,16 +64,16 @@ export function AgentStory() {
     return () => { observer.disconnect(); document.removeEventListener("visibilitychange", sync); };
   }, []);
 
-  const still = !interactive || staticView || reduced || failed3D;
+  const still = !interactive || staticView || reduced;
   const step = still ? 3 : chapter;
   const selectChapter = (index: number) => {
     setChapter(index);
-    document.getElementById(`story-chapter-${index}`)?.scrollIntoView({ behavior: "instant", block: "center" });
+    document.getElementById(`story-chapter-${index}`)?.scrollIntoView({ behavior: reduced ? "instant" : "smooth", block: "center" });
   };
 
   return <div ref={root} className={styles.story} data-still={still}>
     <header className={styles.intro}><span className="eyebrow">Как работает ПоРукам</span><h1>Между спросом<br />и производством — <em>связь.</em></h1><div className={styles.introBottom}><p>ИИ помогает найти друг друга.<br />Решение остаётся за компаниями.</p><Link href="/catalog" className="btn btn-secondary">Сразу в каталог →</Link></div></header>
-    <div className={styles.toolbar}><span>История взаимодействия</span><button type="button" aria-pressed={staticView || reduced || failed3D} disabled={reduced || failed3D} onClick={() => setStaticView(!staticView)}>{failed3D ? "Статичная иллюстрация" : reduced ? "Движение уменьшено в настройках" : staticView ? "Включить анимацию" : "Без анимации"}</button></div>
+    <div className={styles.toolbar}><span>История взаимодействия</span><button type="button" aria-pressed={staticView || reduced} disabled={reduced} onClick={() => setStaticView(!staticView)}>{reduced ? "Движение уменьшено в настройках" : staticView ? "Включить анимацию" : "Без анимации"}</button></div>
     <div className={styles.journey}>
       <div ref={scene} className={styles.visual} data-stage={step} data-paused={paused}>
         <div className={styles.horizon} aria-hidden="true" /><div className={styles.grid} aria-hidden="true" />
