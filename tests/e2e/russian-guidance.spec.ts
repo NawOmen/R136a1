@@ -217,3 +217,30 @@ test("recovery does not claim email delivery on failure and allows retry", async
   await page.getByRole("button",{name:"Получить код на почту",exact:true}).click();
   await expect(page.getByLabel("Код из письма",{exact:true})).toBeVisible();
 });
+
+for (const administrator of [false, true]) {
+  test(`KPI shows automatic process metrics without an expert-review step (${administrator ? "platform" : "company"})`, async ({page}) => {
+    const requests: string[] = [];
+    await page.addInitScript(() => localStorage.setItem("token", "synthetic-metrics"));
+    await page.route("**/api/**", route => {
+      const path = new URL(route.request().url()).pathname;
+      requests.push(path);
+      if (path.endsWith("/auth/me")) return route.fulfill({json:{user:{...user,is_marketplace_admin:administrator},companies:[company]}});
+      if (path.endsWith("/kpi")) return route.fulfill({json:{buyer:{},seller:{},marketplace:{},generated_from_events:0,baseline_note:"Показатели операций"}});
+      if (path.endsWith("/agent-scorecard")) return route.fulfill({json:{window_days:30,notes:[],llm_metrics_available:true,
+        agent_runs_total:1,agent_runs_failed:0,agent_runs_local_route:1,agent_runs_external_route:0,agent_runs_mixed_route:0,agent_runs_rules_route:0,agent_runs_unknown_route:0,
+        agent_average_duration_ms:100,agent_timed_runs:1,agent_model_versions:["local-model"],agent_prompt_versions:["v1"],agent_costed_runs:0,
+        offer_drafts_total:0,offer_drafts_used:0,offer_draft_conversion_pct:null,offer_drafts_open:0,offer_drafts_excluded:0,offer_rejections:0,offers_total:0,deals_from_drafts:0,
+        selected_origin_offers:0,open_origin_offers:0,rejected_origin_offers:0,expired_origin_offers:0,human_approvals:0,blocked_actions:0,admission_checks:0,admission_blocked:0,
+        recommendations_converted:0,recommendations_total:0,recommendation_conversion_pct:null}});
+      if (path.endsWith("/audit/verify")) return route.fulfill({json:{valid:true,checked_events:0}});
+      return route.fulfill({json:[]});
+    });
+    await page.goto("/kpi");
+    await expect(page.getByRole("heading",{name:"Работа ИИ-агентов",exact:true})).toBeVisible();
+    await expect(page.getByText("Запусков агентов: 1",{exact:true})).toBeVisible();
+    await expect(page.getByText("Проверить результат агента",{exact:true})).toHaveCount(0);
+    await expect(page.getByRole("heading",{name:"Оценка агентных ролей",exact:true})).toHaveCount(0);
+    expect(requests.some(path=>/quality-evidence|role-quality/.test(path))).toBe(false);
+  });
+}
