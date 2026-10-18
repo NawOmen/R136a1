@@ -13,11 +13,17 @@
 | `next` | `^16.4.0` | MIT | `apps/web/package.json` (dependencies) |
 | `react` | `^19.3.0` | MIT | `apps/web/package.json` (dependencies) |
 | `react-dom` | `^19.3.0` | MIT | `apps/web/package.json` (dependencies) |
+| `three` | `^0.186.1` | MIT | `apps/web/package.json` (dependencies), 3D-сцена |
+| `@react-three/fiber` | `^9.8.2` | MIT | `apps/web/package.json` (dependencies), React 19 / WebGL |
+| `@react-three/postprocessing` | `^3.2.0` | MIT | `apps/web/package.json` (dependencies), свечение |
+| `@types/three` | `^0.186.0` | MIT | `apps/web/package.json` (devDependencies) |
 | `@types/node` | `^26.6.5` | MIT | `apps/web/package.json` (devDependencies) |
 | `@types/react` | `^19.3.0` | MIT | `apps/web/package.json` (devDependencies) |
 | `@types/react-dom` | `^19.3.0` | MIT | `apps/web/package.json` (devDependencies) |
 | `typescript` | `^7.0.2` | Apache-2.0 | `apps/web/package.json` (devDependencies) |
 | `@playwright/test` | `^1.64.0` | Apache-2.0 | `tests/e2e/package.json` (devDependencies) |
+
+Постобработка сцены использует транзитивный `postprocessing 6.39.5` (Zlib); лицензия проверена по метаданным установленного пакета.
 
 Транзитивные зависимости проверены 11.10.2026 командой `pnpm licenses list --prod`: набор лицензий — MIT, Apache-2.0, ISC, BSD-3-Clause, 0BSD, CC-BY-4.0 (данные `caniuse-lite`) и LGPL-3.0-or-later. Единственный copyleft-компонент — предсобранный платформенный пакет `@img/sharp-libvips-darwin-arm64 1.3.4` (зависимость `sharp`, используется Next.js для оптимизации изображений): немодифицированный бинарник, динамическая компоновка, в Docker-сборке подставляется linux-вариант. Совместимость LGPL при таком использовании подтверждает юрист; замена/исключение при необходимости оформляется отдельно.
 
