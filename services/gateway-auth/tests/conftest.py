@@ -62,3 +62,10 @@ async def client(session_factory):
 async def db_session(session_factory):
     async with session_factory() as session:
         yield session
+
+
+@pytest.fixture(autouse=True)
+def legacy_registration_contract(monkeypatch):
+    # Existing v1 contract tests explicitly opt in; public deployments default off.
+    from app.config import settings
+    monkeypatch.setattr(settings, "legacy_registration_enabled", True)

@@ -86,7 +86,7 @@ export default function ResiliencePage() {
     <div>
       <div className="company-row">
         <div><h1 className="page-title">Устойчивость сделок</h1><p className="subtitle">Резервные производители и восстановление поставки</p></div>
-        <Link href="/dashboard" className="btn btn-secondary btn-sm">На главную</Link>
+        <Link href="/dashboard" className="btn btn-secondary btn-sm">В личный кабинет</Link>
       </div>
       {error && <div className="alert alert-error">{error}</div>}
       {loading ? <p role="status">Загрузка планов…</p> : plans.length === 0 && !error ? <p className="hint">Планов нет. Рассчитайте варианты в карточке потребности и выберите выполнимый.</p> : plans.map((plan) => {

@@ -563,7 +563,7 @@ class CapabilityDetails(BaseModel):
 
     model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
     business_kind: Literal["manufacturer", "stock_supplier", "both"] = "manufacturer"
-    category_scopes: list[CategoryCapability] = Field(default_factory=list,max_length=100)
+    category_scopes: list[CategoryCapability] = Field(default_factory=list,max_length=128)
     product_types: str = Field(default="", max_length=1200)
     complexity: str = Field(default="", max_length=1200)
     material_grades: str = Field(default="", max_length=800)

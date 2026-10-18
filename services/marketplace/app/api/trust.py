@@ -109,11 +109,15 @@ async def update_support_ticket_admin(
     ticket = await db.scalar(select(SupportTicket).where(SupportTicket.id == ticket_id).with_for_update().execution_options(populate_existing=True))
     if ticket is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, detail="Обращение не найдено")
-    if ticket.status == data.status and ticket.admin_response == data.admin_response:
+    response = data.admin_response if "admin_response" in data.model_fields_set else ticket.admin_response
+    response = response.strip() if response is not None else None
+    if data.status in {"resolved", "closed"} and not response:
+        raise HTTPException(422, "Перед закрытием обращения напишите ответ пользователю.")
+    if ticket.status == data.status and ticket.admin_response == response:
         return ticket
     previous_status = ticket.status
     ticket.status = data.status
-    ticket.admin_response = data.admin_response
+    ticket.admin_response = response
     ticket.assigned_admin_user_id = user.id
     await append_audit_event(
         db,
@@ -126,7 +130,7 @@ async def update_support_ticket_admin(
         explanation=f"Администратор изменил статус обращения: {previous_status} → {data.status}.",
         payload={"from_status": previous_status, "to_status": data.status},
     )
-    await notify(db, ticket.user_id, f"Поддержка обновила обращение «{ticket.subject}»: {data.status}", "support_ticket_updated")
+    await notify(db, ticket.user_id, f"Поддержка обновила обращение «{ticket.subject}»: {dict(new='новое', in_progress='в работе', resolved='решено', closed='закрыто')[data.status]}", "support_ticket_updated")
     await db.commit()
     await db.refresh(ticket)
     return ticket

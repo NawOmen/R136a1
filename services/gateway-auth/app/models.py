@@ -47,6 +47,7 @@ class User(Base):
     email: Mapped[str] = mapped_column(String(255), nullable=False, unique=True, index=True)
     password_hash: Mapped[str] = mapped_column(String(255), nullable=False)
     phone: Mapped[str | None] = mapped_column(String(40), nullable=True)
+    token_version: Mapped[int] = mapped_column(Integer, nullable=False, default=0, server_default="0")
     account_status: Mapped[str] = mapped_column(String(16), nullable=False, default="active", server_default="active")
     is_category_editor: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False, server_default=text("false"))
     is_marketplace_admin: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False, server_default=text("false"))
@@ -109,3 +110,26 @@ class CompanyVerificationEvent(Base):
     )
     reason: Mapped[str | None] = mapped_column(String(500), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now())
+
+
+class AccountRecovery(Base):
+    __tablename__ = "account_recovery"
+    __table_args__ = {"schema": SCHEMA}
+    token_hash: Mapped[str] = mapped_column(String(64), primary_key=True)
+    nonce: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), default=_uuid, nullable=False)
+    delivery_status: Mapped[str] = mapped_column(String(16), default="pending", server_default="pending", nullable=False)
+    delivery_attempts: Mapped[int] = mapped_column(Integer, default=0, server_default="0", nullable=False)
+    next_attempt_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+    user_id: Mapped[uuid.UUID] = mapped_column(ForeignKey(f"{SCHEMA}.users.id", ondelete="CASCADE"), index=True)
+    token_version: Mapped[int] = mapped_column(Integer, nullable=False)
+    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    used_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+
+class AccountAgreement(Base):
+    __tablename__ = "account_agreements"
+    __table_args__ = {"schema": SCHEMA}
+    user_id: Mapped[uuid.UUID] = mapped_column(ForeignKey(f"{SCHEMA}.users.id", ondelete="CASCADE"), primary_key=True)
+    document: Mapped[str] = mapped_column(String(24), primary_key=True)
+    version: Mapped[str] = mapped_column(String(32), primary_key=True)
+    accepted_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)

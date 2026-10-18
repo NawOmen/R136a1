@@ -262,7 +262,7 @@ export default function SellerProductsPage() {
             Создать компанию
           </Link>
           <Link href="/dashboard" className="btn btn-secondary">
-            На главную
+            В личный кабинет
           </Link>
         </div>
       </div>
@@ -274,7 +274,7 @@ export default function SellerProductsPage() {
       <div className="company-row">
         <h1 className="page-title">Мои товары</h1>
         <Link href="/dashboard" className="btn btn-secondary btn-sm">
-          На главную
+          В личный кабинет
         </Link>
       </div>
       <p className="subtitle">Товары компании и управление публикацией</p>

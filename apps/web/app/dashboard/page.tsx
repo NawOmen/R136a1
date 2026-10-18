@@ -10,7 +10,7 @@ import {
   ApiError,
   clearToken,
   Company,
-  getToken,
+  getToken, WORKSPACE_CHANGED_EVENT,
   User,
   VERIFICATION_STATUS_LABELS,
 } from "../lib/api";
@@ -72,6 +72,7 @@ export default function DashboardPage() {
   function selectMode(next: Exclude<Mode, null>) {
     setMode(next);
     if (user) window.localStorage.setItem(`porukam:work-mode:${user.id}:${companyId}`, next);
+    window.dispatchEvent(new Event(WORKSPACE_CHANGED_EVENT));
   }
 
   const selectedCompany = companies.find((item) => item.id === companyId);
@@ -152,6 +153,7 @@ export default function DashboardPage() {
       {companies.length > 0 && <div className="field"><label htmlFor="dashboard-company">Рабочая компания</label><select id="dashboard-company" value={companyId} onChange={(event) => {
         setNextStep(null); setCompanyId(event.target.value);
         window.localStorage.setItem(`porukam:dashboard-company:${user.id}`, event.target.value);
+        window.dispatchEvent(new Event(WORKSPACE_CHANGED_EVENT));
         const selected = companies.find((item) => item.id === event.target.value);
         const saved = window.localStorage.getItem(`porukam:work-mode:${user.id}:${event.target.value}`);
         setMode(saved === "sell" && selected?.membership?.can_sell ? "sell" : selected?.membership?.can_buy ? "buy" : selected?.membership?.can_sell ? "sell" : null);
@@ -160,6 +162,7 @@ export default function DashboardPage() {
         <div className="workspace-card__head"><div><h2>Рабочие разделы</h2><p>Один аккаунт может покупать и продавать от имени компании</p></div><div className="mode-toggle" role="group" aria-label="Режим работы">
           <button
             type="button"
+            aria-pressed={mode === "buy"}
             className={mode === "buy" ? "active" : ""}
             disabled={!canBuy}
             title={canBuy ? undefined : "Нет компании с правом покупки"}
@@ -169,6 +172,7 @@ export default function DashboardPage() {
           </button>
           <button
             type="button"
+            aria-pressed={mode === "sell"}
             className={mode === "sell" ? "active" : ""}
             disabled={!canSell}
             title={canSell ? undefined : "Нет компании с правом продажи"}

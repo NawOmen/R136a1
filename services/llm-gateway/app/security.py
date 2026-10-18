@@ -37,10 +37,10 @@ async def get_current_user(
 
     row = (
         await db.execute(
-            text("SELECT account_status FROM auth.users WHERE id = :user_id"),
+            text("SELECT account_status, token_version FROM auth.users WHERE id = :user_id"),
             {"user_id": user_id},
         )
     ).mappings().first()
-    if row is None or row["account_status"] != "active":
+    if row is None or row["account_status"] != "active" or payload.get("ver", 0) != row["token_version"]:
         raise HTTPException(status.HTTP_401_UNAUTHORIZED, detail="Аккаунт недоступен")
     return CurrentUser(user_id)

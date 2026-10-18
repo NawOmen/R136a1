@@ -4,6 +4,9 @@ from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, EmailStr, Field, field_validator, model_validator
 
+RULES_VERSION = "rules-1"
+PRIVACY_VERSION = "privacy-1"
+
 LegalForm = Literal["ООО", "ИП"]
 VerificationDecision = Literal["approve", "reject"]
 
@@ -36,6 +39,14 @@ class RegisterIn(BaseModel):
         if len(value.encode("utf-8")) > 72:
             raise ValueError("Пароль должен занимать не более 72 байт UTF-8")
         return value
+
+
+class RegisterV2In(RegisterIn):
+    password: str = Field(min_length=12, max_length=128)
+    rules_version: Literal["rules-1"]
+    privacy_version: Literal["privacy-1"]
+    rules_accepted: Literal[True]
+    privacy_acknowledged: Literal[True]
 
 
 class LoginIn(BaseModel):

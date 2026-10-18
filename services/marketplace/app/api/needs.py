@@ -12,6 +12,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from ..category_admission import catalog_scope
 from ..category_characteristics import validate_profile_values
 from ..category_profile_snapshot import profile_after_specification_change
+from ..delivery_regions import region_is_served
 from ..database import get_db
 from ..deps import (
     CurrentUser,
@@ -77,19 +78,15 @@ def _need_out(need: Need, files: list[NeedFile] | None = None) -> NeedOut:
     )
 
 
-def _normalize_region(value: str) -> str:
-    return value.strip().lower().replace("г.", "").replace("город", "").strip(" .")
-
-
 async def _region_allowed(db: AsyncSession, passport: CapabilityPassport, need: Need,
                           addresses: dict) -> bool:
-    regions = [_normalize_region(str(item)) for item in (passport.delivery_regions or []) if str(item).strip()]
+    regions = [str(item) for item in (passport.delivery_regions or []) if str(item).strip()]
     if not regions or not need.delivery_address_id:
         return True
     address = addresses.get(need.delivery_address_id)
     if address is None or not address.region:
         return True
-    return _normalize_region(address.region) in regions
+    return region_is_served(regions, address.region)
 
 
 @router.get("/needs", response_model=list[NeedFeedOut])

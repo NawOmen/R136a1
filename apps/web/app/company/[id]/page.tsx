@@ -38,7 +38,8 @@ export default function CompanyPage() {
   const [ogrnip, setOgrnip] = useState("");
   const [kpp, setKpp] = useState("");
   const [legalAddress, setLegalAddress] = useState("");
-  const initializedRef = useRef(false);
+  const initializedRef = useRef("");
+  const loadGeneration = useRef(0);
 
   const load = useCallback(async () => {
     const token = getToken();
@@ -46,25 +47,30 @@ export default function CompanyPage() {
       router.replace("/login");
       return;
     }
+    const generation = ++loadGeneration.current;
     try {
       const result = await api.me(token);
+      if (generation !== loadGeneration.current) return;
       const found = result.companies.find((item) => item.id === id) ?? null;
-      if (!found) setNotFound(true);
+      setNotFound(!found);
       setCompany(found);
       setError(null);
     } catch (err) {
+      if (generation !== loadGeneration.current) return;
       setError(err instanceof ApiError ? russianMessage(err.message) : "Не удалось загрузить компанию.");
     } finally {
-      setLoading(false);
+      if (generation === loadGeneration.current) setLoading(false);
     }
   }, [id, router]);
 
   useEffect(() => {
+    setLoading(true); setNotFound(false); setCompany(null);
     void load();
+    return () => {loadGeneration.current++;};
   }, [load]);
 
   useEffect(() => {
-    if (company && !initializedRef.current) {
+    if (company && initializedRef.current !== company.id) {
       setFullName(company.full_name);
       setDisplayName(company.display_name);
       setLegalForm(company.legal_form);
@@ -75,7 +81,7 @@ export default function CompanyPage() {
       setLegalAddress(company.legal_address);
       setCanBuy(company.membership?.can_buy ?? false);
       setCanSell(company.membership?.can_sell ?? false);
-      initializedRef.current = true;
+      initializedRef.current = company.id;
     }
   }, [company]);
 
@@ -152,7 +158,7 @@ export default function CompanyPage() {
       <div>
         <h1 className="page-title">Компания не найдена</h1>
         <Link href="/dashboard" className="btn btn-secondary">
-          На главную
+          В личный кабинет
         </Link>
       </div>
     );
@@ -167,7 +173,7 @@ export default function CompanyPage() {
       <div className="company-row">
         <h1 className="page-title">{company.display_name}</h1>
         <Link href="/dashboard" className="btn btn-secondary btn-sm">
-          На главную
+          В личный кабинет
         </Link>
       </div>
 

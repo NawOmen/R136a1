@@ -1,14 +1,31 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from .api import admin, auth, companies, health
+from .api import admin, auth, companies, health, account
 from .config import settings
 from .security_events import correlation, logger
 import json
 from datetime import datetime, timezone
 from fastapi import Request
 
-app = FastAPI(title="Gateway Auth", version="1.0.0")
+from contextlib import asynccontextmanager
+import asyncio
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    worker = asyncio.create_task(account.delivery_worker())
+    try:
+        yield
+    finally:
+        worker.cancel()
+        try:
+            await worker
+        except asyncio.CancelledError:
+            pass
+
+
+app = FastAPI(title="Gateway Auth", version="1.0.0", lifespan=lifespan)
 
 
 @app.middleware("http")
@@ -37,3 +54,7 @@ app.include_router(auth.router, prefix="/api/v1")
 app.include_router(companies.router, prefix="/api/v1")
 app.include_router(admin.router, prefix="/api/v1")
 app.include_router(admin.v2_router, prefix="/api/v2")
+
+app.include_router(account.router, prefix="/api/v2")
+
+app.include_router(auth.v2_router, prefix="/api/v2")

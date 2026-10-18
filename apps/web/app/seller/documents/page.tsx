@@ -196,7 +196,7 @@ export default function SellerDocumentsPage() {
             Создать компанию
           </Link>
           <Link href="/dashboard" className="btn btn-secondary">
-            На главную
+            В личный кабинет
           </Link>
         </div>
       </div>
@@ -208,7 +208,7 @@ export default function SellerDocumentsPage() {
       <div className="company-row">
         <h1 className="page-title">Документы и допуск</h1>
         <Link href="/dashboard" className="btn btn-secondary btn-sm">
-          На главную
+          В личный кабинет
         </Link>
       </div>
       <p className="subtitle">

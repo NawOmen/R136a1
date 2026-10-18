@@ -254,7 +254,7 @@ export default function SellerRequestsPage() {
             Создать компанию
           </Link>
           <Link href="/dashboard" className="btn btn-secondary">
-            На главную
+            В личный кабинет
           </Link>
         </div>
       </div>
@@ -270,7 +270,7 @@ export default function SellerRequestsPage() {
   return (
     <div className="market-page">
       <header className="market-page__head">
-        <div><span className="eyebrow">Рынок спроса</span><h1>Потребности покупателей</h1><p>Реальные запросы российских компаний — предложите производство на своих условиях</p></div>
+        <div><span className="eyebrow">Рынок спроса</span><h1>Потребности покупателей</h1><p>Опубликованные запросы российских компаний — предложите производство на своих условиях</p></div>
         <Link href="/seller/opportunities" className="btn btn-secondary">Аналитика спроса</Link>
       </header>
       <div className="catalog-toolbar"><label className="catalog-search"><span aria-hidden="true">⌕</span><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Категория или характеристика" aria-label="Поиск потребностей" /></label><span className="result-count">{openNeeds.length} открытых запросов</span></div>
@@ -297,7 +297,7 @@ export default function SellerRequestsPage() {
       ) : (
         <ul className="demand-grid">
           {openNeeds.map((need) => (
-            <li key={need.id} className="demand-card">
+            <li key={need.id} className="demand-card" data-need-id={need.id}>
               <div className="demand-card__top"><span className="demand-kind">Производство</span><span className="demand-deadline">до {need.deadline_date}</span></div>
               <h2>{need.category}</h2>
               <p className="demand-description">{formatCharacteristics(need.characteristics, need.category_profile)}</p>

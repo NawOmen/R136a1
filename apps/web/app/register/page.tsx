@@ -13,6 +13,8 @@ export default function RegisterPage() {
   const [middleName, setMiddleName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [rulesAccepted, setRulesAccepted] = useState(false);
+  const [privacyAcknowledged, setPrivacyAcknowledged] = useState(false);
   const [phone, setPhone] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
@@ -24,9 +26,12 @@ export default function RegisterPage() {
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setError(null);
+    if (!rulesAccepted || !privacyAcknowledged) {setError("Подтвердите правила работы и ознакомление с условиями обработки данных."); return;}
     setSubmitting(true);
     try {
       const payload: RegisterInput = {
+        rules_version: "rules-1", privacy_version: "privacy-1",
+        rules_accepted: true, privacy_acknowledged: true,
         last_name: lastName.trim(),
         first_name: firstName.trim(),
         email: email.trim(),
@@ -48,7 +53,7 @@ export default function RegisterPage() {
   }
 
   return (
-    <div className="auth-shell"><aside className="auth-aside"><span className="eyebrow">Начните за несколько минут</span><h2>Покупайте и продавайте в одном аккаунте</h2><p>После регистрации создайте компанию и включите нужные возможности: покупка, продажа или оба режима одновременно.</p><ul><li>Каталог оптовых товаров</li><li>Карточки потребностей покупателей</li><li>Коалиции для доступного минимальный заказ</li></ul></aside><div className="auth-page">
+    <div className="auth-shell"><aside className="auth-aside"><span className="eyebrow">Начните за несколько минут</span><h2>Покупайте и продавайте в одном аккаунте</h2><p>После регистрации создайте компанию и включите нужные возможности: покупка, продажа или оба режима одновременно.</p><ul><li>Каталог оптовых товаров</li><li>Карточки потребностей покупателей</li><li>Совместные закупки для минимальной партии</li></ul></aside><div className="auth-page">
       <span className="eyebrow">Новый аккаунт</span><h1 className="page-title">Регистрация</h1>
       <p className="subtitle">Создайте личный профиль для работы с компаниями</p>
       <p className="hint" style={{ marginTop: -14, marginBottom: 16 }}>
@@ -81,7 +86,7 @@ export default function RegisterPage() {
           />
         </div>
         <div className="field">
-          <label htmlFor="middle_name">Отчество<span className="opt">необязательно</span></label>
+          <label htmlFor="middle_name">Отчество <span className="opt">необязательно</span></label>
           <input
             id="middle_name"
             type="text"
@@ -105,17 +110,17 @@ export default function RegisterPage() {
           <label htmlFor="password">Пароль<span className="req">*</span></label>
           <input
             id="password"
+            minLength={12}
             type="password"
             value={password}
             onChange={(event) => setPassword(event.target.value)}
             required
-            minLength={6}
             autoComplete="new-password"
           />
-          <p className="hint">Минимум 6 символов.</p>
+          <p className="hint">Не менее 12 символов.</p>
         </div>
         <div className="field">
-          <label htmlFor="phone">Телефон<span className="opt">необязательно</span></label>
+          <label htmlFor="phone">Телефон <span className="opt">необязательно</span></label>
           <input
             id="phone"
             type="tel"
@@ -124,6 +129,8 @@ export default function RegisterPage() {
             autoComplete="tel"
           />
         </div>
+        <label><input type="checkbox" required checked={rulesAccepted} onChange={event => setRulesAccepted(event.target.checked)} /> Принимаю <Link href="/info/legal" target="_blank" rel="noopener">правила работы</Link></label>
+        <label><input type="checkbox" required checked={privacyAcknowledged} onChange={event => setPrivacyAcknowledged(event.target.checked)} /> Ознакомлен с <Link href="/info/privacy" target="_blank" rel="noopener">условиями обработки данных</Link></label>
         <div className="actions">
           <button type="submit" className="btn btn-primary" disabled={submitting}>
             {submitting ? "Регистрируем..." : "Зарегистрироваться"}
