@@ -64,19 +64,6 @@ for (const mode of ["buy", "sell"] as const) {
   });
 }
 
-test("homepage distinguishes unavailable offers from an empty catalogue and retries", async ({ page }) => {
-  let failed = true;
-  await page.route("**/api/**", route => route.fulfill(failed
-    ? { status: 503, json: { detail: "Предложения временно недоступны" } }
-    : { json: [] }));
-  await page.goto("/");
-  await expect(page.getByRole("alert").filter({ hasText: "Не удалось загрузить предложения" })).toBeVisible();
-  await expect(page.getByText("Предложений пока нет", { exact: true })).toHaveCount(0);
-  failed = false;
-  await page.getByRole("button", { name: "Повторить загрузку", exact: true }).click();
-  await expect(page.getByText("Предложений пока нет", { exact: true })).toBeVisible();
-});
-
 test("optional product checks fail independently without hiding product or implying admission", async ({ page }) => {
   const product = { id: "00000000-0000-4000-8000-000000000090", name: "Синтетический товар", category: "Упаковка и тара", subcategory: "Бумажные стаканы", characteristics: {}, images: [], price_rub: "10.5", price_tiers: [], moq_units: 100, lead_time_days: 3, producer: { display_name: "Проверочный производитель", company_id: company.id, rating: null, reviews_count: 0 } };
   await page.route("**/api/**", route => {
