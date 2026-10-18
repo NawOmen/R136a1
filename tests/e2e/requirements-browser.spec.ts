@@ -19,8 +19,19 @@ async function prepare(page: Page) {
 test("503, reload, role and company switching preserve independent input and source files", async ({ page }) => {
   await prepare(page);
   const description = page.locator("#request_description");
+  await expect(page.getByText("Выбрать файлы", { exact: true })).toBeVisible();
+  await expect(page.getByText("Файлы не выбраны", { exact: true })).toBeVisible();
+  await expect(page.locator("#need_files")).toBeEnabled();
+  await page.locator("#need_files").focus();
+  await expect(page.locator("#need_files")).toBeFocused();
+  await expect(page.getByRole("textbox", { name: "Характеристика 1: название", exact: true })).toHaveValue("Единица измерения");
   await description.fill("Нужны столы из дерева, 30 штук, для офиса");
+  // A readable label must not rename the persisted API characteristic key.
+  await expect.poll(() => page.evaluate(() => Object.values(sessionStorage).some(value => {
+    try { return JSON.parse(value).rows?.some((row: { key: string }) => row.key === "unit"); } catch { return false; }
+  }))).toBe(true);
   await page.locator("#need_files").setInputFiles({ name: "синтетическая-спецификация.txt", mimeType: "text/plain", buffer: Buffer.from("Материал: дерево; количество: 30 шт") });
+  await expect(page.getByText("Выбрано файлов: 1", { exact: true })).toBeVisible();
   await page.getByRole("button", { name: "Разобрать материалы", exact: true }).click();
   await expect(page.getByRole("alert").filter({ hasText: "Локальная модель недоступна" })).toBeVisible();
   await expect(description).toHaveValue(/30 штук/);

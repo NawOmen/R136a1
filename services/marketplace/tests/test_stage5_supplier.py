@@ -294,7 +294,8 @@ async def test_assortment_scope_and_seed_stories(client, db_session):
     assert sum(event.units for event in events if event.kind == "acceptance") == 1000
     images = (await db_session.execute(select(ProductImage))).scalars().all()
     assert len(images) == 12
-    assert all(image.content_type == "image/png" for image in images)
+    assert sum(image.content_type == "image/png" for image in images) == 8
+    assert sum(image.content_type == "image/webp" for image in images) == 4
     assert len({image.product_id for image in images}) == 12
     ural_id, ural_token = seller_tokens["ООО «Урал Комплект»"]
     analytics = await client.get(f"/api/v1/companies/{ural_id}/seller-analytics",

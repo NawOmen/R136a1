@@ -179,7 +179,7 @@ export default function SellerPassportPage() {
         <p className="hint">Загрузка паспорта...</p>
       ) : (
         <form className="card" onSubmit={handleSubmit}>
-          <p className="hint">Описание ниже будет доступно покупателям в подборе и на публичной странице вашей проверенной компании. Не указывайте конфиденциальные сведения.</p>
+          <p className="hint">Описание видно покупателям в подборе и на странице проверенной компании. Не указывайте конфиденциальные сведения.</p>
           <div className="field">
             <label htmlFor="business_kind">Вид деятельности</label>
             <select id="business_kind" value={details.business_kind} onChange={(event) => setDetails({ ...details, business_kind: event.target.value as CapabilityDetails["business_kind"] })}>
@@ -193,7 +193,7 @@ export default function SellerPassportPage() {
             <label htmlFor={field.key}>{field.label}</label>
             <textarea id={field.key} value={details[field.key]} maxLength={field.max} placeholder={field.example} onChange={(event) => setDetails({ ...details, [field.key]: event.target.value })} />
           </div>)}
-          <p className="hint">Списки ниже заполняются построчно. Указывайте только подтверждённые возможности; сложный заказ требует согласования.</p>
+          <p className="hint">Каждая возможность — с новой строки. Указывайте только подтверждённое; сложный заказ согласуется отдельно.</p>
           <div className="field">
             <label htmlFor="technologies">
               Технологии
@@ -230,7 +230,7 @@ export default function SellerPassportPage() {
           <div className="field">
             <label htmlFor="size_ranges">Диапазоны размеров</label>
             <textarea id="size_ranges" value={sizeRangesText} onChange={(event) => setSizeRangesText(event.target.value)} placeholder={"diameter_mm: 10: 120\nlength_mm: 5: 600"} aria-describedby="size_ranges_hint" />
-            <p className="hint" id="size_ranges_hint">Одна строка: название с единицей измерения: минимум: максимум. Например, width_mm: 100: 1200.</p>
+            <p className="hint" id="size_ranges_hint">Формат: параметр с единицей: минимум: максимум. Пример: width_mm: 100: 1200.</p>
           </div>
           <div className="field">
             <label htmlFor="tolerances">

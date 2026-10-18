@@ -1,0 +1,41 @@
+{
+  "prompt": "Use case: product-mockup.\nAsset type: standalone Russian B2B catalogue product illustration, photorealistic.\nPrimary request: One plain kraft corrugated cardboard box with nominal dimensions 400 × 300 × 300 mm, T23-style ordinary corrugated cardboard. Natural brown kraft exterior, realistic small corrugation visible at edges, four top flaps slightly open. No printed markings.\nScene/backdrop: clean seamless off-white studio background, #f8f8f6, subtle natural soft contact shadow.\nComposition/framing: square 1:1 image, 1024 × 1024 if available. Whole single box centered in three-quarter view, occupies about 75% of the frame, all flaps fully inside frame with generous margins.\nStyle/medium: realistic clean studio catalogue photography, crisp believable material details, soft diffuse lighting.\nConstraints: authored synthetic product illustration, no real manufacturer or trademark. No other objects, no labels, no logos, no text, no numbers, no UI, no watermarks, no people, no colored filter, no crop.",
+  "createdAt": "2026-10-17T07:49:49.736Z",
+  "schemaVersion": 1,
+  "tool": "image_gen.imagegen",
+  "mode": "built-in generate",
+  "origin": "AI-generated synthetic product illustration; not an actual supplier photograph",
+  "origin_ru": "Авторская синтетическая иллюстрация товара, созданная ИИ; не фотография товара поставщика",
+  "useCase": "product-mockup",
+  "generatorOriginalPath": "/home/houz/.codex/generated_images/01a148d3-8514-7671-b1f0-24c7126bc16e/exec-d2ebbbae-5357-422d-af5d-c1fd3d9dab3c.png",
+  "generatorOriginalSha256": "ba3e60e553c0789e341555b676c65570c7ea40fae3aa9376383b0f97fbb9322c",
+  "sourcePath": "output/playwright/clear-glass/source/box.png",
+  "sourceSha256": "2735b214934891bb16b3fc7c87cb25a2429aa74db360684a8d6bb2d85f710b5b",
+  "sourceDimensions": [
+    1254,
+    1254
+  ],
+  "deliveryPath": "services/marketplace/seed_media/box.webp",
+  "deliverySha256": "59788554d2f0136eb14a412ef76c551fe1319b9c752b44bfff0b215f0625ea3c",
+  "deliveryDimensions": [
+    1254,
+    1254
+  ],
+  "deliveryBytes": 106492,
+  "conversion": {
+    "library": "Pillow",
+    "format": "WebP",
+    "quality": 88,
+    "method": 6,
+    "resized": false,
+    "cropped": false,
+    "retouched": false
+  },
+  "verification": {
+    "subject": "manually inspected",
+    "wholeProductVisible": true,
+    "noBrandingOrText": true,
+    "background": "off-white studio",
+    "note": "Full native dimensions preserved. Object framing is close with the full object visible."
+  }
+}

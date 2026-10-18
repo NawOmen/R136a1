@@ -5,6 +5,8 @@
 // адрес доставки (+ добавление адреса через prompt), видимость, файлы.
 
 import RequirementSource from "../../components/RequirementSource";
+import { Icon } from "../../components/Icon";
+import { FilePicker } from "../../components/FilePicker";
 import { draftFiles } from "../../lib/draftFiles";
 
 import PhysicalQuantityReview from "../../components/PhysicalQuantityReview";
@@ -504,11 +506,11 @@ export default function NewNeedPage() {
         </Link>
       </div>
       <p className="subtitle">
-        Опишите, что нужно купить, — производители смогут предложить свои условия
+        Укажите товар, объём и условия поставки.
       </p>
 
       {error && <div className="alert alert-error" role="alert">{error}</div>}
-      <p className="hint">ИИ не обязателен: карточку можно заполнить вручную. Текст и поля автоматически сохраняются в этой вкладке отдельно для каждой компании.</p>
+      <p className="hint">Можно заполнить без ИИ. Черновик сохраняется в этой вкладке отдельно для каждой компании.</p>
       {draftNotice && <p className="hint" role="status">{draftNotice}</p>}
       {savedNeed && <p className="alert alert-warning">Черновик уже создан. <Link href={`/needs/${savedNeed.id}`}>Открыть сохранённую потребность</Link>. Повторная отправка продолжит загрузку в этот черновик.</p>}
 
@@ -541,10 +543,10 @@ export default function NewNeedPage() {
         )}
 
         <section className="agent-panel" aria-labelledby="materials-heading">
-          <h2 id="materials-heading">ИИ-аналитика — требования и кандидаты</h2>
+          <h2 id="materials-heading">Разобрать запрос с ИИ</h2>
           <p className="hint">
-            Опишите задачу обычными словами и приложите материалы. Система покажет источники,
-            предположения и противоречия; карточка изменится только после вашего подтверждения.
+            Напишите задачу или приложите материалы. Проверьте источники, предположения и противоречия.
+            Карточка изменится только после вашего подтверждения.
           </p>
           <div className="field">
             <label htmlFor="request_description">Что требуется купить</label>
@@ -556,19 +558,19 @@ export default function NewNeedPage() {
               onChange={(event) => { analysisGeneration.current += 1; setRequestDescription(event.target.value); setAgentRun(null); setAnswers({}); }}
               placeholder="Например: нужны 30 рабочих столов из дерева, доставка в Москву..."
             />
-            <div className="voice-row"><button type="button" className={recording ? "btn btn-danger btn-sm" : "btn btn-secondary btn-sm"} disabled={transcribing || analyzing || submitting || loadedFilesKey !== draftKey} onClick={() => void toggleRecording()}>{transcribing ? "Распознаём…" : recording ? "Остановить запись" : "🎙 Продиктовать запрос"}</button><span className="hint">Речь распознаётся локально и подставляется в текст. В локальной сети микрофону может потребоваться HTTPS.</span></div>
+            <div className="voice-row"><button type="button" className={recording ? "btn btn-danger btn-sm" : "btn btn-secondary btn-sm"} disabled={transcribing || analyzing || submitting || loadedFilesKey !== draftKey} onClick={() => void toggleRecording()}><Icon name="mic" size={17} />{transcribing ? "Распознаём…" : recording ? "Остановить запись" : "Продиктовать запрос"}</button><span className="hint">Речь обрабатывается локально и добавляется в текст. Для микрофона в локальной сети может понадобиться HTTPS.</span></div>
           </div>
           <div className="field">
             <label htmlFor="need_files">
               Материалы<span className="opt">фото, PDF, текст или голосовое сообщение</span>
             </label>
-            <input
-              id="need_files"
-              disabled={analyzing || submitting || loadedFilesKey !== draftKey}
-              type="file"
-              multiple
-              accept="image/*,application/pdf,audio/*,text/plain,text/markdown"
-              onChange={(event) => { analysisGeneration.current += 1; setFiles(Array.from(event.target.files ?? [])); setAgentRun(null); setAnswers({}); }}
+            <FilePicker
+                  id="need_files"
+                  disabled={analyzing || submitting || loadedFilesKey !== draftKey}
+                  multiple
+                  accept="image/*,application/pdf,audio/*,text/plain,text/markdown"
+                  onChange={(event) => { analysisGeneration.current += 1; setFiles(Array.from(event.target.files ?? [])); setAgentRun(null); setAnswers({}); }}
+                  status={files.length > 0 ? `Выбрано файлов: ${files.length}` : "Файлы не выбраны"}
             />
             {files.length > 0 && (
               <p className="hint mode-hint">
@@ -609,7 +611,7 @@ export default function NewNeedPage() {
 
           {trial && <p className="hint" role="status">{trial.enabled ? `Пробные сценарии: ${trial.used} из ${trial.limit} использовано, ${trial.remaining} осталось.` : "Лимит пробных сценариев отключён настройкой платформы."}</p>}
           {trialError && <p className="hint">{trialError}</p>}
-          <p className="hint">Ручное создание бесплатно. При включённом пробном лимите доступны два сценария разбора; повтор запроса и уточнения не расходуют новый сценарий.</p>
+          <details className="text-details"><summary>Стоимость и лимит разбора</summary><div className="text-details__body"><p>Ручное создание бесплатно. При включённом пробном лимите доступны два сценария разбора; повторы и уточнения не расходуют новый сценарий.</p></div></details>
 
           {agentRun && (
             <div className="agent-result">
@@ -770,8 +772,8 @@ export default function NewNeedPage() {
                 placeholder="Характеристика (например, материал)"
                 aria-label={`Характеристика ${index + 1}: название`}
                 required
-                value={row.key}
-                onChange={(event) => updateRow(index, { key: event.target.value })}
+                value={row.key === "unit" ? "Единица измерения" : row.key}
+                onChange={(event) => updateRow(index, { key: event.target.value === "Единица измерения" ? "unit" : event.target.value })}
               />
               <input
                 type="text"

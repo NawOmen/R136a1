@@ -2,6 +2,7 @@
 
 import { FormEvent, useCallback, useEffect, useRef, useState } from "react";
 import { getToken } from "../lib/api";
+import { FilePicker } from "./FilePicker";
 import { FulfillmentCommand, FulfillmentRecord, FulfillmentState, fulfillmentApi, formatRub, marketplace } from "../lib/marketplace";
 
 const names: Record<string, string> = { prepare: "Подготовка", production: "Производство", logistics: "Получение и тариф",
@@ -103,12 +104,25 @@ export default function DealFulfillmentPanel({ dealId, companyId, isBuyer, canMa
     {data && <><p><b>{statuses[data.status] ?? "Исполнение"}</b> · согласованные условия, версия {data.terms_version}</p>
       <dl className="stats-grid">{Object.entries({ Заказано: data.totals.ordered_units, Отгружено: data.totals.shipped_units, Получено: data.totals.received_units,
         Принято: data.totals.accepted_units, Возвращено: data.totals.returned_units, Отменено: data.totals.cancelled_units, "Открытые обязательства": data.totals.open_units }).map(([name, value]) => <div key={name}><dt>{name}</dt><dd>{value}</dd></div>)}</dl>
-      <p className="hint">Подготовка → производство → отгрузка → получение → проверка → завершение. Спорный объём не считается принятым. Возврат не создаёт новый заказ.</p>
-      <p>Согласованная стоимость заказа продавца: <b>{formatRub(data.commercial.seller_total_rub)}</b>; в том числе доставка продавца: {data.commercial.seller_delivery_rub == null ? "Не определена" : formatRub(data.commercial.seller_delivery_rub)}. Перевозчик покупателя / самовывоз отдельно: {data.commercial.external_carrier_rub == null ? "Тариф неизвестен" : formatRub(data.commercial.external_carrier_rub)}.</p>
+      <p className="hint">Спорный объём не считается принятым. Возврат не создаёт новый заказ.</p>
+      <dl className="readable-facts">
+        <div><dt>Согласованная стоимость заказа продавца</dt><dd>{formatRub(data.commercial.seller_total_rub)}</dd></div>
+        <div><dt>В том числе доставка продавца</dt><dd>{data.commercial.seller_delivery_rub == null ? "Не определена" : formatRub(data.commercial.seller_delivery_rub)}</dd></div>
+        <div><dt>Перевозчик покупателя / самовывоз отдельно</dt><dd>{data.commercial.external_carrier_rub == null ? "Тариф неизвестен" : formatRub(data.commercial.external_carrier_rub)}</dd></div>
+      </dl>
       <h3>Получение внутри России</h3><p>Адрес покупателя: {data.destination ?? "Не указан"}</p>
-      {data.dispatch ? <p>Отгрузка: {data.dispatch.address}, {data.dispatch.city}, {data.dispatch.region}. Готовность: {data.dispatch.expected_date}. Упаковка: {data.dispatch.packaging}; {data.dispatch.places} мест, {data.dispatch.weight_kg} кг, {data.dispatch.volume_m3} м³. Ограничения: {data.dispatch.restrictions || "Не указаны"}. Класс опасности: {data.dispatch.hazard_class ?? "Не указан"}. {data.dispatch.classification_note}</p> : <p className="hint">Продавец должен подтвердить параметры подготовки и адрес отгрузки.</p>}
+      {data.dispatch ? <>
+        <dl className="readable-facts">
+          <div><dt>Отгрузка</dt><dd>{data.dispatch.address}, {data.dispatch.city}, {data.dispatch.region}</dd></div>
+          <div><dt>Готовность</dt><dd>{data.dispatch.expected_date}</dd></div>
+          <div><dt>Упаковка и груз</dt><dd>{data.dispatch.packaging} · {data.dispatch.places} мест · {data.dispatch.weight_kg} кг · {data.dispatch.volume_m3} м³</dd></div>
+          <div><dt>Ограничения</dt><dd>{data.dispatch.restrictions || "Не указаны"}</dd></div>
+          <div><dt>Класс опасности</dt><dd>{data.dispatch.hazard_class ?? "Не указан"}</dd></div>
+        </dl>
+        <p className="hint">{data.dispatch.classification_note}</p>
+      </> : <p className="hint">Продавец должен подтвердить параметры подготовки и адрес отгрузки.</p>}
       {data.logistics ? <p>{methodNames[data.logistics.method]}, {data.logistics.carrier || "без отдельного перевозчика"}. Срок: {data.logistics.expected_date}. Тариф: <b>{data.logistics.cost_rub == null ? "Неизвестен — финальное согласие недоступно" : formatRub(data.logistics.cost_rub)}</b>. {data.logistics.confirmed ? "Согласовано" : "Требуется согласие продавца"}.</p> : <p className="hint">Тариф пока неизвестен. До согласования получения отгрузка недоступна.</p>}
-      <p className="hint">Стоимость перевозки учитывается отдельно от товаров. ПоРукам не является перевозчиком и не подтверждает оплату. Опасный груз и диапазон 12–15 м³ требуют ручного уточнения; ориентиры размера партии не гарантируют транспорт.</p>
+      <ul className="reading-list hint"><li>Стоимость перевозки — отдельно от товаров. ПоРукам не перевозчик и не подтверждает оплату.</li><li>Опасный груз и объём 12–15 м³ требуют ручного уточнения. Размер партии не гарантирует наличие транспорта.</li></ul>
       <h3>Партии</h3>{!data.batches.length && <p className="hint">Отгрузок пока нет.</p>}
       {data.batches.map(b => <div className="alert" key={b.id}><b>{b.batch}</b>: отгружено {b.units}, получено {b.received}, принято {b.accepted}, отклонено {b.rejected}, не поставлено {b.missing}.<p>Ожидаемая дата: {b.expected_date ?? "Историческая партия"}; факт: {b.actual_date ? new Date(b.actual_date).toLocaleString("ru-RU") : "Ранее подтверждено"}.</p>{files(b)}{canManage && isBuyer && <><button type="button" className="btn btn-secondary btn-sm" onClick={() => choose("receipt", "batch_id", b.id)}>Записать получение</button><button type="button" className="btn btn-secondary btn-sm" onClick={() => choose("inspection", "batch_id", b.id)}>Проверить полученное</button></>}</div>)}
       <h3>Расхождения</h3>{!data.disputes.length && <p className="hint">Расхождений нет.</p>}{data.disputes.map(d => <div className="alert" key={d.id}><b>{eventStatuses[d.status ?? "open"]}</b> · {d.units} ед. · условия версии {d.terms_version}<p>{d.note}</p>{files(d)}{d.responses?.map(response => <p key={response.id}>Ответ продавца: {response.note}. Предложено: {response.resolution === "accept" ? "Принять после проверки" : "Уменьшить обязательство и стоимость товара"}{files(response)}</p>)}{canManage && d.status !== "closed" && (!isBuyer || d.status === "responded") && <button type="button" className="btn btn-secondary" onClick={() => choose(isBuyer ? "dispute_decision" : "dispute_response", "dispute_id", d.id)}>{isBuyer ? "Решение покупателя" : "Ответить на расхождение"}</button>}</div>)}
@@ -131,7 +145,7 @@ export default function DealFulfillmentPanel({ dealId, companyId, isBuyer, canMa
         {["decision", "dispute_decision", "proposal_decision"].includes(action) && <div className="field"><label>Решение<select value={f("approved")} onChange={e => change("approved", e.target.value)}><option value="true">Согласовать</option><option value="false">Отклонить</option></select></label></div>}
         {action === "return_complete" && <label><input type="checkbox" checked={f("restock") === "true"} onChange={e => change("restock", String(e.target.checked))} /> Товар получен, качество проверено: разрешаю возврат на доступный склад</label>}
         <div className="field"><label htmlFor="fulfillment-note">{action === "message" ? "Сообщение" : "Основание, доказательство или номер акта"}</label><textarea id="fulfillment-note" required minLength={3} maxLength={1000} value={f("note")} onChange={e => change("note", e.target.value)} /></div>
-        <div className="field"><label htmlFor="fulfillment-file">Материалы (PDF, PNG, JPEG до 10 МБ)</label><input id="fulfillment-file" type="file" accept="application/pdf,image/png,image/jpeg" disabled={pending || materials.length >= 10} onChange={e => { const file = e.target.files?.[0]; e.target.value = ""; if (!file) return; void perform(async token => { const item = await fulfillmentApi.upload(token, dealId, companyId, data.terms_version, file); if (alive.current) { setMaterials(old => [...old, item]); setApproved(false); } }); }} />{materials.map(m => <span key={m.id}>{m.filename} <button type="button" disabled={pending} onClick={() => { setMaterials(old => old.filter(v => v.id !== m.id)); setApproved(false); }}>Убрать</button></span>)}</div>
+        <div className="field"><label htmlFor="fulfillment-file">Материалы (PDF, PNG, JPEG до 10 МБ)</label><FilePicker id="fulfillment-file" accept="application/pdf,image/png,image/jpeg" disabled={pending || materials.length >= 10} status={pending ? "Обрабатываем файл…" : materials.length ? `Прикреплено файлов: ${materials.length}` : "Файл не выбран"} onChange={e => { const file = e.target.files?.[0]; e.target.value = ""; if (!file) return; void perform(async token => { const item = await fulfillmentApi.upload(token, dealId, companyId, data.terms_version, file); if (alive.current) { setMaterials(old => [...old, item]); setApproved(false); } }); }} />{materials.map(m => <span key={m.id}>{m.filename} <button type="button" disabled={pending} onClick={() => { setMaterials(old => old.filter(v => v.id !== m.id)); setApproved(false); }}>Убрать</button></span>)}</div>
         <label><input type="checkbox" checked={approved} onChange={e => setApproved(e.target.checked)} required /> {action === "message" ? "Подтверждаю отправку в эту сделку" : "Подтверждаю действие, количество и основание от имени компании"}</label>
         <button className="btn btn-primary" disabled={pending || !approved || (!canManage && action !== "message")}>{pending ? "Сохраняем…" : names[action]}</button>
       </fieldset></form>

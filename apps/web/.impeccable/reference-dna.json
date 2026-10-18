@@ -1,0 +1,451 @@
+{
+  "meta": {
+    "name": "ПоРукам — витрина по макету пользователя",
+    "description": "Композиция утверждённого пользовательского изображения; рабочий HTML и фактический ассортимент API.",
+    "source_references": [
+      "apps/web/.impeccable/references/approved-storefront.png"
+    ],
+    "created_at": "2026-10-18",
+    "authority": "Последнее прямое поручение пользователя заменяет прежний main.jpg как главную визуальную основу. Фото склада и значок потребности из предоставленного изображения используются без перерисовки.",
+    "latest_user_override": "Правые иллюстрации помощи и ИИ-закупок становятся 3D-объектами с плавным поворотом по положению мыши.",
+    "applied_principles": [
+      "Компактная шапка с поиском, сегментами рынка и рабочими ссылками",
+      "Складской баннер, раздельные иконки категорий, четыре товарные карточки",
+      "Белый фон с голубым оттенком, тёмные чернила, синие действия",
+      "Фактические категории/товары/цены вместо придуманных коммерческих фактов"
+    ]
+  },
+  "design_system": {
+    "color": {
+      "palette_type": "neutral-blue",
+      "primary": {
+        "hex": "#12356c",
+        "role": "Основные действия светлой темы, локально выбран из синего языка макета"
+      },
+      "secondary": {
+        "hex": "#daeefc",
+        "role": "Выбранная категория/направление"
+      },
+      "accent": {
+        "hex": "#4d83bd",
+        "role": "Измеренный синий акцент; коричневый кластер относится к фотографиям, не к UI"
+      },
+      "neutral": {
+        "scale": [
+          "#ffffff",
+          "#f7fafc",
+          "#d1d4da",
+          "#949299",
+          "#3a4860",
+          "#17141f"
+        ],
+        "usage": "Почти белая сцена, отдельные белые карточки, читаемый чернильный текст"
+      },
+      "semantic": {
+        "success": "#138963",
+        "warning": "#7c521b",
+        "error": "#a32a3f",
+        "info": "#12356c"
+      },
+      "surface": {
+        "background": "#f7fafc",
+        "card": "#ffffff",
+        "elevated": "#f8fbfe"
+      },
+      "contrast_strategy": "Отдельные светлые и тёмные токены; изображения и цветной логотип не фильтруются",
+      "measurement": {
+        "k": 8,
+        "sampling": {
+          "method": "deterministic_stratified",
+          "max_pixels": 160000,
+          "sampled_pixels": 160000
+        }
+      },
+      "measured_palette": [
+        {
+          "hex": "#f7fafc",
+          "coverage": 0.6549,
+          "role": "background"
+        },
+        {
+          "hex": "#d1d4da",
+          "coverage": 0.1257,
+          "role": "unassigned"
+        },
+        {
+          "hex": "#926642",
+          "coverage": 0.0498,
+          "role": "accent"
+        },
+        {
+          "hex": "#d8b28f",
+          "coverage": 0.0433,
+          "role": "unassigned"
+        },
+        {
+          "hex": "#3a4860",
+          "coverage": 0.0418,
+          "role": "unassigned"
+        },
+        {
+          "hex": "#949299",
+          "coverage": 0.0407,
+          "role": "unassigned"
+        },
+        {
+          "hex": "#17141f",
+          "coverage": 0.0373,
+          "role": "text"
+        },
+        {
+          "hex": "#4d83bd",
+          "coverage": 0.0064,
+          "role": "unassigned"
+        }
+      ],
+      "measurement_scope": "Весь исходный комп, включая фотографии. Коричневые кластеры не задают цвет кнопок. Палитра итоговых фотографий API может отличаться."
+    },
+    "typography": {
+      "display": {
+        "family": "Manrope",
+        "weight": 800,
+        "size": "57px desktop; responsive clamp",
+        "line_height": 1.02
+      },
+      "body": {
+        "family": "Manrope",
+        "weight": 400,
+        "size": "14–16px",
+        "line_height": 1.65
+      },
+      "source": "Локальные Cyrillic WOFF2; название шрифта макета не установлено. Font-match предложил Encode Sans как приближение; он не установлен.",
+      "detail": "На десктопе масштаб заголовка по X .92, текст остаётся HTML."
+    },
+    "spacing": {
+      "base_unit": 4,
+      "scale": [
+        4,
+        8,
+        10,
+        12,
+        14,
+        16,
+        20,
+        28,
+        35,
+        44
+      ]
+    },
+    "layout": {
+      "model": "Slim header, warehouse hero, category rail, product grid, request strip, footer",
+      "reference_viewport": [
+        1280,
+        841
+      ],
+      "hero_height": 196,
+      "header_height": 63,
+      "container_max": 1600,
+      "columns": {
+        "desktop": 4,
+        "tablet": 3,
+        "mobile": 2
+      },
+      "breakpoints": {
+        "tablet": 1000,
+        "mobile": 760,
+        "narrow": 360
+      },
+      "overflow": "Только локальная нативная прокрутка категорий; без горизонтального выхода страницы"
+    },
+    "shape": {
+      "card_radius": "8px",
+      "category_radius": "9px",
+      "action_radius": "24px",
+      "language": "Прямоугольные товарные карточки и категории, капсульные действия; разные линзы справки"
+    },
+    "elevation": {
+      "card": "Лёгкая контурная граница и малый рассеянный shadow",
+      "actions": "CSS заливка и тень плюс одна процедурная оптическая кромка"
+    },
+    "iconography": {
+      "system": "Оригинальные inline SVG из Icon.tsx",
+      "color": "Тематический синий; зелёный только достоверная проверка"
+    },
+    "motion": {
+      "background": "Статичен",
+      "controls": "Краткий отклик на нажатие, без движения текста",
+      "fallback": "reduced motion/transparency, coarse pointer, no WebGL, forced colors",
+      "category": "CSS scale1.025/180ms, press1.005/100ms; fine pointer only, no reduced motion"
+    },
+    "components": {
+      "header": "Логотип, Товары/Потребности, настоящий GET-поиск, ИИ-закупки/Поддержка, аккаунт",
+      "product": "Ссылка на условия и отдельная кнопка локального избранного; изображение 1.546 desktop / 1.2 mobile; заголовок, точная цена, допущенный производитель",
+      "category": "Отдельные плотные объёмные CSS-кнопки с фактическими категориями API; hover scale1.025/180ms, без liquid/WebGL.",
+      "sort": "Порядок каталога / По названию; без неподтверждённой популярности",
+      "request": "Открывает настоящую потребность; администратору кабинет площадки"
+    }
+  },
+  "design_style": {
+    "aesthetic": [
+      "Ясная торговая витрина",
+      "Белый и синий",
+      "Точная типографическая иерархия"
+    ],
+    "visual_language": "Исходные цвета логотипа и товаров; фото склада задаёт контекст",
+    "composition": "Почти совпадающая геометрия предоставленного экрана, настоящее содержимое из API",
+    "imagery": "Пользовательский складской снимок и собственные фотографии поставщиков; синтетические иллюстрации подписаны",
+    "interaction_feel": "Устойчивые hit targets, физический изгиб только оптических оболочек",
+    "brand_voice_in_ui": "Короткий русский текст и реальные действия"
+  },
+  "visual_effects": {
+    "overview": "Ограниченные liquid 3D кнопки в статичной витрине",
+    "background": {
+      "type": "flat",
+      "pointer_response": false
+    },
+    "particles": {
+      "enabled": false
+    },
+    "3d": {
+      "implementation": "Собственная WebGL-сетка liquidGlassMesh.ts для оболочек; Three.js0.186.1 для отдельных моделей справа.",
+      "scope": [
+        "Поиск: Найти",
+        "Разместить потребность",
+        "Создать потребность",
+        "Hero помощи",
+        "Hero ИИ-закупок"
+      ],
+      "geometry": "64×8 rail, 64×24 hero",
+      "content_transform": false,
+      "dependency_added": true,
+      "objects": {
+        "routes": [
+          "/knowledge",
+          "/ai-procurement"
+        ],
+        "geometry": "Широкая стеклянная лента, замкнутая в трёхлопастный узел с хромированной кромкой; прежний планшет/коробка/сообщение помощи сохранены.",
+        "rotation_radians": {
+          "x": 0.32,
+          "y": 0.6,
+          "z": 0.07
+        },
+        "smoothing_tau_ms": 95,
+        "continuous_loop": false,
+        "max_buffer": [
+          640,
+          640
+        ],
+        "max_dpr": 1.6,
+        "fallback": "Первый кадр текущей 3D-сцены, отдельно для обеих тем; старые иллюстрации не подключаются. В forced colors декорация скрыта.",
+        "loading": "Dynamic import только при видимости и fine pointer, без motion/transparency ограничений.",
+        "firstPaint": "scripts/render-hero-posters.mjs экспортирует PNG с совпадающей позой, камерой и светом; без смены силуэта при загрузке JS.",
+        "rendering": "AI: PBR transmission/refraction/dispersion и PMREM softbox reflections; не path tracing. Материал и свет помощи сохранены."
+      }
+    },
+    "shaders": {
+      "type": "Процедурное стилизованное стекло",
+      "true_dom_refraction": false,
+      "max_buffer": [
+        1100,
+        600
+      ],
+      "dpr_multiplier": false,
+      "guard_band": "8–32 CSS px; projected displacement smooth-bound to min(24,gutter−6), including spring overshoot"
+    },
+    "scroll": {
+      "type": "native",
+      "background_parallax": false
+    },
+    "text": {
+      "animated": false
+    },
+    "cursor": {
+      "background_effect": false,
+      "surface_effect": "Bounded fine-pointer deformation only"
+    },
+    "image": {
+      "logo_filter": false,
+      "product_filter": false,
+      "warehouse": "CSS-область исходного пользовательского изображения; не screenshot всей страницы",
+      "help": "Оригинальная прозрачная procurement-help.webp: документ закупки, коробка и подсказка; ИИ-закупки сохраняют business-link.webp"
+    },
+    "glass": {
+      "type": "Стилизованный объёмный материал с устойчивым текстом",
+      "fallback": "Статический CSS"
+    },
+    "canvas": {
+      "idle_loop": false,
+      "pause": "Offscreen, hidden tab, blur, media preferences",
+      "context_loss": "CSS fallback; reinitialize on restore"
+    },
+    "svg": {
+      "usage": "Inline функциональные иконки"
+    },
+    "composite_notes": [
+      "Это выбранная реализация движения, а не движение, измеренное из статичного макета.",
+      "Проверки GPU-readback подтверждают реакцию сетки; не являются замером батареи/FPS всех устройств."
+    ]
+  },
+  "scoped_3d_extension": {
+    "status": "Сохранено из предшествующей реализации и применено к ключевым кнопкам нового макета",
+    "spring": {
+      "mass": 1,
+      "stiffness": 100,
+      "damping": 10
+    },
+    "source": "apps/web/app/components/liquidGlassMesh.ts",
+    "verification": "tests/e2e/liquid-surface-browser.spec.ts"
+  },
+  "verification": {
+    "reference_measurement": "Deterministic whole-image k=8; includes product/warehouse photo colors",
+    "whole_image_color_check": {
+      "implementation": "output/playwright/reference-storefront/comp.png",
+      "reference": "/tmp/porukam-reference-storefront/measured.json",
+      "measurement": {
+        "k": 8
+      },
+      "entries": [
+        {
+          "specHex": "#f7fafc",
+          "role": "background",
+          "nearestImageHex": "#fafcfc",
+          "deltaE": 1.29,
+          "specCoverage": 0.6549,
+          "imageCoverage": 0.745
+        },
+        {
+          "specHex": "#d1d4da",
+          "role": "unassigned",
+          "nearestImageHex": "#d5dbe1",
+          "deltaE": 2.5,
+          "specCoverage": 0.1257,
+          "imageCoverage": 0.0645
+        },
+        {
+          "specHex": "#926642",
+          "role": "accent",
+          "nearestImageHex": "#af8762",
+          "deltaE": 12.75,
+          "specCoverage": 0.0498,
+          "imageCoverage": 0.0322
+        },
+        {
+          "specHex": "#d8b28f",
+          "role": "unassigned",
+          "nearestImageHex": "#d6b493",
+          "deltaE": 2.16,
+          "specCoverage": 0.0433,
+          "imageCoverage": 0.0234
+        },
+        {
+          "specHex": "#3a4860",
+          "role": "unassigned",
+          "nearestImageHex": "#1d202f",
+          "deltaE": 18.68,
+          "specCoverage": 0.0418,
+          "imageCoverage": 0.0325
+        },
+        {
+          "specHex": "#949299",
+          "role": "unassigned",
+          "nearestImageHex": "#939dad",
+          "deltaE": 7.4,
+          "specCoverage": 0.0407,
+          "imageCoverage": 0.0222
+        },
+        {
+          "specHex": "#17141f",
+          "role": "text",
+          "nearestImageHex": "#1d202f",
+          "deltaE": 6.57,
+          "specCoverage": 0.0373,
+          "imageCoverage": 0.0659
+        },
+        {
+          "specHex": "#4d83bd",
+          "role": "unassigned",
+          "nearestImageHex": "#2b5b92",
+          "deltaE": 15.83,
+          "specCoverage": 0.0064,
+          "imageCoverage": 0.0143
+        }
+      ],
+      "implementationClusters": [
+        {
+          "imageHex": "#fafcfc",
+          "imageCoverage": 0.745,
+          "nearestSpecHex": "#f7fafc",
+          "nearestSpecRole": "background",
+          "deltaE": 1.29
+        },
+        {
+          "imageHex": "#1d202f",
+          "imageCoverage": 0.0659,
+          "nearestSpecHex": "#17141f",
+          "nearestSpecRole": "text",
+          "deltaE": 6.57
+        },
+        {
+          "imageHex": "#d5dbe1",
+          "imageCoverage": 0.0645,
+          "nearestSpecHex": "#d1d4da",
+          "nearestSpecRole": "unassigned",
+          "deltaE": 2.5
+        },
+        {
+          "imageHex": "#625856",
+          "imageCoverage": 0.0325,
+          "nearestSpecHex": "#3a4860",
+          "nearestSpecRole": "unassigned",
+          "deltaE": 20.31
+        },
+        {
+          "imageHex": "#af8762",
+          "imageCoverage": 0.0322,
+          "nearestSpecHex": "#926642",
+          "nearestSpecRole": "accent",
+          "deltaE": 12.75
+        },
+        {
+          "imageHex": "#d6b493",
+          "imageCoverage": 0.0234,
+          "nearestSpecHex": "#d8b28f",
+          "nearestSpecRole": "unassigned",
+          "deltaE": 2.16
+        },
+        {
+          "imageHex": "#939dad",
+          "imageCoverage": 0.0222,
+          "nearestSpecHex": "#949299",
+          "nearestSpecRole": "unassigned",
+          "deltaE": 7.4
+        },
+        {
+          "imageHex": "#2b5b92",
+          "imageCoverage": 0.0143,
+          "nearestSpecHex": "#4d83bd",
+          "nearestSpecRole": "unassigned",
+          "deltaE": 15.83
+        }
+      ],
+      "meanDeltaE": 3.07,
+      "maxDeltaE": 20.31,
+      "coverageDrift": 0.2531,
+      "thresholds": {
+        "meanDeltaE": 5,
+        "maxDeltaE": 20,
+        "coverageDrift": 0.35,
+        "significantCoverage": 0.005
+      },
+      "pass": false
+    },
+    "interpretation": "Whole-image color check FAIL: max deltaE20.31 exceeds20; mean3.07 and coverage drift0.2531 pass. Different actual product photos intentionally retained. No false PASS or UI-brown recolor.",
+    "composition_diff": {
+      "overall": 0.8071,
+      "tool_verdict": "match",
+      "scope": "Statistical helper, not pixel identity or full visual approval",
+      "reference_size": "1280x841",
+      "build_fullpage_size": "1280x846"
+    }
+  }
+}

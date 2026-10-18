@@ -135,7 +135,7 @@ export default function CoalitionsPage() {
                       <div className="actions">
                         <CommercialEstimate value={ownMember.commercial_estimate} />
                         <button type="button" className="btn btn-secondary" disabled={workingId===coalition.id} onClick={()=>void loadBaselines(coalition,ownMember.need_id)}>Выбрать подтверждённое КП для сравнения</button>
-                        {baselineChoices[coalition.id] && <div className="field"><label htmlFor={`baseline_${coalition.id}`}>Индивидуальное подтверждённое КП</label><select id={`baseline_${coalition.id}`} value={baselineSelection[coalition.id]||""} onChange={event=>setBaselineSelection(current=>({...current,[coalition.id]:event.target.value}))}><option value="">Без базы экономии</option>{baselineChoices[coalition.id].filter(offer=>offer.commercial_quote?.estimate.complete).map(offer=><option key={offer.id} value={offer.id}>Производитель #{offer.company_id.slice(0,8)} · {formatRub(offer.commercial_quote?.estimate.total_rub)} · {offer.lead_time_days} дн.</option>)}</select><button type="button" className="btn btn-secondary" disabled={workingId===coalition.id} onClick={()=>void chooseBaseline(coalition,ownMember.buyer_company_id!)}>Применить базу сравнения</button><p className="hint">Сопоставимость проверяется по объёму, требованиям, доставке, срокам и налогам. Без подходящего КП экономия не подтверждается.</p></div>}
+                        {baselineChoices[coalition.id] && <div className="field"><label htmlFor={`baseline_${coalition.id}`}>Индивидуальное подтверждённое КП</label><select id={`baseline_${coalition.id}`} value={baselineSelection[coalition.id]||""} onChange={event=>setBaselineSelection(current=>({...current,[coalition.id]:event.target.value}))}><option value="">Без базы экономии</option>{baselineChoices[coalition.id].filter(offer=>offer.commercial_quote?.estimate.complete).map(offer=><option key={offer.id} value={offer.id}>Производитель #{offer.company_id.slice(0,8)} · {formatRub(offer.commercial_quote?.estimate.total_rub)} · {offer.lead_time_days} дн.</option>)}</select><button type="button" className="btn btn-secondary" disabled={workingId===coalition.id} onClick={()=>void chooseBaseline(coalition,ownMember.buyer_company_id!)}>Применить базу сравнения</button><p className="hint">Сравниваются объём, требования, доставка, сроки и налоги. Без сопоставимого КП экономия не подтверждена.</p></div>}
                         <button type="button" className="btn btn-success" disabled={workingId === coalition.id || !ownMember.commercial_estimate?.complete} onClick={() => void decide(coalition, ownMember.buyer_company_id!, "approved")}>Подтвердить свои условия</button>
                         <button type="button" className="btn btn-secondary" disabled={workingId === coalition.id} onClick={() => void decide(coalition, ownMember.buyer_company_id!, "rejected")}>Отказаться</button>
                       </div>
@@ -143,7 +143,7 @@ export default function CoalitionsPage() {
                   </section>
                 )}
                 <p className="hint">
-                  Другие покупатели имеют отдельные бюджеты, контакты и заказы. Сделка не создаётся, пока каждый участник не подтвердит собственные условия.
+                  Бюджеты, контакты и заказы участников раздельны. Сделка создаётся только после согласия каждого на свои условия.
                 </p>
               </article>
             );

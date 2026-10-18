@@ -171,6 +171,7 @@ export default function DashboardPage() {
           <button
             type="button"
             className={mode === "buy" ? "active" : ""}
+            aria-pressed={mode === "buy"}
             disabled={!canBuy}
             title={canBuy ? undefined : "Нет компании с правом покупки"}
             onClick={() => selectMode("buy")}
@@ -180,6 +181,7 @@ export default function DashboardPage() {
           <button
             type="button"
             className={mode === "sell" ? "active" : ""}
+            aria-pressed={mode === "sell"}
             disabled={!canSell}
             title={canSell ? undefined : "Нет компании с правом продажи"}
             onClick={() => selectMode("sell")}

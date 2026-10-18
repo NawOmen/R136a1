@@ -15,6 +15,7 @@ COPY --from=builder /app/apps/web/package.json ./
 COPY --from=builder /app/node_modules ./node_modules
 COPY --from=builder /app/apps/web/node_modules ./apps/web/node_modules
 COPY --from=builder /app/apps/web/.next ./apps/web/.next
+COPY --from=builder /app/apps/web/public ./apps/web/public
 COPY --from=builder /app/apps/web/next.config.mjs ./apps/web/
 WORKDIR /app/apps/web
 RUN mkdir -p .next/cache && chown -R node:node .next/cache

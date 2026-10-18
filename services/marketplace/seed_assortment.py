@@ -6,6 +6,7 @@ Synthetic demo data only: assortment, group pictograms drawn by the team
 import struct
 import uuid
 import zlib
+from pathlib import Path
 from datetime import date, datetime, timedelta, timezone
 from decimal import Decimal
 
@@ -34,6 +35,7 @@ GROUP_COLORS = {
 }
 
 LEGACY_COMPARISON_KEYS = ("box", "bolt", "jacket", "desk", "tile", "cable", "lamp")
+PRODUCT_PHOTO_KEYS = ("box", "jacket", "cable", "drinking_water")
 
 
 def comparison_assortment():
@@ -85,6 +87,7 @@ def group_pictogram(family: str, size: int = 96) -> bytes:
 
 
 async def seed_assortment(db):
+    created = []
     for seller_index, title in enumerate(("ООО «Урал Комплект»", "ООО «Регион Поставка»")):
         row = (await db.execute(text(
             "SELECT c.id, m.user_id FROM auth.companies c JOIN auth.company_members m ON m.company_id = c.id "
@@ -120,6 +123,7 @@ async def seed_assortment(db):
                 stock_units=stock // (seller_index + 1), stock_updated_at=datetime.now(timezone.utc),
                 is_published=report.blocking_open == 0)
             db.add(product)
+            created.append(product)
             # Extend scope only for this newly inserted fixture. Existing scope edits
             # and deliberately removed scope entries survive subsequent seed runs.
             details = passport.details or {}
@@ -133,6 +137,7 @@ async def seed_assortment(db):
                     unit_price_rub=product.price_rub, specification_hash=product_specification_hash(product)))
     await seed_product_images(db)
     await seed_seller_stories(db)
+    return created
 
 
 async def seed_product_images(db):
@@ -142,6 +147,7 @@ async def seed_product_images(db):
     """
     from app.storage import upload_object
 
+    await seed_product_photos(db)
     pictured = set()
     for key, family, _category, _subcategory, _name, _attributes, _price, _moq, _stock, _lead in ASSORTMENT:
         if family in pictured:
@@ -162,6 +168,48 @@ async def seed_product_images(db):
             continue
         db.add(ProductImage(product_id=product.id, file_name=f"Схематическая иллюстрация: {family}.png",
                             file_key=file_key, content_type="image/png", position=0))
+        await db.flush()
+
+
+async def seed_product_photos(db):
+    """Attach authored product illustrations only to unchanged synthetic SKUs.
+
+    Upgrade our own old pictograms; preserve supplier uploads, edited products,
+    existing image IDs and all commercial data. A storage failure is retryable.
+    """
+    from app.storage import upload_object
+
+    seller_id = await _first_seller_id(db)
+    if seller_id == "missing-seller":
+        return
+    for key, _family, category, subcategory, name, attributes, *_ in ASSORTMENT:
+        if key not in PRODUCT_PHOTO_KEYS:
+            continue
+        product_id = uuid.uuid5(NAMESPACE, f"{seller_id}:{key}")
+        product = await db.get(Product, product_id)
+        if product is None or (product.name, product.category, product.subcategory, product.characteristics) != (name, category, subcategory, attributes):
+            continue
+        images = list((await db.scalars(select(ProductImage).where(
+            ProductImage.product_id == product_id))).all())
+        photo_key = f"products/{product_id}/seed-photo-{key}.webp"
+        if any(image.file_key == photo_key for image in images):
+            continue
+        old_key = f"products/{product_id}/seed-{key}.png"
+        if any(not (image.file_key == old_key and image.file_name.startswith("Схематическая иллюстрация:")) for image in images):
+            continue
+        asset = Path(__file__).parent / "seed_media" / f"{key}.webp"
+        if not asset.is_file():
+            continue
+        try:
+            upload_object(photo_key, asset.read_bytes(), "image/webp")
+        except Exception:
+            continue
+        image = images[0] if images else ProductImage(product_id=product_id, position=0)
+        image.file_name = f"Иллюстрация товара: {name}.webp"
+        image.file_key = photo_key
+        image.content_type = "image/webp"
+        if not images:
+            db.add(image)
         await db.flush()
 
 

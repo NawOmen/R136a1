@@ -180,19 +180,20 @@ export default function SellerCapacityPage() {
       {saved && <div className="alert alert-success">Мощности сохранены.</div>}
       {error && <div className="alert alert-error">{error}</div>}
 
-      <div className="form-grid card">
+      <div className="form-grid card capacity-settings">
         <div className="field"><label htmlFor="capacity-category">Категория ресурса</label><select id="capacity-category" value={scopeCategory} disabled={saving} onChange={event => { setScopeCategory(event.target.value); setSaved(false); }}><option value="">Общий ресурс с явными коэффициентами</option>{leafOptions.map(item => <option key={item.id} value={item.id}>{item.label}</option>)}</select></div>
-        <div className="field"><label htmlFor="capacity-unit">Единица измерения</label><input id="capacity-unit" value={scopeUnit} maxLength={32} disabled={saving} onChange={event => { setScopeUnit(event.target.value); setSaved(false); setConversionApproved(false); }} /></div>
-        <p className="hint">Отдельный ресурс относится к одной подкатегории и единице. Общий ресурс распределяется только по подтверждённым коэффициентам; каждый день — отдельный период. Занятое считается в единице ресурса. Для дробных физических заказов используйте единицу хранения: г, мм, см² или мл. Например 2,5 кг — 2500 г; 0,5 часа ресурса — 30 мин.</p>
-        {!scopeCategory && <div className="field"><h3>Расход общего ресурса</h3>
+        <div className="field"><label htmlFor="capacity-unit">Единица измерения</label><input id="capacity-unit" type="text" value={scopeUnit} maxLength={32} disabled={saving} onChange={event => { setScopeUnit(event.target.value); setSaved(false); setConversionApproved(false); }} /></div>
+        <p className="hint">Отдельный ресурс — одна подкатегория и единица. Общий — только с подтверждёнными коэффициентами. Каждый день учитывается отдельно, занятое — в единице ресурса.</p>
+        <details className="text-details"><summary>Как вводить дробные объёмы</summary><div className="text-details__body"><p>Используйте меньшую единицу хранения: г, мм, см² или мл. Например, 2,5 кг = 2500 г; 0,5 часа ресурса = 30 минут.</p></div></details>
+        {!scopeCategory && <div className="field capacity-settings__conversions"><h3>Расход общего ресурса</h3>
           {conversions.map((item,index)=><div key={index}>
             <label>Подкатегория<select value={item.category_id} disabled={saving} onChange={event=>{setConversions(previous=>previous.map((value,i)=>i===index?{...value,category_id:event.target.value}:value));setConversionApproved(false);}}><option value="">Выберите</option>{leafOptions.map(leaf=><option key={leaf.id} value={leaf.id}>{leaf.label}</option>)}</select></label>
             <label>Единица заказа<input value={item.order_unit} disabled={saving} onChange={event=>{setConversions(previous=>previous.map((value,i)=>i===index?{...value,order_unit:event.target.value}:value));setConversionApproved(false);}} /></label>
             <label>Расход {scopeUnit} на одну единицу заказа<input type="number" min={1} step={1} value={item.resource_units_per_order_unit} disabled={saving} onChange={event=>{setConversions(previous=>previous.map((value,i)=>i===index?{...value,resource_units_per_order_unit:Number(event.target.value)}:value));setConversionApproved(false);}} /></label>
-            <button type="button" disabled={saving} onClick={()=>{setConversions(previous=>previous.filter((_,i)=>i!==index));setConversionApproved(false);}}>Удалить коэффициент</button>
+            <button type="button" className="btn btn-secondary btn-sm" disabled={saving} onClick={()=>{setConversions(previous=>previous.filter((_,i)=>i!==index));setConversionApproved(false);}}>Удалить коэффициент</button>
           </div>)}
-          <button type="button" disabled={saving} onClick={()=>{setConversions(previous=>[...previous,{category_id:"",order_unit:"шт",resource_units_per_order_unit:1}]);setConversionApproved(false);}}>Добавить категорию</button>
-          <p className="hint">Расход задаётся целым числом в выбранной меньшей единице ресурса, без округления. Для 0,5 часа используйте 30 минут. Коэффициенты относятся ко всем показанным дням; прежние резервы сохраняют свои условия.</p>
+          <button type="button" className="btn btn-secondary btn-sm" disabled={saving} onClick={()=>{setConversions(previous=>[...previous,{category_id:"",order_unit:"шт",resource_units_per_order_unit:1}]);setConversionApproved(false);}}>Добавить категорию</button>
+          <p className="hint">Расход — целое число в меньшей единице, без округления. Коэффициенты действуют для всех показанных дней; условия прежних резервов сохраняются.</p>
           {!!conversions.length && <label><input type="checkbox" checked={conversionApproved} disabled={saving} onChange={event=>setConversionApproved(event.target.checked)} /> Коэффициенты и дни календаря проверены</label>}
         </div>}
       </div>
@@ -202,6 +203,7 @@ export default function SellerCapacityPage() {
           <p className="hint">Загрузка календаря...</p>
         ) : (
           <>
+            <div className="comparison-scroll" tabIndex={0} role="region" aria-label="Календарь мощностей, прокрутка по горизонтали">
             <table className="capacity-table">
               <thead>
                 <tr>
@@ -230,6 +232,7 @@ export default function SellerCapacityPage() {
                 ))}
               </tbody>
             </table>
+            </div>
             <p className="hint mode-hint">
               Например, {formatUnits(4800, scopeUnit)} — объём выбранного ресурса в этот день. Занятый объём включает заказы, удержания и уже выполненную работу. Уменьшить мощность ниже занятого объёма нельзя.
             </p>

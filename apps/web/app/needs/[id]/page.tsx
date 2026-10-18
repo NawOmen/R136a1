@@ -383,9 +383,9 @@ export default function NeedDetailPage() {
 
       {variants.length > 0 && (
         <section className="card">
-          <h2>Варианты оптимизатора</h2>
+          <h2>Варианты закупки</h2>
           <p className="hint mode-hint">
-            Расчёт выполнен обычным кодом и OR-Tools. LLM не выбирает распределение.
+            Объём распределяется программным расчётом, без решений ИИ.
           </p>
           <div className="market-grid">
             {variants.map((variant) => (

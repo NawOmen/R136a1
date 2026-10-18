@@ -1,0 +1,18 @@
+{
+  "origin": "Transparent first frame rendered from the project's own procedural Three.js scene; matches live geometry, pose, camera, lighting and theme. No external image generation or old illustration.",
+  "generator": "scripts/render-hero-posters.mjs",
+  "kind": "procurement",
+  "theme": "light",
+  "sources": {
+    "apps/web/app/components/heroObjectModels.ts": "177ee98ce9780bb81773afa8773ff44e25feb97485b125d02490c84d82baadd2",
+    "apps/web/app/components/heroObjectScene.ts": "65baf3acd9a451c9a815ee8f2ba7795e8b3a82842f77bda5631da866dfae5ded"
+  },
+  "dimensions": [
+    624,
+    624
+  ],
+  "colorSpace": "sRGB",
+  "transparentBackground": true,
+  "sha256": "9b23224361f7a4e2d5cddc85b4f28b7bd0330fc4c5e51e68ab5b0144028ae78e",
+  "bytes": 246292
+}

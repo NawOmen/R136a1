@@ -1,0 +1,689 @@
+{
+  "regions": [
+    {
+      "id": "brand",
+      "kind": "chrome",
+      "pixelBox": {
+        "x": 34,
+        "y": 14,
+        "w": 149,
+        "h": 36
+      },
+      "note": "Original chain logo and Russian wordmark"
+    },
+    {
+      "id": "market-tabs",
+      "kind": "control",
+      "pixelBox": {
+        "x": 207,
+        "y": 11,
+        "w": 192,
+        "h": 43
+      },
+      "note": "Goods and demand segmented navigation"
+    },
+    {
+      "id": "search",
+      "kind": "control",
+      "pixelBox": {
+        "x": 415,
+        "y": 11,
+        "w": 429,
+        "h": 43
+      },
+      "note": "Search field and navy submit button"
+    },
+    {
+      "id": "work-links",
+      "kind": "control",
+      "pixelBox": {
+        "x": 863,
+        "y": 18,
+        "w": 169,
+        "h": 28
+      },
+      "note": "AI purchases and support route links"
+    },
+    {
+      "id": "account",
+      "kind": "control",
+      "pixelBox": {
+        "x": 1072,
+        "y": 11,
+        "w": 177,
+        "h": 43
+      },
+      "note": "Login and pale blue registration action"
+    },
+    {
+      "id": "hero",
+      "kind": "chrome",
+      "pixelBox": {
+        "x": 0,
+        "y": 62,
+        "w": 1280,
+        "h": 196
+      },
+      "note": "Wide banner container",
+      "container": true
+    },
+    {
+      "id": "warehouse",
+      "kind": "image",
+      "pixelBox": {
+        "x": 650,
+        "y": 63,
+        "w": 630,
+        "h": 194
+      },
+      "note": "Provided warehouse photograph, orange shelving and boxes",
+      "bleed": true,
+      "parentId": "hero"
+    },
+    {
+      "id": "hero-title",
+      "kind": "text",
+      "pixelBox": {
+        "x": 50,
+        "y": 94,
+        "w": 590,
+        "h": 50
+      },
+      "note": "Black heavy headline: Всё для вашего бизнеса",
+      "parentId": "hero"
+    },
+    {
+      "id": "hero-subtitle",
+      "kind": "text",
+      "pixelBox": {
+        "x": 52,
+        "y": 153,
+        "w": 581,
+        "h": 25
+      },
+      "note": "Single muted sentence below headline",
+      "parentId": "hero"
+    },
+    {
+      "id": "hero-action",
+      "kind": "control",
+      "pixelBox": {
+        "x": 54,
+        "y": 189,
+        "w": 264,
+        "h": 48
+      },
+      "note": "Outlined primary demand action",
+      "parentId": "hero"
+    },
+    {
+      "id": "hero-guide",
+      "kind": "control",
+      "pixelBox": {
+        "x": 344,
+        "y": 198,
+        "w": 155,
+        "h": 28
+      },
+      "note": "Blue how-it-works route link",
+      "parentId": "hero"
+    },
+    {
+      "id": "category-0",
+      "kind": "control",
+      "pixelBox": {
+        "x": 35,
+        "y": 273,
+        "w": 197,
+        "h": 54
+      },
+      "note": "Category button with blue line icon and Russian label",
+      "reviewGroup": "categories"
+    },
+    {
+      "id": "category-1",
+      "kind": "control",
+      "pixelBox": {
+        "x": 242,
+        "y": 273,
+        "w": 166,
+        "h": 54
+      },
+      "note": "Category button with blue line icon and Russian label",
+      "reviewGroup": "categories"
+    },
+    {
+      "id": "category-2",
+      "kind": "control",
+      "pixelBox": {
+        "x": 417,
+        "y": 273,
+        "w": 218,
+        "h": 54
+      },
+      "note": "Category button with blue line icon and Russian label",
+      "reviewGroup": "categories"
+    },
+    {
+      "id": "category-3",
+      "kind": "control",
+      "pixelBox": {
+        "x": 645,
+        "y": 273,
+        "w": 192,
+        "h": 54
+      },
+      "note": "Category button with blue line icon and Russian label",
+      "reviewGroup": "categories"
+    },
+    {
+      "id": "category-4",
+      "kind": "control",
+      "pixelBox": {
+        "x": 846,
+        "y": 273,
+        "w": 168,
+        "h": 54
+      },
+      "note": "Category button with blue line icon and Russian label",
+      "reviewGroup": "categories"
+    },
+    {
+      "id": "category-5",
+      "kind": "control",
+      "pixelBox": {
+        "x": 1024,
+        "y": 273,
+        "w": 224,
+        "h": 54
+      },
+      "note": "Category button with blue line icon and Russian label",
+      "reviewGroup": "categories"
+    },
+    {
+      "id": "catalog-title",
+      "kind": "text",
+      "pixelBox": {
+        "x": 35,
+        "y": 354,
+        "w": 322,
+        "h": 25
+      },
+      "note": "Manufacturer products heading"
+    },
+    {
+      "id": "market-mode",
+      "kind": "control",
+      "pixelBox": {
+        "x": 815,
+        "y": 348,
+        "w": 247,
+        "h": 34
+      },
+      "note": "Buyer and manufacturer route selector"
+    },
+    {
+      "id": "catalog-sort",
+      "kind": "control",
+      "pixelBox": {
+        "x": 1079,
+        "y": 348,
+        "w": 168,
+        "h": 34
+      },
+      "note": "Compact native product order selector"
+    },
+    {
+      "id": "product-0",
+      "kind": "chrome",
+      "pixelBox": {
+        "x": 36,
+        "y": 392,
+        "w": 294,
+        "h": 294
+      },
+      "note": "Product card frame",
+      "container": true
+    },
+    {
+      "id": "product-photo-0",
+      "kind": "image",
+      "pixelBox": {
+        "x": 40,
+        "y": 396,
+        "w": 286,
+        "h": 185
+      },
+      "note": "Paper cups product photograph",
+      "bleed": true,
+      "parentId": "product-0"
+    },
+    {
+      "id": "product-0-name",
+      "kind": "text",
+      "pixelBox": {
+        "x": 53,
+        "y": 594,
+        "w": 243,
+        "h": 22
+      },
+      "note": "Product name, current API identity",
+      "parentId": "product-0",
+      "reviewGroup": "product-name"
+    },
+    {
+      "id": "product-0-price",
+      "kind": "text",
+      "pixelBox": {
+        "x": 53,
+        "y": 622,
+        "w": 201,
+        "h": 25
+      },
+      "note": "Exact ruble unit price, current API data",
+      "parentId": "product-0",
+      "reviewGroup": "product-price"
+    },
+    {
+      "id": "product-0-verification",
+      "kind": "text",
+      "pixelBox": {
+        "x": 53,
+        "y": 653,
+        "w": 228,
+        "h": 22
+      },
+      "note": "Manufacturer status justified by catalogue admission",
+      "parentId": "product-0",
+      "reviewGroup": "product-verification"
+    },
+    {
+      "id": "favorite-0",
+      "kind": "control",
+      "pixelBox": {
+        "x": 289,
+        "y": 402,
+        "w": 28,
+        "h": 29
+      },
+      "note": "Favorite heart button",
+      "parentId": "product-0",
+      "reviewGroup": "favorites"
+    },
+    {
+      "id": "product-open-0",
+      "kind": "control",
+      "pixelBox": {
+        "x": 275,
+        "y": 622,
+        "w": 42,
+        "h": 42
+      },
+      "note": "Open product arrow",
+      "parentId": "product-0",
+      "reviewGroup": "product-arrows"
+    },
+    {
+      "id": "product-1",
+      "kind": "chrome",
+      "pixelBox": {
+        "x": 342,
+        "y": 392,
+        "w": 294,
+        "h": 294
+      },
+      "note": "Product card frame",
+      "container": true
+    },
+    {
+      "id": "product-photo-1",
+      "kind": "image",
+      "pixelBox": {
+        "x": 346,
+        "y": 396,
+        "w": 286,
+        "h": 185
+      },
+      "note": "Metal hardware product photograph",
+      "bleed": true,
+      "parentId": "product-1"
+    },
+    {
+      "id": "product-1-name",
+      "kind": "text",
+      "pixelBox": {
+        "x": 359,
+        "y": 594,
+        "w": 243,
+        "h": 22
+      },
+      "note": "Product name, current API identity",
+      "parentId": "product-1",
+      "reviewGroup": "product-name"
+    },
+    {
+      "id": "product-1-price",
+      "kind": "text",
+      "pixelBox": {
+        "x": 359,
+        "y": 622,
+        "w": 201,
+        "h": 25
+      },
+      "note": "Exact ruble unit price, current API data",
+      "parentId": "product-1",
+      "reviewGroup": "product-price"
+    },
+    {
+      "id": "product-1-verification",
+      "kind": "text",
+      "pixelBox": {
+        "x": 359,
+        "y": 653,
+        "w": 228,
+        "h": 22
+      },
+      "note": "Manufacturer status justified by catalogue admission",
+      "parentId": "product-1",
+      "reviewGroup": "product-verification"
+    },
+    {
+      "id": "favorite-1",
+      "kind": "control",
+      "pixelBox": {
+        "x": 595,
+        "y": 402,
+        "w": 28,
+        "h": 29
+      },
+      "note": "Favorite heart button",
+      "parentId": "product-1",
+      "reviewGroup": "favorites"
+    },
+    {
+      "id": "product-open-1",
+      "kind": "control",
+      "pixelBox": {
+        "x": 581,
+        "y": 622,
+        "w": 42,
+        "h": 42
+      },
+      "note": "Open product arrow",
+      "parentId": "product-1",
+      "reviewGroup": "product-arrows"
+    },
+    {
+      "id": "product-2",
+      "kind": "chrome",
+      "pixelBox": {
+        "x": 648,
+        "y": 392,
+        "w": 294,
+        "h": 294
+      },
+      "note": "Product card frame",
+      "container": true
+    },
+    {
+      "id": "product-photo-2",
+      "kind": "image",
+      "pixelBox": {
+        "x": 652,
+        "y": 396,
+        "w": 286,
+        "h": 185
+      },
+      "note": "Workwear product photograph",
+      "bleed": true,
+      "parentId": "product-2"
+    },
+    {
+      "id": "product-2-name",
+      "kind": "text",
+      "pixelBox": {
+        "x": 665,
+        "y": 594,
+        "w": 243,
+        "h": 22
+      },
+      "note": "Product name, current API identity",
+      "parentId": "product-2",
+      "reviewGroup": "product-name"
+    },
+    {
+      "id": "product-2-price",
+      "kind": "text",
+      "pixelBox": {
+        "x": 665,
+        "y": 622,
+        "w": 201,
+        "h": 25
+      },
+      "note": "Exact ruble unit price, current API data",
+      "parentId": "product-2",
+      "reviewGroup": "product-price"
+    },
+    {
+      "id": "product-2-verification",
+      "kind": "text",
+      "pixelBox": {
+        "x": 665,
+        "y": 653,
+        "w": 228,
+        "h": 22
+      },
+      "note": "Manufacturer status justified by catalogue admission",
+      "parentId": "product-2",
+      "reviewGroup": "product-verification"
+    },
+    {
+      "id": "favorite-2",
+      "kind": "control",
+      "pixelBox": {
+        "x": 901,
+        "y": 402,
+        "w": 28,
+        "h": 29
+      },
+      "note": "Favorite heart button",
+      "parentId": "product-2",
+      "reviewGroup": "favorites"
+    },
+    {
+      "id": "product-open-2",
+      "kind": "control",
+      "pixelBox": {
+        "x": 887,
+        "y": 622,
+        "w": 42,
+        "h": 42
+      },
+      "note": "Open product arrow",
+      "parentId": "product-2",
+      "reviewGroup": "product-arrows"
+    },
+    {
+      "id": "product-3",
+      "kind": "chrome",
+      "pixelBox": {
+        "x": 954,
+        "y": 392,
+        "w": 294,
+        "h": 294
+      },
+      "note": "Product card frame",
+      "container": true
+    },
+    {
+      "id": "product-photo-3",
+      "kind": "image",
+      "pixelBox": {
+        "x": 958,
+        "y": 396,
+        "w": 286,
+        "h": 185
+      },
+      "note": "Corrugated boxes product photograph",
+      "bleed": true,
+      "parentId": "product-3"
+    },
+    {
+      "id": "product-3-name",
+      "kind": "text",
+      "pixelBox": {
+        "x": 971,
+        "y": 594,
+        "w": 243,
+        "h": 22
+      },
+      "note": "Product name, current API identity",
+      "parentId": "product-3",
+      "reviewGroup": "product-name"
+    },
+    {
+      "id": "product-3-price",
+      "kind": "text",
+      "pixelBox": {
+        "x": 971,
+        "y": 622,
+        "w": 201,
+        "h": 25
+      },
+      "note": "Exact ruble unit price, current API data",
+      "parentId": "product-3",
+      "reviewGroup": "product-price"
+    },
+    {
+      "id": "product-3-verification",
+      "kind": "text",
+      "pixelBox": {
+        "x": 971,
+        "y": 653,
+        "w": 228,
+        "h": 22
+      },
+      "note": "Manufacturer status justified by catalogue admission",
+      "parentId": "product-3",
+      "reviewGroup": "product-verification"
+    },
+    {
+      "id": "favorite-3",
+      "kind": "control",
+      "pixelBox": {
+        "x": 1207,
+        "y": 402,
+        "w": 28,
+        "h": 29
+      },
+      "note": "Favorite heart button",
+      "parentId": "product-3",
+      "reviewGroup": "favorites"
+    },
+    {
+      "id": "product-open-3",
+      "kind": "control",
+      "pixelBox": {
+        "x": 1193,
+        "y": 622,
+        "w": 42,
+        "h": 42
+      },
+      "note": "Open product arrow",
+      "parentId": "product-3",
+      "reviewGroup": "product-arrows"
+    },
+    {
+      "id": "request-close",
+      "kind": "chrome",
+      "pixelBox": {
+        "x": 35,
+        "y": 706,
+        "w": 1212,
+        "h": 62
+      },
+      "note": "Closing request strip",
+      "container": true
+    },
+    {
+      "id": "request-symbol",
+      "kind": "image",
+      "pixelBox": {
+        "x": 66,
+        "y": 709,
+        "w": 58,
+        "h": 58
+      },
+      "note": "Reference original blue violet sparkle disc",
+      "parentId": "request-close"
+    },
+    {
+      "id": "request-title",
+      "kind": "text",
+      "pixelBox": {
+        "x": 146,
+        "y": 725,
+        "w": 341,
+        "h": 28
+      },
+      "note": "No matching product question",
+      "parentId": "request-close"
+    },
+    {
+      "id": "request-action",
+      "kind": "control",
+      "pixelBox": {
+        "x": 1012,
+        "y": 716,
+        "w": 217,
+        "h": 43
+      },
+      "note": "Create demand primary action",
+      "parentId": "request-close"
+    },
+    {
+      "id": "footer-brand",
+      "kind": "chrome",
+      "pixelBox": {
+        "x": 34,
+        "y": 800,
+        "w": 149,
+        "h": 31
+      },
+      "note": "Original footer brand"
+    },
+    {
+      "id": "footer-links",
+      "kind": "control",
+      "pixelBox": {
+        "x": 260,
+        "y": 799,
+        "w": 437,
+        "h": 29
+      },
+      "note": "Contact support onboarding legal links"
+    },
+    {
+      "id": "footer-contact",
+      "kind": "control",
+      "pixelBox": {
+        "x": 846,
+        "y": 800,
+        "w": 229,
+        "h": 29
+      },
+      "note": "Working support route without invented email"
+    },
+    {
+      "id": "footer-copyright",
+      "kind": "text",
+      "pixelBox": {
+        "x": 1180,
+        "y": 802,
+        "w": 69,
+        "h": 25
+      },
+      "note": "Short brand copyright"
+    }
+  ]
+}

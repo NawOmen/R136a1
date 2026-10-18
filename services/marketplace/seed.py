@@ -161,8 +161,10 @@ async def seed() -> None:
 
         await _seed_category_documents(db, seller_company_id)
 
-        from seed_assortment import seed_assortment
-        await seed_assortment(db)
+        from seed_assortment import NAMESPACE, PRODUCT_PHOTO_KEYS, seed_assortment
+        created_assortment = await seed_assortment(db)
+        pictured_ids = {uuid.uuid5(NAMESPACE, f"{seller_company_id}:{key}") for key in PRODUCT_PHOTO_KEYS}
+        new_products.extend(product for product in created_assortment if product.id in pictured_ids)
         await db.flush()
         # Only newly created fixtures: reruns never republish a seller's draft.
         # The regular handler checks membership, company, specification and evidence,
@@ -194,6 +196,27 @@ DEMO_DOCUMENTS = (
         "document_type": "test_report",
         "verification_note": "Синтетический демонстрационный документ: материал и PE-покрытие.",
         "confirms": {"material": ["крафт-картон"], "coating": ["PE"]},
+    },
+    {
+        "name": "Декларация упаковки — коробки (синтетический документ)",
+        "document_type": "declaration", "scope_category": "Упаковка и тара", "scope_subcategory": "Коробки",
+        "verification_note": "Синтетический документ локальной витрины. Юридической силы не имеет.", "confirms": {},
+    },
+    {
+        "name": "Проверка спецификации рабочей куртки (синтетический документ)",
+        "document_type": "specification_review", "scope_category": "Товары для бизнеса", "scope_subcategory": "Спецодежда",
+        "verification_note": "Синтетическая проверка спецификации. Защитные свойства не заявлены.",
+        "confirms": {"composition": ["65% полиэстер, 35% хлопок"], "size": ["52"], "purpose": ["общая рабочая одежда, без защитных свойств"]},
+    },
+    {
+        "name": "Декларация компонентов — кабель (синтетический документ)",
+        "document_type": "declaration", "scope_category": "Электроника", "scope_subcategory": "Компоненты",
+        "verification_note": "Синтетический документ локальной витрины. Юридической силы не имеет.", "confirms": {},
+    },
+    {
+        "name": "Декларация напитков — вода (синтетический документ)",
+        "document_type": "declaration", "scope_category": "Продукты питания", "scope_subcategory": "Напитки",
+        "verification_note": "Синтетический документ локальной витрины. Юридической силы не имеет.", "confirms": {},
     },
 )
 
@@ -240,7 +263,7 @@ async def _seed_category_documents(db, seller_company_id) -> None:
                 await asyncio.to_thread(upload_object, existing.file_key, synthetic_document_pdf(item), "application/pdf")
             # Демо-документ мог быть загружен до появления подтверждённых
             # характеристик: обновляем их, чтобы чек-лист соответствовал данным.
-            if existing.verification_status == "verified" and existing.confirms != item["confirms"]:
+            if existing.file_key.startswith("demo/synthetic/") and existing.verification_status == "verified" and existing.confirms != item["confirms"]:
                 existing.confirms = item["confirms"]
             continue
         file_key = f"demo/synthetic/{uuid.uuid4()}"
@@ -254,8 +277,8 @@ async def _seed_category_documents(db, seller_company_id) -> None:
                 file_key=file_key,
                 content_type="application/pdf",
                 verification_status="verified" if admin_id else "unverified",
-                scope_category="Упаковка и тара",
-                scope_subcategory="Бумажные стаканы",
+                scope_category=item.get("scope_category", "Упаковка и тара"),
+                scope_subcategory=item.get("scope_subcategory", "Бумажные стаканы"),
                 valid_until=valid_until,
                 confirms=item["confirms"],
                 verified_by_user_id=admin_id,

@@ -15,8 +15,8 @@ export function ValidatedFields({ children }: { children: ReactNode }) {
     });
   });
   return <section ref={ref} className="manual-requirements" aria-labelledby="manual-heading">
-    <h2 id="manual-heading">Карточка потребности — заполняете вы</h2>
-    <p id="manual-format-hint" className="hint">Зелёный — формат заполнен корректно; красный — исправьте значение; приглушённый — пусто. Это не проверка достоверности требований.</p>
+    <h2 id="manual-heading">Условия закупки</h2>
+    <p id="manual-format-hint" className="hint">Зелёный — верный формат, красный — ошибка, приглушённый — пусто. Достоверность требований проверяете вы.</p>
     {children}
   </section>;
 }

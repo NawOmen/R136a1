@@ -84,6 +84,10 @@ export interface Product {
 }
 
 export interface ProductImage { id: string; file_name: string; content_type: string; position: number }
+export function primaryProductImage(images: ProductImage[]): ProductImage | undefined {
+  return images.find(image => !image.file_name?.startsWith("Схематическая иллюстрация:") && !image.file_name?.startsWith("Иллюстрация товара:"))
+    ?? images.find(image => image.file_name?.startsWith("Иллюстрация товара:"));
+}
 export interface ProductSource { label: string; reference: string }
 export interface ProductPriceTier { min_units: number; unit_price_rub: Money }
 export interface SellerAnalytics { company_id: string; products_total: number; products_published: number; deals_total: number; sold_units: number; revenue_rub: Money | null; available_capacity_units: number; capacity_utilization_pct: number | null }
@@ -1100,8 +1104,8 @@ export const marketplace = {
     return marketplaceFetchBlob(`/api/v1/companies/${companyId}/commercial-report.csv?${params}`, token);
   },
   // Публичный каталог (без Bearer)
-  getCatalog(): Promise<Product[]> {
-    return marketplaceFetch("/api/v1/products", {}).then((body) => unwrapList<Product>(body, ["products", "items"]));
+  getCatalog(sort: "catalog" | "popular" = "catalog"): Promise<Product[]> {
+    return marketplaceFetch(`/api/v1/products${sort === "popular" ? "?sort=popular" : ""}`, {}).then((body) => unwrapList<Product>(body, ["products", "items"]));
   },
 
   getProductDetail(productId: string): Promise<PublicProductDetail> {

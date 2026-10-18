@@ -1,0 +1,74 @@
+{
+  "prompt": "Use case: stylized-concept. Asset type: original transparent editorial illustration for the Russian B2B marketplace ПоРукам, beside guidance about collaboration and procurement. Subject: two broad asymmetric translucent optical-glass ribbons interlocking into one open sculptural link, an original fluid form suggesting two businesses coming together, not a logo, no literal handshake or chain hardware. Material: crystal-clear acrylic with polished silver edges, deep ink-blue reflections, a very restrained lavender and ice-blue iridescent rim. Style: premium high-end CGI product still, physically convincing glass and subtle liquid curvature, large calm shapes, elegant restraint. Composition: one centered three-quarter-view sculpture, full object visible, fills about 78 percent of a square frame, enough clear air around it. Background: genuinely transparent alpha; no floor, no opaque background, no checkerboard painted into image. Lighting: broad white studio reflection, soft light from upper left, silver highlights and fine dark reflections readable on both a near-white and deep navy webpage. Constraints: no text, no letters, no logos, no UI, no labels, no numbers, no glow halo, no extra objects, no scene or stock watermark. Not a real product photograph.",
+  "createdAt": "2026-10-17T14:11:35.156Z",
+  "asset_id": "business-link",
+  "source_type": "original AI illustration; not a supplier photo or real product photograph",
+  "generation": {
+    "tool": "built-in image_gen.imagegen",
+    "transparent_background": true,
+    "referenced_images": false,
+    "original": {
+      "path": "/home/houz/.codex/generated_images/01a14a31-99d8-7ce3-9074-3a38b44de378/exec-5b61e583-6453-4739-bb5b-2ce90078202c.png",
+      "width": 1254,
+      "height": 1254,
+      "mode": "RGBA",
+      "bytes": 1630190,
+      "sha256": "dfa01b7bdd63d5001a0127479ca9d0c772ff2ea19e2dc2ba5ac1db29017d5ac7",
+      "alpha_range": [
+        0,
+        255
+      ],
+      "transparent_pixels": 761401,
+      "partially_transparent_pixels": 810539,
+      "opaque_pixels": 576,
+      "alpha_sha256": "9f5faf01e9bf8f5d2e6d94e09c6f2b86149006fd7af391a224635dc8ab828a42"
+    }
+  },
+  "source": {
+    "path": "/home/houz/Desktop/B2B AI Marketplace/output/playwright/silver-guidance/source/business-link-native.png",
+    "width": 1254,
+    "height": 1254,
+    "mode": "RGBA",
+    "bytes": 1630190,
+    "sha256": "dfa01b7bdd63d5001a0127479ca9d0c772ff2ea19e2dc2ba5ac1db29017d5ac7",
+    "alpha_range": [
+      0,
+      255
+    ],
+    "transparent_pixels": 761401,
+    "partially_transparent_pixels": 810539,
+    "opaque_pixels": 576,
+    "alpha_sha256": "9f5faf01e9bf8f5d2e6d94e09c6f2b86149006fd7af391a224635dc8ab828a42"
+  },
+  "delivery": {
+    "path": "/home/houz/Desktop/B2B AI Marketplace/apps/web/public/images/business-link.webp",
+    "width": 1254,
+    "height": 1254,
+    "mode": "RGBA",
+    "bytes": 220858,
+    "sha256": "3f18ff4f8b28c4c391cde00c042a561fa0119b33ab940bcc3c441f4543b16600",
+    "alpha_range": [
+      0,
+      255
+    ],
+    "transparent_pixels": 761401,
+    "partially_transparent_pixels": 810539,
+    "opaque_pixels": 576,
+    "alpha_sha256": "9f5faf01e9bf8f5d2e6d94e09c6f2b86149006fd7af391a224635dc8ab828a42"
+  },
+  "conversion": {
+    "tool": "Pillow",
+    "format": "WebP",
+    "quality": 80,
+    "method": 6,
+    "resized": false,
+    "visual_editing": false,
+    "native_alpha_preserved": true
+  },
+  "verification": {
+    "light_background": "output/playwright/silver-guidance/source/preview-light.jpg",
+    "dark_background": "output/playwright/silver-guidance/source/preview-navy.jpg",
+    "inspected": true,
+    "note": "Full sculpture and interior openings remain visible; no painted checkerboard or opaque background. Parent review pending."
+  }
+}

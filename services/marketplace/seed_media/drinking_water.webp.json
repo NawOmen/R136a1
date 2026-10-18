@@ -1,0 +1,41 @@
+{
+  "prompt": "Use case: product-mockup.\nAsset type: standalone Russian B2B catalogue product illustration, photorealistic.\nPrimary request: One clear unbranded 500 ml PET bottle of still drinking water, filled normally with clear water, plain white screw cap. A modest completely blank white label around the middle, with no printing whatsoever. Everyday cylindrical clear plastic bottle, gentle molded ribbing and believable transparent PET material.\nScene/backdrop: clean seamless off-white studio background, #f8f8f6, subtle natural soft contact shadow.\nComposition/framing: square 1:1 image, 1024 × 1024 if available. One full upright bottle centered straight-on, fills about 78% of frame height, cap and bottom fully visible with clear margins. The bottle is slender and realistically proportioned for 500 ml.\nStyle/medium: realistic clean studio catalogue photography, clear natural highlights and refraction in the water, soft diffuse lighting.\nConstraints: authored synthetic product illustration, no real manufacturer or trademark. No other objects, branded packaging, text, numbers, logos, fake certifications, bubbles suggesting carbonation, UI, watermarks, people, colored filter or crop.",
+  "createdAt": "2026-10-17T07:49:49.903Z",
+  "schemaVersion": 1,
+  "tool": "image_gen.imagegen",
+  "mode": "built-in generate",
+  "origin": "AI-generated synthetic product illustration; not an actual supplier photograph",
+  "origin_ru": "Авторская синтетическая иллюстрация товара, созданная ИИ; не фотография товара поставщика",
+  "useCase": "product-mockup",
+  "generatorOriginalPath": "/home/houz/.codex/generated_images/01a148d3-8514-7671-b1f0-24c7126bc16e/exec-b5352eb6-1574-499f-8a0a-837c004a410b.png",
+  "generatorOriginalSha256": "682afc922110f541f7221560a80fca449c26ae4799097d411c2a178558d014e4",
+  "sourcePath": "output/playwright/clear-glass/source/drinking_water.png",
+  "sourceSha256": "f77929b72e6d678be7ded7e14a5421426eabfee0883b57e43cfce8f46ac9980b",
+  "sourceDimensions": [
+    1254,
+    1254
+  ],
+  "deliveryPath": "services/marketplace/seed_media/drinking_water.webp",
+  "deliverySha256": "8c75b95d3ae1c5669be68f0e9cbf1e785914eae3438a98dad4c0a11856e66165",
+  "deliveryDimensions": [
+    1254,
+    1254
+  ],
+  "deliveryBytes": 41630,
+  "conversion": {
+    "library": "Pillow",
+    "format": "WebP",
+    "quality": 88,
+    "method": 6,
+    "resized": false,
+    "cropped": false,
+    "retouched": false
+  },
+  "verification": {
+    "subject": "manually inspected",
+    "wholeProductVisible": true,
+    "noBrandingOrText": true,
+    "background": "off-white studio",
+    "note": "Full native dimensions preserved. Object framing is close with the full object visible."
+  }
+}

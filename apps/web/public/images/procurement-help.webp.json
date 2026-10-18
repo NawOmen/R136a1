@@ -1,0 +1,18 @@
+{
+  "prompt": "Use case: stylized-concept. Asset type: original premium 3D editorial cutout illustration for the Russian B2B marketplace ПоРукам, in the right side of the «Помощь с закупкой» help hero. Primary request: make procurement guidance immediately understandable: one elegant translucent glass clipboard with an opaque ivory inset sheet showing three simple navy checklist lines and small checkmarks, a compact neutral ivory shipping carton in front, and one floating blue glass speech bubble with three tiny dots. Clear silhouette with only these three connected elements. No abstract torus, no rings. Style: high-end physically rendered sculptural product illustration, polished clear acrylic, narrow silver-chrome rims, deep navy and subtle cool-blue reflections matching a white/navy liquid-glass B2B interface. Calm, adult, precise; not toy-like clay. Composition: centered coherent three-quarter view, full objects visible with generous transparent margin, square asset readable at 280px. Lighting: broad soft studio highlights, delicate contact shadows only beneath objects, convincing transparent edges on both near-white and dark navy UI. Background: genuinely transparent alpha, no floor rectangle, no background color, no checkerboard. Text: no readable letters, numbers, labels or logos. No people, hands, headset, shopping cart, currency, metrics or badges implying actual verification. Preserve restrained palette navy, ivory, clear glass, silver; no saturated purple or orange.",
+  "origin": "Original illustration generated with built-in image_gen for ПоРукам procurement help; decorative, not an actual document or commercial verification.",
+  "source": "exec-a0d08935-1e5e-49e0-bc40-b6bf6cbff6e7.png",
+  "transparent_background": true,
+  "delivery": "WebP quality88, native alpha preserved; original generation1254×1254.",
+  "sha256": "dcb5f749883fa2ef918f79e996eeb52853ed050083fb9fe118319328aabd08d0",
+  "dimensions": [
+    1254,
+    1254
+  ],
+  "alpha_extrema": [
+    0,
+    255
+  ],
+  "bytes": 196618,
+  "sourceSha256": "bfc2f8caeba53ae5ba2daaa3e3b2602203ae978df50e2ac5b31b3af6614d0e4c"
+}

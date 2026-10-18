@@ -1,0 +1,25 @@
+{
+  "prompt": "Use case: precise-object-edit\nAsset type: opaque full-page website background plate, portrait 1600 by 1900 proportion.\nInput image 1: approved reference and edit target. Extract and reconstruct ONLY the atmospheric background behind the interface in this exact image.\nPrimary request: remove every foreground interface element, panel, glass card, button, photograph, text, logo, brand, icon, border, and decorative glass ribbon from the image. Fill their former areas naturally with a continuous clean background using the background visible around them. Keep the reference background's exact broad color placement, lighting, and soft diffuse texture as closely as possible.\nComposition and lighting invariants: luminous turquoise and aqua cyan bleed broadly from the upper center and upper fifth, muted medium blue towards the upper corners; airy cyan blue across the upper-middle; increasingly subdued blue down the middle; deep midnight navy across the lower third and near-black navy at the bottom. Preserve this vertical distribution and broad horizontal light diffusion, including the delicate pale horizontal atmospheric band near the upper tenth. Smooth soft cloudy light fields, very subtle luminous diffusion. This is an empty backplate, the subject is the underlying light field itself.\nConstraints: fully opaque edge-to-edge backdrop. No distinct objects or structures. No chrome, liquid metal, sculptural forms, waves, glass ribbons, swirls, arcs, tubing, cards, rectangular panels, interface layouts, frames, text, photos, logos, symbols, star flares, or sharp shapes. Do not invent a new style, composition, or palette. Reconstruct the original background rather than designing wallpaper.",
+  "createdAt": "2026-10-17T06:46:01.361Z",
+  "prompt_sha256": "83b2560e1bfb44fb7b64f65c40e7724b59366fba9a3df483fed24a650dbef574",
+  "asset_sha256": "35cd70c24cdfb336e680c7e55829cca9c5cf7b77f882354bf47707b1741963bf",
+  "dimensions": {
+    "width": 1600,
+    "height": 1900
+  },
+  "native_dimensions": {
+    "width": 1151,
+    "height": 1367
+  },
+  "opaque": true,
+  "tool": "image_gen.imagegen (built-in edit)",
+  "source_origin": {
+    "kind": "generated background reconstruction derived from user-provided visual reference",
+    "reference": "Liquid design/main.jpg",
+    "reference_sha256": "583ce91ce2a062cd93e4b3ec000ae9dce2ebed36805eb0f91da061698c774006",
+    "reference_use": "background lighting and color placement; all brand, text, photos and UI removed",
+    "generated_source": "output/playwright/main-reference/source/main-atmosphere-native.png"
+  },
+  "conversion": "Pillow RGB resize to 1600x1900, WebP quality 92; no painted edits",
+  "review": "Visually inspected native output and delivery; no UI, text, logos, photos, objects, or glass ribbons remain."
+}
