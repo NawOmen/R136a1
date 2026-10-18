@@ -1,0 +1,20 @@
+.illustration { width:100%; height:100%; overflow:visible; }
+.plant,.office,.network { transition:opacity 1s ease,filter 1s ease,transform 1.2s cubic-bezier(.2,0,0,1); transform-origin:50% 50%; }
+.agent { transform-box:fill-box; transform-origin:center; animation:float 5s ease-in-out infinite; }
+.agent1 { animation-delay:-1.8s; }.agent2 { animation-delay:-3s; }
+.routes { opacity:0; transition:opacity 1s ease; }.flow { animation:flow 6s linear infinite; }.scanning { opacity:0; transform-origin:510px 325px; }.network { opacity:0; }
+.fan { transform-origin:0 0; animation:spin 8s linear infinite; }.conveyor { animation:conveyor 4s ease-in-out infinite; }.roof { transition:transform 1.2s cubic-bezier(.2,0,0,1); }
+.illustration[data-stage="0"] .plant,.illustration[data-stage="0"] .office { filter:saturate(.25) brightness(.75); }
+.illustration[data-stage="0"] .agent1,.illustration[data-stage="0"] .agent2 { opacity:0; }
+.illustration[data-stage="0"] .fan,.illustration[data-stage="0"] .conveyor { animation-play-state:paused; }
+.illustration:not([data-stage="0"]) .roof { transform:translateY(-12px); }
+.illustration[data-stage="1"] .scanning { animation:scan 4s ease-out infinite; }
+.illustration[data-stage="2"] .routes,.illustration[data-stage="3"] .routes { opacity:1; }
+.illustration[data-stage="2"] .agent1 { animation:intercept 6s ease-in-out infinite; }
+.illustration[data-stage="3"] .network { opacity:.5; }.illustration[data-stage="3"] .alternate { opacity:0; }
+@keyframes float {0%,100%{translate:0 0;}50%{translate:0 -12px;}}
+@keyframes spin {to{rotate:360deg;}}
+@keyframes conveyor {50%{translate:8px 3.6px;}}
+@keyframes flow {to{stroke-dashoffset:-152;}}
+@keyframes scan {0%{opacity:0;scale:.6;}25%{opacity:.6;}100%{opacity:0;scale:1.5;}}
+@keyframes intercept {0%,100%{translate:0 0;}50%{translate:160px 95px;}}
