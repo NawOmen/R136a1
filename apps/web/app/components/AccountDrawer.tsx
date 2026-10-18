@@ -11,6 +11,8 @@ import { applyTheme, savedTheme, THEME_CHANGED_EVENT, Theme } from "../lib/theme
 export function AccountDrawer() {
   const pathname = usePathname();
   const router = useRouter();
+  const [signingOut, setSigningOut] = useState(false);
+  const [logoutError, setLogoutError] = useState("");
   const [open, setOpen] = useState(false);
   const drawerRef = useRef<HTMLElement>(null);
   useEffect(() => {
@@ -49,14 +51,22 @@ export function AccountDrawer() {
     return () => { window.removeEventListener(THEME_CHANGED_EVENT, syncTheme); window.removeEventListener("storage", syncTheme); window.removeEventListener(AUTH_CHANGED_EVENT, sync); window.removeEventListener("storage", sync); };
   }, [pathname]);
   function toggleTheme() { const next = theme === "light" ? "dark" : "light"; setTheme(next); applyTheme(next); }
-  function logout() { clearToken(); window.localStorage.removeItem("porukam-work-mode"); setOpen(false); router.replace("/"); router.refresh(); }
+  async function logout() {
+    if (signingOut || !window.confirm("Выйти из аккаунта на всех устройствах?")) return;
+    const token = getToken(); setSigningOut(true); setLogoutError("");
+    try {
+      if (token) await api.logout(token);
+      clearToken(); window.localStorage.removeItem("porukam-work-mode"); setOpen(false); router.replace("/"); router.refresh();
+    } catch {setLogoutError("Не удалось завершить сеансы. Повторите выход.");}
+    finally {setSigningOut(false);}
+  }
   return <div className="account-control">
     <button className="theme-toggle" type="button" aria-label={theme === "dark" ? "Включить светлую тему" : "Включить тёмную тему"} title={theme === "dark" ? "Светлая тема" : "Тёмная тема"} onClick={toggleTheme}>{theme === "dark" ? "☀" : "☾"}</button>
     {!user && <><Link className="account-login" href="/login">Войти</Link><Link className="btn btn-outline-primary btn-sm" href="/register">Регистрация</Link></>}
     {user && <button className="account-avatar" type="button" aria-label="Открыть личный кабинет" aria-expanded={open} aria-controls={open ? "account-drawer" : undefined} onClick={() => setOpen(true)}>{user.first_name.slice(0, 1)}{user.last_name.slice(0, 1)}</button>}
     {open && user && <><button className="drawer-backdrop" tabIndex={-1} aria-label="Закрыть панель" onClick={() => setOpen(false)} /><aside ref={drawerRef} id="account-drawer" role="dialog" aria-modal="true" className="account-drawer" aria-label="Меню аккаунта">
       <div className="company-row"><div><h2>{user.first_name} {user.last_name}</h2><span className="hint">{user.email}</span></div><button className="drawer-close" aria-label="Закрыть" onClick={() => setOpen(false)}>×</button></div>
-      <nav onClick={(event) => { if ((event.target as HTMLElement).closest("a")) setOpen(false); }}><ActiveLink href={user.is_marketplace_admin ? "/admin" : "/dashboard"}>Личный кабинет</ActiveLink>{(user.is_category_editor || user.is_marketplace_admin) && <ActiveLink href="/editor">Кабинет редактора</ActiveLink>}<ActiveLink href="/notifications">Уведомления</ActiveLink><ActiveLink href="/settings">Настройки</ActiveLink>{!user.is_marketplace_admin && <ActiveLink href="/support">Поддержка</ActiveLink>}<button type="button" onClick={toggleTheme}>Тема: {theme === "dark" ? "тёмная" : "светлая"}</button><button className="drawer-logout" type="button" onClick={logout}>Выйти</button></nav>
+      {logoutError && <p role="alert">{logoutError}</p>}<nav onClick={(event) => { if ((event.target as HTMLElement).closest("a")) setOpen(false); }}><ActiveLink href={user.is_marketplace_admin ? "/admin" : "/dashboard"}>Личный кабинет</ActiveLink>{(user.is_category_editor || user.is_marketplace_admin) && <ActiveLink href="/editor">Кабинет редактора</ActiveLink>}<ActiveLink href="/notifications">Уведомления</ActiveLink><ActiveLink href="/settings">Настройки</ActiveLink>{!user.is_marketplace_admin && <ActiveLink href="/support">Поддержка</ActiveLink>}<button type="button" onClick={toggleTheme}>Тема: {theme === "dark" ? "тёмная" : "светлая"}</button><button className="drawer-logout" type="button" disabled={signingOut} onClick={() => void logout()}>{signingOut ? "Выходим…" : "Выйти"}</button></nav>
     </aside></>}
   </div>;
 }

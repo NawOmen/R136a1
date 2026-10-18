@@ -11,6 +11,7 @@ import { useMe } from "../lib/useMe";
 
 export default function NotificationsPage() {
   useMe(); // проверка входа
+  const [retry, setRetry] = useState(0);
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -20,14 +21,16 @@ export default function NotificationsPage() {
   useEffect(() => {
     const token = getToken();
     if (!token) return;
+    let active = true; setLoading(true); setError(null);
     marketplace
       .getNotifications(token)
-      .then(setNotifications)
+      .then(items => {if(active) setNotifications(items);})
       .catch((err: unknown) =>
-        setError(err instanceof ApiError ? russianMessage(err.message) : "Не удалось загрузить уведомления."),
+        active && setError(err instanceof ApiError ? russianMessage(err.message) : "Не удалось загрузить уведомления."),
       )
-      .finally(() => setLoading(false));
-  }, []);
+      .finally(() => {if(active) setLoading(false);});
+    return () => {active=false;};
+  }, [retry]);
 
   async function handleRead(notification: Notification) {
     const token = getToken();
@@ -74,7 +77,7 @@ export default function NotificationsPage() {
             <button
               type="button"
               className="btn btn-secondary btn-sm"
-              disabled={markingAll}
+              disabled={markingAll || busyId !== null}
               onClick={() => void handleReadAll()}
             >
               {markingAll ? "..." : "Прочитать все"}
@@ -89,9 +92,9 @@ export default function NotificationsPage() {
         {unread > 0 ? `Непрочитанных: ${unread}` : "Все уведомления прочитаны"}
       </p>
 
-      {error && <div className="alert alert-error">{error}</div>}
+      {error && <div className="alert alert-error" role="alert">{error}<button type="button" className="btn btn-secondary" onClick={() => setRetry(value => value+1)}>Повторить загрузку</button></div>}
 
-      {notifications.length === 0 ? (
+      {notifications.length === 0 && !error ? (
         <p className="hint">Уведомлений пока нет.</p>
       ) : (
         <ul className="company-list">
@@ -105,15 +108,15 @@ export default function NotificationsPage() {
                   <button
                     type="button"
                     className="btn btn-secondary btn-sm"
-                    disabled={busyId === notification.id}
+                    disabled={busyId !== null || markingAll}
                     onClick={() => void handleRead(notification)}
                   >
-                    {busyId === notification.id ? "..." : "Прочитать"}
+                    {busyId === notification.id ? "..." : "Отметить прочитанным"}
                   </button>
                 )}
               </div>
               <p style={{ margin: "10px 0 0" }}>{notification.message}</p>
-              <p className="hint mode-hint">Тип: {notification.type}</p>
+
             </li>
           ))}
         </ul>

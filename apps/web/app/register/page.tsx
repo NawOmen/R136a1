@@ -13,6 +13,8 @@ export default function RegisterPage() {
   const [middleName, setMiddleName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [rulesAccepted, setRulesAccepted] = useState(false);
+  const [privacyAcknowledged, setPrivacyAcknowledged] = useState(false);
   const [phone, setPhone] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
@@ -24,9 +26,12 @@ export default function RegisterPage() {
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setError(null);
+    if (!rulesAccepted || !privacyAcknowledged) {setError("Подтвердите правила работы и ознакомление с условиями обработки данных."); return;}
     setSubmitting(true);
     try {
       const payload: RegisterInput = {
+        rules_version: "rules-1", privacy_version: "privacy-1",
+        rules_accepted: true, privacy_acknowledged: true,
         last_name: lastName.trim(),
         first_name: firstName.trim(),
         email: email.trim(),
@@ -105,14 +110,14 @@ export default function RegisterPage() {
           <label htmlFor="password">Пароль<span className="req">*</span></label>
           <input
             id="password"
+            minLength={12}
             type="password"
             value={password}
             onChange={(event) => setPassword(event.target.value)}
             required
-            minLength={6}
             autoComplete="new-password"
           />
-          <p className="hint">Минимум 6 символов.</p>
+          <p className="hint">Не менее 12 символов.</p>
         </div>
         <div className="field">
           <label htmlFor="phone">Телефон <span className="opt">необязательно</span></label>
@@ -124,6 +129,8 @@ export default function RegisterPage() {
             autoComplete="tel"
           />
         </div>
+        <label><input type="checkbox" required checked={rulesAccepted} onChange={event => setRulesAccepted(event.target.checked)} /> Принимаю <Link href="/info/legal" target="_blank" rel="noopener">правила работы</Link></label>
+        <label><input type="checkbox" required checked={privacyAcknowledged} onChange={event => setPrivacyAcknowledged(event.target.checked)} /> Ознакомлен с <Link href="/info/privacy" target="_blank" rel="noopener">условиями обработки данных</Link></label>
         <div className="actions">
           <button type="submit" className="btn btn-primary" disabled={submitting}>
             {submitting ? "Регистрируем..." : "Зарегистрироваться"}

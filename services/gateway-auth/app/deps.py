@@ -35,6 +35,8 @@ async def get_current_user(
     user = await db.get(User, parsed_id)
     if user is None:
         raise HTTPException(status.HTTP_401_UNAUTHORIZED, detail="Пользователь не найден")
+    if payload.get("ver", 0) != user.token_version:
+        raise HTTPException(status.HTTP_401_UNAUTHORIZED, detail="Сеанс завершён. Войдите снова.")
     if user.account_status == "blocked":
         raise HTTPException(status.HTTP_401_UNAUTHORIZED, detail="Аккаунт заблокирован")
     return user

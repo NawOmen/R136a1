@@ -70,6 +70,9 @@ export default function LoginPage() {
       </form>
 
       <p className="hint">
+        <Link href="/recover">Забыли пароль?</Link>
+      </p>
+      <p className="hint">
         Нет аккаунта? <Link href="/register">Зарегистрироваться</Link>
       </p>
     </div></div>

@@ -33,7 +33,7 @@ async def engine():
                 "CREATE TABLE IF NOT EXISTS auth.users ("
                 "id UUID PRIMARY KEY, last_name VARCHAR(120) NOT NULL, first_name VARCHAR(120) NOT NULL, "
                 "middle_name VARCHAR(120), email VARCHAR(255) NOT NULL UNIQUE, password_hash VARCHAR(255) NOT NULL, "
-                "phone VARCHAR(40), account_status VARCHAR(16) NOT NULL DEFAULT 'active', "
+                "phone VARCHAR(40), token_version INTEGER NOT NULL DEFAULT 0, account_status VARCHAR(16) NOT NULL DEFAULT 'active', "
                 "is_marketplace_admin BOOLEAN NOT NULL DEFAULT false, created_at TIMESTAMPTZ DEFAULT now(), "
                 "updated_at TIMESTAMPTZ DEFAULT now())"
             )

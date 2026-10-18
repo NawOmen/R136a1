@@ -174,23 +174,23 @@ test(`${classified ? "Точная классификация через API" : 
     await seller.goto("/deals");
     await seller.locator(`[data-deal-id="${dealId}"]`).click();
     await expect(seller.getByText("Операций пока нет. Заказ ещё не считается продажей.", { exact: true })).toBeVisible();
-    await recordFulfillment(seller, "prepare", "Подготовка", {
+    await recordFulfillment(seller, "prepare", "Сохранить параметры отгрузки", {
       "Адрес отгрузки в России": "г. Москва, ул. Синтетическая, д. 1", "Город": "Москва", "Регион": "Москва",
       "Упаковка": "Коробка", "Вес, кг": "5", "Объём, м³": "0.1", "Количество мест": "1",
     });
-    await recordFulfillment(seller, "production", "Производство");
+    await recordFulfillment(seller, "production", "Начать производство");
     await page.goto("/deals");
     await page.locator(`[data-deal-id="${dealId}"]`).click();
-    await recordFulfillment(page, "logistics", "Получение и тариф", {"Подтверждённый тариф, ₽ (0 — без платы)": "0"});
+    await recordFulfillment(page, "logistics", "Согласовать получение", {"Подтверждённый тариф, ₽ (0 — без платы)": "0"});
     await seller.reload();
     await seller.locator(`[data-deal-id="${dealId}"]`).click();
-    await recordFulfillment(seller, "shipment", "Отгрузка партии", {"Название или номер партии": "Партия E2E", "Количество отгрузки": "200"});
+    await recordFulfillment(seller, "shipment", "Записать отгрузку", {"Название или номер партии": "Партия E2E", "Количество отгрузки": "200"});
     await page.reload();
     await page.locator(`[data-deal-id="${dealId}"]`).click();
     await page.getByRole("button", {name: "Записать получение", exact: true}).click();
-    await recordFulfillment(page, "receipt", "Получение партии", {"Фактически получено": "200", "Не поставлено из этой партии": "0"});
+    await recordFulfillment(page, "receipt", "Записать получение партии", {"Фактически получено": "200", "Не поставлено из этой партии": "0"});
     await page.getByRole("button", {name: "Проверить полученное", exact: true}).click();
-    await recordFulfillment(page, "inspection", "Проверка партии", {"Принято после проверки": "200", "Отклонено, требуется решение": "0"});
+    await recordFulfillment(page, "inspection", "Сохранить результат проверки", {"Принято после проверки": "200", "Отклонено, требуется решение": "0"});
     const execution = page.locator("section").filter({has: page.getByRole("heading", {name: "Исполнение и расчёты", exact: true})});
     await expect(execution.locator(".stats-grid > div").filter({has: page.getByText("Принято", {exact: true})}).locator("dd")).toHaveText("200");
     await expect(page.getByLabel("Себестоимость единицы, ₽", { exact: true })).toHaveCount(0);
@@ -333,4 +333,87 @@ test("лента продавца содержит подходящую подк
   expect((await page.request.post(`http://localhost:8002/api/v1/needs/${need.id}/publish`, { headers })).ok()).toBeTruthy();
   await page.reload();
   await expect(page.locator(`li.demand-card[data-need-id="${need.id}"]`)).toHaveCount(1);
+});
+
+
+test("администратор и редактор: компания, обращение, документы, правила и отзыв роли", async ({page, browser}) => {
+  test.setTimeout(180_000);
+  await login(page, "ADMIN");
+  const adminToken = await page.evaluate(() => localStorage.getItem("token"));
+  const adminHeaders = {Authorization: `Bearer ${adminToken}`};
+  const suffix = crypto.randomUUID(); const email = `review-${suffix}@demo.ru`; const accountPassword = `Access-${suffix}`;
+  const registered = await page.request.post("http://localhost:8001/api/v2/auth/register", {data: {rules_version:"rules-1",privacy_version:"privacy-1",rules_accepted: true, privacy_acknowledged: true, last_name: "Проверка", first_name: "Редактора", email, password: accountPassword}});
+  expect(registered.status()).toBe(201);
+  const account = await registered.json(); const userHeaders = {Authorization: `Bearer ${account.access_token}`};
+  const created = await page.request.post("http://localhost:8001/api/v1/companies", {headers: userHeaders, data: {
+    full_name: "ООО «Проверка кабинетов»", display_name: `Проверка-${suffix}`, legal_form: "ООО", inn: "0000000000", ogrn: "0000000000000",
+    legal_address: "Россия, г. Москва, ул. Синтетическая, д. 1", can_buy: true, can_sell: true,
+  }});
+  expect(created.status(), await created.text()).toBe(201);
+  const company = await created.json();
+  expect((await page.request.post(`http://localhost:8001/api/v1/companies/${company.id}/submit-review`, {headers: userHeaders})).ok()).toBeTruthy();
+  const subject = `Вопрос-${suffix}`;
+  expect((await page.request.post("http://localhost:8002/api/v1/support/tickets", {headers: userHeaders, data: {subject, message: "Уточните порядок проверки нашей компании."}})).status()).toBe(201);
+  await page.goto("/admin");
+  const companyCard = page.locator("li.card").filter({hasText: company.display_name});
+  page.once("dialog", dialog => dialog.accept("Синтетические реквизиты проверены"));
+  await companyCard.getByRole("button", {name: "Подтвердить компанию", exact: true}).click();
+  await expect(companyCard).toHaveCount(0);
+  const ticket = page.locator("li.card").filter({has: page.getByText(subject, {exact: true})});
+  await ticket.getByRole("button", {name: "Отправить ответ и закрыть", exact: true}).click();
+  await expect(page.getByText("Напишите ответ пользователю перед закрытием обращения.", {exact: true})).toBeVisible();
+  await ticket.getByLabel("Ответ", {exact: true}).fill("Компания проверена, можно продолжить работу.");
+  await ticket.getByRole("button", {name: "Отправить ответ и закрыть", exact: true}).click();
+  await expect(ticket.getByText("Решено", {exact: true})).toBeVisible();
+  const member = page.locator(".company-row").filter({has: page.getByText(email, {exact: false})});
+  await member.getByLabel("Основание назначения или снятия роли редактора", {exact: true}).fill("Синтетическая проверка полномочий");
+  await member.getByRole("button", {name: "Назначить редактором", exact: true}).click();
+  await expect(member.getByRole("button", {name: "Снять роль редактора", exact: true})).toBeVisible();
+  const editorContext = await browser.newContext({baseURL: process.env.BASE_URL || "http://localhost:3000"});
+  try {
+    const editor = await editorContext.newPage();
+    await editor.goto("/login");
+    await editor.getByLabel("Электронная почта", {exact: false}).fill(email);
+    await editor.getByLabel("Пароль", {exact: false}).fill(accountPassword);
+    await editor.getByRole("button", {name: "Войти", exact: true}).click();
+    await expect(editor).toHaveURL(/\/dashboard/);
+    await editor.goto("/editor");
+    await expect(editor.getByRole("heading", {name: "Кабинет редактора", exact: true})).toBeVisible();
+    const token = await editor.evaluate(() => localStorage.getItem("token"));
+    const editorHeaders = {Authorization: `Bearer ${token}`};
+    expect((await editor.request.get("http://localhost:8001/api/v1/admin/users", {headers: editorHeaders})).status()).toBe(403);
+    const documentName = `Спецификация-${suffix}`;
+    const upload = await page.request.post(`http://localhost:8002/api/v1/companies/${company.id}/documents`, {headers: userHeaders, multipart: {
+      name: documentName, document_type: "specification_review", scope_category: "Строительство", scope_subcategory: "Крепёж",
+      file: {name: "synthetic-review.pdf", mimeType: "application/pdf", buffer: syntheticSpecificationPdf()},
+    }});
+    expect(upload.status(), await upload.text()).toBe(201);
+    await editor.reload();
+    const document = editor.locator("fieldset").filter({has: editor.getByRole("heading", {name: documentName, exact: true})});
+    const downloaded = editor.waitForEvent("download");
+    await document.getByRole("button", {name: "Скачать для проверки", exact: true}).click();
+    expect((await downloaded).suggestedFilename()).toBe(documentName);
+    await document.getByLabel("Подтверждённые характеристики", {exact: true}).fill(Object.entries(boltSpecification).map(([key,value]) => `${key}: ${value}`).join("\n"));
+    await document.getByLabel("Заключение", {exact: true}).fill("Применимость синтетической спецификации проверена");
+    await document.getByRole("button", {name: "Применимость проверена — подтвердить", exact: true}).click();
+    await expect(document).toHaveCount(0);
+    await editor.getByRole("combobox", {name: /^Состояние/}).selectOption("verified");
+    await expect(document).toBeVisible();
+    await document.getByLabel("Подтверждённые характеристики", {exact: true}).fill("Синтаксическая ошибка не мешает отзыву");
+    await document.getByLabel("Заключение", {exact: true}).fill("Применимость отозвана после дополнительной проверки");
+    await document.getByRole("button", {name: "Отозвать с причиной", exact: true}).click();
+    await expect(document).toHaveCount(0);
+    await editor.getByRole("combobox", {name: /^Категория/}).selectOption("packaging.paper-cups");
+    await editor.getByLabel("Основание изменений", {exact: true}).fill("Уточнены проверки приёмки синтетического стенда");
+    await editor.getByLabel("Проверки при приёмке, по одной в строке", {exact: true}).fill("Проверка количества\nПроверка упаковки");
+    await editor.getByRole("button", {name: "Проверить изменения", exact: true}).click();
+    await expect(editor.getByRole("button", {name: "Опубликовать новую версию", exact: true})).toBeDisabled();
+    await editor.getByLabel("Изменения и их предметное основание проверены", {exact: true}).check();
+    await editor.getByRole("button", {name: "Опубликовать новую версию", exact: true}).click();
+    await expect(editor.getByText("Новая версия правил опубликована.", {exact: true})).toBeVisible();
+    await member.getByRole("button", {name: "Снять роль редактора", exact: true}).click();
+    await editor.reload();
+    await expect(editor.getByRole("main").getByRole("alert")).toContainText(/редактор|доступ|полномоч/);
+  } finally {await editorContext.close();}
+  expect((await page.request.get(`http://localhost:8001/api/v1/admin/companies?status=verified`, {headers: adminHeaders})).ok()).toBeTruthy();
 });

@@ -76,6 +76,10 @@ export interface MeResponse {
 // ---------- Входные данные ----------
 
 export interface RegisterInput {
+  rules_version: "rules-1";
+  privacy_version: "privacy-1";
+  rules_accepted: true;
+  privacy_acknowledged: true;
   last_name: string;
   first_name: string;
   middle_name?: string;
@@ -190,7 +194,7 @@ async function request<T>(path: string, options: RequestOptions = {}): Promise<T
     if (
       response.status === 401 &&
       path !== "/api/v1/auth/login" &&
-      path !== "/api/v1/auth/register"
+      path !== "/api/v1/auth/register" && path !== "/api/v2/auth/register"
     ) {
       handleUnauthorized();
     }
@@ -215,15 +219,25 @@ async function request<T>(path: string, options: RequestOptions = {}): Promise<T
 // ---------- Эндпоинты ----------
 
 export const api = {
+  logout(token: string): Promise<void> {return request("/api/v2/auth/logout", {token, method:"POST"});},
+  getUserAgreements(token: string, userId: string): Promise<{document: string; version: string; accepted_at: string}[]> {
+    return request(`/api/v1/admin/users/${userId}/agreements`, {token});
+  },
+  changePassword(token: string, current_password: string, password: string): Promise<AuthResponse> {
+    return request("/api/v2/auth/password/change", {token, method: "POST", body: JSON.stringify({current_password, password})});
+  },
+  endOtherSessions(token: string): Promise<AuthResponse> { return request("/api/v2/auth/sessions/end", {token, method: "POST"}); },
+  requestRecovery(email: string): Promise<{message: string}> { return request("/api/v2/auth/password/recovery", {method: "POST", body: JSON.stringify({email})}); },
+  resetPassword(code: string, password: string): Promise<{message: string}> { return request("/api/v2/auth/password/reset", {method: "POST", body: JSON.stringify({code, password})}); },
   appointCategoryEditor(token: string, userId: string, enabled: boolean, reason: string): Promise<User> {
     return request(`/api/v1/admin/users/${userId}/category-editor`, { token, method: "PUT", body: JSON.stringify({ enabled, reason }) });
   },
-  getSecurityEvents(token: string, alertsOnly = false): Promise<{event: string; created_at: string; correlation_id: string}[]> {
+  getSecurityEvents(token: string, alertsOnly = false): Promise<{event: string; created_at: string; correlation_id: string; actor_id?: string; target_id?: string; reason?: string}[]> {
     return request("/api/v1/admin/security-events" + (alertsOnly ? "?alerts_only=true" : ""), {token});
   },
   // 1. Регистрация
   register(input: RegisterInput): Promise<AuthResponse> {
-    return request("/api/v1/auth/register", { method: "POST", body: JSON.stringify(input) });
+    return request("/api/v2/auth/register", { method: "POST", body: JSON.stringify(input) });
   },
 
   // 2. Вход

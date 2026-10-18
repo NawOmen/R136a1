@@ -38,11 +38,13 @@ async def get_current_user(
         raise HTTPException(status.HTTP_401_UNAUTHORIZED, detail="Неверный токен")
 
     result = await db.execute(
-        text("SELECT account_status FROM auth.users WHERE id = :uid"), {"uid": user_id}
+        text("SELECT account_status, token_version FROM auth.users WHERE id = :uid"), {"uid": user_id}
     )
     row = result.mappings().first()
     if row is None:
         raise HTTPException(status.HTTP_401_UNAUTHORIZED, detail="Пользователь не найден")
+    if payload.get("ver", 0) != row["token_version"]:
+        raise HTTPException(status.HTTP_401_UNAUTHORIZED, detail="Сеанс завершён. Войдите снова.")
     if row["account_status"] == "blocked":
         raise HTTPException(status.HTTP_401_UNAUTHORIZED, detail="Аккаунт заблокирован")
     return CurrentUser(id=user_id)
