@@ -144,7 +144,7 @@ export default function SellerPassportPage() {
             Создать компанию
           </Link>
           <Link href="/dashboard" className="btn btn-secondary">
-            На главную
+            В личный кабинет
           </Link>
         </div>
       </div>
@@ -156,7 +156,7 @@ export default function SellerPassportPage() {
       <div className="company-row">
         <h1 className="page-title">Паспорт возможностей</h1>
         <Link href="/dashboard" className="btn btn-secondary btn-sm">
-          На главную
+          В личный кабинет
         </Link>
       </div>
       <p className="subtitle">Производство и поставки: возможности, ограничения и условия</p>

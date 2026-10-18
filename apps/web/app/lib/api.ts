@@ -6,6 +6,7 @@ import { serviceUrl } from "./serviceUrl";
 const apiBaseUrl = () => serviceUrl(process.env.NEXT_PUBLIC_API_URL, 8001);
 const TOKEN_KEY = "token";
 export const AUTH_CHANGED_EVENT = "porukam-auth-changed";
+export const WORKSPACE_CHANGED_EVENT = "porukam:workspace-changed";
 
 // ---------- Типы домена ----------
 

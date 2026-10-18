@@ -47,3 +47,58 @@ test("native required field validation is Russian even with an English browser",
   const message = await page.locator('input[required]').first().evaluate(input => (input as HTMLInputElement).validationMessage);
   expect(message).toBe("Заполните обязательное поле.");
 });
+
+for (const mode of ["buy", "sell"] as const) {
+  test(`market needs navigation follows selected work mode: ${mode}`, async ({ page }) => {
+    await page.addInitScript(({ userId, companyId, mode }) => {
+      localStorage.setItem("token", "synthetic-navigation");
+      localStorage.setItem(`porukam:work-mode:${userId}:${companyId}`, mode);
+    }, { userId: user.id, companyId: company.id, mode });
+    await page.route("**/api/**", route => {
+      if (new URL(route.request().url()).pathname.endsWith("/auth/me")) return route.fulfill({ json: { user, companies: [company] } });
+      return route.fulfill({ json: [] });
+    });
+    await page.goto("/catalog");
+    await expect(page.getByRole("navigation", { name: "Раздел рынка" }).getByRole("link", { name: "Потребности" }))
+      .toHaveAttribute("href", mode === "buy" ? "/needs" : "/seller/requests");
+  });
+}
+
+test("homepage distinguishes unavailable offers from an empty catalogue and retries", async ({ page }) => {
+  let failed = true;
+  await page.route("**/api/**", route => route.fulfill(failed
+    ? { status: 503, json: { detail: "Предложения временно недоступны" } }
+    : { json: [] }));
+  await page.goto("/");
+  await expect(page.getByRole("alert").filter({ hasText: "Не удалось загрузить предложения" })).toBeVisible();
+  await expect(page.getByText("Предложений пока нет", { exact: true })).toHaveCount(0);
+  failed = false;
+  await page.getByRole("button", { name: "Повторить загрузку", exact: true }).click();
+  await expect(page.getByText("Предложений пока нет", { exact: true })).toBeVisible();
+});
+
+test("optional product checks fail independently without hiding product or implying admission", async ({ page }) => {
+  const product = { id: "00000000-0000-4000-8000-000000000090", name: "Синтетический товар", category: "Упаковка и тара", subcategory: "Бумажные стаканы", characteristics: {}, images: [], price_rub: "10.5", price_tiers: [], moq_units: 100, lead_time_days: 3, producer: { display_name: "Проверочный производитель", company_id: company.id, rating: null, reviews_count: 0 } };
+  await page.route("**/api/**", route => {
+    const path = new URL(route.request().url()).pathname;
+    return route.fulfill(path.endsWith("/detail") ? { json: product } : { status: 503, json: { detail: "Временно недоступно" } });
+  });
+  await page.goto(`/catalog/${product.id}`);
+  await expect(page.getByRole("heading", { name: product.name, exact: true })).toBeVisible();
+  await expect(page.getByRole("link", { name: "Запросить условия", exact: true })).toBeVisible();
+  await expect(page.getByText("История цен временно недоступна.", { exact: false })).toBeVisible();
+  await expect(page.getByText("Не удалось загрузить сведения о допуске.", { exact: false })).toBeVisible();
+  await expect(page.getByText("Для этой категории правила проверки документов ещё не настроены.", { exact: false })).toHaveCount(0);
+});
+
+test("guest mobile access includes login, usable theme and reachable form before marketing copy", async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto("/login");
+  await expect(page.locator("header").getByRole("link", { name: "Войти", exact: true })).toBeVisible();
+  const email = page.getByLabel("Электронная почта", { exact: false });
+  await expect(email).toBeInViewport();
+  await page.getByRole("button", { name: "Включить светлую тему" }).click();
+  await expect(page.locator("html")).toHaveAttribute("data-theme", "light");
+  await expect(page.getByRole("button", { name: "Включить тёмную тему" })).toBeVisible();
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+});

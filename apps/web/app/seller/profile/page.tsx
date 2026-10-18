@@ -116,7 +116,7 @@ export default function SellerProfilePage() {
             Создать компанию
           </Link>
           <Link href="/dashboard" className="btn btn-secondary">
-            На главную
+            В личный кабинет
           </Link>
         </div>
       </div>
@@ -128,7 +128,7 @@ export default function SellerProfilePage() {
       <div className="company-row">
         <h1 className="page-title">Производственный профиль</h1>
         <Link href="/dashboard" className="btn btn-secondary btn-sm">
-          На главную
+          В личный кабинет
         </Link>
       </div>
       <p className="subtitle">Информация о производственной площадке для покупателей</p>

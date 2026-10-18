@@ -93,7 +93,7 @@ export default function CoalitionsPage() {
           <h1 className="page-title">Объединённые партии</h1>
           <p className="subtitle">Отдельные условия и подтверждения каждого участника</p>
         </div>
-        <Link href="/dashboard" className="btn btn-secondary btn-sm">На главную</Link>
+        <Link href="/dashboard" className="btn btn-secondary btn-sm">В личный кабинет</Link>
       </div>
       {error && <div className="alert alert-error">{error}</div>}
       {items.length === 0 ? (

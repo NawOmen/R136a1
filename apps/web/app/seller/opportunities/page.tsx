@@ -175,7 +175,7 @@ export default function MarketOpportunitiesPage() {
           <h1 className="page-title">Что сейчас нужно рынку</h1>
           <p className="subtitle">Подтверждённый незакрытый спрос, подходящий вашему производству</p>
         </div>
-        <Link href="/dashboard" className="btn btn-secondary btn-sm">На главную</Link>
+        <Link href="/dashboard" className="btn btn-secondary btn-sm">В личный кабинет</Link>
       </div>
 
       {available.length > 1 && (

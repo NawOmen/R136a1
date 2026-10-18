@@ -190,3 +190,14 @@ test("category guidance adds its required fields without cup-specific defaults",
   expect(new Set(keys).size).toBe(keys.length);
   await expect(page.getByRole("button", { name: "Добавить недостающие обязательные поля" })).toHaveCount(0);
 });
+
+test("narrow request form keeps file selection inside the viewport", async ({ page }) => {
+  await prepare(page);
+  await page.setViewportSize({ width: 320, height: 844 });
+  await page.goto("/needs/new");
+  const files = page.locator("#need_files");
+  await expect(files).toBeVisible();
+  await files.setInputFiles({ name: "Требования-к-закупке.txt", mimeType: "text/plain", buffer: Buffer.from("Синтетические требования") });
+  await expect(page.getByText(/Восстановленные или выбранные файлы: 1/)).toBeVisible();
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+});

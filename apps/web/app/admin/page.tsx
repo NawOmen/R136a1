@@ -208,7 +208,7 @@ export default function AdminPage() {
         <h1 className="page-title">Панель администратора</h1>
         <div className="alert alert-error">{error ?? "Не удалось загрузить данные."}</div>
         <Link href="/dashboard" className="btn btn-secondary">
-          На главную
+          В личный кабинет
         </Link>
       </div>
     );
@@ -220,7 +220,7 @@ export default function AdminPage() {
         <h1 className="page-title">Панель администратора</h1>
         <div className="alert alert-error">Нет доступа</div>
         <Link href="/dashboard" className="btn btn-secondary">
-          На главную
+          В личный кабинет
         </Link>
       </div>
     );
@@ -247,7 +247,7 @@ export default function AdminPage() {
       <div className="company-row">
         <h1 className="page-title">Панель администратора</h1>
         <Link href="/dashboard" className="btn btn-secondary btn-sm">
-          На главную
+          В личный кабинет
         </Link>
       </div>
       <p className="subtitle">Очередь и история проверки компаний ({companies.length})</p>

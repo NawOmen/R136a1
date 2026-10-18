@@ -152,7 +152,7 @@ export default function CompanyPage() {
       <div>
         <h1 className="page-title">Компания не найдена</h1>
         <Link href="/dashboard" className="btn btn-secondary">
-          На главную
+          В личный кабинет
         </Link>
       </div>
     );
@@ -167,7 +167,7 @@ export default function CompanyPage() {
       <div className="company-row">
         <h1 className="page-title">{company.display_name}</h1>
         <Link href="/dashboard" className="btn btn-secondary btn-sm">
-          На главную
+          В личный кабинет
         </Link>
       </div>
 

@@ -27,6 +27,7 @@ function defaultDeadline(): string {
 
 export default function MyNeedsPage() {
   useMe(); // проверка входа и данных аккаунта
+  const [query, setQuery] = useState("");
   const [needs, setNeeds] = useState<Need[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -55,6 +56,7 @@ export default function MyNeedsPage() {
   }
 
   useEffect(() => {
+    setQuery(new URLSearchParams(window.location.search).get("q") ?? "");
     void load();
   }, []);
 
@@ -112,6 +114,9 @@ export default function MyNeedsPage() {
     }
   }
 
+  const normalizedQuery = query.trim().toLocaleLowerCase("ru");
+  const visibleNeeds = needs.filter(need => `${need.category} ${need.subcategory ?? ""} ${NEED_STATUS_LABELS[need.status]}`.toLocaleLowerCase("ru").includes(normalizedQuery));
+
   if (loading) return <p className="hint">Загрузка...</p>;
 
   return (
@@ -123,6 +128,7 @@ export default function MyNeedsPage() {
         </Link>
       </div>
       <p className="subtitle">Потребности, созданные вашими компаниями</p>
+      <label className="catalog-search"><input aria-label="Поиск моих потребностей" placeholder="Категория или статус потребности" value={query} onChange={event => setQuery(event.target.value)} /></label>
 
       {error && (
         <div className="alert alert-error" role="alert">
@@ -139,7 +145,8 @@ export default function MyNeedsPage() {
         </p>
       ) : (
         <ul className="company-list">
-          {needs.map((need) => (
+          {visibleNeeds.length === 0 && needs.length > 0 && <li className="hint">По этому запросу потребности не найдены. Измените поиск.</li>}
+          {visibleNeeds.map((need) => (
             <li key={need.id} className="company-item repeat-order">
               <Link href={`/needs/${need.id}`} className="company-item">
                 <span className="company-item__name">

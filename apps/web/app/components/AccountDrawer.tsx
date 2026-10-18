@@ -6,12 +6,7 @@ import { useEffect, useRef, useState } from "react";
 import { ActiveLink } from "./ActiveLink";
 import { api, AUTH_CHANGED_EVENT, clearToken, getToken, User } from "../lib/api";
 
-type Theme = "light" | "dark";
-
-function applyTheme(theme: Theme) {
-  document.documentElement.dataset.theme = theme;
-  window.localStorage.setItem("porukam-theme", theme);
-}
+import { applyTheme, savedTheme, THEME_CHANGED_EVENT, Theme } from "../lib/theme";
 
 export function AccountDrawer() {
   const pathname = usePathname();
@@ -44,15 +39,19 @@ export function AccountDrawer() {
       if (!token) { setUser(null); return; }
       void api.me(token).then((result) => setUser(result.user)).catch(() => setUser(null));
     };
-    const saved = window.localStorage.getItem("porukam-theme") === "light" ? "light" : "dark";
-    setTheme(saved); applyTheme(saved); sync();
+    const saved = savedTheme();
+    setTheme(saved); document.documentElement.dataset.theme = saved; sync();
+    const syncTheme = () => setTheme(savedTheme());
+    window.addEventListener(THEME_CHANGED_EVENT, syncTheme);
+    window.addEventListener("storage", syncTheme);
     window.addEventListener(AUTH_CHANGED_EVENT, sync);
     window.addEventListener("storage", sync);
-    return () => { window.removeEventListener(AUTH_CHANGED_EVENT, sync); window.removeEventListener("storage", sync); };
+    return () => { window.removeEventListener(THEME_CHANGED_EVENT, syncTheme); window.removeEventListener("storage", syncTheme); window.removeEventListener(AUTH_CHANGED_EVENT, sync); window.removeEventListener("storage", sync); };
   }, [pathname]);
   function toggleTheme() { const next = theme === "light" ? "dark" : "light"; setTheme(next); applyTheme(next); }
   function logout() { clearToken(); window.localStorage.removeItem("porukam-work-mode"); setOpen(false); router.replace("/"); router.refresh(); }
   return <div className="account-control">
+    <button className="theme-toggle" type="button" aria-label={theme === "dark" ? "Включить светлую тему" : "Включить тёмную тему"} title={theme === "dark" ? "Светлая тема" : "Тёмная тема"} onClick={toggleTheme}>{theme === "dark" ? "☀" : "☾"}</button>
     {!user && <><Link className="account-login" href="/login">Войти</Link><Link className="btn btn-outline-primary btn-sm" href="/register">Регистрация</Link></>}
     {user && <button className="account-avatar" type="button" aria-label="Открыть личный кабинет" aria-expanded={open} aria-controls={open ? "account-drawer" : undefined} onClick={() => setOpen(true)}>{user.first_name.slice(0, 1)}{user.last_name.slice(0, 1)}</button>}
     {open && user && <><button className="drawer-backdrop" tabIndex={-1} aria-label="Закрыть панель" onClick={() => setOpen(false)} /><aside ref={drawerRef} id="account-drawer" role="dialog" aria-modal="true" className="account-drawer" aria-label="Меню аккаунта">

@@ -48,7 +48,7 @@ export default function RegisterPage() {
   }
 
   return (
-    <div className="auth-shell"><aside className="auth-aside"><span className="eyebrow">Начните за несколько минут</span><h2>Покупайте и продавайте в одном аккаунте</h2><p>После регистрации создайте компанию и включите нужные возможности: покупка, продажа или оба режима одновременно.</p><ul><li>Каталог оптовых товаров</li><li>Карточки потребностей покупателей</li><li>Коалиции для доступного минимальный заказ</li></ul></aside><div className="auth-page">
+    <div className="auth-shell"><aside className="auth-aside"><span className="eyebrow">Начните за несколько минут</span><h2>Покупайте и продавайте в одном аккаунте</h2><p>После регистрации создайте компанию и включите нужные возможности: покупка, продажа или оба режима одновременно.</p><ul><li>Каталог оптовых товаров</li><li>Карточки потребностей покупателей</li><li>Совместные закупки для минимальной партии</li></ul></aside><div className="auth-page">
       <span className="eyebrow">Новый аккаунт</span><h1 className="page-title">Регистрация</h1>
       <p className="subtitle">Создайте личный профиль для работы с компаниями</p>
       <p className="hint" style={{ marginTop: -14, marginBottom: 16 }}>
@@ -81,7 +81,7 @@ export default function RegisterPage() {
           />
         </div>
         <div className="field">
-          <label htmlFor="middle_name">Отчество<span className="opt">необязательно</span></label>
+          <label htmlFor="middle_name">Отчество <span className="opt">необязательно</span></label>
           <input
             id="middle_name"
             type="text"
@@ -115,7 +115,7 @@ export default function RegisterPage() {
           <p className="hint">Минимум 6 символов.</p>
         </div>
         <div className="field">
-          <label htmlFor="phone">Телефон<span className="opt">необязательно</span></label>
+          <label htmlFor="phone">Телефон <span className="opt">необязательно</span></label>
           <input
             id="phone"
             type="tel"

@@ -148,7 +148,7 @@ export default function SellerCapacityPage() {
             Создать компанию
           </Link>
           <Link href="/dashboard" className="btn btn-secondary">
-            На главную
+            В личный кабинет
           </Link>
         </div>
       </div>
@@ -160,7 +160,7 @@ export default function SellerCapacityPage() {
       <div className="company-row">
         <h1 className="page-title">Мощности</h1>
         <Link href="/dashboard" className="btn btn-secondary btn-sm">
-          На главную
+          В личный кабинет
         </Link>
       </div>
       <p className="subtitle">Мощность производства по категориям и единицам измерения (ближайшие {DAYS_COUNT} дней)</p>
@@ -203,7 +203,7 @@ export default function SellerCapacityPage() {
           <p className="hint">Загрузка календаря...</p>
         ) : (
           <>
-            <table className="capacity-table">
+            <div className="comparison-scroll" role="region" aria-label="Календарь мощностей" tabIndex={0}><table className="capacity-table">
               <thead>
                 <tr>
                   <th>Дата</th>
@@ -230,7 +230,7 @@ export default function SellerCapacityPage() {
                   </tr>
                 ))}
               </tbody>
-            </table>
+            </table></div>
             <p className="hint mode-hint">
               Например, {formatUnits(4800, scopeUnit)} — объём выбранного ресурса в этот день. Занятый объём включает заказы, удержания и уже выполненную работу. Уменьшить мощность ниже занятого объёма нельзя.
             </p>

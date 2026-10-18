@@ -38,5 +38,5 @@ export function WorkflowGuide() {
   if (path === "/needs/new" || path === "/dashboard") return null;
   const guide = guides.find(([prefix]) => path === prefix || path.startsWith(prefix.endsWith("/") ? prefix : `${prefix}/`));
   if (!guide) return null;
-  return <aside className="workflow-guide" aria-label="Подсказка по шагу"><p>{guide[1]}</p><details><summary>Порядок действий</summary><ol>{guide[2].map(step => <li key={step}>{step}</li>)}</ol></details></aside>;
+  return <details className="workflow-guide"><summary>Как работать с этим разделом</summary><p>{guide[1]}</p><ol>{guide[2].map(step => <li key={step}>{step}</li>)}</ol></details>;
 }

@@ -81,7 +81,7 @@ export default function NotificationsPage() {
             </button>
           )}
           <Link href="/dashboard" className="btn btn-secondary btn-sm">
-            На главную
+            В личный кабинет
           </Link>
         </div>
       </div>
