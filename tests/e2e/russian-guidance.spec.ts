@@ -244,3 +244,60 @@ for (const administrator of [false, true]) {
     expect(requests.some(path=>/quality-evidence|role-quality/.test(path))).toBe(false);
   });
 }
+
+for (const administrator of [false, true]) {
+  test(`dashboard exit revokes the server session before clearing the browser (${administrator ? "admin" : "company user"})`, async ({page}) => {
+    let called = 0;
+    let finish!: () => void;
+    const pending = new Promise<void>(resolve => {finish=resolve;});
+    await page.addInitScript(() => localStorage.setItem("token", "synthetic-dashboard-session"));
+    await page.route("**/api/**", async route => {
+      const path = new URL(route.request().url()).pathname;
+      if (path.endsWith("/auth/me")) return route.fulfill({json:{user:{...user,is_marketplace_admin:administrator},companies:[]}});
+      if (path.endsWith("/next-step")) return route.fulfill({json:{title:"Создайте компанию",description:"Добавьте компанию для работы.",href:"/company/new"}});
+      if (path.endsWith("/auth/logout")) {
+        expect(route.request().method()).toBe("POST");
+        expect(route.request().headers().authorization).toBe("Bearer synthetic-dashboard-session");
+        called++; await pending;
+        return route.fulfill({status:204});
+      }
+      return route.fulfill({json:[]});
+    });
+    await page.goto("/dashboard");
+    page.once("dialog", dialog => dialog.accept());
+    await page.getByRole("button",{name:"Выйти",exact:true}).click();
+    await expect.poll(()=>called).toBe(1);
+    await expect(page.getByRole("button",{name:"Выходим…",exact:true})).toBeDisabled();
+    expect(await page.evaluate(()=>localStorage.getItem("token"))).toBe("synthetic-dashboard-session");
+    finish();
+    await expect(page).toHaveURL(/\/login$/);
+    expect(await page.evaluate(()=>localStorage.getItem("token"))).toBeNull();
+  });
+}
+
+test("dashboard exit can be cancelled and retried after a server failure", async ({page}) => {
+  let calls = 0;
+  await page.addInitScript(() => localStorage.setItem("token", "synthetic-dashboard-session"));
+  await page.route("**/api/**", route => {
+    const path=new URL(route.request().url()).pathname;
+    if(path.endsWith("/auth/me"))return route.fulfill({json:{user:{...user,is_marketplace_admin:true},companies:[]}});
+    if(path.endsWith("/auth/logout")){
+      calls++;
+      return calls===1?route.fulfill({status:503,json:{detail:"Не удалось завершить сеансы. Повторите выход."}}):route.fulfill({status:204});
+    }
+    return route.fulfill({json:[]});
+  });
+  await page.goto("/dashboard");
+  page.once("dialog", dialog=>dialog.dismiss());
+  await page.getByRole("button",{name:"Выйти",exact:true}).click();
+  expect(calls).toBe(0);
+  expect(await page.evaluate(()=>localStorage.getItem("token"))).toBe("synthetic-dashboard-session");
+  page.once("dialog", dialog=>dialog.accept());
+  await page.getByRole("button",{name:"Выйти",exact:true}).click();
+  await expect(page.getByRole("alert").filter({hasText:"Не удалось завершить сеансы. Повторите выход."})).toBeVisible();
+  expect(await page.evaluate(()=>localStorage.getItem("token"))).toBe("synthetic-dashboard-session");
+  page.once("dialog", dialog=>dialog.accept());
+  await page.getByRole("button",{name:"Выйти",exact:true}).click();
+  await expect(page).toHaveURL(/\/login$/);
+  expect(calls).toBe(2);
+});
