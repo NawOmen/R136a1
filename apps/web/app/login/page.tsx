@@ -2,6 +2,9 @@
 
 import { russianMessage } from "../lib/russianMessages";
 import Link from "next/link";
+import { AuthFrame, AuthSubmit } from "../components/auth/AuthFrame";
+import { PasswordInput } from "../components/auth/PasswordInput";
+import styles from "../components/auth/AuthFrame.module.css";
 import { useRouter } from "next/navigation";
 import { FormEvent, useEffect, useState } from "react";
 import { api, ApiError, getToken, setToken } from "../lib/api";
@@ -33,11 +36,11 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="auth-shell"><aside className="auth-aside"><span className="eyebrow">ПоРукам для бизнеса</span><h2>Один аккаунт для закупок и продаж</h2><p>Товары, запросы и сделки вашей компании — в одном кабинете.</p></aside><div className="auth-page">
-      <span className="eyebrow">С возвращением</span><h1 className="page-title">Войти в аккаунт</h1>
-      <p className="subtitle">Продолжите закупки и продажи в ПоРукам</p>
+    <AuthFrame>
+      <h1 className="page-title">Войти в аккаунт</h1>
+      <p className="subtitle">Закупки и продажи — в вашем кабинете.</p>
 
-      {error && <div className="alert alert-error">{error}</div>}
+      {error && <div className="alert alert-error" role="alert">{error}</div>}
 
       <form className="card" onSubmit={handleSubmit}>
         <div className="field">
@@ -53,28 +56,21 @@ export default function LoginPage() {
         </div>
         <div className="field">
           <label htmlFor="password">Пароль<span className="req">*</span></label>
-          <input
+          <PasswordInput
             id="password"
-            type="password"
             value={password}
             onChange={(event) => setPassword(event.target.value)}
             required
             autoComplete="current-password"
           />
         </div>
-        <div className="actions">
-          <button type="submit" className="btn btn-primary" disabled={submitting}>
-            {submitting ? "Входим..." : "Войти"}
-          </button>
-        </div>
+        <div className={styles.recover}><Link href="/recover">Забыли пароль?</Link></div>
+        <AuthSubmit submitting={submitting} text="Войти" pendingText="Входим…" />
       </form>
 
       <p className="hint">
-        <Link href="/recover">Забыли пароль?</Link>
-      </p>
-      <p className="hint">
         Нет аккаунта? <Link href="/register">Зарегистрироваться</Link>
       </p>
-    </div></div>
+    </AuthFrame>
   );
 }

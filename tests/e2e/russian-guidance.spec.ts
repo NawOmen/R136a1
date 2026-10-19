@@ -138,7 +138,7 @@ test("registration requires separate acknowledgements and sends the current regi
   await page.getByLabel("Фамилия", {exact:false}).fill("Проверка");
   await page.locator("#first_name").fill("Аккаунта");
   await page.getByLabel("Электронная почта", {exact:false}).fill("access@demo.ru");
-  await page.getByLabel("Пароль", {exact:false}).fill("synthetic-access-password");
+  await page.locator("#password").fill("synthetic-access-password");
   const submit = page.getByRole("button", {name:"Зарегистрироваться", exact:true});
   await submit.click(); expect(registered).toBeNull();
   await page.getByRole("checkbox", {name:/Принимаю правила работы/}).check();

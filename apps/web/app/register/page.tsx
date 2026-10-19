@@ -2,6 +2,9 @@
 
 import { russianMessage } from "../lib/russianMessages";
 import Link from "next/link";
+import { AuthFrame, AuthSubmit } from "../components/auth/AuthFrame";
+import { PasswordInput } from "../components/auth/PasswordInput";
+import styles from "../components/auth/AuthFrame.module.css";
 import { useRouter } from "next/navigation";
 import { FormEvent, useEffect, useState } from "react";
 import { api, ApiError, getToken, RegisterInput, setToken } from "../lib/api";
@@ -53,17 +56,17 @@ export default function RegisterPage() {
   }
 
   return (
-    <div className="auth-shell"><aside className="auth-aside"><span className="eyebrow">Аккаунт компании</span><h2>Покупайте и продавайте в одном аккаунте</h2><p>Добавьте компанию и выберите задачи: закупки, продажи или оба направления.</p></aside><div className="auth-page">
-      <span className="eyebrow">Новый аккаунт</span><h1 className="page-title">Регистрация</h1>
-      <p className="subtitle">Создайте личный профиль для работы с компаниями</p>
+    <AuthFrame registration>
+      <h1 className="page-title">Регистрация</h1>
+      <p className="subtitle">Один аккаунт для закупок и продаж.</p>
       <p className="hint" style={{ marginTop: -14, marginBottom: 16 }}>
         Обязательные поля отмечены <span className="req">*</span>.
       </p>
 
-      {error && <div className="alert alert-error">{error}</div>}
+      {error && <div className="alert alert-error" role="alert">{error}</div>}
 
       <form className="card" onSubmit={handleSubmit}>
-        <div className="field">
+        <div className={styles.names}><div className="field">
           <label htmlFor="last_name">Фамилия<span className="req">*</span></label>
           <input
             id="last_name"
@@ -85,7 +88,9 @@ export default function RegisterPage() {
             autoComplete="given-name"
           />
         </div>
-        <div className="field">
+        </div>
+        <div className={styles.names}>
+<div className="field">
           <label htmlFor="middle_name">Отчество <span className="opt">необязательно</span></label>
           <input
             id="middle_name"
@@ -94,6 +99,17 @@ export default function RegisterPage() {
             onChange={(event) => setMiddleName(event.target.value)}
             autoComplete="additional-name"
           />
+        </div>
+        <div className="field">
+          <label htmlFor="phone">Телефон <span className="opt">необязательно</span></label>
+          <input
+            id="phone"
+            type="tel"
+            value={phone}
+            onChange={(event) => setPhone(event.target.value)}
+            autoComplete="tel"
+          />
+        </div>
         </div>
         <div className="field">
           <label htmlFor="email">Электронная почта<span className="req">*</span></label>
@@ -108,10 +124,9 @@ export default function RegisterPage() {
         </div>
         <div className="field">
           <label htmlFor="password">Пароль<span className="req">*</span></label>
-          <input
+          <PasswordInput
             id="password"
             minLength={12}
-            type="password"
             value={password}
             onChange={(event) => setPassword(event.target.value)}
             required
@@ -119,28 +134,14 @@ export default function RegisterPage() {
           />
           <p className="hint">Не менее 12 символов.</p>
         </div>
-        <div className="field">
-          <label htmlFor="phone">Телефон <span className="opt">необязательно</span></label>
-          <input
-            id="phone"
-            type="tel"
-            value={phone}
-            onChange={(event) => setPhone(event.target.value)}
-            autoComplete="tel"
-          />
-        </div>
-        <label><input type="checkbox" required checked={rulesAccepted} onChange={event => setRulesAccepted(event.target.checked)} /> Принимаю <Link href="/info/legal" target="_blank" rel="noopener">правила работы</Link></label>
-        <label><input type="checkbox" required checked={privacyAcknowledged} onChange={event => setPrivacyAcknowledged(event.target.checked)} /> Ознакомлен с <Link href="/info/privacy" target="_blank" rel="noopener">условиями обработки данных</Link></label>
-        <div className="actions">
-          <button type="submit" className="btn btn-primary" disabled={submitting}>
-            {submitting ? "Регистрируем..." : "Зарегистрироваться"}
-          </button>
-        </div>
+        <label className={styles.consent}><input type="checkbox" required checked={rulesAccepted} onChange={event => setRulesAccepted(event.target.checked)} /> Принимаю <Link href="/info/legal" target="_blank" rel="noopener">правила работы</Link></label>
+        <label className={styles.consent}><input type="checkbox" required checked={privacyAcknowledged} onChange={event => setPrivacyAcknowledged(event.target.checked)} /> Ознакомлен с <Link href="/info/privacy" target="_blank" rel="noopener">условиями обработки данных</Link></label>
+        <AuthSubmit submitting={submitting} text="Зарегистрироваться" pendingText="Создаём аккаунт…" />
       </form>
 
       <p className="hint">
         Уже есть аккаунт? <Link href="/login">Войти</Link>
       </p>
-    </div></div>
+    </AuthFrame>
   );
 }

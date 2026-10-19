@@ -100,3 +100,21 @@ test("catalog loading rotates only its spinner and keeps the text bounded", asyn
   await page.emulateMedia({ reducedMotion: "reduce" });
   expect(await page.locator(".market-loading__spinner").evaluate(el => getComputedStyle(el).animationName)).toBe("none");
 });
+
+
+for (const route of ["login", "register"]) {
+  test(`glass ${route} keeps password visibility and mobile layout usable`, async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.goto(`/${route}`);
+    const password = page.locator("#password");
+    await password.fill("synthetic-check-password");
+    await expect(password).toHaveAttribute("type", "password");
+    await page.getByRole("button", { name: "Показать пароль", exact: true }).click();
+    await expect(password).toHaveAttribute("type", "text");
+    await expect(password).toHaveValue("synthetic-check-password");
+    await page.getByRole("button", { name: "Скрыть пароль", exact: true }).click();
+    await expect(password).toHaveAttribute("type", "password");
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
+    await expect(page.getByRole("button", { name: route === "login" ? "Войти" : "Зарегистрироваться", exact: true })).toBeEnabled();
+  });
+}
