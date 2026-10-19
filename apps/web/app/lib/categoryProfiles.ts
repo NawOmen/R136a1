@@ -1,3 +1,4 @@
+import { isVisibleCategory } from "./categoryVisibility";
 import registry from "./category-registry.generated.json";
 
 type TechnicalProfile = { version: number; state: string; fields: string[]; required_for_product: string[] };
@@ -67,6 +68,7 @@ export function resolveAgentCategory(category: string, productType = ""): { cate
   function resolve(raw: string) {
     const value = normalize(aliases[normalize(raw)] ?? raw);
     for (const [parent, leaves] of Object.entries(ids)) {
+      if (!isVisibleCategory(parent)) continue;
       for (const [label, id] of Object.entries(leaves)) {
         if ([label, id].some(item => normalize(item) === value)) return { category: parent, subcategory: label };
       }

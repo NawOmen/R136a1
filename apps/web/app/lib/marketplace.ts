@@ -9,6 +9,8 @@ export type { Money } from "./money";
 import { ApiError, handleUnauthorized } from "./api";
 import { serviceUrl } from "./serviceUrl";
 import categoryRegistry from "./category-registry.generated.json";
+import { isVisibleCategory } from "./categoryVisibility";
+export { isVisibleCategory } from "./categoryVisibility";
 import { registryCharacteristicLabel } from "./categoryProfiles";
 
 // Тот же класс ошибок, что у gateway-auth — страницы ловят единый тип.
@@ -774,9 +776,6 @@ export const NEED_VISIBILITY_LABELS: Record<NeedVisibility, string> = {
 // Generated from the canonical backend registry; v1 still sends Russian labels.
 export const PRODUCT_CATEGORY_REGISTRY_VERSION = categoryRegistry.registry_version;
 export const PRODUCT_CATEGORY_IDS: Record<string, Record<string, string>> = categoryRegistry.leaf_ids;
-export function isVisibleCategory(category: string): boolean {
-  return !["Продукты питания", "Медицина и гигиена"].includes(category);
-}
 export const PRODUCT_CATEGORY_TREE: Record<string, string[]> = Object.fromEntries(
   Object.entries(categoryRegistry.tree).filter(([category]) => isVisibleCategory(category)),
 );

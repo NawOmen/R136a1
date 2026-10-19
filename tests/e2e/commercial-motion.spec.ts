@@ -1,10 +1,13 @@
 import { expect, test } from "@playwright/test";
 import { formatDate, formatDateTime } from "../../apps/web/app/lib/dates";
+import { resolveAgentCategory } from "../../apps/web/app/lib/categoryProfiles";
 import { displayValue } from "../../apps/web/app/lib/presentation";
 
 const user = { id: "00000000-0000-4000-8000-000000000001", first_name: "Проверка", last_name: "Интерфейса", email: "synthetic@example.test", account_status: "active" };
 
 test("calendar dates keep their day and use two-digit years", () => {
+  expect(resolveAgentCategory("Продукты питания")).toBeNull();
+  expect(resolveAgentCategory("Медицина и гигиена")).toBeNull();
   expect(formatDate("2026-01-09")).toBe("09.01.26");
   expect(formatDate("2024-02-29")).toBe("29.02.24");
   expect(formatDate("2026-02-30")).toBe("—");
