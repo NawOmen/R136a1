@@ -167,8 +167,8 @@ export function AgentStory({ landing = false, children }: { landing?: boolean; c
       <div ref={scene} className={styles.visual} data-stage={step} data-paused={paused}>
         <div className={styles.horizon} aria-hidden="true" /><div className={styles.grid} aria-hidden="true" />
         <span className={styles.sceneCaption}>ПРОИЗВОДИТЕЛЬ ↔ ПОКУПАТЕЛЬ</span>
-        <div className={styles.illustration} style={{visibility: ready3D && !still && !failed3D ? "hidden" : "visible"}}><AgentIllustration stage={step}/></div>
-        {!still && !failed3D && <div className={styles.webgl}><AgentWorld stage={step} paused={paused} onFailure={() => setFailed3D(true)} onReady={() => setReady3D(true)} /></div>}
+        <div className={styles.illustration} style={{visibility: ready3D && !still && !failed3D && !compact ? "hidden" : "visible"}}><AgentIllustration stage={step}/></div>
+        {!still && !failed3D && !compact && <div className={styles.webgl}><AgentWorld stage={step} paused={paused} onFailure={() => setFailed3D(true)} onReady={() => setReady3D(true)} /></div>}
         <button className={`${styles.hotspot} ${styles.factoryLabel}`} type="button" aria-expanded={insight === "factory"} onClick={() => setInsight(insight === "factory" ? null : "factory")}><small>01 / ПРЕДЛОЖЕНИЕ</small>Производитель <span>+</span></button>
         <button className={`${styles.hotspot} ${styles.buyerLabel}`} type="button" aria-expanded={insight === "buyer"} onClick={() => setInsight(insight === "buyer" ? null : "buyer")}><small>02 / ПОТРЕБНОСТЬ</small>Компания-покупатель <span>+</span></button>
         <button className={styles.agentLabel} type="button" aria-expanded={insight === "agent"} onClick={() => setInsight(insight === "agent" ? null : "agent")}>✧ ИИ-агенты · {chapters[step].state}</button>

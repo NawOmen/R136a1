@@ -155,9 +155,9 @@ function Agent({ index, stage }: {index:number;stage:number}) {
 function World({ stage }: {stage:number}) {
   const scan = useRef<Mesh>(null);
   const cameraTarget = useMemo(() => new Vector3(), []);
-  useFrame(({camera,clock,pointer},delta)=>{
-    const wide=stage===3;
-    cameraTarget.set(4+pointer.x*.5,wide?17:14,wide?23:21);
+  useFrame(({camera,clock,pointer,size},delta)=>{
+    const distance = Math.max(14, 32 / (size.width / Math.max(1, size.height))) * (stage === 3 ? 1.06 : 1);
+    cameraTarget.set(distance*.16+pointer.x*.5,distance*.56,distance*.83);
     camera.position.lerp(cameraTarget,1-Math.exp(-delta*2));
     camera.lookAt(0,.65,0);
     if(scan.current){const size=(clock.elapsedTime*.3)%4.5;scan.current.scale.setScalar(size);}
