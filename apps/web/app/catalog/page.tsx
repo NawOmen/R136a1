@@ -69,7 +69,7 @@ export default function CatalogPage() {
 
 
   return <div className="market-page">
-    <header className="market-page__head"><div><span className="eyebrow">Рынок предложений</span><h1>Каталог товаров</h1><p>Готовая продукция российских производителей с оптовыми условиями</p></div><Link href="/needs/new" className="btn btn-primary">+ Разместить потребность</Link></header>
+    <header className="catalog-heading"><h1>Каталог товаров</h1><p>Если нужного нет, опишите потребность в разделе <Link href="/ai-procurement">«Закупки с ИИ»</Link>.</p></header>
     <div className="catalog-toolbar"><label className="catalog-search"><span aria-hidden="true">⌕</span><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Название товара или категория" aria-label="Поиск товаров" /></label><span className="result-count" role="status">{loading ? "Загружаем предложения..." : error && products.length === 0 ? "Предложения не загружены" : `${visible.length} ${visible.length % 10 === 1 && visible.length % 100 !== 11 ? "товар" : visible.length % 10 >= 2 && visible.length % 10 <= 4 && !(visible.length % 100 >= 12 && visible.length % 100 <= 14) ? "товара" : "товаров"}`}</span></div>
     <nav ref={categoryRail} className="category-rail category-rail--catalog" aria-label="Категории товаров">{categories.map((item) => <button type="button" className={category === item ? "active" : ""} aria-pressed={category === item} onClick={() => setCategory(item)} key={item}>{item}</button>)}</nav>
     <div className="catalog-filter-panel" role="group" aria-label="Фильтры товаров">

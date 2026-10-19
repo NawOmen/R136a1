@@ -154,7 +154,14 @@ export function AgentStory({ landing = false, children }: { landing?: boolean; c
         const headerHeight = document.querySelector(".site-header")?.getBoundingClientRect().height ?? 0;
         const offset = headerHeight + (controls.current?.getBoundingClientRect().height ?? 0) + 12;
         window.scrollTo({ top: Math.max(0, window.scrollY + target.getBoundingClientRect().top - offset), behavior: reduced ? "instant" : "smooth" });
-        selectionTimer.current = setTimeout(() => { scrollSelection.current = null; }, 1200);
+        let previousY = Number.NaN;
+        const releaseWhenSettled = () => {
+          const currentY = window.scrollY;
+          if (Math.abs(currentY - previousY) < .5) { scrollSelection.current = null; return; }
+          previousY = currentY;
+          selectionTimer.current = setTimeout(releaseWhenSettled, 100);
+        };
+        selectionTimer.current = setTimeout(releaseWhenSettled, 1200);
       });
     });
   };

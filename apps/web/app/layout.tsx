@@ -3,7 +3,6 @@ import type { ReactNode } from "react";
 import "./globals.css";
 import Link from "next/link";
 import { AccountDrawer } from "./components/AccountDrawer";
-import { WorkflowGuide } from "./components/WorkflowGuide";
 import { RussianValidation } from "./components/RussianValidation";
 import { SiteNavigation } from "./components/SiteNavigation";
 
@@ -28,7 +27,7 @@ export default function RootLayout({ children }: Readonly<{ children: ReactNode 
             <AccountDrawer />
           </div>
         </header>
-        <main tabIndex={-1} id="main-content" className="container main"><WorkflowGuide />{children}</main>
+        <main tabIndex={-1} id="main-content" className="container main">{children}</main>
         <footer className="site-footer">
           <div className="container footer-grid">
             <div className="footer-brand"><Link className="site-header__logo" href="/"><img src="/icon.png" alt="" width="34" height="34" /><span>ПоРукам</span></Link><p>Для проверенных российских покупателей и производителей.</p><span>© ПоРукам</span></div>

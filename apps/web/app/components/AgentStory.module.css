@@ -138,3 +138,6 @@
 .landing .chapter { min-height:clamp(260px,calc(100svh - 320px),740px); }
 @media(max-width:650px){ .controls .steps { margin-bottom:10px; }.visual { top:auto; }.chapter,.landing .chapter { min-height:auto; } }
 @media(prefers-reduced-motion:reduce){ .visual { top:auto; }.chapter,.landing .chapter { min-height:auto; } }
+
+@media(min-width:651px){ .landing .intro { display:block;position:relative;text-align:center; }.landing .intro h1 { margin-inline:auto; }.landing .introBottom { position:absolute;right:0;top:50%;transform:translateY(-50%); } }
+@media(max-width:650px){ .landing .intro { display:flex;flex-direction:column;align-items:center;gap:12px; }.landing .introBottom { align-items:center; } }
