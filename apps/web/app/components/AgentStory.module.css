@@ -113,7 +113,7 @@
   .landing .introBottom :global(.btn) { padding:10px 12px;font-size:12px; }
   .landing .steps { gap:4px;margin-bottom:10px; }
   .landing .steps button { min-height:36px;padding:8px;font-size:10px; }
-  .landing .visual { height:calc(100svh - 375px);min-height:260px;max-height:430px; }
+  .landing .visual { height:calc(100svh - 420px);min-height:260px;max-height:430px; }
   .landing .chapter:first-child { min-height:auto; }
   .landing .sceneCaption { top:15px;font-size:8px; }
 }
