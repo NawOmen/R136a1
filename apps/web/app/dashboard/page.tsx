@@ -134,7 +134,7 @@ export default function DashboardPage() {
       {logoutError && <p className="alert alert-error" role="alert">{logoutError}</p>}
       <div className="dashboard-head">
         <div>
-          <span className="eyebrow">Центр управления</span>
+
           <h1 className="page-title">Личный кабинет</h1>
           <p className="subtitle">
             {fullName} · {user.email} · Статус: {ACCOUNT_STATUS_LABELS[user.account_status]}
@@ -171,7 +171,7 @@ export default function DashboardPage() {
         setMode(saved === "sell" && selected?.membership?.can_sell ? "sell" : selected?.membership?.can_buy ? "buy" : selected?.membership?.can_sell ? "sell" : null);
       }}>{companies.map((item) => <option key={item.id} value={item.id}>{item.display_name}</option>)}</select></div>}
       <section className="workspace-card">
-        <div className="workspace-card__head"><div><h2>Рабочие разделы</h2><p>Один аккаунт может покупать и продавать от имени компании</p></div><div className="mode-toggle" role="group" aria-label="Режим работы">
+        <div className="workspace-card__head"><div><h2>Рабочие разделы</h2></div><div className="mode-toggle" role="group" aria-label="Режим работы">
           <button
             type="button"
             aria-pressed={mode === "buy"}
@@ -193,7 +193,7 @@ export default function DashboardPage() {
             Продаю
           </button>
         </div></div>
-        <p className="hint">Выберите компанию и режим. Ниже — ближайшее действие именно для них.</p>
+
       {nextStep && (
         <section className="card" aria-live="polite">
           <span className="eyebrow">Следующий шаг</span>

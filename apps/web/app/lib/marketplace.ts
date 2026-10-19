@@ -792,6 +792,7 @@ export const DOCUMENT_STATUS_LABELS: Record<string, string> = {
 };
 
 const CHARACTERISTIC_LABELS: Record<string, string> = {
+  food_contact: "Контакт с пищевыми продуктами",
   print: "Печать",
   top_diameter_mm: "Диаметр верха, мм",
   bottom_diameter_mm: "Диаметр дна, мм",

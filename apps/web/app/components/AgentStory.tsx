@@ -9,10 +9,10 @@ import { AgentIllustration } from "./AgentIllustration";
 const AgentWorld = dynamic(() => import("./AgentWorld"), { ssr: false });
 
 const chapters = [
-  { name: "Разрыв", title: "Производство есть. Спрос есть. Нужна связь.", text: "У производителя — возможности. У покупателя — задача. ПоРукам помогает им встретиться.", state: "Поиск", detail: "Возможности и запрос ещё не сопоставлены." },
-  { name: "Подбор", title: "Два бизнеса. Один понятный запрос.", text: "ИИ разбирает требования покупателя и сопоставляет их с предложениями производителей.", state: "Сканирование", detail: "Материал, объём и сроки учитываются при подборе." },
-  { name: "Согласование", title: "ИИ готовит. Стороны решают.", text: "Сравните условия и уточните детали. Обязательства возникают только после вашего подтверждения.", state: "Координация", detail: "При изменении условий потребуется повторная проверка." },
-  { name: "Сотрудничество", title: "От отдельного запроса — к общей работе.", text: "Товары, производство и совместные закупки — в одном пространстве.", state: "Связь", detail: "Запрос → подбор → согласование сторонами." },
+  { name: "Запрос", title: "Начните с задачи", text: "Товар, объём и срок — всё, что нужно для начала подбора.", state: "Поиск", detail: "Потребность покупателя и возможности производства." },
+  { name: "Подбор", title: "Найдите подходящее производство", text: "ИИ сопоставляет ваш запрос с товарами и возможностями производителей.", state: "Подбор", detail: "Подбор по характеристикам, объёму и срокам." },
+  { name: "Условия", title: "Согласуйте детали", text: "Сравните предложения. Цену, объём и сроки подтверждают обе стороны.", state: "Согласование", detail: "Условия подтверждают покупатель и производитель." },
+  { name: "Сделка", title: "Перейдите к заказу", text: "Переписка, документы и ход сделки — в одном месте.", state: "Связь", detail: "От запроса до согласованного заказа." },
 ];
 
 export function AgentStory({ landing = false, children }: { landing?: boolean; children?: ReactNode }) {
@@ -167,8 +167,8 @@ export function AgentStory({ landing = false, children }: { landing?: boolean; c
   };
 
   return <div ref={root} className={`${styles.story} ${landing ? styles.landing : ""}`} data-still={still} data-current={step} data-preview={preview && !still}>
-    <header className={styles.intro}><span className="eyebrow">Как работает ПоРукам</span><h1>{landing ? <>Ваш бизнес.<br /><em>Новые связи.</em></> : <>Между спросом<br />и производством — <em>связь.</em></>}</h1><div className={styles.introBottom}><p>ИИ помогает найти друг друга.<br />Решение остаётся за компаниями.</p><Link href="/catalog" className="btn btn-secondary">Каталог товаров →</Link></div></header>
-    <div ref={controls} className={styles.controls}><div className={styles.toolbar}><span>История взаимодействия</span><button type="button" aria-pressed={staticView || reduced} disabled={reduced} onClick={() => setStaticView(!staticView)}>{reduced ? "Движение уменьшено в настройках" : staticView ? "Включить анимацию" : "Без анимации"}</button></div>
+    <header className={styles.intro}><span className="eyebrow">Как работает ПоРукам</span><h1>{landing ? <>Товары и <em>производство.</em></> : <>От запроса <em>к заказу.</em></>}</h1><div className={styles.introBottom}><p>Готовые партии и заказы на производство.</p><Link href="/catalog" className="btn btn-secondary">Каталог товаров →</Link></div></header>
+    <div ref={controls} className={styles.controls}><div className={styles.toolbar}><span>От запроса к заказу</span><button type="button" aria-pressed={staticView || reduced} disabled={reduced} onClick={() => setStaticView(!staticView)}>{reduced ? "Движение уменьшено в настройках" : staticView ? "Включить анимацию" : "Без анимации"}</button></div>
     {!still && <nav className={styles.steps} aria-label="Этапы взаимодействия">{chapters.map((item, index) => <button key={item.name} type="button" aria-current={chapter === index ? "step" : undefined} onClick={() => selectChapter(index)}><span>0{index + 1}</span>{" "}{item.name}</button>)}</nav>}</div>
     <div className={styles.journey}>
       <div ref={scene} className={styles.visual} data-stage={step} data-paused={paused}>
@@ -186,6 +186,6 @@ export function AgentStory({ landing = false, children }: { landing?: boolean; c
     </div>
 
     {children}
-    <section className={styles.outro}><span className="eyebrow">Следующий шаг — ваш</span><h2>Найдите товар.<br />Или расскажите, что нужно.</h2><div className="actions"><Link href="/catalog" className="btn btn-secondary">Открыть каталог</Link><Link href="/needs/new" className="btn btn-primary">Создать потребность →</Link></div><p>Только российские компании. Расчёты в рублях.</p></section>
+    <section className={styles.outro}><span className="eyebrow">ПоРукам</span><h2>Что нужно вашему бизнесу?</h2><div className="actions"><Link href="/catalog" className="btn btn-secondary">Открыть каталог</Link><Link href="/needs/new" className="btn btn-primary">Создать потребность →</Link></div><p>Только российские компании. Расчёты в рублях.</p></section>
   </div>;
 }

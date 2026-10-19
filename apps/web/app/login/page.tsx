@@ -33,7 +33,7 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="auth-shell"><aside className="auth-aside"><span className="eyebrow">ПоРукам для бизнеса</span><h2>Один аккаунт для закупок и продаж</h2><p>Работайте от имени компании, публикуйте товары и потребности, следите за предложениями и сделками.</p><ul><li>Проверенные российские компании</li><li>Объяснимый подбор производителей</li><li>Контроль критичных действий</li></ul></aside><div className="auth-page">
+    <div className="auth-shell"><aside className="auth-aside"><span className="eyebrow">ПоРукам для бизнеса</span><h2>Один аккаунт для закупок и продаж</h2><p>Товары, запросы и сделки вашей компании — в одном кабинете.</p></aside><div className="auth-page">
       <span className="eyebrow">С возвращением</span><h1 className="page-title">Войти в аккаунт</h1>
       <p className="subtitle">Продолжите закупки и продажи в ПоРукам</p>
 
