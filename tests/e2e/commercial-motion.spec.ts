@@ -64,3 +64,24 @@ test("reduced motion keeps the complete story readable without headline loops", 
   const title = page.getByRole("heading", { name: "Товары и производство", exact: true }).locator("span");
   expect(await title.evaluate(el => getComputedStyle(el).animationName)).toBe("none");
 });
+
+test("animated catalog keeps filtering, sorting and focus usable", async ({ page }) => {
+  const products = [
+    { id: "first", name: "Картонная коробка", category: "Упаковка и тара", price_rub: "100", moq_units: 10, lead_time_days: 3, characteristics: {}, images: [], price_tiers: [] },
+    { id: "second", name: "Крепёж", category: "Металлоизделия", price_rub: "20", moq_units: 20, lead_time_days: 5, characteristics: {}, images: [], price_tiers: [] },
+  ];
+  await page.route("**/api/**", route => route.fulfill({ json: route.request().url().includes("/products") ? products : [] }));
+  await page.goto("/catalog");
+  const cards = page.locator(".catalog-result-grid .market-product");
+  await expect(cards).toHaveCount(2);
+  await page.getByText("Фильтры и сортировка", { exact: true }).click();
+  await page.getByRole("combobox", { name: "Сортировка", exact: true }).selectOption("price-asc");
+  await expect(cards.first()).toContainText("Крепёж");
+  const search = page.getByRole("textbox", { name: "Поиск товаров", exact: true });
+  await search.fill("коробка");
+  await expect(cards).toHaveCount(1);
+  await expect(cards).toContainText("Картонная коробка");
+  await expect(search).toBeFocused();
+  await search.fill("");
+  await expect(cards).toHaveCount(2);
+});

@@ -148,3 +148,17 @@ input,textarea { caret-color:var(--primary); }
 .market-price { font-variant-numeric:tabular-nums; }
 @media(max-width:650px){ .catalog-heading{padding:16px 0 12px;} }
 @media(prefers-reduced-motion:reduce){ .market-product,.market-product__visual img,.category-rail button{transition:none;}.market-product:hover .market-product__visual img{transform:none;} }
+
+/* Motion owns card position and press feedback; do not compete with CSS transforms. */
+.catalog-result-grid .market-product,.category-rail button,.slide-text-link { transition:background-color 180ms ease,color 180ms ease,border-color 180ms ease; }
+.catalog-result-grid .market-product:hover,.category-rail button:active,.slide-text-link:hover,.slide-text-link:active,.slide-text-link:hover:active { transform:none; }
+.slide-text-link { overflow:hidden; }
+.slide-text-link__track { display:grid;transition:translate 280ms cubic-bezier(.16,1,.3,1); }
+.slide-text-link__track > span { grid-area:1/1; }
+.slide-text-link__track > span:last-child { translate:0 140%;visibility:hidden; }
+@media(hover:hover){ .slide-text-link:hover .slide-text-link__track{translate:0 -140%;}.slide-text-link:hover .slide-text-link__track > span:last-child{visibility:visible;} }
+.slide-text-link:focus-visible .slide-text-link__track{translate:0 -140%;}
+.slide-text-link:focus-visible .slide-text-link__track > span:last-child{visibility:visible;}
+.loading-wave span span { display:inline-block;animation:loading-letter 1.6s ease-in-out infinite; }
+@keyframes loading-letter { 50%{opacity:.4;} }
+@media(prefers-reduced-motion:reduce){ .slide-text-link__track{transition:none!important;translate:none!important;}.slide-text-link__track > span:last-child{display:none;}.loading-wave span span{animation:none;} }

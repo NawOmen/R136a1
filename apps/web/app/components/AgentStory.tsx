@@ -1,6 +1,8 @@
 "use client";
 
-import Link from "next/link";
+import { animate, createScope } from "animejs";
+import { AnimatePresence, LayoutGroup, motion } from "motion/react";
+import { SlideTextLink } from "./motion/SlideTextLink";
 import dynamic from "next/dynamic";
 import { type ReactNode, useEffect, useRef, useState } from "react";
 import styles from "./AgentStory.module.css";
@@ -42,6 +44,15 @@ export function AgentStory({ landing = false, children }: { landing?: boolean; c
     viewport.addEventListener("change", syncViewport);
     return () => { media.removeEventListener("change", sync); viewport.removeEventListener("change", syncViewport); };
   }, []);
+
+  useEffect(() => {
+    if (!root.current || reduced || staticView || paused || window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    const scope = createScope({ root: root.current }).add(() => {
+      animate('[data-story-action]', { opacity: [.45, 1], translateY: [7, 0], duration: 550, ease: 'out(4)' });
+      animate(`[data-chapter="${chapter}"] h2`, { opacity: [.5, 1], translateX: [12, 0], duration: 650, ease: 'out(4)' });
+    });
+    return () => scope.revert();
+  }, [chapter, paused, reduced, staticView]);
 
   useEffect(() => {
     const header = document.querySelector<HTMLElement>(".site-header");
@@ -165,9 +176,9 @@ export function AgentStory({ landing = false, children }: { landing?: boolean; c
   };
 
   return <div ref={root} className={`${styles.story} ${landing ? styles.landing : ""}`} data-still={still} data-paused={paused} data-current={step} data-preview={preview && !still}>
-    <header className={styles.intro}><span className="eyebrow">Как работает ПоРукам</span><h1>{landing ? <><span className={styles.headlineText}>Товары и <em>производство</em></span></> : <>От запроса <em>к заказу.</em></>}</h1><div className={styles.introBottom}><p>Готовые партии и заказы на производство.</p><Link href="/catalog" className="btn btn-secondary">Каталог товаров →</Link></div></header>
+    <header className={styles.intro}><span className="eyebrow">Как работает ПоРукам</span><h1>{landing ? <><span className={styles.headlineText}>Товары и <em>производство</em></span></> : <>От запроса <em>к заказу.</em></>}</h1><div className={styles.introBottom}><p>Готовые партии и заказы на производство.</p><SlideTextLink href="/catalog" text="Каталог товаров" /></div></header>
     <div ref={controls} className={styles.controls}><div className={styles.toolbar}><span>От запроса к заказу</span><button type="button" aria-pressed={staticView || reduced} disabled={reduced} onClick={() => setStaticView(!staticView)}>{reduced ? "Движение уменьшено в настройках" : staticView ? "Включить анимацию" : "Без анимации"}</button></div>
-    {!still && <nav className={styles.steps} aria-label="Этапы взаимодействия">{chapters.map((item, index) => <button key={item.name} type="button" aria-current={chapter === index ? "step" : undefined} onClick={() => selectChapter(index)}><span>0{index + 1}</span>{" "}{item.name}</button>)}</nav>}</div>
+    {!still && <LayoutGroup id="story-steps"><nav className={styles.steps} aria-label="Этапы взаимодействия">{chapters.map((item, index) => <button key={item.name} type="button" aria-current={chapter === index ? "step" : undefined} onClick={() => selectChapter(index)}><span>0{index + 1}</span>{" "}{item.name}{chapter === index && <motion.i className={styles.stepIndicator} layoutId="current-step" transition={{ type: "spring", stiffness: 340, damping: 36 }} aria-hidden="true" />}</button>)}</nav></LayoutGroup>}</div>
     <div className={styles.journey}>
       <div ref={scene} className={styles.visual} data-stage={step} data-paused={paused}>
         <div className={styles.horizon} aria-hidden="true" /><div className={styles.grid} aria-hidden="true" />
@@ -176,15 +187,15 @@ export function AgentStory({ landing = false, children }: { landing?: boolean; c
         <button className={`${styles.hotspot} ${styles.factoryLabel}`} type="button" aria-expanded={insight === "factory"} onClick={() => setInsight(insight === "factory" ? null : "factory")}><small>01 / ПРЕДЛОЖЕНИЕ</small>Завод · продавец <span>+</span></button>
         <button className={`${styles.hotspot} ${styles.buyerLabel}`} type="button" aria-expanded={insight === "buyer"} onClick={() => setInsight(insight === "buyer" ? null : "buyer")}><small>02 / ПОТРЕБНОСТЬ</small>Офис · покупатель <span>+</span></button>
         <button className={styles.agentLabel} type="button" aria-expanded={insight === "agent"} onClick={() => setInsight(insight === "agent" ? null : "agent")}>ИИ-агенты <span aria-hidden="true">+</span></button>
-        {insight && <div className={styles.insight} role="status">{insight === "factory" ? "Товары, параметры и доступные возможности производства." : insight === "buyer" ? "Требования, количество и срок закупки." : "Подготовка запроса и объяснение подбора. Подтверждают условия стороны."}<button type="button" aria-label="Закрыть пояснение" onClick={() => setInsight(null)}>×</button></div>}
-        <div key={step} className={styles.stageAction} aria-hidden="true"><span className={styles.actionNumber}>0{step + 1}</span><span>{["Покупатель формирует запрос", "ИИ находит производство", "Стороны согласуют условия", "Партия отправляется покупателю"][step]}</span></div>
+        <AnimatePresence initial={false}>{insight && <motion.div key={insight} initial={still ? false : { opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} transition={{ duration: still ? 0 : .2 }} className={styles.insight} role="status">{insight === "factory" ? "Товары, параметры и доступные возможности производства." : insight === "buyer" ? "Требования, количество и срок закупки." : "Подготовка запроса и объяснение подбора. Подтверждают условия стороны."}<button type="button" aria-label="Закрыть пояснение" onClick={() => setInsight(null)}>×</button></motion.div>}</AnimatePresence>
+        <div key={step} data-story-action className={styles.stageAction} aria-hidden="true"><span className={styles.actionNumber}>0{step + 1}</span><span>{["Покупатель формирует запрос", "ИИ находит производство", "Стороны согласуют условия", "Партия отправляется покупателю"][step]}</span></div>
         <div className={styles.sceneStatus}><span className={styles.dot} />{chapters[step].detail}</div>
       </div>
-      <div className={styles.chapters}>{chapters.map((item, index) => <section key={item.name} id={`story-chapter-${index}`} data-chapter={index} className={styles.chapter}><span className={styles.number}>0{index + 1} / {item.name}</span><h2>{item.title}</h2><p>{item.text}</p>{index === 3 && !landing && <Link className="btn btn-primary" href="/register">Начать сотрудничество →</Link>}</section>)}</div>
+      <div className={styles.chapters}>{chapters.map((item, index) => <section key={item.name} id={`story-chapter-${index}`} data-chapter={index} className={styles.chapter}><span className={styles.number}>0{index + 1} / {item.name}</span><h2>{item.title}</h2><p>{item.text}</p>{index === 3 && !landing && <SlideTextLink href="/register" text="Начать сотрудничество" primary />}</section>)}</div>
     </div>
 
     <noscript><style>{`.${styles.story} .${styles.controls}{display:none}.${styles.story} .${styles.journey}{display:block}.${styles.story} .${styles.visual}{position:relative;top:auto}.${styles.story} .${styles.chapter}{display:flex!important;min-height:0!important}.${styles.story} *{animation:none!important}`}</style></noscript>
     {children}
-    <section className={styles.outro}><span className="eyebrow">ПоРукам</span><h2>Что нужно вашему бизнесу?</h2><div className="actions"><Link href="/catalog" className="btn btn-secondary">Открыть каталог</Link><Link href="/needs/new" className="btn btn-primary">Создать потребность →</Link></div><p>Только российские компании. Расчёты в рублях.</p></section>
+    <section className={styles.outro}><span className="eyebrow">ПоРукам</span><h2>Что нужно вашему бизнесу?</h2><div className="actions"><SlideTextLink href="/catalog" text="Открыть каталог" /><SlideTextLink href="/needs/new" text="Создать потребность" primary /></div><p>Только российские компании. Расчёты в рублях.</p></section>
   </div>;
 }

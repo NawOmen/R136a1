@@ -82,7 +82,7 @@
 @keyframes headlineLight { 0%,100%{background-position:0% 50%;}50%{background-position:100% 50%;} }
 @keyframes headlineFloat { 0%,100%{transform:translateY(0);}50%{transform:translateY(-3px);} }
 .story[data-paused="true"] .headlineText { animation-play-state:paused; }
-.stageAction { position:absolute;top:23px;left:24px;right:24px;display:flex;align-items:center;gap:10px;color:#deedf4;font-size:12px;max-width:none;animation:actionArrive 500ms cubic-bezier(.16,1,.3,1) both; }
+.stageAction { position:absolute;top:23px;left:24px;right:24px;display:flex;align-items:center;gap:10px;color:#deedf4;font-size:12px;max-width:none; }
 .actionNumber { display:grid;place-items:center;flex-shrink:0;width:25px;height:25px;border:1px solid #769cac6b;border-radius:50%;font-size:10px;color:#9fdaef; }
 .sceneCaption { top:32px;font-size:8px; }
 .agentLabel { top:18%; }
@@ -134,3 +134,10 @@
  .landing .buyerLabel{right:4%;}.landing .agentLabel{left:50%;}.landing .stageAction,.landing .sceneStatus,.landing .insight{right:18px;}
  .landing .outro{margin-top:24px;padding:32px 0;}.landing[data-still="true"] .visual{height:360px;}
 }
+
+/* Anime.js owns caption and heading entrances; CSS owns the ambient scene. */
+.landing .chapter { animation:none!important; }
+
+.steps button { position:relative; }
+.steps button[aria-current] { border-bottom-color:transparent; }
+.steps .stepIndicator { position:absolute;bottom:-2px;left:0;right:0;height:2px;background:var(--primary);pointer-events:none; }
