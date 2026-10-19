@@ -90,3 +90,47 @@
 @media(max-width:650px){ .sceneCaption{display:none;}.stageAction{top:18px;left:18px;right:18px;max-width:none;font-size:12px;}.agentLabel{top:18%;}.hotspot{font-size:10px;}.sceneStatus{font-size:10px;} }
 @media(prefers-reduced-motion:reduce){ .headlineText{animation:none;background:none;color:var(--text);} }
 .story[data-still="true"] .headlineText { animation:none;background:none;color:var(--text); }
+
+/* One panoramic stage: the explanation belongs to the industrial scene. */
+.landing .intro { padding:22px 0 28px; }
+.landing .intro h1 { font-size:clamp(36px,5.3vw,76px);font-weight:550;letter-spacing:-.04em;max-width:1200px;line-height:1.12; }
+.landing .introBottom { margin-top:20px; }
+.landing .introBottom :global(.btn) { min-height:42px;padding:10px 22px;border:1px solid var(--border);border-radius:8px;background:var(--surface);font-size:13px;transition:background 200ms ease,border-color 200ms ease; }
+.landing .introBottom :global(.btn:hover) { border-color:var(--primary);background:var(--primary-soft); }
+.landing .journey { grid-template-columns:minmax(0,2.6fr) minmax(240px,1fr);gap:0; }
+.landing .visual { grid-column:1/-1;grid-row:1;align-self:start;height:calc(100svh - 350px);min-height:400px;border:0;border-radius:16px;box-shadow:0 22px 48px -32px #071b304d; }
+.landing .visual::after { content:"";position:absolute;inset:0 0 0 67%;background:linear-gradient(90deg,transparent,#10212bd9 24%,#10212b);pointer-events:none;z-index:-1; }
+.landing .illustration { right:27%;left:-3%;top:35px;bottom:28px; }
+.landing .webgl { right:27%;left:0; }
+.landing .chapters { grid-column:2;grid-row:1;z-index:1;pointer-events:none;padding:0 32px 0 8px; }
+.landing .chapter { min-height:clamp(400px,calc(100svh - 350px),740px);color:#edf5f8;padding:64px 0; }
+.landing .chapter h2 { font-size:clamp(27px,2.6vw,38px);letter-spacing:-.035em;margin:18px 0; }
+.landing .chapter p { color:#b7cbd5;font-size:14px;line-height:1.75;margin-bottom:0; }
+.landing .number { color:#95c9df; }
+.landing .buyerLabel { right:32%; }
+.landing .factoryLabel { left:4%; }
+.landing .agentLabel { left:36%; }
+.landing .sceneStatus { right:32%; }
+.landing .stageAction { right:32%; }
+.landing .insight { right:32%;z-index:3; }
+.landing .outro { margin-top:64px;padding:60px 0 48px; }
+.landing .outro :global(.eyebrow) { display:none; }
+.landing .outro h2 { letter-spacing:-.035em; }
+.landing[data-still="true"] .journey { grid-template-columns:1fr; }
+.landing[data-still="true"] .visual { grid-column:auto;grid-row:auto;height:460px; }
+.landing[data-still="true"] .visual::after { display:none; }
+.landing[data-still="true"] .illustration { right:0; }
+.landing[data-still="true"] .chapters { grid-column:auto;grid-row:auto;padding:0;pointer-events:auto; }
+.landing[data-still="true"] .chapter { color:var(--text);min-height:0;padding:28px 0; }
+.landing[data-still="true"] .chapter p { color:var(--text-muted); }
+.landing[data-still="true"] .number { color:var(--primary); }
+.landing[data-still="true"] .buyerLabel { right:4%; }
+.landing[data-still="true"] .agentLabel { left:50%; }
+.landing[data-still="true"] .sceneStatus,.landing[data-still="true"] .stageAction,.landing[data-still="true"] .insight { right:24px; }
+@media(max-width:650px){
+ .landing .intro{padding:14px 0 24px;}.landing .intro h1{font-size:clamp(31px,7.8vw,46px);max-width:520px;}.landing .introBottom{margin-top:16px;}
+ .landing .visual{min-height:360px;height:calc(100svh - 350px);max-height:480px;border-radius:12px;}.landing .visual::after{display:none;}
+ .landing .illustration{inset:48px -9% 48px;}.landing .chapters{padding:0;pointer-events:auto;}.landing .chapter{min-height:0;color:var(--text);padding:30px 4px;}.landing .chapter h2{font-size:30px;margin:14px 0;}.landing .chapter p{color:var(--text-muted);font-size:14px;}.landing .number{color:var(--primary);}
+ .landing .buyerLabel{right:4%;}.landing .agentLabel{left:50%;}.landing .stageAction,.landing .sceneStatus,.landing .insight{right:18px;}
+ .landing .outro{margin-top:24px;padding:32px 0;}.landing[data-still="true"] .visual{height:360px;}
+}

@@ -135,3 +135,16 @@ html { scrollbar-gutter:stable; }
 input,textarea { caret-color:var(--primary); }
 @media(max-width:650px){.account-drawer{width:min(390px,100vw);padding:24px;}}
 @media(prefers-reduced-motion:reduce){.account-drawer,.drawer-backdrop{animation:none;}}
+
+/* Editorial spacing shared by the storefront, without decorating work forms. */
+.catalog-heading { padding:24px 0 18px; }
+.catalog-heading h1 { letter-spacing:-.04em;line-height:1.12;font-weight:550; }
+.category-rail { gap:10px; }
+.category-rail button { min-height:44px;transition:background 180ms ease,border-color 180ms ease,color 180ms ease; }
+.market-product__visual { border-radius:12px;background:#eef0ee; }
+.market-product { transition:transform 280ms cubic-bezier(.16,1,.3,1); }
+.market-product__visual img { transition:transform 650ms cubic-bezier(.16,1,.3,1); }
+@media(hover:hover){ .market-product:hover .market-product__visual img{transform:scale(1.035);} }
+.market-price { font-variant-numeric:tabular-nums; }
+@media(max-width:650px){ .catalog-heading{padding:16px 0 12px;} }
+@media(prefers-reduced-motion:reduce){ .market-product,.market-product__visual img,.category-rail button{transition:none;}.market-product:hover .market-product__visual img{transform:none;} }
