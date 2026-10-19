@@ -1062,3 +1062,16 @@ input[type="file"] { width: 100%; min-width: 0; max-width: 100%; }
 .market-product__availability .product-availability--request { background:#fffffff0;color:#49545f; }
 
 .product-availability__dot { width:7px;height:7px;border-radius:50%;background:#18b76b;box-shadow:0 0 0 3px #18b76b17;flex-shrink:0;margin:3px; }
+
+.catalog-filter-panel { display:grid;grid-template-columns:minmax(220px,1.5fr) minmax(150px,1fr) minmax(180px,1.2fr) auto;gap:18px;align-items:end;padding:18px;margin:0 0 28px;border:1px solid var(--border);border-radius:var(--radius);background:var(--surface); }
+.catalog-price-filter { padding:0;margin:0;border:0;min-width:0; }
+.catalog-price-filter legend,.catalog-select-filter>span { display:block;font-size:12px;color:var(--text-muted);margin-bottom:8px; }
+.catalog-price-filter>div { display:flex;align-items:center;gap:8px; }
+.catalog-price-filter input,.catalog-select-filter select { width:100%;min-width:0;padding:10px 12px;border:1px solid var(--border);border-radius:8px;background:var(--bg);color:var(--text);font:inherit;font-size:14px; }
+.catalog-price-filter input { flex:1; }
+.catalog-filter-actions { display:flex;flex-direction:column;align-items:flex-start;gap:9px; }
+.catalog-filter-actions>label { display:flex;align-items:center;gap:8px;font-size:12px;cursor:pointer; }
+.catalog-filter-actions input { accent-color:var(--primary);width:16px;height:16px; }
+.catalog-filter-error { grid-column:1/-1;color:var(--danger);font-size:13px;margin:0; }
+@media(max-width:1000px){ .catalog-filter-panel { grid-template-columns:1fr 1fr; }.catalog-filter-actions { flex-direction:row;align-items:center;justify-content:space-between; } }
+@media(max-width:650px){ .catalog-filter-panel { grid-template-columns:1fr;gap:16px;padding:16px; }.catalog-price-filter input,.catalog-select-filter select { font-size:16px; }.catalog-filter-actions { flex-wrap:wrap; } }

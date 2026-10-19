@@ -105,7 +105,7 @@
 .landing .toolbar button { padding:7px 14px;font-size:11px; }
 .landing .steps { margin-bottom:12px;padding-bottom:8px; }
 .landing .visual { height:calc(100svh - 320px);min-height:260px;max-height:740px; }
-.landing .chapter:first-child { min-height:calc(100svh - 320px); }
+.landing .chapter:first-child { min-height:clamp(260px,calc(100svh - 320px),740px); }
 @media(max-width:650px){
   .landing .intro { gap:12px;padding:0 0 10px; }
   .landing .intro h1 { font-size:27px; }
@@ -127,5 +127,14 @@
 .landing[data-preview="true"][data-current="0"] .chapter[data-chapter="0"],
 .landing[data-preview="true"][data-current="1"] .chapter[data-chapter="1"],
 .landing[data-preview="true"][data-current="2"] .chapter[data-chapter="2"],
-.landing[data-preview="true"][data-current="3"] .chapter[data-chapter="3"] { display:flex;min-height:calc(100svh - 320px);animation:chapterEnter .4s cubic-bezier(.2,0,0,1); }
+.landing[data-preview="true"][data-current="3"] .chapter[data-chapter="3"] { display:flex;min-height:clamp(260px,calc(100svh - 320px),740px);animation:chapterEnter .4s cubic-bezier(.2,0,0,1); }
 @media(max-width:650px){.landing[data-preview="true"] .chapter { min-height:auto !important; }}
+
+/* Keep navigation and the scene aligned below the actual responsive header. */
+.controls { position:sticky;top:var(--story-header-height,70px);z-index:5;background:var(--bg); }
+.controls .steps { margin-top:0; }
+.visual { top:var(--story-scene-top,150px); }
+.chapter { scroll-margin-top:var(--story-scene-top,150px);min-height:min(740px,78vh); }
+.landing .chapter { min-height:clamp(260px,calc(100svh - 320px),740px); }
+@media(max-width:650px){ .controls .steps { margin-bottom:10px; }.visual { top:auto; }.chapter,.landing .chapter { min-height:auto; } }
+@media(prefers-reduced-motion:reduce){ .visual { top:auto; }.chapter,.landing .chapter { min-height:auto; } }
