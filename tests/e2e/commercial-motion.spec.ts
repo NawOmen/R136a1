@@ -85,3 +85,18 @@ test("animated catalog keeps filtering, sorting and focus usable", async ({ page
   await search.fill("");
   await expect(cards).toHaveCount(2);
 });
+
+
+test("catalog loading rotates only its spinner and keeps the text bounded", async ({ page }) => {
+  await page.route("**/api/v1/products", () => { /* Keep the catalog request pending while inspecting loading. */ });
+  await page.goto("/catalog");
+  const loading = page.locator(".market-loading");
+  await expect(loading).toBeVisible();
+  await expect(page.locator(".market-loading__spinner")).toHaveCount(1);
+  const text = loading.locator(".loading-wave");
+  expect(await text.evaluate(el => getComputedStyle(el).animationName)).toBe("none");
+  expect(await text.evaluate(el => el.getBoundingClientRect().width < 350)).toBe(true);
+  expect(await text.locator("span span").first().evaluate(el => getComputedStyle(el).borderTopWidth)).toBe("0px");
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  expect(await page.locator(".market-loading__spinner").evaluate(el => getComputedStyle(el).animationName)).toBe("none");
+});

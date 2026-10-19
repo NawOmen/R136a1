@@ -57,7 +57,7 @@ export default function ProductDetailPage() {
   }, [id, admissionRetry]);
 
   if (error) return <div className="alert alert-error" role="alert">{error} <button type="button" className="btn btn-secondary btn-sm" onClick={() => setRetry(value => value + 1)}>Повторить загрузку</button> <Link href="/catalog">В каталог</Link></div>;
-  if (!product) return <div className="market-loading"><span /><p>Загружаем карточку товара...</p></div>;
+  if (!product) return <div className="market-loading"><span className="market-loading__spinner" aria-hidden="true" /><p>Загружаем карточку товара...</p></div>;
 
   return <div className="product-page">
     <nav className="breadcrumbs" aria-label="Навигационная цепочка"><Link href="/catalog">Каталог</Link><span>›</span><Link href={`/catalog?q=${encodeURIComponent(product.category)}`}>{product.category}</Link><span>›</span><span>{product.name}</span></nav>
