@@ -75,15 +75,57 @@ function Office({ active, x = 3, z = 0, scale = 1 }: { active: boolean; x?: numb
   </group>;
 }
 
+function Warehouse({ x, z, active }: { x:number; z:number; active:boolean }) {
+  return <group position={[x,0,z]}>
+    <Block position={[0,-.12,0]} size={[4.7,.24,3.2]} color="#28465a"/>
+    <Block position={[0,.68,-.25]} size={[4.2,1.35,2.15]} color="#60899a"/>
+    <Block position={[0,1.4,-.25]} size={[4.4,.16,2.4]} color="#aac4cb"/>
+    {[-1.45,-.5,.5,1.45].map((v,i)=><group key={v}>
+      <Block position={[v,.45,.84]} size={[.73,.82,.06]} color={active?"#2c5366":"#203d4e"}/>
+      {[0,1,2,3,4].map(j=><Block key={j} position={[v,.17+j*.14,.88]} size={[.7,.015,.025]} color="#769eaf"/>)}
+      <Block position={[v,.12,1.13]} size={[.85,.19,.55]} color="#182f3d"/>
+      <Block position={[v,1.13,.9]} size={[.24,.05,.08]} color={active?"#b5f1d4":"#6f929a"}/>
+      <Block position={[v,1.51,-.25]} size={[.6,.035,1.35]} color="#244a62"/>
+      {i<2&&<Block position={[v,.34,1.34]} size={[.35,.3,.4]} color="#c6a77b"/>}
+    </group>)}
+  </group>;
+}
+
+function Truck({x,z,color="#78b8d0"}:{x:number;z:number;color?:string}) {
+  return <group position={[x,0,z]}>
+    <Block position={[0,.47,0]} size={[.75,.7,1.5]} color="#c3ced0"/>
+    <Block position={[0,.33,1.05]} size={[.75,.48,.55]} color={color}/>
+    <Block position={[0,.62,1.04]} size={[.65,.2,.44]} color="#2a5267"/>
+    {[-.38,.38].flatMap(v=>[-.45,.55,1.12].map(w=><mesh key={`${v}-${w}`} position={[v,.17,w]} rotation={[0,0,Math.PI/2]}><cylinderGeometry args={[.16,.16,.09,12]}/><meshStandardMaterial color="#142933"/></mesh>))}
+  </group>;
+}
+
+function Campus({active}:{active:boolean}) {
+  return <>
+    <Block position={[0,-.27,0]} size={[23,.15,12]} color="#142d3c"/>
+    <Block position={[0,-.16,2.6]} size={[22,.05,1.65]} color="#294454"/>
+    <Block position={[0,-.15,-2.7]} size={[21,.05,1.3]} color="#294454"/>
+    {Array.from({length:27},(_,i)=><Block key={i} position={[-10.4+i*.8,-.12,2.6]} size={[.32,.015,.035]} color="#a2b8bc"/>)}
+    <Warehouse x={-7} z={-4.3} active={active}/><Warehouse x={-2} z={-4.3} active={active}/>
+    <Factory active={active} x={-7} z={0}/>
+    <Office active={active} x={7} z={0}/><Office active={active} x={7.3} z={-4.5} scale={.7}/>
+    <Truck x={-7.4} z={-2.7}/><Truck x={-2.6} z={-2.7} color="#cda570"/>
+    <Truck x={-4} z={4.3}/><Truck x={3.5} z={4.3}/>
+    {[-10,-4.5,4.5,10].flatMap(x=>[-1.5,4.2].map(z=><Tree key={`${x}-${z}`} x={x} z={z}/>))}
+    {[-9,-4,1,6,10].map(x=><group key={x} position={[x,0,3.7]}><Block position={[0,.65,0]} size={[.045,1.3,.045]} color="#7f9ca6"/><Block position={[0,1.3,-.16]} size={[.09,.05,.4]} color="#b4dce6"/></group>)}
+    {Array.from({length:9},(_,i)=><group key={i} position={[-10+(i%3)*.48,.1,-4+Math.floor(i/3)*.48]}><Block position={[0,0,0]} size={[.44,.12,.44]} color="#7d6954"/><Block position={[0,.28,0]} size={[.38,.46,.38]} color="#bd9b70"/></group>)}
+  </>;
+}
+
 function Route({ stage }: { stage: number }) {
   const bridge = useRef<Group>(null);
-  const detour = useMemo(() => new CatmullRomCurve3([new Vector3(-1.6,.5,0),new Vector3(-.7,1.25,-1.3),new Vector3(.8,1.2,-1.2),new Vector3(1.6,.5,0)]), []);
-  const curve = useMemo(() => new CatmullRomCurve3([new Vector3(-2,.4,0),new Vector3(-.8,.6,-.5),new Vector3(.6,.6,-.5),new Vector3(2,.4,0)]), []);
+  const detour = useMemo(() => new CatmullRomCurve3([new Vector3(-5.2,.5,0),new Vector3(-3,1.25,-2),new Vector3(3,1.2,-2),new Vector3(5.2,.5,0)]), []);
+  const curve = useMemo(() => new CatmullRomCurve3([new Vector3(-5.2,.4,0),new Vector3(-2,.6,.8),new Vector3(2,.6,.8),new Vector3(5.2,.4,0)]), []);
   useFrame((_,delta) => { if(bridge.current) bridge.current.scale.x = MathUtils.damp(bridge.current.scale.x,stage >= 2 ? 1 : .001,4,delta); });
   return <group ref={bridge} scale={[.001,1,1]}>
     <mesh><tubeGeometry args={[curve,48,.06,8,false]} /><meshStandardMaterial color="#65d5ff" emissive="#239fd3" emissiveIntensity={2} /></mesh>
     <mesh visible={stage===2}><tubeGeometry args={[detour,40,.025,6,false]} /><meshBasicMaterial color="#7be5ae" /></mesh>
-    <mesh position={[0,.1,0]}><boxGeometry args={[4,.08,.65]} /><meshStandardMaterial color="#2a657f" transparent opacity={.45} metalness={.8} roughness={.15} /></mesh>
+    <mesh position={[0,.1,0]}><boxGeometry args={[10.4,.08,.65]} /><meshStandardMaterial color="#2a657f" transparent opacity={.45} metalness={.8} roughness={.15} /></mesh>
     {Array.from({length: 7},(_,i)=><Cargo key={i} offset={i/7} curve={curve} />)}
   </group>;
 }
@@ -100,10 +142,10 @@ function Agent({ index, stage }: {index:number;stage:number}) {
     if(!group.current)return;
     const t=clock.elapsedTime;
     const intercept=stage===2&&index===1;
-    const x=index===0?0:index===1?-2.6:2.6;
+    const x=index===0?0:index===1?-6.6:6.6;
     const targetX=intercept?-.9+Math.sin(t*1.8)*.8:x+Math.sin(t*.6+index)*.25;
     group.current.position.x=MathUtils.damp(group.current.position.x,targetX,3,delta);
-    group.current.position.y=2.8+Math.sin(t*.9+index)*.25-(intercept?.8:0);
+    group.current.position.y=3.3+Math.sin(t*.9+index)*.25-(intercept?.8:0);
     group.current.rotation.y+=delta*.45;
   });
   const color=index===2?"#ffd394":"#73deff";
@@ -115,22 +157,22 @@ function World({ stage }: {stage:number}) {
   const cameraTarget = useMemo(() => new Vector3(), []);
   useFrame(({camera,clock,pointer},delta)=>{
     const wide=stage===3;
-    cameraTarget.set(1.8+pointer.x*.6,wide?10:6,wide?15:11);
+    cameraTarget.set(4+pointer.x*.5,wide?17:14,wide?23:21);
     camera.position.lerp(cameraTarget,1-Math.exp(-delta*2));
     camera.lookAt(0,.65,0);
-    if(scan.current){const size=(clock.elapsedTime*.5)%2.6;scan.current.scale.setScalar(size);}
+    if(scan.current){const size=(clock.elapsedTime*.3)%4.5;scan.current.scale.setScalar(size);}
   });
   return <>
     <EffectComposer multisampling={0}><Bloom luminanceThreshold={1.2} intensity={.35} mipmapBlur /></EffectComposer>
-    <color attach="background" args={["#081621"]} /><fog attach="fog" args={["#081621",14,30]} />
-    <ambientLight intensity={1.1} /><directionalLight position={[3,8,5]} intensity={3.5} color="#b4eaff" castShadow shadow-mapSize={[1024,1024]} /><pointLight position={[-3,5,2]} color="#50cbff" intensity={12} distance={9} /><pointLight position={[3,5,2]} color="#ffc575" intensity={9} distance={8} />
+    <color attach="background" args={["#081621"]} /><fog attach="fog" args={["#081621",30,65]} />
+    <ambientLight intensity={1.1} /><directionalLight position={[3,16,8]} shadow-camera-left={-14} shadow-camera-right={14} shadow-camera-top={10} shadow-camera-bottom={-10} intensity={3.5} color="#b4eaff" castShadow shadow-mapSize={[1024,1024]} /><pointLight position={[-7,5,2]} color="#50cbff" intensity={12} distance={9} /><pointLight position={[7,5,2]} color="#ffc575" intensity={9} distance={8} />
     <mesh rotation={[-Math.PI/2,0,0]} position={[0,-.34,0]} receiveShadow><planeGeometry args={[60,60]} /><meshStandardMaterial color="#0b1d2b" roughness={.32} metalness={.6} /></mesh>
     <gridHelper args={[30,30,"#21495e","#142f42"]} position={[0,-.32,0]} />
-    <Factory active={stage>0}/><Office active={stage>0}/><Route stage={stage}/>
+    <Campus active={stage>0}/><Route stage={stage}/>
     {[0,1,2].map(index=><Agent key={index} index={index} stage={stage}/>)}
     <mesh ref={scan} rotation={[-Math.PI/2,0,0]} position={[0,.1,0]} visible={stage===1}><ringGeometry args={[1.9,1.93,64]} /><meshBasicMaterial color="#73deff" transparent opacity={.45} /></mesh>
-    {stage===3&&<group>{Array.from({length:12},(_,i)=><mesh key={i} position={[Math.cos(i*2.4)*5,1.8+(i%3)*.4,Math.sin(i*2.4)*3-1]}><octahedronGeometry args={[.07]}/><meshBasicMaterial color={i%2 ? "#79dfff" : "#ffcf88"}/></mesh>)}</group>}
-    {stage===3&&<><Factory active scale={.45} x={-4.5} z={-3}/><Factory active scale={.35} x={-1.5} z={-4}/><Office active scale={.5} x={3} z={-3.5}/><Office active scale={.35} x={5} z={-2.5}/></>}
+    {stage===3&&<group>{Array.from({length:12},(_,i)=><mesh key={i} position={[Math.cos(i*2.4)*10,1.8+(i%3)*.4,Math.sin(i*2.4)*5-1]}><octahedronGeometry args={[.07]}/><meshBasicMaterial color={i%2 ? "#79dfff" : "#ffcf88"}/></mesh>)}</group>}
+
   </>;
 }
 
@@ -147,5 +189,5 @@ function Unavailable({ onFailure }: { onFailure: () => void }) {
 }
 
 export default function AgentWorld({stage,paused,onFailure,onReady}:{stage:number;paused:boolean;onFailure:()=>void;onReady:()=>void}) {
-  return <SceneBoundary onFailure={onFailure}><Canvas aria-hidden="true" shadows dpr={[1,1.5]} frameloop={paused?"never":"always"} camera={{position:[0,5,10],fov:44}} gl={{antialias:true,alpha:false,powerPreference:"high-performance"}} onCreated={({gl})=>{onReady();gl.domElement.addEventListener("webglcontextlost",onFailure,{once:true});}} fallback={<Unavailable onFailure={onFailure} />}><World stage={stage}/></Canvas></SceneBoundary>;
+  return <SceneBoundary onFailure={onFailure}><Canvas aria-hidden="true" shadows dpr={[1,1.5]} frameloop={paused?"never":"always"} camera={{position:[4,14,21],fov:44}} gl={{antialias:true,alpha:false,powerPreference:"high-performance"}} onCreated={({gl})=>{onReady();gl.domElement.addEventListener("webglcontextlost",onFailure,{once:true});}} fallback={<Unavailable onFailure={onFailure} />}><World stage={stage}/></Canvas></SceneBoundary>;
 }

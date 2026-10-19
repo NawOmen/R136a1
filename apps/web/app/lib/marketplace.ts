@@ -81,6 +81,7 @@ export interface Product {
   /** Остаток на складе: нужен для роли «поставка со склада». */
   stock_units: number | null;
   stock_updated_at: string | null;
+  available_stock_units?: number | null;
   is_published: boolean;
   images: ProductImage[];
 }
@@ -829,6 +830,13 @@ export function formatRub(value: Money | null | undefined, maximumFractionDigits
 export function itemUnit(characteristics?: Record<string, unknown>): string {
   const value = characteristics?.unit ?? characteristics?.["единица измерения"];
   return typeof value === "string" && value.trim() ? value.trim() : "шт.";
+}
+
+/** Compact, case-neutral labels for catalogue price and quantity captions. */
+export function catalogUnit(characteristics?: Record<string, unknown>): string {
+  const unit = itemUnit(characteristics);
+  const labels: Record<string, string> = { "шт": "шт.", "упаковка": "уп.", "рулон": "рул.", "мешок": "меш.", "бухта": "бух.", "комплект": "компл." };
+  return labels[unit] ?? unit;
 }
 
 export function formatUnits(value: number, unit = "шт."): string {

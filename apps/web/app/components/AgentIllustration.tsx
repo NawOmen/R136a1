@@ -45,20 +45,43 @@ function Office(){return <g>
   <circle cx="843" cy="412" r="6" fill="#172e3b"/><circle cx="868" cy="423" r="6" fill="#172e3b"/>
 </g>}
 function Tree({x,y}:{x:number;y:number}){return <g transform={`translate(${x} ${y})`}><ellipse cy="11" rx="22" ry="9" fill="#091b28" opacity=".5"/><path d="M0 7 V-28" stroke="#73918a" strokeWidth="5"/><path d="M0 -73 L23 -46 L20 -22 L0 -12 L-23 -26 L-22 -51 Z" fill="#377e77"/><path d="M0 -73 L23 -46 L20 -22 L0 -12 Z" fill="#215858"/><path d="M0 -73 L-22 -51 L0 -40 L23 -46 Z" fill="#6aa398"/></g>}
+function Warehouse({x,y}:{x:number;y:number}) {return <g transform={`translate(${x} ${y})`}>
+  <Box x={0} y={0} w={240} d={115} h={12} color="#29495b" top="#5c7887"/>
+  <Box x={3} y={-15} w={222} d={100} h={95} color="#527f94" top="#bdd1d8" side="#2e566d"/>
+  <Box x={3} y={-110} w={230} d={105} h={9} color="#8aabb8" top="#c9dde2"/>
+  {[0,1,2,3].map(i=><g key={i}><path d={`M ${-79+i*50} ${-67+i*22.5} l35 15.75 v54 l-35 -15.75 Z`} fill="#203f53" stroke="#91becd"/>
+    {[0,1,2,3].map(j=><path key={j} d={`M ${-77+i*50} ${-57+i*22.5+j*12} l31 13.95`} stroke="#517a90"/>)}
+    <Box x={-66+i*50} y={-8+i*22.5} w={36} d={25} h={10} top="#768e99"/>
+    <path d={`M ${-73+i*50} ${-76+i*22.5} l22 9.9`} stroke="#a2edcc" strokeWidth="3"/>
+  </g>)}
+  {[0,1,2,3].map(i=><Box key={i} x={8+i*45} y={-113+i*20.25} w={31} d={65} h={3} color="#254e66" top="#3d7791"/>)}
+</g>}
+function Truck({x,y}:{x:number;y:number}) {return <g transform={`translate(${x} ${y})`}>
+  <Box x={0} y={0} w={60} d={29} h={38} color="#a7c1cb" top="#d7e6e9" side="#678d9f"/>
+  <Box x={63} y={28} w={24} d={29} h={25} color="#4e91b0" top="#90c9dc"/>
+  <path d="M41 19 l18 8 v-13 l-18 -8Z" fill="#21465c"/>
+  {[0,1,2].map(i=><circle key={i} cx={-13+i*32} cy={17+i*14.4} r="7" fill="#102a3b" stroke="#6e93a3" strokeWidth="2"/>)}
+</g>}
 export function AgentIllustration({stage}:{stage:number}) {
   const id=useId().replace(/:/g,"");
-  return <svg className={styles.illustration} data-stage={stage} viewBox="0 0 1000 650" aria-hidden="true">
+  return <svg className={styles.illustration} data-stage={stage} viewBox="0 0 1600 850" aria-hidden="true">
     <defs><radialGradient id={`${id}-glow`}><stop stopColor="#55d9ff" stopOpacity=".18"/><stop offset="1" stopColor="#55d9ff" stopOpacity="0"/></radialGradient><linearGradient id={`${id}-road`}><stop stopColor="#60cfff"/><stop offset="1" stopColor="#9eecd1"/></linearGradient></defs>
-    <ellipse cx="500" cy="350" rx="490" ry="260" fill={`url(#${id}-glow)`}/>
-    <g className={styles.network} opacity=".3"><path d="M120 150 L500 300 L880 150 M190 500 L500 300 L880 500" fill="none" stroke="#649cb3" strokeDasharray="5 8"/>
-      <g transform="translate(110 90) scale(.24)"><Plant/></g><g transform="translate(650 60) scale(.24)"><Office/></g><g transform="translate(130 410) scale(.22)"><Plant/></g></g>
-    <ellipse cx="281" cy="402" rx="190" ry="52" fill="#020e19" opacity=".5"/>
-    <ellipse cx="753" cy="402" rx="180" ry="52" fill="#020e19" opacity=".5"/>
-    <g className={styles.plant}><Plant/><Tree x={162} y={385}/></g><g className={styles.office}><Office/><Tree x={615} y={366}/><Tree x={900} y={361}/></g>
-    <g className={styles.routes}><path d="M423 368 C490 334 560 332 630 355" fill="none" stroke="#163f56" strokeWidth="30"/><path d="M423 365 C490 331 560 329 630 352" fill="none" stroke={`url(#${id}-road)`} strokeWidth="2"/>
-      <path className={styles.flow} d="M423 365 C490 331 560 329 630 352" fill="none" stroke="#c9f8ff" strokeWidth="7" strokeDasharray="1 37" strokeLinecap="round"/>
-      <path className={styles.alternate} d="M435 350 C460 240 590 240 622 338" fill="none" stroke="#95dfbc" strokeWidth="1.5" strokeDasharray="4 5"/></g>
-    <g className={styles.scanning}><ellipse cx="510" cy="325" rx="145" ry="65" fill="none" stroke="#6edaff" strokeWidth="1"/><ellipse cx="510" cy="325" rx="195" ry="88" fill="none" stroke="#6edaff" strokeWidth=".6" opacity=".35"/></g>
-    {[0,1,2].map((i)=><g className={`${styles.agent} ${styles[`agent${i}`]}`} key={i} transform={`translate(${i===0?505:i===1?280:760} ${i===0?190:112})`}><circle r="32" fill={`url(#${id}-glow)`}/><path d="M0 -16 L12 0 L0 19 L-12 0Z" fill={i===2?"#ffd6a1":"#9feaff"}/><path d="M0 -16 L0 19 L-12 0Z" fill={i===2?"#b98c57":"#368fac"}/><ellipse cy="23" rx="22" ry="7" stroke={i===2?"#ffd6a1":"#9feaff"} strokeWidth=".8" fill="none" opacity=".5"/></g>)}
+    <ellipse cx="800" cy="430" rx="790" ry="390" fill={`url(#${id}-glow)`}/>
+    <path d="M100 440 L740 160 L1510 495 L865 790 Z" fill="#132d3e" stroke="#2a5269" strokeWidth="2"/>
+    <path d="M180 528 L788 260 L1430 542 M385 660 L1010 385" fill="none" stroke="#294858" strokeWidth="35" strokeLinejoin="round"/>
+    <path d="M180 528 L788 260 L1430 542 M385 660 L1010 385" fill="none" stroke="#7999a8" strokeWidth="1.5" strokeDasharray="12 14"/>
+    <g className={styles.network}><g transform="translate(400 80) scale(.58)"><Plant/></g><g transform="translate(820 90) scale(.46)"><Office/></g></g>
+    <Warehouse x={415} y={260}/><Warehouse x={690} y={380}/>
+    <g className={styles.plant} transform="translate(75 140)"><Plant/><Tree x={124} y={390}/></g>
+    <g className={styles.office} transform="translate(565 115)"><Office/><Tree x={606} y={383}/><Tree x={905} y={360}/></g>
+    <Truck x={326} y={336}/><Truck x={609} y={461}/><Truck x={1075} y={613}/>
+    {[0,1,2,3,4].map(i=><g key={i}><Tree x={173+i*89} y={581+i*38}/><Tree x={1063+i*62} y={336+i*27}/></g>)}
+    {[0,1,2,3,4,5].map(i=><Box key={i} x={256+i%3*34} y={574+Math.floor(i/3)*35+i%3*15.3} w={25} d={23} h={27} color="#b8956c" top="#e1bf93" side="#8b7051"/>)}
+    {[0,1,2,3,4,5].map(i=><g key={i} transform={`translate(${615+i*97} ${714-i*43})`}><path d="M0 0 v-58 l-16 -7" fill="none" stroke="#769dac" strokeWidth="3"/><path d="M-21 -65 l14 6" stroke="#b6eafa" strokeWidth="5"/></g>)}
+    <g className={styles.routes}><path d="M492 500 C675 595 875 594 1192 458" fill="none" stroke="#163f56" strokeWidth="22"/><path d="M492 500 C675 595 875 594 1192 458" fill="none" stroke={`url(#${id}-road)`} strokeWidth="2"/>
+      <path className={styles.flow} d="M492 500 C675 595 875 594 1192 458" fill="none" stroke="#c9f8ff" strokeWidth="6" strokeDasharray="1 48" strokeLinecap="round"/>
+      <path className={styles.alternate} d="M492 500 C600 330 990 270 1192 458" fill="none" stroke="#95dfbc" strokeWidth="1.5" strokeDasharray="4 7"/></g>
+    <g className={styles.scanning}><ellipse cx="800" cy="475" rx="300" ry="135" fill="none" stroke="#6edaff" strokeWidth="1"/><ellipse cx="800" cy="475" rx="390" ry="175" fill="none" stroke="#6edaff" strokeWidth=".6" opacity=".35"/></g>
+    {[0,1,2].map((i)=><g className={`${styles.agent} ${styles[`agent${i}`]}`} key={i} transform={`translate(${i===0?800:i===1?355:1320} ${i===0?265:200})`}><circle r="48" fill={`url(#${id}-glow)`}/><path d="M0 -23 L18 0 L0 28 L-18 0Z" fill={i===2?"#ffd6a1":"#9feaff"}/><path d="M0 -23 L0 28 L-18 0Z" fill={i===2?"#b98c57":"#368fac"}/><ellipse cy="33" rx="32" ry="10" stroke={i===2?"#ffd6a1":"#9feaff"} strokeWidth=".8" fill="none" opacity=".5"/></g>)}
   </svg>;
 }

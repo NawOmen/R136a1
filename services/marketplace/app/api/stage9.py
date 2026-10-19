@@ -86,7 +86,9 @@ async def public_product_detail(product_id: uuid.UUID, db: AsyncSession = Depend
         has_photo=bool(profile and profile.photo_file_key), rating=round(float(rating), 1) if rating else None,
         reviews_count=int(count or 0),
     )
-    return PublicProductDetailOut.model_validate({**payload, "images": images, "producer": producer})
+    from ..resources import catalog_available_stock
+    available = await catalog_available_stock(db, product)
+    return PublicProductDetailOut.model_validate({**payload, "images": images, "producer": producer, "available_stock_units": available})
 
 
 @router.get("/producers/{company_id}", response_model=PublicProducerOut)

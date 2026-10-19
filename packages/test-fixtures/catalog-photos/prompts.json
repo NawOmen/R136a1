@@ -1,0 +1,200 @@
+[
+  {
+    "key": "cup_350",
+    "name": "Стакан 350 мл PE",
+    "file": "cup_350.webp",
+    "prompt": "Use case: product-mockup. One square premium ecommerce studio product photograph for a B2B catalog. Subject: a stack of plain kraft brown 350 ml paper cups with white inner PE lining. Photorealistic materials, accurate industrial proportions, centered balanced composition, three-quarter angle, clean soft light gray seamless background, gentle contact shadow, consistent soft studio light, generous breathing room. No logos, no promotional text, no watermark, no other unrelated objects. Single product photo, never a collage."
+  },
+  {
+    "key": "cup_400",
+    "name": "Стакан 400 мл PE",
+    "file": "cup_400.webp",
+    "prompt": "Use case: product-mockup. One square premium ecommerce studio product photograph for a B2B catalog. Subject: a tall stack of plain kraft brown 400 ml paper cups with white PE interior, one cup on its side. Photorealistic materials, accurate industrial proportions, centered balanced composition, three-quarter angle, clean soft light gray seamless background, gentle contact shadow, consistent soft studio light, generous breathing room. No logos, no promotional text, no watermark, no other unrelated objects. Single product photo, never a collage."
+  },
+  {
+    "key": "box",
+    "name": "Гофрокороб 400×300×300 мм",
+    "file": "box.webp",
+    "prompt": "Use case: product-mockup. One square premium ecommerce studio product photograph for a B2B catalog. Subject: one open brown corrugated shipping carton, 400 by 300 by 300 mm, crisp folded flaps. Photorealistic materials, accurate industrial proportions, centered balanced composition, three-quarter angle, clean soft light gray seamless background, gentle contact shadow, consistent soft studio light, generous breathing room. No logos, no promotional text, no watermark, no other unrelated objects. Single product photo, never a collage."
+  },
+  {
+    "key": "bag",
+    "name": "Бумажный пакет 260×150×350 мм",
+    "file": "bag.webp",
+    "prompt": "Use case: product-mockup. One square premium ecommerce studio product photograph for a B2B catalog. Subject: three natural kraft paper shopping bags with twisted paper handles, 260 by 150 by 350 mm. Photorealistic materials, accurate industrial proportions, centered balanced composition, three-quarter angle, clean soft light gray seamless background, gentle contact shadow, consistent soft studio light, generous breathing room. No logos, no promotional text, no watermark, no other unrelated objects. Single product photo, never a collage."
+  },
+  {
+    "key": "film",
+    "name": "Стрейч-плёнка 500 мм, рулон 2 кг",
+    "file": "film.webp",
+    "prompt": "Use case: product-mockup. One square premium ecommerce studio product photograph for a B2B catalog. Subject: one roll of clear stretch wrapping film, 500 mm wide, visible cardboard core and a short unrolled clear edge. Photorealistic materials, accurate industrial proportions, centered balanced composition, three-quarter angle, clean soft light gray seamless background, gentle contact shadow, consistent soft studio light, generous breathing room. No logos, no promotional text, no watermark, no other unrelated objects. Single product photo, never a collage."
+  },
+  {
+    "key": "bolt",
+    "name": "Болт М8×40, класс 8.8",
+    "file": "bolt.webp",
+    "prompt": "Use case: product-mockup. One square premium ecommerce studio product photograph for a B2B catalog. Subject: a neat small group of zinc plated M8 by 40 hex head steel bolts, industrial close-up. Photorealistic materials, accurate industrial proportions, centered balanced composition, three-quarter angle, clean soft light gray seamless background, gentle contact shadow, consistent soft studio light, generous breathing room. No logos, no promotional text, no watermark, no other unrelated objects. Single product photo, never a collage."
+  },
+  {
+    "key": "nut",
+    "name": "Гайка М8 оцинкованная",
+    "file": "nut.webp",
+    "prompt": "Use case: product-mockup. One square premium ecommerce studio product photograph for a B2B catalog. Subject: a small pile of clean zinc plated M8 steel hex nuts, detailed internal threads. Photorealistic materials, accurate industrial proportions, centered balanced composition, three-quarter angle, clean soft light gray seamless background, gentle contact shadow, consistent soft studio light, generous breathing room. No logos, no promotional text, no watermark, no other unrelated objects. Single product photo, never a collage."
+  },
+  {
+    "key": "washer",
+    "name": "Шайба плоская 8 мм",
+    "file": "washer.webp",
+    "prompt": "Use case: product-mockup. One square premium ecommerce studio product photograph for a B2B catalog. Subject: a neat scattered group of flat circular zinc plated steel washers with 8 mm central holes. Photorealistic materials, accurate industrial proportions, centered balanced composition, three-quarter angle, clean soft light gray seamless background, gentle contact shadow, consistent soft studio light, generous breathing room. No logos, no promotional text, no watermark, no other unrelated objects. Single product photo, never a collage."
+  },
+  {
+    "key": "jacket",
+    "name": "Рабочая куртка, размер 52",
+    "file": "jacket.webp",
+    "prompt": "Use case: product-mockup. One square premium ecommerce studio product photograph for a B2B catalog. Subject: a dark navy and gray industrial work jacket, size 52, two chest pockets, front view neatly presented without a mannequin. Photorealistic materials, accurate industrial proportions, centered balanced composition, three-quarter angle, clean soft light gray seamless background, gentle contact shadow, consistent soft studio light, generous breathing room. No logos, no promotional text, no watermark, no other unrelated objects. Single product photo, never a collage."
+  },
+  {
+    "key": "apron",
+    "name": "Фартук хлопковый 80×90 см",
+    "file": "apron.webp",
+    "prompt": "Use case: product-mockup. One square premium ecommerce studio product photograph for a B2B catalog. Subject: a plain heavy cotton beige work apron with neck loop and front pocket, no model. Photorealistic materials, accurate industrial proportions, centered balanced composition, three-quarter angle, clean soft light gray seamless background, gentle contact shadow, consistent soft studio light, generous breathing room. No logos, no promotional text, no watermark, no other unrelated objects. Single product photo, never a collage."
+  },
+  {
+    "key": "fabric",
+    "name": "Ткань смесовая, рулон 50 м",
+    "file": "fabric.webp",
+    "prompt": "Use case: product-mockup. One square premium ecommerce studio product photograph for a B2B catalog. Subject: a roll of gray blended workwear fabric with a gently folded unrolled section, rich woven texture. Photorealistic materials, accurate industrial proportions, centered balanced composition, three-quarter angle, clean soft light gray seamless background, gentle contact shadow, consistent soft studio light, generous breathing room. No logos, no promotional text, no watermark, no other unrelated objects. Single product photo, never a collage."
+  },
+  {
+    "key": "desk",
+    "name": "Офисный стол 1200×600 мм",
+    "file": "desk.webp",
+    "prompt": "Use case: product-mockup. One square premium ecommerce studio product photograph for a B2B catalog. Subject: a minimal 1200 by 600 mm office desk with light oak tabletop and black metal legs, three-quarter angle. Photorealistic materials, accurate industrial proportions, centered balanced composition, three-quarter angle, clean soft light gray seamless background, gentle contact shadow, consistent soft studio light, generous breathing room. No logos, no promotional text, no watermark, no other unrelated objects. Single product photo, never a collage."
+  },
+  {
+    "key": "rack",
+    "name": "Стеллаж металлический, 5 полок",
+    "file": "rack.webp",
+    "prompt": "Use case: product-mockup. One square premium ecommerce studio product photograph for a B2B catalog. Subject: a freestanding galvanized steel storage rack with five empty sturdy shelves. Photorealistic materials, accurate industrial proportions, centered balanced composition, three-quarter angle, clean soft light gray seamless background, gentle contact shadow, consistent soft studio light, generous breathing room. No logos, no promotional text, no watermark, no other unrelated objects. Single product photo, never a collage."
+  },
+  {
+    "key": "cabinet",
+    "name": "Шкаф офисный двухдверный",
+    "file": "cabinet.webp",
+    "prompt": "Use case: product-mockup. One square premium ecommerce studio product photograph for a B2B catalog. Subject: a minimal two door office storage cabinet in pale oak finish with modest dark handles. Photorealistic materials, accurate industrial proportions, centered balanced composition, three-quarter angle, clean soft light gray seamless background, gentle contact shadow, consistent soft studio light, generous breathing room. No logos, no promotional text, no watermark, no other unrelated objects. Single product photo, never a collage."
+  },
+  {
+    "key": "tile",
+    "name": "Плитка 300×300 мм, упаковка 1,08 м²",
+    "file": "tile.webp",
+    "prompt": "Use case: product-mockup. One square premium ecommerce studio product photograph for a B2B catalog. Subject: a small stack of pale gray square ceramic floor tiles, 300 by 300 mm, one tile leaning against the stack. Photorealistic materials, accurate industrial proportions, centered balanced composition, three-quarter angle, clean soft light gray seamless background, gentle contact shadow, consistent soft studio light, generous breathing room. No logos, no promotional text, no watermark, no other unrelated objects. Single product photo, never a collage."
+  },
+  {
+    "key": "mix",
+    "name": "Сухая смесь, мешок 25 кг",
+    "file": "mix.webp",
+    "prompt": "Use case: product-mockup. One square premium ecommerce studio product photograph for a B2B catalog. Subject: a plain unbranded sealed kraft industrial dry construction mix sack, 25 kg, no writing. Photorealistic materials, accurate industrial proportions, centered balanced composition, three-quarter angle, clean soft light gray seamless background, gentle contact shadow, consistent soft studio light, generous breathing room. No logos, no promotional text, no watermark, no other unrelated objects. Single product photo, never a collage."
+  },
+  {
+    "key": "insulation",
+    "name": "Утеплитель 50 мм, упаковка 0,3 м³",
+    "file": "insulation.webp",
+    "prompt": "Use case: product-mockup. One square premium ecommerce studio product photograph for a B2B catalog. Subject: a neat pack of yellow mineral wool insulation slabs, 50 mm thick, transparent plastic wrap partially open. Photorealistic materials, accurate industrial proportions, centered balanced composition, three-quarter angle, clean soft light gray seamless background, gentle contact shadow, consistent soft studio light, generous breathing room. No logos, no promotional text, no watermark, no other unrelated objects. Single product photo, never a collage."
+  },
+  {
+    "key": "cable",
+    "name": "Кабель 3×2,5 мм², бухта 100 м",
+    "file": "cable.webp",
+    "prompt": "Use case: product-mockup. One square premium ecommerce studio product photograph for a B2B catalog. Subject: a coiled thick black three core 3 by 2.5 square mm electrical cable with one cut end exposing blue brown and yellow-green copper wires. Photorealistic materials, accurate industrial proportions, centered balanced composition, three-quarter angle, clean soft light gray seamless background, gentle contact shadow, consistent soft studio light, generous breathing room. No logos, no promotional text, no watermark, no other unrelated objects. Single product photo, never a collage."
+  },
+  {
+    "key": "lamp",
+    "name": "Светильник светодиодный 36 Вт",
+    "file": "lamp.webp",
+    "prompt": "Use case: product-mockup. One square premium ecommerce studio product photograph for a B2B catalog. Subject: a rectangular white 36 watt LED office ceiling luminaire with frosted diffuser, three-quarter view showing its slim frame. Photorealistic materials, accurate industrial proportions, centered balanced composition, three-quarter angle, clean soft light gray seamless background, gentle contact shadow, consistent soft studio light, generous breathing room. No logos, no promotional text, no watermark, no other unrelated objects. Single product photo, never a collage."
+  },
+  {
+    "key": "junction",
+    "name": "Распределительная коробка 100×100 мм",
+    "file": "junction.webp",
+    "prompt": "Use case: product-mockup. One square premium ecommerce studio product photograph for a B2B catalog. Subject: a white square electrical junction box 100 by 100 mm with lid resting beside it. Photorealistic materials, accurate industrial proportions, centered balanced composition, three-quarter angle, clean soft light gray seamless background, gentle contact shadow, consistent soft studio light, generous breathing room. No logos, no promotional text, no watermark, no other unrelated objects. Single product photo, never a collage."
+  },
+  {
+    "key": "canister_5",
+    "name": "Канистра полиэтиленовая 5 л",
+    "file": "canister_5.webp",
+    "prompt": "Use case: product-mockup. One square premium ecommerce studio product photograph for a B2B catalog. Subject: one clean plain white 5 liter polyethylene jerrycan with integrated handle and blue screw cap, no labels. Photorealistic materials, accurate industrial proportions, centered balanced composition, three-quarter angle, clean soft light gray seamless background, gentle contact shadow, consistent soft studio light, generous breathing room. No logos, no promotional text, no watermark, no other unrelated objects. Single product photo, never a collage."
+  },
+  {
+    "key": "cardboard_sheet",
+    "name": "Картон листовой 1000×700 мм, 250 г/м²",
+    "file": "cardboard_sheet.webp",
+    "prompt": "Use case: product-mockup. One square premium ecommerce studio product photograph for a B2B catalog. Subject: a short neat stack of cream cardboard sheets with one sheet gently lifted, natural fibrous surface. Photorealistic materials, accurate industrial proportions, centered balanced composition, three-quarter angle, clean soft light gray seamless background, gentle contact shadow, consistent soft studio light, generous breathing room. No logos, no promotional text, no watermark, no other unrelated objects. Single product photo, never a collage."
+  },
+  {
+    "key": "polypropylene_granule",
+    "name": "Гранулы полипропилена ПП-01",
+    "file": "polypropylene_granule.webp",
+    "prompt": "Use case: product-mockup. One square premium ecommerce studio product photograph for a B2B catalog. Subject: a small mound of translucent white polypropylene granules spilling from a plain industrial scoop. Photorealistic materials, accurate industrial proportions, centered balanced composition, three-quarter angle, clean soft light gray seamless background, gentle contact shadow, consistent soft studio light, generous breathing room. No logos, no promotional text, no watermark, no other unrelated objects. Single product photo, never a collage."
+  },
+  {
+    "key": "steel_plate_2",
+    "name": "Лист стальной 1000×500×2 мм",
+    "file": "steel_plate_2.webp",
+    "prompt": "Use case: product-mockup. One square premium ecommerce studio product photograph for a B2B catalog. Subject: three stacked rectangular steel sheets 1000 by 500 by 2 mm, brushed gray metal, clear thin edges. Photorealistic materials, accurate industrial proportions, centered balanced composition, three-quarter angle, clean soft light gray seamless background, gentle contact shadow, consistent soft studio light, generous breathing room. No logos, no promotional text, no watermark, no other unrelated objects. Single product photo, never a collage."
+  },
+  {
+    "key": "drilling_machine",
+    "name": "Станок сверлильный настольный 1,5 кВт",
+    "file": "drilling_machine.webp",
+    "prompt": "Use case: product-mockup. One square premium ecommerce studio product photograph for a B2B catalog. Subject: a professional compact blue-gray benchtop pillar drilling machine, cast iron base, adjustable drilling table, chuck and three feed handles, no brand. Photorealistic materials, accurate industrial proportions, centered balanced composition, three-quarter angle, clean soft light gray seamless background, gentle contact shadow, consistent soft studio light, generous breathing room. No logos, no promotional text, no watermark, no other unrelated objects. Single product photo, never a collage."
+  },
+  {
+    "key": "retail_display",
+    "name": "Витрина торговая 1200×500 мм",
+    "file": "retail_display.webp",
+    "prompt": "Use case: product-mockup. One square premium ecommerce studio product photograph for a B2B catalog. Subject: a modern empty glass retail display cabinet, aluminum frame and two clear glass shelves, 1200 mm wide. Photorealistic materials, accurate industrial proportions, centered balanced composition, three-quarter angle, clean soft light gray seamless background, gentle contact shadow, consistent soft studio light, generous breathing room. No logos, no promotional text, no watermark, no other unrelated objects. Single product photo, never a collage."
+  },
+  {
+    "key": "warehouse_trolley",
+    "name": "Тележка платформенная 800×500 мм",
+    "file": "warehouse_trolley.webp",
+    "prompt": "Use case: product-mockup. One square premium ecommerce studio product photograph for a B2B catalog. Subject: a blue industrial platform warehouse trolley with two front swivel wheels, two rear wheels and a tall push handle. Photorealistic materials, accurate industrial proportions, centered balanced composition, three-quarter angle, clean soft light gray seamless background, gentle contact shadow, consistent soft studio light, generous breathing room. No logos, no promotional text, no watermark, no other unrelated objects. Single product photo, never a collage."
+  },
+  {
+    "key": "warehouse_scale",
+    "name": "Весы платформенные 600×600 мм",
+    "file": "warehouse_scale.webp",
+    "prompt": "Use case: product-mockup. One square premium ecommerce studio product photograph for a B2B catalog. Subject: a low stainless steel platform warehouse scale, square 600 by 600 mm weighing platform and a small digital indicator on a narrow upright. Photorealistic materials, accurate industrial proportions, centered balanced composition, three-quarter angle, clean soft light gray seamless background, gentle contact shadow, consistent soft studio light, generous breathing room. No logos, no promotional text, no watermark, no other unrelated objects. Single product photo, never a collage."
+  },
+  {
+    "key": "office_paper_a4",
+    "name": "Бумага офисная А4, пачка 500 листов",
+    "file": "office_paper_a4.webp",
+    "prompt": "Use case: product-mockup. One square premium ecommerce studio product photograph for a B2B catalog. Subject: one ream of 500 sheets of bright white A4 office paper in a plain white wrapper, slightly open corner showing stacked paper edges. Photorealistic materials, accurate industrial proportions, centered balanced composition, three-quarter angle, clean soft light gray seamless background, gentle contact shadow, consistent soft studio light, generous breathing room. No logos, no promotional text, no watermark, no other unrelated objects. Single product photo, never a collage."
+  },
+  {
+    "key": "office_keyboard",
+    "name": "Клавиатура проводная USB-C",
+    "file": "office_keyboard.webp",
+    "prompt": "Use case: product-mockup. One square premium ecommerce studio product photograph for a B2B catalog. Subject: a full size black wired USB-C office keyboard, Cyrillic and Latin small key markings, no branding, three-quarter top view. Photorealistic materials, accurate industrial proportions, centered balanced composition, three-quarter angle, clean soft light gray seamless background, gentle contact shadow, consistent soft studio light, generous breathing room. No logos, no promotional text, no watermark, no other unrelated objects. Single product photo, never a collage."
+  },
+  {
+    "key": "office_mouse",
+    "name": "Мышь проводная USB-C",
+    "file": "office_mouse.webp",
+    "prompt": "Use case: product-mockup. Create one physically correct premium studio product photograph of a simple wired USB-C black office mouse, viewed from directly above at a modest three-quarter angle. Matte black symmetrical gently arched oval body, exactly two normal click buttons divided by a straight center seam, one small recessed rubber scroll wheel between the buttons, no branding. CRITICAL cable geometry: exactly ONE continuous unbroken black cable attaches at the mouse FRONT center, travels in one smooth open U-shaped curve on the background, and terminates in exactly ONE small male USB-C plug with a rounded oval metal connector. The entire cable must be visible and traceable from the front socket to the plug. The rear of the mouse is smooth, with NO cable, NO port, NO second cord. No loose cable ends, no forked wires, no disconnected fragments, no extra connectors. Accurate commercial injection-molded plastic object, realistic manufacturing details. Whole mouse, cable and USB-C plug fully in frame, medium shot with generous breathing space, centered square composition. Light gray seamless studio background, soft neutral light, subtle contact shadow, professional ecommerce photograph matching a B2B catalogue. No hands, labels, writing, gaming lights or collage."
+  },
+  {
+    "key": "shipping_cage",
+    "name": "Контейнер сетчатый 1200×800 мм",
+    "file": "shipping_cage.webp",
+    "prompt": "Use case: product-mockup. One square premium ecommerce studio product photograph for a B2B catalog. Subject: one galvanized steel mesh warehouse cage container on a pallet base, empty, industrial foldable rectangular cage. Photorealistic materials, accurate industrial proportions, centered balanced composition, three-quarter angle, clean soft light gray seamless background, gentle contact shadow, consistent soft studio light, generous breathing room. No logos, no promotional text, no watermark, no other unrelated objects. Single product photo, never a collage."
+  },
+  {
+    "key": "label_50",
+    "name": "Этикетка самоклеящаяся 50×30 мм",
+    "file": "label_50.webp",
+    "prompt": "Use case: product-mockup. One square premium ecommerce studio product photograph for a B2B catalog. Subject: two rolls of blank matte white self adhesive rectangular labels 50 by 30 mm, one short unrolled strip. Photorealistic materials, accurate industrial proportions, centered balanced composition, three-quarter angle, clean soft light gray seamless background, gentle contact shadow, consistent soft studio light, generous breathing room. No logos, no promotional text, no watermark, no other unrelated objects. Single product photo, never a collage."
+  }
+]

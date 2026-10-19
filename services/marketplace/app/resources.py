@@ -35,6 +35,15 @@ async def free_stock(db, product, rows=None):
     return max(0, (product.stock_units or 0) - sum(row.units for row in rows if row.product_id == product.id and occupies(row, stock=True)))
 
 
+async def catalog_available_stock(db, product, rows=None):
+    """Public stock indication follows the same freshness and reservations as ordering."""
+    if product.stock_units is None or product.stock_updated_at is None:
+        return None
+    if product.stock_updated_at < datetime.now(timezone.utc) - timedelta(days=7):
+        return None
+    return await free_stock(db, product, rows)
+
+
 async def reserve(db, *, company_id, anchor_type, anchor_id, units, deadline, resource_kind="capacity", product_id=None, expires_at=None, start=None, category="", subcategory=None, unit="шт"):
     await lock_company(db, company_id)
     rows = await reservations(db, company_id)

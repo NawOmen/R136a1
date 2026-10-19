@@ -130,3 +130,47 @@ async def test_seeded_seller_feed_includes_moscow_but_not_outside_district(clien
     visible = {item["id"] for item in feed.json()}
     assert ids[0] in visible
     assert ids[1] not in visible
+
+
+async def test_expanded_photo_catalog_is_opt_in_and_preserves_seller_edits(client, db_session, session_factory, monkeypatch, tmp_path):
+    import json
+    from pathlib import Path
+    import seed_catalog_showcase as showcase
+    from app.models import ProductImage
+    company = await seller_fixture(db_session, monkeypatch)
+    monkeypatch.setattr(seed, "SessionLocal", session_factory)
+    await seed.seed()
+    monkeypatch.setattr(showcase, "SessionLocal", session_factory)
+    # Use a real tiny WebP to exercise the same bounded decoder as the loader.
+    import io
+    from PIL import Image
+    buffer = io.BytesIO()
+    Image.new("RGB", (8, 8), "white").save(buffer, format="WEBP")
+    monkeypatch.setattr(showcase, "upload_object", lambda key, data, content_type: key)
+    manifest = Path(__file__).resolve().parents[3] / "packages/test-fixtures/catalog-photos/prompts.json"
+    entries = json.loads(manifest.read_text())
+    (tmp_path / "prompts.json").write_text(json.dumps(entries))
+    for entry in entries:
+        (tmp_path / entry["file"]).write_bytes(buffer.getvalue())
+    assert await showcase.seed_catalog(tmp_path) == 33
+    catalog = (await client.get("/api/v3/products")).json()
+    assert len(catalog) == 33
+    assert len({item["category"] for item in catalog}) == 8
+    assert all(item["images"] for item in catalog)
+    assert all(item["category"] != "Продукты питания" for item in catalog)
+    image_count = len((await db_session.scalars(select(ProductImage))).all())
+    chosen = await db_session.get(Product, catalog[0]["id"])
+    chosen.is_published = False
+    chosen.stock_units = 3
+    chosen.price_rub = Decimal("123.45")
+    await db_session.commit()
+    removed = await db_session.scalar(select(ProductImage).where(ProductImage.product_id == chosen.id))
+    await db_session.delete(removed)
+    await db_session.commit()
+    await showcase.seed_catalog(tmp_path)
+    await db_session.refresh(chosen)
+    assert not chosen.is_published and chosen.stock_units == 3 and chosen.price_rub == Decimal("123.45")
+    assert len((await db_session.scalars(select(ProductImage))).all()) == image_count - 1
+    monkeypatch.setenv("ENABLE_DEMO_SEED", "false")
+    with pytest.raises(RuntimeError, match="explicitly configured"):
+        await showcase.seed_catalog(tmp_path)

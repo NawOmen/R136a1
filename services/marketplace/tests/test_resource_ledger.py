@@ -106,3 +106,26 @@ async def test_capacity_scopes_keep_categories_and_units_separate(warehouse, db_
     await db_session.rollback()
     await reserve(db_session, company_id=company, anchor_type="deal", anchor_id=uuid.uuid4(),
                   units=8, deadline=day, category="Сырьё и материалы", subcategory="Текстиль", unit="м")
+
+
+@pytest.mark.asyncio
+async def test_catalog_stock_tracks_holds_and_stale_updates(warehouse, db_session):
+    from app.resources import catalog_available_stock
+    _, company, product_id = warehouse
+    product = await db_session.get(Product, product_id)
+    assert await catalog_available_stock(db_session, product) == 10
+    anchor = uuid.uuid4()
+    await reserve(db_session, company_id=company, anchor_type="reserve", anchor_id=anchor, units=8,
+                  deadline=date.today(), resource_kind="stock", product_id=product_id,
+                  expires_at=datetime.now(timezone.utc)+timedelta(hours=1))
+    assert await catalog_available_stock(db_session, product) == 2
+    rows = await db_session.scalars(select(ResourceReservation).where(ResourceReservation.anchor_id == anchor))
+    for row in rows:
+        row.expires_at = datetime.now(timezone.utc)-timedelta(seconds=1)
+    await db_session.flush()
+    assert await catalog_available_stock(db_session, product) == 10
+    product.stock_updated_at = datetime.now(timezone.utc)-timedelta(days=8)
+    assert await catalog_available_stock(db_session, product) is None
+    product.stock_updated_at = datetime.now(timezone.utc)
+    product.stock_units = None
+    assert await catalog_available_stock(db_session, product) is None

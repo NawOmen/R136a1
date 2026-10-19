@@ -141,6 +141,7 @@ class ProductOut(BaseModel):
     lead_time_days: int
     stock_units: int | None = None
     stock_updated_at: datetime | None = None
+    available_stock_units: int | None = None
     is_published: bool
     images: list[ProductImageOut] = Field(default_factory=list)
 

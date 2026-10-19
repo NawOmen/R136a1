@@ -40,12 +40,15 @@ MAX_IMAGE_SIZE = 8 * 1024 * 1024
 ALLOWED_IMAGE_TYPES = {"image/png", "image/jpeg", "image/webp"}
 
 
-async def _product_out(product: Product, db: AsyncSession) -> ProductOut:
-    images = (await db.execute(
-        select(ProductImage).where(ProductImage.product_id == product.id).order_by(ProductImage.position)
-    )).scalars().all()
+async def _product_out(product: Product, db: AsyncSession, reservation_rows=None, images=None) -> ProductOut:
+    if images is None:
+        images = (await db.execute(
+            select(ProductImage).where(ProductImage.product_id == product.id).order_by(ProductImage.position)
+        )).scalars().all()
     payload = {column.name: getattr(product, column.name) for column in Product.__table__.columns}
-    return ProductOut.model_validate({**payload, "images": images})
+    from ..resources import catalog_available_stock
+    available = await catalog_available_stock(db, product, reservation_rows)
+    return ProductOut.model_validate({**payload, "images": images, "available_stock_units": available})
 
 
 @router.get("/products", response_model=list[ProductOut])
@@ -53,7 +56,16 @@ async def list_catalog(db: AsyncSession = Depends(get_db)):
     result = await db.execute(
         select(Product).where(Product.is_published.is_(True)).order_by(Product.created_at.desc())
     )
-    return [await _product_out(product, db) for product in await publicly_available_products(db, list(result.scalars()))]
+    from ..resources import reservations
+    products = await publicly_available_products(db, list(result.scalars()))
+    rows_by_company = {company_id: await reservations(db, company_id)
+                       for company_id in {product.company_id for product in products}}
+    images_by_product = {product.id: [] for product in products}
+    if products:
+        images = await db.scalars(select(ProductImage).where(ProductImage.product_id.in_(images_by_product)).order_by(ProductImage.position))
+        for image in images:
+            images_by_product[image.product_id].append(image)
+    return [await _product_out(product, db, rows_by_company[product.company_id], images_by_product[product.id]) for product in products]
 
 
 @router.get("/companies/{company_id}/products", response_model=list[ProductOut])

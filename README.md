@@ -530,6 +530,26 @@ docker compose -f infra/docker-compose.yml exec llm-gateway python -c 'from fast
 Для Docker адрес Ollama задаётся отдельно как
 `OLLAMA_DOCKER_BASE_URL=http://host.docker.internal:11434`.
 
+Для расширенного локального каталога подготовлены 33 отдельных фотографий товаров
+в восьми категориях. Это синтетическое наполнение, включая компании, остатки и
+PDF допуска; оно не подтверждает реальные товары или коммерческие результаты.
+Фотографии созданы ImageGen; запросы и происхождение находятся в
+[манифесте фотографий](packages/test-fixtures/catalog-photos/prompts.json).
+Загрузчик запускается отдельно, только при `ENABLE_DEMO_SEED=true`, после обычного
+наполнения. Он применяет штатные проверки публикации и при повторном запуске
+сохраняет цены, остатки, пользовательские фотографии и снятие с публикации:
+
+```bash
+docker compose --env-file .env -f infra/docker-compose.yml cp packages/test-fixtures/catalog-photos marketplace:/tmp/catalog-photos
+docker compose --env-file .env -f infra/docker-compose.yml exec marketplace python seed_catalog_showcase.py /tmp/catalog-photos
+```
+
+В команде `cp` путь к исходной папке задаётся от корня репозитория. Если стенд
+использует `--project-name` или дополнительные Compose-файлы, укажите те же
+параметры в обеих командах. Загрузчик не запускается автоматически на сервере.
+Публичное поле API v1/v3 `available_stock_units` содержит свободный остаток с учётом
+резервов, либо `null`, если остаток отсутствует или не обновлялся более семи дней.
+
 После запуска:
 
 | Сервис | Адрес | Описание |
