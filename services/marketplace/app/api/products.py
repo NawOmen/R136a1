@@ -20,7 +20,7 @@ from ..deps import (
 )
 from ..experience import notify_market_watchers, validate_characteristics
 from ..models import Product, ProductImage, ProductPriceObservation
-from ..resources import lock_company, reservations, occupies
+from ..resources import catalog_available_stock, lock_company, reservations, occupies
 from ..matching import run_market_rematch
 from ..schemas import (
     AdmissionChecklistOut,
@@ -46,7 +46,6 @@ async def _product_out(product: Product, db: AsyncSession, reservation_rows=None
             select(ProductImage).where(ProductImage.product_id == product.id).order_by(ProductImage.position)
         )).scalars().all()
     payload = {column.name: getattr(product, column.name) for column in Product.__table__.columns}
-    from ..resources import catalog_available_stock
     available = await catalog_available_stock(db, product, reservation_rows)
     return ProductOut.model_validate({**payload, "images": images, "available_stock_units": available})
 
@@ -56,7 +55,6 @@ async def list_catalog(db: AsyncSession = Depends(get_db)):
     result = await db.execute(
         select(Product).where(Product.is_published.is_(True)).order_by(Product.created_at.desc())
     )
-    from ..resources import reservations
     products = await publicly_available_products(db, list(result.scalars()))
     rows_by_company = {company_id: await reservations(db, company_id)
                        for company_id in {product.company_id for product in products}}
