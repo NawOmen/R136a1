@@ -1,3 +1,4 @@
+import { formatDate, formatDateTime } from "./dates";
 import { registryCharacteristicLabel } from "./categoryProfiles";
 
 const labels: Record<string, string> = {
@@ -33,7 +34,11 @@ export function displayValue(value: unknown): string {
   if (typeof value === "boolean") return value ? "Да" : "Нет";
   if (Array.isArray(value)) return value.map(displayValue).join("; ");
   if (typeof value === "object") return Object.entries(value).map(([key, item], index) => `${russianLabel(key, `Дополнительное поле № ${index + 1}`)}: ${displayValue(item)}`).join("; ");
-  if (typeof value === "string") return labels[value] ?? value;
+  if (typeof value === "string") {
+    if (/^\d{4}-\d{2}-\d{2}$/.test(value)) return formatDate(value);
+    if (/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/.test(value)) return formatDateTime(value);
+    return labels[value] ?? value;
+  }
   return String(value);
 }
 

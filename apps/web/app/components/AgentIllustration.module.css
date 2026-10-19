@@ -18,3 +18,26 @@
 @keyframes flow {to{stroke-dashoffset:-152;}}
 @keyframes scan {0%{opacity:0;scale:.6;}25%{opacity:.6;}100%{opacity:0;scale:1.5;}}
 @keyframes intercept {0%,100%{translate:0 0;}50%{translate:330px 170px;}}
+/* A readable causal sequence: request, match, agreement, physical shipment. */
+.illustration[data-stage="0"] .office { filter:brightness(1.12); }
+.illustration[data-stage="1"] .plant { filter:brightness(1.13); }
+.requestPacket { transform:translate(1190px,280px);opacity:0; }
+.illustration[data-stage="0"] .requestPacket { opacity:1;animation:requestPrepare 3.8s ease-in-out infinite; }
+.illustration[data-stage="1"] .requestPacket { animation:requestTravel 4.6s cubic-bezier(.45,0,.25,1) infinite; }
+.agreement { opacity:0; }
+.illustration[data-stage="2"] .agreement { animation:agreementReveal 4.2s ease-in-out infinite; }
+.shipment,.arrival { opacity:0; }
+.illustration[data-stage="3"] .shipment { animation:shipmentTravel 7.8s cubic-bezier(.4,0,.25,1) infinite; }
+.illustration[data-stage="3"] .arrival { animation:arrivalConfirm 7.8s ease-in-out infinite; }
+.illustration[data-stage="2"] .flow { opacity:.35;animation-duration:12s; }
+.illustration[data-stage="3"] .flow { animation-duration:4s; }
+@keyframes requestPrepare { 0%,100%{transform:translate(1190px,280px);}50%{transform:translate(1190px,270px);} }
+@keyframes requestTravel { 0%,8%{opacity:0;transform:translate(1190px,280px) scale(.85);}18%{opacity:1;}45%{transform:translate(850px,230px) scale(1);}80%{opacity:1;transform:translate(430px,350px) scale(.85);}100%{opacity:0;transform:translate(430px,350px) scale(.85);} }
+@keyframes agreementReveal { 0%,100%{opacity:.6;}25%,80%{opacity:1;} }
+@keyframes shipmentTravel { 0%,8%{opacity:0;transform:translate(492px,500px);}16%{opacity:1;}38%{transform:translate(665px,552px);}62%{transform:translate(890px,548px);}84%,100%{transform:translate(1150px,477px);}90%,100%{opacity:0;} }
+@keyframes arrivalConfirm { 0%,78%,100%{opacity:0;}85%,94%{opacity:1;} }
+@media(prefers-reduced-motion:reduce){.illustration *{animation:none!important;transition:none!important;}.illustration[data-stage="3"] .shipment{opacity:1;transform:translate(1050px,510px);}.illustration[data-stage="3"] .arrival{opacity:1;}}
+.illustration { transition:transform 1500ms cubic-bezier(.2,0,0,1);transform-origin:50% 55%; }
+.illustration[data-stage="0"] { transform:translateX(-.6%) scale(1.02); }
+.illustration[data-stage="1"] { transform:translateX(.6%) scale(1.02); }
+.illustration[data-stage="2"],.illustration[data-stage="3"] { transform:none; }

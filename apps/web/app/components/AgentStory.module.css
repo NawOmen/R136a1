@@ -1,4 +1,4 @@
-.story { --ice:#75d8ff;--gold:#ffd397;--ink:#081520;max-width:1440px;margin:auto; }
+.story { --ice:#75d8ff;--gold:#ffd397;--ink:#081520;max-width:1440px;width:100%;min-width:0;margin:auto; }
 .intro { padding:40px 0 32px;text-align:center; }
 .intro h1 { font-size:clamp(38px,5.5vw,76px);font-weight:600;letter-spacing:-.055em;line-height:1.08;margin:24px auto 30px;max-width:1050px; }
 .intro em { font-style:normal;color:var(--primary); }
@@ -75,3 +75,18 @@
 .story[data-still="true"] .chapters { display:grid;grid-template-columns:1fr 1fr;gap:24px 40px; }
 .story[data-still="true"] .chapter { min-height:0;border-top:1px solid var(--border);padding:24px 0; }
 @media(max-width:650px){ .story[data-still="true"] .visual{height:340px;}.story[data-still="true"] .chapters{grid-template-columns:1fr;gap:0;} }
+
+/* The title is a soft material accent; the narrative is the focal motion. */
+.headlineText { display:inline-block;background:linear-gradient(110deg,var(--text) 15%,var(--primary) 45%,var(--text) 70%);background-size:240% 100%;background-clip:text;-webkit-background-clip:text;color:transparent;animation:headlineLight 11s ease-in-out infinite,headlineFloat 7s ease-in-out infinite; }
+.landing .intro h1 .headlineText em { color:inherit; }
+@keyframes headlineLight { 0%,100%{background-position:0% 50%;}50%{background-position:100% 50%;} }
+@keyframes headlineFloat { 0%,100%{transform:translateY(0);}50%{transform:translateY(-3px);} }
+.story[data-paused="true"] .headlineText { animation-play-state:paused; }
+.stageAction { position:absolute;top:23px;left:24px;right:24px;display:flex;align-items:center;gap:10px;color:#deedf4;font-size:12px;max-width:none;animation:actionArrive 500ms cubic-bezier(.16,1,.3,1) both; }
+.actionNumber { display:grid;place-items:center;flex-shrink:0;width:25px;height:25px;border:1px solid #769cac6b;border-radius:50%;font-size:10px;color:#9fdaef; }
+.sceneCaption { top:32px;font-size:8px; }
+.agentLabel { top:18%; }
+@keyframes actionArrive { from{opacity:.4;transform:translateY(5px);}to{opacity:1;transform:translateY(0);} }
+@media(max-width:650px){ .sceneCaption{display:none;}.stageAction{top:18px;left:18px;right:18px;max-width:none;font-size:12px;}.agentLabel{top:18%;}.hotspot{font-size:10px;}.sceneStatus{font-size:10px;} }
+@media(prefers-reduced-motion:reduce){ .headlineText{animation:none;background:none;color:var(--text);} }
+.story[data-still="true"] .headlineText { animation:none;background:none;color:var(--text); }

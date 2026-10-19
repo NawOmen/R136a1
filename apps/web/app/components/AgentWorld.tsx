@@ -9,7 +9,7 @@ import { CatmullRomCurve3, Group, Mesh, Vector3, MathUtils } from "three";
 function Block({ position, size, color, glass = false }: { position: [number, number, number]; size: [number, number, number]; color: string; glass?: boolean }) {
   const geometry = useMemo(() => new RoundedBoxGeometry(size[0], size[1], size[2], 2, Math.min(...size) * .12), [size[0], size[1], size[2]]);
   useEffect(() => () => geometry.dispose(), [geometry]);
-  return <mesh position={position} geometry={geometry} castShadow receiveShadow><meshPhysicalMaterial color={color} metalness={glass ? .1 : .35} roughness={glass ? .08 : .4} transparent={glass} opacity={glass ? .2 : 1} clearcoat={1} /></mesh>;
+  return <mesh position={position} geometry={geometry} castShadow receiveShadow><meshPhysicalMaterial color={color} metalness={glass ? .1 : .35} roughness={glass ? .12 : .52} transparent={glass} opacity={glass ? .2 : 1} clearcoat={1} /></mesh>;
 }
 
 function Fan({ active, position }: { active:boolean; position:[number,number,number] }) {
@@ -108,7 +108,7 @@ function Campus({active}:{active:boolean}) {
     {Array.from({length:27},(_,i)=><Block key={i} position={[-10.4+i*.8,-.12,2.6]} size={[.32,.015,.035]} color="#a2b8bc"/>)}
     <Warehouse x={-7} z={-4.3} active={active}/><Warehouse x={-2} z={-4.3} active={active}/>
     <Factory active={active} x={-7} z={0}/>
-    <Office active={active} x={7} z={0}/><Office active={active} x={7.3} z={-4.5} scale={.7}/>
+    <Office active x={7} z={0}/><Office active={active} x={7.3} z={-4.5} scale={.7}/>
     <Truck x={-7.4} z={-2.7}/><Truck x={-2.6} z={-2.7} color="#cda570"/>
     <Truck x={-4} z={4.3}/><Truck x={3.5} z={4.3}/>
     {[-10,-4.5,4.5,10].flatMap(x=>[-1.5,4.2].map(z=><Tree key={`${x}-${z}`} x={x} z={z}/>))}
@@ -126,14 +126,23 @@ function Route({ stage }: { stage: number }) {
     <mesh><tubeGeometry args={[curve,48,.06,8,false]} /><meshStandardMaterial color="#65d5ff" emissive="#239fd3" emissiveIntensity={2} /></mesh>
     <mesh visible={stage===2}><tubeGeometry args={[detour,40,.025,6,false]} /><meshBasicMaterial color="#7be5ae" /></mesh>
     <mesh position={[0,.1,0]}><boxGeometry args={[10.4,.08,.65]} /><meshStandardMaterial color="#2a657f" transparent opacity={.45} metalness={.8} roughness={.15} /></mesh>
-    {Array.from({length: 7},(_,i)=><Cargo key={i} offset={i/7} curve={curve} />)}
+    {stage >= 3 && <Shipment curve={curve} />}
   </group>;
 }
 
-function Cargo({ offset, curve }: {offset:number;curve:CatmullRomCurve3}) {
-  const mesh = useRef<Mesh>(null);
-  useFrame(({clock})=>{ if(mesh.current) mesh.current.position.copy(curve.getPoint((clock.elapsedTime*.12+offset)%1)); });
-  return <mesh ref={mesh}><octahedronGeometry args={[.1]} /><meshStandardMaterial color="#c2f6ff" emissive="#5bdeff" emissiveIntensity={3} /></mesh>;
+function Shipment({ curve }: {curve:CatmullRomCurve3}) {
+  const vehicle = useRef<Group>(null);
+  const progress = useRef(0);
+  useFrame((_, delta) => {
+    if (!vehicle.current) return;
+    progress.current = (progress.current + Math.min(delta,.05) / 8) % 1;
+    const point = curve.getPoint(progress.current);
+    const tangent = curve.getTangent(progress.current);
+    vehicle.current.position.copy(point);
+    vehicle.current.rotation.y = Math.atan2(tangent.x, tangent.z);
+    vehicle.current.scale.setScalar(Math.min(1, progress.current * 14, (1-progress.current) * 14) * .7);
+  });
+  return <group ref={vehicle}><Truck x={0} z={0} color="#64b8d5"/></group>;
 }
 
 function Agent({ index, stage }: {index:number;stage:number}) {
@@ -142,8 +151,9 @@ function Agent({ index, stage }: {index:number;stage:number}) {
     if(!group.current)return;
     const t=clock.elapsedTime;
     const intercept=stage===2&&index===1;
+    const matching=stage===1&&index===2;
     const x=index===0?0:index===1?-6.6:6.6;
-    const targetX=intercept?-.9+Math.sin(t*1.8)*.8:x+Math.sin(t*.6+index)*.25;
+    const targetX=matching ? Math.cos(t*.65)*6 : intercept ? -.9+Math.sin(t*.8)*.4 : x+Math.sin(t*.6+index)*.25;
     group.current.position.x=MathUtils.damp(group.current.position.x,targetX,3,delta);
     group.current.position.y=3.3+Math.sin(t*.9+index)*.25-(intercept?.8:0);
     group.current.rotation.y+=delta*.45;
@@ -155,17 +165,21 @@ function Agent({ index, stage }: {index:number;stage:number}) {
 function World({ stage }: {stage:number}) {
   const scan = useRef<Mesh>(null);
   const cameraTarget = useMemo(() => new Vector3(), []);
+  const cameraFocus = useMemo(() => new Vector3(0,.65,0), []);
+  const nextFocus = useMemo(() => new Vector3(), []);
   useFrame(({camera,clock,pointer,size},delta)=>{
     const distance = Math.max(14, 32 / (size.width / Math.max(1, size.height))) * (stage === 3 ? 1.06 : 1);
     cameraTarget.set(distance*.16+pointer.x*.5,distance*.56,distance*.83);
     camera.position.lerp(cameraTarget,1-Math.exp(-delta*2));
-    camera.lookAt(0,.65,0);
+    nextFocus.set(stage===0 ? .9 : stage===1 ? -.8 : 0,.65,0);
+    cameraFocus.lerp(nextFocus,1-Math.exp(-delta*1.5));
+    camera.lookAt(cameraFocus);
     if(scan.current){const size=(clock.elapsedTime*.3)%4.5;scan.current.scale.setScalar(size);}
   });
   return <>
     <EffectComposer multisampling={0}><Bloom luminanceThreshold={1.2} intensity={.35} mipmapBlur /></EffectComposer>
     <color attach="background" args={["#081621"]} /><fog attach="fog" args={["#081621",30,65]} />
-    <ambientLight intensity={1.1} /><directionalLight position={[3,16,8]} shadow-camera-left={-14} shadow-camera-right={14} shadow-camera-top={10} shadow-camera-bottom={-10} intensity={3.5} color="#b4eaff" castShadow shadow-mapSize={[1024,1024]} /><pointLight position={[-7,5,2]} color="#50cbff" intensity={12} distance={9} /><pointLight position={[7,5,2]} color="#ffc575" intensity={9} distance={8} />
+    <ambientLight intensity={.8} /><hemisphereLight args={["#d4efff", "#23313e", 1.5]}/><directionalLight position={[3,16,8]} shadow-camera-left={-14} shadow-camera-right={14} shadow-camera-top={10} shadow-camera-bottom={-10} intensity={3.5} color="#b4eaff" castShadow shadow-mapSize={[1024,1024]} /><pointLight position={[-7,5,2]} color="#50cbff" intensity={12} distance={9} /><pointLight position={[7,5,2]} color="#ffc575" intensity={9} distance={8} />
     <mesh rotation={[-Math.PI/2,0,0]} position={[0,-.34,0]} receiveShadow><planeGeometry args={[60,60]} /><meshStandardMaterial color="#0b1d2b" roughness={.32} metalness={.6} /></mesh>
     <gridHelper args={[30,30,"#21495e","#142f42"]} position={[0,-.32,0]} />
     <Campus active={stage>0}/><Route stage={stage}/>

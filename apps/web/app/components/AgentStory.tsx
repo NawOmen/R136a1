@@ -12,7 +12,7 @@ const chapters = [
   { name: "Запрос", title: "Начните с задачи", text: "Товар, объём и срок — всё, что нужно для начала подбора.", state: "Поиск", detail: "Потребность покупателя и возможности производства." },
   { name: "Подбор", title: "Найдите подходящее производство", text: "ИИ сопоставляет ваш запрос с товарами и возможностями производителей.", state: "Подбор", detail: "Подбор по характеристикам, объёму и срокам." },
   { name: "Условия", title: "Согласуйте детали", text: "Сравните предложения. Цену, объём и сроки подтверждают обе стороны.", state: "Согласование", detail: "Условия подтверждают покупатель и производитель." },
-  { name: "Сделка", title: "Перейдите к заказу", text: "Переписка, документы и ход сделки — в одном месте.", state: "Связь", detail: "От запроса до согласованного заказа." },
+  { name: "Поставка", title: "От завода — к вашему офису", text: "Производитель готовит партию. Покупатель следит за отгрузкой и подтверждает получение.", state: "Поставка", detail: "Подготовка партии → отгрузка → получение." },
 ];
 
 export function AgentStory({ landing = false, children }: { landing?: boolean; children?: ReactNode }) {
@@ -26,15 +26,13 @@ export function AgentStory({ landing = false, children }: { landing?: boolean; c
   const [paused, setPaused] = useState(true);
   const [failed3D, setFailed3D] = useState(false);
   const [ready3D, setReady3D] = useState(false);
-  const [compact, setCompact] = useState(false);
-  const [interactive, setInteractive] = useState(false);
-  const [chapter, setChapter] = useState(0);
+  const [compact, setCompact] = useState(true);
+    const [chapter, setChapter] = useState(0);
   const [staticView, setStaticView] = useState(false);
   const [reduced, setReduced] = useState(false);
   const [insight, setInsight] = useState<"factory" | "buyer" | "agent" | null>(null);
 
   useEffect(() => {
-    setInteractive(true);
     const media = window.matchMedia("(prefers-reduced-motion: reduce)");
     const sync = () => setReduced(media.matches);
     const viewport = window.matchMedia("(max-width: 650px)");
@@ -128,11 +126,11 @@ export function AgentStory({ landing = false, children }: { landing?: boolean; c
     return () => { observer.disconnect(); document.removeEventListener("visibilitychange", sync); };
   }, []);
 
-  const still = !interactive || staticView || reduced;
+  const still = staticView || reduced;
   const step = still ? 3 : chapter;
   useEffect(() => {
     if (!preview || still) return;
-    const timers = [1600, 6000, 10500].map((delay, index) => window.setTimeout(() => setChapter(index + 1), delay));
+    const timers = [3800, 8500, 13500].map((delay, index) => window.setTimeout(() => setChapter(index + 1), delay));
     const stop = () => { if (window.scrollY > 60) setPreview(false); };
     window.addEventListener("scroll", stop, { passive: true });
     stop();
@@ -166,25 +164,26 @@ export function AgentStory({ landing = false, children }: { landing?: boolean; c
     });
   };
 
-  return <div ref={root} className={`${styles.story} ${landing ? styles.landing : ""}`} data-still={still} data-current={step} data-preview={preview && !still}>
-    <header className={styles.intro}><span className="eyebrow">Как работает ПоРукам</span><h1>{landing ? <>Товары и <em>производство.</em></> : <>От запроса <em>к заказу.</em></>}</h1><div className={styles.introBottom}><p>Готовые партии и заказы на производство.</p><Link href="/catalog" className="btn btn-secondary">Каталог товаров →</Link></div></header>
+  return <div ref={root} className={`${styles.story} ${landing ? styles.landing : ""}`} data-still={still} data-paused={paused} data-current={step} data-preview={preview && !still}>
+    <header className={styles.intro}><span className="eyebrow">Как работает ПоРукам</span><h1>{landing ? <><span className={styles.headlineText}>Товары и <em>производство</em></span></> : <>От запроса <em>к заказу.</em></>}</h1><div className={styles.introBottom}><p>Готовые партии и заказы на производство.</p><Link href="/catalog" className="btn btn-secondary">Каталог товаров →</Link></div></header>
     <div ref={controls} className={styles.controls}><div className={styles.toolbar}><span>От запроса к заказу</span><button type="button" aria-pressed={staticView || reduced} disabled={reduced} onClick={() => setStaticView(!staticView)}>{reduced ? "Движение уменьшено в настройках" : staticView ? "Включить анимацию" : "Без анимации"}</button></div>
     {!still && <nav className={styles.steps} aria-label="Этапы взаимодействия">{chapters.map((item, index) => <button key={item.name} type="button" aria-current={chapter === index ? "step" : undefined} onClick={() => selectChapter(index)}><span>0{index + 1}</span>{" "}{item.name}</button>)}</nav>}</div>
     <div className={styles.journey}>
       <div ref={scene} className={styles.visual} data-stage={step} data-paused={paused}>
         <div className={styles.horizon} aria-hidden="true" /><div className={styles.grid} aria-hidden="true" />
-        <span className={styles.sceneCaption}>ПРОИЗВОДИТЕЛЬ ↔ ПОКУПАТЕЛЬ</span>
         <div className={styles.illustration} style={{visibility: ready3D && !still && !failed3D && !compact ? "hidden" : "visible"}}><AgentIllustration stage={step}/></div>
         {!still && !failed3D && !compact && <div className={styles.webgl}><AgentWorld stage={step} paused={paused} onFailure={() => setFailed3D(true)} onReady={() => setReady3D(true)} /></div>}
-        <button className={`${styles.hotspot} ${styles.factoryLabel}`} type="button" aria-expanded={insight === "factory"} onClick={() => setInsight(insight === "factory" ? null : "factory")}><small>01 / ПРЕДЛОЖЕНИЕ</small>Производитель <span>+</span></button>
-        <button className={`${styles.hotspot} ${styles.buyerLabel}`} type="button" aria-expanded={insight === "buyer"} onClick={() => setInsight(insight === "buyer" ? null : "buyer")}><small>02 / ПОТРЕБНОСТЬ</small>Компания-покупатель <span>+</span></button>
-        <button className={styles.agentLabel} type="button" aria-expanded={insight === "agent"} onClick={() => setInsight(insight === "agent" ? null : "agent")}>✧ ИИ-агенты · {chapters[step].state}</button>
+        <button className={`${styles.hotspot} ${styles.factoryLabel}`} type="button" aria-expanded={insight === "factory"} onClick={() => setInsight(insight === "factory" ? null : "factory")}><small>01 / ПРЕДЛОЖЕНИЕ</small>Завод · продавец <span>+</span></button>
+        <button className={`${styles.hotspot} ${styles.buyerLabel}`} type="button" aria-expanded={insight === "buyer"} onClick={() => setInsight(insight === "buyer" ? null : "buyer")}><small>02 / ПОТРЕБНОСТЬ</small>Офис · покупатель <span>+</span></button>
+        <button className={styles.agentLabel} type="button" aria-expanded={insight === "agent"} onClick={() => setInsight(insight === "agent" ? null : "agent")}>ИИ-агенты <span aria-hidden="true">+</span></button>
         {insight && <div className={styles.insight} role="status">{insight === "factory" ? "Товары, параметры и доступные возможности производства." : insight === "buyer" ? "Требования, количество и срок закупки." : "Подготовка запроса и объяснение подбора. Подтверждают условия стороны."}<button type="button" aria-label="Закрыть пояснение" onClick={() => setInsight(null)}>×</button></div>}
+        <div key={step} className={styles.stageAction} aria-hidden="true"><span className={styles.actionNumber}>0{step + 1}</span><span>{["Покупатель формирует запрос", "ИИ находит производство", "Стороны согласуют условия", "Партия отправляется покупателю"][step]}</span></div>
         <div className={styles.sceneStatus}><span className={styles.dot} />{chapters[step].detail}</div>
       </div>
       <div className={styles.chapters}>{chapters.map((item, index) => <section key={item.name} id={`story-chapter-${index}`} data-chapter={index} className={styles.chapter}><span className={styles.number}>0{index + 1} / {item.name}</span><h2>{item.title}</h2><p>{item.text}</p>{index === 3 && !landing && <Link className="btn btn-primary" href="/register">Начать сотрудничество →</Link>}</section>)}</div>
     </div>
 
+    <noscript><style>{`.${styles.story} .${styles.controls}{display:none}.${styles.story} .${styles.journey}{display:block}.${styles.story} .${styles.visual}{position:relative;top:auto}.${styles.story} .${styles.chapter}{display:flex!important;min-height:0!important}.${styles.story} *{animation:none!important}`}</style></noscript>
     {children}
     <section className={styles.outro}><span className="eyebrow">ПоРукам</span><h2>Что нужно вашему бизнесу?</h2><div className="actions"><Link href="/catalog" className="btn btn-secondary">Открыть каталог</Link><Link href="/needs/new" className="btn btn-primary">Создать потребность →</Link></div><p>Только российские компании. Расчёты в рублях.</p></section>
   </div>;

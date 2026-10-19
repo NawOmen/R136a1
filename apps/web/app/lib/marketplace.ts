@@ -774,7 +774,12 @@ export const NEED_VISIBILITY_LABELS: Record<NeedVisibility, string> = {
 // Generated from the canonical backend registry; v1 still sends Russian labels.
 export const PRODUCT_CATEGORY_REGISTRY_VERSION = categoryRegistry.registry_version;
 export const PRODUCT_CATEGORY_IDS: Record<string, Record<string, string>> = categoryRegistry.leaf_ids;
-export const PRODUCT_CATEGORY_TREE: Record<string, string[]> = categoryRegistry.tree;
+export function isVisibleCategory(category: string): boolean {
+  return !["Продукты питания", "Медицина и гигиена"].includes(category);
+}
+export const PRODUCT_CATEGORY_TREE: Record<string, string[]> = Object.fromEntries(
+  Object.entries(categoryRegistry.tree).filter(([category]) => isVisibleCategory(category)),
+);
 export const PRODUCT_CATEGORIES = Object.keys(PRODUCT_CATEGORY_TREE);
 
 export const DOCUMENT_TYPES: { value: string; label: string }[] = [

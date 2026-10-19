@@ -1,4 +1,7 @@
 "use client";
+
+import { formatDateTime } from "../lib/dates";
+
 import { displayValue } from "../lib/presentation";
 import { useEffect, useState } from "react";
 import { getToken } from "../lib/api";
@@ -25,10 +28,10 @@ export default function NeedRequirements({ need }: { need: Need }) {
     {evidence ? Object.entries(evidence.fields).map(([key, field]) => <details key={key}>
       <summary>{label(key)}: {show(field.value)} {field.normalized_unit} · {field.origin === "agent" ? "Из материалов, проверено покупателем" : "Указано покупателем"}</summary>
       {field.original_unit && field.original_unit !== field.normalized_unit && <p>Исходное значение: {show(field.original_value)} {field.original_unit}</p>}
-      <p className="hint">Подтверждено {new Date(field.confirmed_at).toLocaleString("ru-RU")}</p>
+      <p className="hint">Подтверждено {formatDateTime(field.confirmed_at)}</p>
       {evidence.run && field.sources.map((source, index) => <RequirementSource key={`${need.id}:${evidence.run?.id}:${source.source_id}:${index}`} runId={evidence.run!.id} source={source} />)}
     </details>) : <p className="hint">Для прежней версии отдельное происхождение полей не сохранялось.</p>}
     {error && <p role="alert">{error}</p>}
-    <details><summary>Сохранённые версии ({history.length})</summary>{history.map(row => <details key={row.revision}><summary>Версия {row.revision} · {new Date(row.created_at).toLocaleString("ru-RU")}</summary><p>Количество: {show(row.snapshot.volume_units)} · Срок поставки: {show(row.snapshot.deadline_date)}</p>{Object.entries((row.impact.changes ?? {}) as Record<string, { before: unknown; after: unknown }>).map(([key, value]) => <p key={key}>{label(key)}: {show(value.before)} → {show(value.after)}</p>)}</details>)}</details>
+    <details><summary>Сохранённые версии ({history.length})</summary>{history.map(row => <details key={row.revision}><summary>Версия {row.revision} · {formatDateTime(row.created_at)}</summary><p>Количество: {show(row.snapshot.volume_units)} · Срок поставки: {show(row.snapshot.deadline_date)}</p>{Object.entries((row.impact.changes ?? {}) as Record<string, { before: unknown; after: unknown }>).map(([key, value]) => <p key={key}>{label(key)}: {show(value.before)} → {show(value.after)}</p>)}</details>)}</details>
   </section>;
 }

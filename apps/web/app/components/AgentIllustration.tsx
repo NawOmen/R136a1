@@ -65,15 +65,15 @@ function Truck({x,y}:{x:number;y:number}) {return <g transform={`translate(${x} 
 export function AgentIllustration({stage}:{stage:number}) {
   const id=useId().replace(/:/g,"");
   return <svg className={styles.illustration} data-stage={stage} viewBox="0 0 1600 850" aria-hidden="true">
-    <defs><radialGradient id={`${id}-glow`}><stop stopColor="#55d9ff" stopOpacity=".18"/><stop offset="1" stopColor="#55d9ff" stopOpacity="0"/></radialGradient><linearGradient id={`${id}-road`}><stop stopColor="#60cfff"/><stop offset="1" stopColor="#9eecd1"/></linearGradient></defs>
+    <defs><radialGradient id={`${id}-glow`}><stop stopColor="#55d9ff" stopOpacity=".18"/><stop offset="1" stopColor="#55d9ff" stopOpacity="0"/></radialGradient><linearGradient id={`${id}-road`}><stop stopColor="#60cfff"/><stop offset="1" stopColor="#9eecd1"/></linearGradient><filter id={`${id}-shadow`} x="-30%" y="-30%" width="160%" height="180%"><feDropShadow dx="0" dy="14" stdDeviation="11" floodColor="#020c14" floodOpacity=".4"/></filter></defs>
     <ellipse cx="800" cy="430" rx="790" ry="390" fill={`url(#${id}-glow)`}/>
     <path d="M100 440 L740 160 L1510 495 L865 790 Z" fill="#132d3e" stroke="#2a5269" strokeWidth="2"/>
     <path d="M180 528 L788 260 L1430 542 M385 660 L1010 385" fill="none" stroke="#294858" strokeWidth="35" strokeLinejoin="round"/>
     <path d="M180 528 L788 260 L1430 542 M385 660 L1010 385" fill="none" stroke="#7999a8" strokeWidth="1.5" strokeDasharray="12 14"/>
     <g className={styles.network}><g transform="translate(400 80) scale(.58)"><Plant/></g><g transform="translate(820 90) scale(.46)"><Office/></g></g>
     <Warehouse x={415} y={260}/><Warehouse x={690} y={380}/>
-    <g className={styles.plant} transform="translate(75 140)"><Plant/><Tree x={124} y={390}/></g>
-    <g className={styles.office} transform="translate(565 115)"><Office/><Tree x={606} y={383}/><Tree x={905} y={360}/></g>
+    <g className={styles.plant} filter={`url(#${id}-shadow)`} transform="translate(75 140)"><Plant/><Tree x={124} y={390}/></g>
+    <g className={styles.office} filter={`url(#${id}-shadow)`} transform="translate(565 115)"><Office/><Tree x={606} y={383}/><Tree x={905} y={360}/></g>
     <Truck x={326} y={336}/><Truck x={609} y={461}/><Truck x={1075} y={613}/>
     {[0,1,2,3,4].map(i=><g key={i}><Tree x={173+i*89} y={581+i*38}/><Tree x={1063+i*62} y={336+i*27}/></g>)}
     {[0,1,2,3,4,5].map(i=><Box key={i} x={256+i%3*34} y={574+Math.floor(i/3)*35+i%3*15.3} w={25} d={23} h={27} color="#b8956c" top="#e1bf93" side="#8b7051"/>)}
@@ -81,6 +81,23 @@ export function AgentIllustration({stage}:{stage:number}) {
     <g className={styles.routes}><path d="M492 500 C675 595 875 594 1192 458" fill="none" stroke="#163f56" strokeWidth="22"/><path d="M492 500 C675 595 875 594 1192 458" fill="none" stroke={`url(#${id}-road)`} strokeWidth="2"/>
       <path className={styles.flow} d="M492 500 C675 595 875 594 1192 458" fill="none" stroke="#c9f8ff" strokeWidth="6" strokeDasharray="1 48" strokeLinecap="round"/>
       <path className={styles.alternate} d="M492 500 C600 330 990 270 1192 458" fill="none" stroke="#95dfbc" strokeWidth="1.5" strokeDasharray="4 7"/></g>
+    <g className={styles.requestPacket}>
+      <rect x="-40" y="-35" width="80" height="70" rx="9" fill="#e8f4f9" stroke="#9bdbf0" strokeWidth="2"/>
+      <path d="M-23 -18h31M-23 -6h46M-23 6h35" stroke="#3d7b98" strokeWidth="4" strokeLinecap="round"/>
+      <circle cx="22" cy="19" r="7" fill="#4b9bb6"/>
+    </g>
+    <g className={styles.agreement} transform="translate(860 420)">
+      <rect x="-78" y="-50" width="156" height="100" rx="12" fill="#e7f1f5" stroke="#a2cfdf" strokeWidth="2"/>
+      <path d="M-48 -26h96" stroke="#45758b" strokeWidth="4"/>
+      <circle cx="-37" cy="8" r="14" fill="#225d78"/><circle cx="37" cy="8" r="14" fill="#79613d"/>
+      <path d="m-43 8 4 4 9-10m61 6 4 4 9-10" stroke="#dcfff0" strokeWidth="3" fill="none"/>
+      <path d="M-15 8h30" stroke="#6e98a9" strokeWidth="2"/>
+    </g>
+    <g className={styles.shipment}>
+      <ellipse cx="0" cy="16" rx="42" ry="12" fill="#020b12" opacity=".45"/>
+      <Truck x={0} y={0}/>
+    </g>
+    <g className={styles.arrival} transform="translate(1192 458)"><circle r="28" fill="#7fe3b1" fillOpacity=".12" stroke="#8ceac2" strokeWidth="2"/><path d="m-12 0 8 8 17-20" fill="none" stroke="#b8f5d7" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round"/></g>
     <g className={styles.scanning}><ellipse cx="800" cy="475" rx="300" ry="135" fill="none" stroke="#6edaff" strokeWidth="1"/><ellipse cx="800" cy="475" rx="390" ry="175" fill="none" stroke="#6edaff" strokeWidth=".6" opacity=".35"/></g>
     {[0,1,2].map((i)=><g className={`${styles.agent} ${styles[`agent${i}`]}`} key={i} transform={`translate(${i===0?800:i===1?355:1320} ${i===0?265:200})`}><circle r="48" fill={`url(#${id}-glow)`}/><path d="M0 -23 L18 0 L0 28 L-18 0Z" fill={i===2?"#ffd6a1":"#9feaff"}/><path d="M0 -23 L0 28 L-18 0Z" fill={i===2?"#b98c57":"#368fac"}/><ellipse cy="33" rx="32" ry="10" stroke={i===2?"#ffd6a1":"#9feaff"} strokeWidth=".8" fill="none" opacity=".5"/></g>)}
   </svg>;

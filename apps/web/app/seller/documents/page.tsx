@@ -1,5 +1,7 @@
 "use client";
 
+import { formatDate } from "../../lib/dates";
+
 // Документы компании (GET/POST /companies/{id}/documents, DELETE /documents/{id}).
 // Загрузка — multipart (file + name + document_type + область действия).
 // Рядом — отчёт о категорийном допуске: загрузка файла сама допуск не выдаёт,
@@ -463,7 +465,7 @@ export default function SellerDocumentsPage() {
             {expiring.map((document) => (
               <li key={document.id} className="company-item">
                 <span className="company-item__name">{document.name}</span>
-                <span className="company-meta">Действует до {document.valid_until ?? "—"}</span>
+                <span className="company-meta">Действует до {formatDate(document.valid_until, "—")}</span>
               </li>
             ))}
           </ul>
@@ -505,7 +507,7 @@ export default function SellerDocumentsPage() {
                         </div>
                       )}
                       {document.valid_until && (
-                        <div className="company-meta">Действует до {document.valid_until}</div>
+                        <div className="company-meta">Действует до {formatDate(document.valid_until)}</div>
                       )}
                       {document.verification_note && (
                         <div className="company-meta">Решение проверяющего: {document.verification_note}</div>

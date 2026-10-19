@@ -19,7 +19,7 @@ test("errors, statuses and structured values have Russian presentation without c
 const company = { id: "00000000-0000-4000-8000-000000000010", display_name: "Синтетическая компания", country: "RU", verification_status: "draft", membership: { can_buy: true, can_sell: true, is_admin: true } };
 const user = { id: "00000000-0000-4000-8000-000000000001", first_name: "Проверка", last_name: "Интерфейса", account_status: "active" };
 
-test("first login opens a scoped next action instead of declaring a draft company ready", async ({ page }) => {
+test("dashboard opens a scoped next action instead of declaring a draft company ready", async ({ page }) => {
   await page.addInitScript(() => localStorage.setItem("token", "synthetic-guidance"));
   await page.route("**/api/**", route => {
     const path = new URL(route.request().url()).pathname;
@@ -30,7 +30,7 @@ test("first login opens a scoped next action instead of declaring a draft compan
     }
     return route.fulfill({ json: [] });
   });
-  await page.goto("/");
+  await page.goto("/dashboard");
   await expect(page).toHaveURL(/\/dashboard$/);
   await expect(page.getByRole("heading", { name: "Завершите проверку компании" })).toBeVisible();
   await expect(page.getByRole("link", { name: "Продолжить", exact: true })).toHaveAttribute("href", `/company/${company.id}`);

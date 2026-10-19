@@ -1,4 +1,7 @@
 "use client";
+
+import { formatDateTime } from "../lib/dates";
+
 import { russianLabel } from "../lib/presentation";
 import { formatRub } from "../lib/marketplace";
 
@@ -107,7 +110,7 @@ export default function KpiPage() {
       <p className="hint">Последние 50 событий выбранной компании. Запись показывает действие и его причину; история другой компании недоступна.</p>
       {verification && <p role="status">Проверка последовательности и хешей: {verification.valid ? `успешна, ${verification.checked_events} событий` : `ошибка на событии № ${verification.broken_sequence}`}. Это не защита от изменения базы администратором.</p>}
       {auditError && <div className="alert alert-error">{auditError}</div>}
-      {!auditError && auditEvents.length === 0 ? <p className="hint">Событий пока нет.</p> : <ul className="company-list">{auditEvents.map((event) => <li key={event.id} className="company-item"><strong>№ {event.sequence} · {russianLabel(event.event_type, "Действие платформы")}</strong><span className="company-meta">{new Date(event.created_at).toLocaleString("ru-RU")} · {russianLabel(event.entity_type, "Запись")}{event.entity_id ? ` · ${event.entity_id}` : ""}</span><p>{event.explanation}</p></li>)}</ul>}
+      {!auditError && auditEvents.length === 0 ? <p className="hint">Событий пока нет.</p> : <ul className="company-list">{auditEvents.map((event) => <li key={event.id} className="company-item"><strong>№ {event.sequence} · {russianLabel(event.event_type, "Действие платформы")}</strong><span className="company-meta">{formatDateTime(event.created_at)} · {russianLabel(event.entity_type, "Запись")}{event.entity_id ? ` · ${event.entity_id}` : ""}</span><p>{event.explanation}</p></li>)}</ul>}
     </section>
   </div>;
 }

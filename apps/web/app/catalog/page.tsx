@@ -6,7 +6,7 @@ import { ProductPlaceholder } from "../components/ProductPlaceholder";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { scaledMoney } from "../lib/money";
 import { ProductAvailability } from "../components/ProductAvailability";
-import { formatRub, formatUnits, catalogUnit, marketplace, Product } from "../lib/marketplace";
+import { formatRub, formatUnits, catalogUnit, isVisibleCategory, marketplace, Product } from "../lib/marketplace";
 
 function priceValue(value: string): bigint | null {
   if (!value.trim()) return null;
@@ -46,10 +46,11 @@ export default function CatalogPage() {
     void loadCatalog();
   }, [loadCatalog]);
 
-  const categories = useMemo(() => ["Все категории", ...Array.from(new Set(products.map((product) => product.category))).sort()], [products]);
+  const availableProducts = useMemo(() => products.filter(product => isVisibleCategory(product.category)), [products]);
+  const categories = useMemo(() => ["Все категории", ...Array.from(new Set(availableProducts.map((product) => product.category))).sort()], [availableProducts]);
   const visible = useMemo(() => {
     const normalized = query.trim().toLocaleLowerCase("ru");
-    const filtered = products.filter((product) => {
+    const filtered = availableProducts.filter((product) => {
       if (category !== "Все категории" && product.category !== category) return false;
       if (normalized && !`${product.name} ${product.category} ${product.subcategory ?? ""}`.toLocaleLowerCase("ru").includes(normalized)) return false;
       if (inStock && (product.available_stock_units == null || product.available_stock_units < product.moq_units)) return false;
@@ -65,7 +66,7 @@ export default function CatalogPage() {
       if (sort === "lead") return a.lead_time_days - b.lead_time_days;
       return 0; // API order is newest first; stable sorting preserves it.
     });
-  }, [products, category, query, inStock, leadTime, sort, minimum, maximum, priceError]);
+  }, [availableProducts, category, query, inStock, leadTime, sort, minimum, maximum, priceError]);
 
 
   return <div className="market-page commercial-catalog">

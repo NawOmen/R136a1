@@ -1,4 +1,7 @@
 "use client";
+
+import { formatDate } from "../../lib/dates";
+
 import { russianMessage } from "../../lib/russianMessages";
 import { russianLabel } from "../../lib/presentation";
 import CommercialTermsFields, { emptyCommercialTerms } from "../../components/CommercialTermsFields";
@@ -298,7 +301,7 @@ export default function SellerRequestsPage() {
         <ul className="demand-grid">
           {openNeeds.map((need) => (
             <li key={need.id} className="demand-card" data-need-id={need.id}>
-              <div className="demand-card__top"><span className="demand-kind">Производство</span><span className="demand-deadline">до {need.deadline_date}</span></div>
+              <div className="demand-card__top"><span className="demand-kind">Производство</span><span className="demand-deadline">до {formatDate(need.deadline_date)}</span></div>
               <h2>{need.category}</h2>
               <p className="demand-description">{formatCharacteristics(need.characteristics, need.category_profile)}</p>
               <dl className="demand-facts"><div><dt>Необходимый объём</dt><dd>{formatUnits(need.volume_units, itemUnit(need.characteristics))}</dd></div><div><dt>Статус запроса</dt><dd>{NEED_STATUS_LABELS[need.status]}</dd></div></dl>

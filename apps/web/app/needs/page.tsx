@@ -1,5 +1,7 @@
 "use client";
 
+import { formatDate } from "../lib/dates";
+
 // Мои потребности (GET /needs/mine): статус, объём, бюджет, срок,
 // переход к деталям. Повтор — новый черновик с новыми датами:
 // старые файлы, допуски, резервы и согласия не переносятся.
@@ -153,7 +155,7 @@ export default function MyNeedsPage() {
                   {need.category} · {formatUnits(need.volume_units)}
                 </span>
                 <span className="company-meta">
-                  Бюджет: {formatRub(need.budget_rub)} · Срок: {need.deadline_date}
+                  Бюджет: {formatRub(need.budget_rub)} · Срок: {formatDate(need.deadline_date)}
                 </span>
                 <span className={`badge badge-${need.status}`}>{NEED_STATUS_LABELS[need.status]}</span>
               </Link>

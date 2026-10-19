@@ -1,5 +1,7 @@
 "use client";
 
+import { formatDate } from "../../lib/dates";
+
 // Календарь мощностей (GET/PUT /companies/{id}/capacity).
 // Таблица на ближайшие 30 дней для выбранного ресурса и единицы измерения.
 
@@ -7,7 +9,7 @@ import { russianMessage } from "../../lib/russianMessages";
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { getToken } from "../../lib/api";
-import { ApiError, CapacityEntry, formatUnits, marketplace } from "../../lib/marketplace";
+import { ApiError, CapacityEntry, formatUnits, isVisibleCategory, marketplace } from "../../lib/marketplace";
 import { useCompanySelector } from "../../lib/useMe";
 
 const DAYS_COUNT = 30;
@@ -50,7 +52,7 @@ export default function SellerCapacityPage() {
   const [leafOptions, setLeafOptions] = useState<{id:string;label:string}[]>([]);
   useEffect(() => {
     let active=true;
-    marketplace.getCategoryRegistry().then(data => {if(active)setLeafOptions(data.groups.flatMap(group=>group.leaves.filter(leaf=>leaf.admission_state!=="unsupported").map(leaf=>({id:leaf.id,label:group.label+" / "+leaf.label}))));})
+    marketplace.getCategoryRegistry().then(data => {if(active)setLeafOptions(data.groups.filter(group => isVisibleCategory(group.label)).flatMap(group=>group.leaves.filter(leaf=>leaf.admission_state!=="unsupported").map(leaf=>({id:leaf.id,label:group.label+" / "+leaf.label}))));})
       .catch(err=>{if(active)setError(err instanceof Error?russianMessage(err.message):"Не удалось загрузить категории.");});
     return ()=>{active=false;};
   }, []);
@@ -213,13 +215,13 @@ export default function SellerCapacityPage() {
               <tbody>
                 {dates.map((date) => (
                   <tr key={date}>
-                    <td>{date}</td>
+                    <td>{formatDate(date)}</td>
                     <td>
                       <input
                         type="number"
                         min={reserved[date] ?? 0}
                         step="1"
-                        aria-label={`Общая мощность на ${date}`}
+                        aria-label={`Общая мощность на ${formatDate(date)}`}
                         value={values[date] ?? ""}
                         placeholder="0"
                         onChange={(event) =>
