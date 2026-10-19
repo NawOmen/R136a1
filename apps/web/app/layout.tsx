@@ -18,6 +18,7 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: Readonly<{ children: ReactNode }>) {
   return (
     <html lang="ru" suppressHydrationWarning>
+      <head><script dangerouslySetInnerHTML={{ __html: `try{document.documentElement.dataset.theme=localStorage.getItem("porukam-theme")==="light"?"light":"dark"}catch{}` }} /></head>
       <body className={brandFont.variable}>
         <RussianValidation />
         <a className="skip-link" href="#main-content">Перейти к содержимому</a>
