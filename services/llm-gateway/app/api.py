@@ -77,10 +77,10 @@ def _model_version(used_route: str) -> str:
     if used_route == "external_deepseek":
         return settings.deepseek_model
     if used_route == "local_qwen+external_deepseek":
-        return f"{settings.ollama_model}+{settings.deepseek_model}"
+        return f"{settings.trained_model_version if settings.local_llm_backend == 'mlx' else settings.ollama_model}+{settings.deepseek_model}"
     if used_route == "rules_only":
         return "rules_only"
-    return settings.ollama_model
+    return settings.trained_model_version if settings.local_llm_backend == "mlx" else settings.ollama_model
 
 
 async def owned_run(db, run_id, user, *, lock=False):

@@ -1,131 +1,72 @@
-"""Сборка локальной обученной модели Ollama из MLX-базы и LoRA-адаптера.
+"""Проверить последнюю MLX-модель; --serve запускает её только по команде оператора.
 
-Модель собирается на машине с `mlx-lm` и Ollama:
-
-1. `mlx_lm fuse` переносит LoRA-адаптер в веса базовой MLX-модели;
-2. `ollama create` импортирует safetensors-каталог как модель Ollama.
-
-Скрипт не обучает модель, не меняет исходные каталоги и не добавляет
-зависимостей в приложение. Обученный кандидат предназначен для тестового
-контура: семантическая приёмка независимым экспертом не пройдена.
-
-Пример:
-
-    python3 infra/build_local_model.py \
-      --base /path/to/model-9b-4bit \
-      --adapter /path/to/adapter-2144 \
-      --name porukam-buyer-9b:latest
+Не выполняет обучение, fuse, конвертацию в GGUF или ollama create.
 """
-
 from __future__ import annotations
-
 import argparse
-import shutil
-import subprocess
-import sys
+import hashlib
+import json
+import os
 from pathlib import Path
+import sys
 
+ADAPTER_SHA256 = "2043a052df09167337bdfd7d003d6988a655bd87ea4bb93aae49d0144251b18e"
+ADAPTER_CONFIG_SHA256 = "4833ec3bc1a3d126c26b070e30a13f0822a0ad31e82a0525c197b978e0793fde"
+BASE_REVISION = "8b2b98c00a6b4d291155e4890773ca8f769aee53"
 
-def run(command: list[str]) -> None:
-    print("+", " ".join(command))
-    try:
-        subprocess.run(command, check=True)
-    except subprocess.CalledProcessError as error:
-        raise SystemExit(
-            f"Команда завершилась с кодом {error.returncode}: {' '.join(command)}"
-        ) from None
+def digest(path: Path) -> str:
+    h = hashlib.sha256()
+    with path.open("rb") as f:
+        for block in iter(lambda: f.read(8 * 1024**2), b""):
+            h.update(block)
+    return h.hexdigest()
 
-
-def resolve_adapter(path: Path) -> Path:
-    """mlx-lm ожидает каталог с adapters.safetensors и adapter_config.json."""
-    path = path.expanduser().resolve()
-    if path.is_file():
-        return path.parent
-    return path
-
+def verify(base: Path, adapter: Path) -> None:
+    if digest(adapter / "adapters.safetensors") != ADAPTER_SHA256:
+        raise ValueError("SHA256 адаптера не совпадает с последней версией PR")
+    if digest(adapter / "adapter_config.json") != ADAPTER_CONFIG_SHA256:
+        raise ValueError("SHA256 конфигурации адаптера не совпадает")
+    manifest = json.loads((base / "download-manifest.json").read_text())
+    if manifest["sha"] != BASE_REVISION:
+        raise ValueError("Не совпадает ревизия базовой модели")
+    if not (adapter / "adapter_config.json").is_file():
+        raise ValueError("Не найден adapter_config.json")
+    count = 0
+    for entry in manifest["siblings"]:
+        if entry.get("lfs"):
+            path = base / entry["rfilename"]
+            if path.stat().st_size != entry["lfs"]["size"] or digest(path) != entry["lfs"]["sha256"]:
+                raise ValueError(f"Повреждён базовый файл {entry['rfilename']}")
+            count += 1
+    if not count:
+        raise ValueError("Пустой манифест базовых весов")
 
 def main() -> None:
-    parser = argparse.ArgumentParser(
-        description="Собрать модель Ollama из MLX-базы и LoRA-адаптера."
-    )
-    parser.add_argument("--base", type=Path, required=True, help="каталог базовой MLX-модели")
-    parser.add_argument("--adapter", type=Path, required=True, help="каталог LoRA-адаптера")
-    parser.add_argument(
-        "--name", default="porukam-buyer-9b:latest", help="тег модели Ollama"
-    )
-    parser.add_argument(
-        "--workdir",
-        type=Path,
-        default=Path(".build/porukam-buyer-9b"),
-        help="каталог сборки (по умолчанию .build/porukam-buyer-9b)",
-    )
-    parser.add_argument(
-        "--python",
-        default=sys.executable,
-        help="интерпретатор с установленным mlx-lm (по умолчанию текущий)",
-    )
-    parser.add_argument(
-        "--quantize",
-        help="необязательный уровень квантования safetensors для `ollama create`",
-    )
-    parser.add_argument(
-        "--skip-fuse", action="store_true", help="не запускать fuse, использовать --fused"
-    )
-    parser.add_argument("--fused", type=Path, help="готовый каталог слитой модели")
-    args = parser.parse_args()
-
-    base = args.base.expanduser().resolve()
-    adapter = resolve_adapter(args.adapter)
-    workdir = args.workdir.expanduser().resolve()
-
-    if not (base / "config.json").is_file():
-        raise SystemExit(f"Не найден каталог MLX-модели: {base}")
-    if not (adapter / "adapters.safetensors").is_file():
-        raise SystemExit(f"Не найден LoRA-адаптер: {adapter}")
-    if shutil.which("ollama") is None:
-        raise SystemExit("Команда ollama не найдена в PATH")
-
-    if args.skip_fuse:
-        fused = (args.fused or workdir / "fused").expanduser().resolve()
-        if not fused.is_dir():
-            raise SystemExit(f"Не найден каталог --fused: {fused}")
-    else:
-        probe = subprocess.run(
-            [args.python, "-c", "import mlx_lm"], capture_output=True, text=True
-        )
-        if probe.returncode != 0:
-            raise SystemExit(
-                f"В интерпретаторе {args.python} нет mlx-lm; укажите --python "
-                "с установленным mlx-lm"
-            )
-        fused = workdir / "fused"
-        workdir.mkdir(parents=True, exist_ok=True)
-        run(
-            [
-                args.python,
-                "-m",
-                "mlx_lm",
-                "fuse",
-                "--model",
-                str(base),
-                "--adapter-path",
-                str(adapter),
-                "--save-path",
-                str(fused),
-            ]
-        )
-
-    modelfile = workdir / "Modelfile"
-    modelfile.write_text(f"FROM {fused}\n", encoding="utf-8")
-    command = ["ollama", "create", args.name, "-f", str(modelfile)]
-    if args.quantize:
-        command.extend(["--quantize", args.quantize])
-    run(command)
-
-    print(f"\nГотово: {args.name}")
-    print(f"Проверка: ollama show {args.name}")
-    print("Модель текстовая; для изображений используется OLLAMA_VISION_MODEL.")
-
+    p = argparse.ArgumentParser(description=__doc__)
+    p.add_argument("--base", type=Path, required=True)
+    p.add_argument("--adapter", type=Path, required=True)
+    p.add_argument("--host", default="127.0.0.1", help="Для Docker доступ через приватный интерфейс хоста; не публичный интернет")
+    p.add_argument("--port", type=int, default=8080)
+    p.add_argument("--serve", action="store_true", help="Явно запустить MLX server после проверки")
+    a = p.parse_args()
+    try:
+        verify(a.base, a.adapter)
+    except (ValueError, KeyError, OSError) as exc:
+        p.exit(1, f"Проверка модели не пройдена: {exc}\n")
+    print("База и последний адаптер проверены. Качество последнего адаптера не оценено.")
+    if not a.serve:
+        print("Сервер не запущен. Для запуска оператором добавьте --serve.")
+        return
+    os.environ["MLX_MAX_OPS_PER_BUFFER"] = "1"
+    os.environ["MLX_MAX_MB_PER_BUFFER"] = "10"
+    import mlx.core as mx
+    mx.set_memory_limit(9 * 1024**3)
+    mx.disable_compile()
+    from mlx_lm.server import main as serve
+    sys.argv = ["mlx_lm.server", "--model", str(a.base.resolve()),
+                "--adapter-path", str(a.adapter.resolve()), "--host", a.host,
+                "--port", str(a.port), "--chat-template-args", '{"enable_thinking":false}']
+    serve()
 
 if __name__ == "__main__":
     main()

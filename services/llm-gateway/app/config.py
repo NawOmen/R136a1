@@ -22,8 +22,14 @@ class Settings(BaseSettings):
     jwt_algorithm: Literal["HS256"] = "HS256"
 
     ollama_base_url: str = "http://host.docker.internal:11434"
+    local_llm_backend: Literal["mlx", "ollama"] = "mlx"
+    mlx_base_url: str = "http://host.docker.internal:8080"
+    trained_model_version: str = "porukam-buyer-1424-2043a052df09"
+    mlx_timeout_seconds: float = 180.0
+    mlx_max_tokens: int = Field(default=640, ge=1, le=2048)
+
     # Основная модель — обученный локальный кандидат; изображения распознаёт отдельная vision-модель.
-    ollama_model: str = "porukam-buyer-9b:latest"
+    ollama_model: str = "qwen3.5:9b"
     ollama_vision_model: str = "qwen3.5:9b"
     ollama_timeout_seconds: float = 180.0
     llm_context_tokens: int = 8192

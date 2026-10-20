@@ -1,20 +1,28 @@
 {
   "local_llm": {
-    "provider": "ollama",
-    "model": "porukam-buyer-9b:latest",
-    "context_tokens": 8192,
+    "provider": "mlx_lm.server",
+    "model": "porukam-buyer-1424-2043a052df09",
+    "api_model": "default_model",
     "base_model": "mlx-community/Qwen3.5-9B-4bit",
-    "adapter_sha256": "5b21b4eb2e7a50cb6027bf5b0ece6997cc6bf8b78d0ca285019dcd8c8ffcf3c9",
-    "digest": "sha256:bad417d2a2ad65fa30c10c2e8756e514ece3c45656fd56d09237e365be70b87a",
+    "base_revision": "8b2b98c00a6b4d291155e4890773ca8f769aee53",
+    "adapter_sha256": "2043a052df09167337bdfd7d003d6988a655bd87ea4bb93aae49d0144251b18e",
+    "saved_training_step": 1424,
+    "last_metric_step": 1429,
+    "planned_steps": 2160,
+    "full_pass_complete": false,
+    "quality_status": "Последний адаптер не оценён; не принят для автономной эксплуатации",
     "build_script": "infra/build_local_model.py",
-    "training_report": "docs/research/local-ml-training-report.md",
-    "quality_status": "кандидат для тестового контура; семантическая приёмка независимым экспертом не пройдена"
+    "training_report": "docs/research/local-ml-training-report.md"
   },
   "vision_llm": {
     "provider": "ollama",
     "model": "qwen3.5:9b",
     "purpose": "локальное OCR/распознавание изображений; у текстового обученного кандидата нет vision-башни"
   },
-  "speech_to_text": {"provider": "faster-whisper", "model": "small", "compute_type": "int8"},
+  "speech_to_text": {
+    "provider": "faster-whisper",
+    "model": "small",
+    "compute_type": "int8"
+  },
   "note": "Перед защитой оператор проверяет наличие этих моделей локально; внешняя LLM для офлайн-режима отключается."
 }

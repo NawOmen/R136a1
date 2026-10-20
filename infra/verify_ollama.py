@@ -1,25 +1,11 @@
-"""Проверка локальных моделей Ollama и замер производительности.
-
-Основная модель — обученный кандидат (`OLLAMA_MODEL`), изображения распознаёт
-отдельная vision-модель (`OLLAMA_VISION_MODEL`). Скрипт проверяет наличие обеих
-моделей и измеряет скорость генерации основной.
-
-Измеряет:
-- скорость генерации (ток/с) при холодном и прогретом запуске;
-- TTFT (время до первого токена) в прогретом режиме;
-- память модели через `ollama ps`;
-- печатает команды для замера RAM/VRAM на основном компьютере (Linux + RTX 5060).
-
-Запуск: python infra/verify_ollama.py
-"""
-
+"""Legacy/vision Ollama diagnostics only; trained text uses MLX (docs/ml-trained-deployment.md)."""
 import json
 import os
 import time
 import urllib.request
 
 OLLAMA = os.getenv("OLLAMA_BASE_URL", "http://localhost:11434")
-MODEL = os.getenv("OLLAMA_MODEL", "porukam-buyer-9b:latest")
+MODEL = os.getenv("OLLAMA_VISION_MODEL", "qwen3.5:9b")
 VISION_MODEL = os.getenv("OLLAMA_VISION_MODEL", "qwen3.5:9b")
 PROMPT = "Одним предложением ответь: что такое одноразовый бумажный стакан для горячих напитков?"
 

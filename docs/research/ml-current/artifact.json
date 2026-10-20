@@ -1,0 +1,8 @@
+{
+  "asset": "porukam-trained-latest.tar.gz",
+  "bytes": 19918159,
+  "sha256": "3fcd19648940e573eaeac4695e7c18ed9413c85b40b52e216cf1d9ad78043519",
+  "verified_files": 33,
+  "secret_scan": "no credential-like matches",
+  "latest_adapter_sha256": "2043a052df09167337bdfd7d003d6988a655bd87ea4bb93aae49d0144251b18e"
+}

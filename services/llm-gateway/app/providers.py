@@ -99,6 +99,46 @@ class OllamaProvider:
             raise ModelUnavailable("Локальное распознавание изображения недоступно") from exc
 
 
+class TrainedMLXProvider:
+    # Сохраняем версионированный идентификатор маршрута существующего API.
+    # Конкретная версия адаптера сохраняется отдельно в model_version.
+    route_name = "local_qwen"
+
+    async def structured(
+        self, system: str, prompt: str, response_model: type[BaseModel]
+    ) -> BaseModel:
+        schema = json.dumps(response_model.model_json_schema(), ensure_ascii=False)
+        payload = {
+            # MLX server связывает default_model с --model и --adapter-path.
+            # Произвольное имя здесь заставило бы сервер искать другую модель.
+            "model": "default_model",
+            "stream": False,
+            "temperature": 0,
+            "max_tokens": settings.mlx_max_tokens,
+            "messages": [
+                {"role": "system", "content": f"{system}\nВерни только JSON по схеме: {schema}"},
+                {"role": "user", "content": prompt},
+            ],
+        }
+        try:
+            async with httpx.AsyncClient(timeout=settings.mlx_timeout_seconds) as client:
+                response = await client.post(
+                    f"{settings.mlx_base_url.rstrip('/')}/v1/chat/completions", json=payload
+                )
+                response.raise_for_status()
+                content = response.json()["choices"][0]["message"]["content"]
+                if not isinstance(content, str):
+                    raise ValueError("Ожидался текст JSON")
+            return response_model.model_validate(_json_from_text(content))
+        except (httpx.HTTPError, KeyError, IndexError, TypeError, ValueError, ValidationError) as exc:
+            # Без скрытого переключения на базовую модель или внешний сервис.
+            raise ModelUnavailable("Обученная локальная модель недоступна или вернула неверный JSON") from exc
+
+    async def vision_text(self, image_base64: str, prompt: str) -> str:
+        # Адаптер обучен извлечению текста; vision остаётся отдельным маршрутом.
+        return await OllamaProvider().vision_text(image_base64, prompt)
+
+
 class DeepSeekProvider:
     route_name = "external_deepseek"
 
@@ -138,7 +178,7 @@ class DeepSeekProvider:
 
 class RoutedProvider:
     def __init__(self) -> None:
-        self.local = OllamaProvider()
+        self.local = TrainedMLXProvider() if settings.local_llm_backend == "mlx" else OllamaProvider()
         self.external = DeepSeekProvider()
 
     async def structured(

@@ -1,7 +1,7 @@
 {
-  "user_requested_stop": true,
-  "actual_eval_pid_exited": 63193,
-  "all26locks_free": true,
+  "user_stopped": true,
+  "actual_pid_exited": 35025,
+  "all31locks_free": true,
   "locks_free": [
     "/Users/assweg/Desktop/b2b/porukam-ml-experiments/.buyer-profile-broad-controller.lock",
     "/Users/assweg/Desktop/b2b/porukam-ml-experiments/.buyer-role-prompt-controller.lock",
@@ -28,15 +28,25 @@
     "/Users/assweg/Desktop/b2b/porukam-ml-experiments/buyer-prose-boundary-training-v1/session-v1/.controller.lock",
     "/Users/assweg/Desktop/b2b/porukam-ml-experiments/buyer-prose-frozen-kernel-training-v1/session-v1/.controller.lock",
     "/Users/assweg/Desktop/b2b/porukam-ml-experiments/buyer-prose-frozen-kernel-training-v1/session-v2/.controller.lock",
-    "/Users/assweg/Desktop/b2b/porukam-ml-experiments/buyer-prose-frozen-kernel-training-v1/valid-evaluation-v1/.controller.lock"
+    "/Users/assweg/Desktop/b2b/porukam-ml-experiments/buyer-prose-frozen-kernel-training-v1/valid-evaluation-v1/.controller.lock",
+    "/Users/assweg/Desktop/b2b/porukam-ml-experiments/buyer-fullpass-low-lr-v1/session-v1/.controller.lock",
+    "/Users/assweg/Desktop/b2b/porukam-ml-experiments/buyer-fullpass-low-lr-v1/session-v2/.controller.lock",
+    "/Users/assweg/Desktop/b2b/porukam-ml-experiments/buyer-fullpass-low-lr-v1/valid-evaluation-v1/.controller.lock",
+    "/Users/assweg/Desktop/b2b/porukam-ml-experiments/buyer-fullpass-low-lr-v1/valid-continuation-v1/.controller.lock",
+    "/Users/assweg/Desktop/b2b/porukam-ml-experiments/buyer-curriculum-training-v2/session-v1/.controller.lock"
   ],
-  "no_heavy_processes": true,
+  "no_heavy": true,
   "ollama_empty": true,
-  "own_databases": [],
-  "inputs_unchanged": true,
-  "partial_generated": 384,
-  "generation_complete": false,
-  "report_sha256": "1506dce5ebd7a383213176861fdf8f6a5d93e20148361147c9e9f9e7b0bf570f",
-  "final_adapter_sha256": "1b6caec3c043deed61ebb438602803ea91d47ca02d4e696bcc24482e631cabdf",
-  "no_resume": true
+  "own_databases_empty": true,
+  "input_sha_before_cleanup_unchanged": true,
+  "last_completed_metric_step": 1429,
+  "saved_adapter_step": 1424,
+  "planned_steps": 2160,
+  "full_pass_complete": false,
+  "adapter_sha256": "2043a052df09167337bdfd7d003d6988a655bd87ea4bb93aae49d0144251b18e",
+  "base_revision": "8b2b98c00a6b4d291155e4890773ca8f769aee53",
+  "base_required": true,
+  "new_adapter_quality_evaluated": false,
+  "quality_accepted": false,
+  "prior_adapter_metrics_not_applicable_to_this_adapter": true
 }

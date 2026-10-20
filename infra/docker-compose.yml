@@ -154,7 +154,11 @@ services:
       BUYER_TRIAL_ENABLED: ${BUYER_TRIAL_ENABLED:-true}
       JWT_SECRET: ${JWT_SECRET:?Задайте JWT_SECRET}
       OLLAMA_BASE_URL: ${OLLAMA_DOCKER_BASE_URL:-http://host.docker.internal:11434}
-      OLLAMA_MODEL: ${OLLAMA_MODEL:-porukam-buyer-9b:latest}
+      LOCAL_LLM_BACKEND: ${LOCAL_LLM_BACKEND:-mlx}
+      MLX_BASE_URL: ${MLX_BASE_URL:-http://host.docker.internal:8080}
+      TRAINED_MODEL_VERSION: porukam-buyer-1424-2043a052df09
+      MLX_MAX_TOKENS: ${MLX_MAX_TOKENS:-640}
+      OLLAMA_MODEL: ${OLLAMA_MODEL:-qwen3.5:9b}
       OLLAMA_VISION_MODEL: ${OLLAMA_VISION_MODEL:-qwen3.5:9b}
       LLM_CONTEXT_TOKENS: ${LLM_CONTEXT_TOKENS:-8192}
       DEEPSEEK_BASE_URL: ${DEEPSEEK_BASE_URL:-https://api.deepseek.com}

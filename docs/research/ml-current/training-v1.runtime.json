@@ -1,0 +1,93 @@
+{
+  "finished": false,
+  "started_utc": "2026-10-20T11:04:38.102487+00:00",
+  "config_sha256": "be4e1b080c6cbd90ee7983e2b6090638393eca4a4e1db14e0ef0426fe447ca34",
+  "memory_limit_gib": 9.0,
+  "boundary_loss": false,
+  "completion_loss": true,
+  "completion_tokens": 512,
+  "completion_chunk_size": 64,
+  "training_loader_sha256": "fde08f1cc46a3ff69ccc6a07efd963b560a8f1e92512d54ce7e97d305f714162",
+  "device": {
+    "device_name": "Apple M1 Pro",
+    "max_recommended_working_set_size": 12713115648,
+    "memory_size": 17179869184,
+    "architecture": "applegpu_g13s",
+    "max_buffer_length": 9534832640,
+    "resource_limit": 499000
+  },
+  "settings": {
+    "model": "/Users/assweg/Desktop/b2b/porukam-ml-experiments/model-9b-4bit",
+    "train": true,
+    "fine_tune_type": "lora",
+    "data": "/Users/assweg/Desktop/b2b/porukam-ml-experiments/buyer-curriculum-training-v2",
+    "seed": 1205,
+    "num_layers": 1,
+    "batch_size": 1,
+    "iters": 2160,
+    "learning_rate": 1e-05,
+    "steps_per_report": 1,
+    "steps_per_eval": 256,
+    "val_batches": 1,
+    "save_every": 16,
+    "adapter_path": "/Users/assweg/Desktop/b2b/porukam-ml-experiments/buyer-curriculum-training-v2/adapter-2160",
+    "max_seq_length": 1280,
+    "grad_checkpoint": true,
+    "mask_prompt": true,
+    "lora_parameters": {
+      "rank": 64,
+      "dropout": 0.05,
+      "scale": 2.0
+    },
+    "grad_accumulation_steps": 2,
+    "resume_adapter_file": "/Users/assweg/Desktop/b2b/porukam-ml-experiments/buyer-fullpass-low-lr-v1/adapter-2144/adapters.safetensors"
+  },
+  "data_sha256": {
+    "train": "d1afebcdb4c2be8757a8d79359f25c04164e61b3ef2777af5012c43f6ee2aa11",
+    "valid": "2f9d292d96c4f80643220cc02244b81d323d4ad0894b872d9177f7304f5ea227"
+  },
+  "script_sha256": "963dc19513f4021f387a3234d535f368861c9cb84343e8fbebf5977e7dee98bf",
+  "environment_lock_sha256": "3e664e9642a05c27fc59c6a1108c0e89e1e646d06b0666376c05639a314d9a8e",
+  "resume_adapter_sha256": "5b21b4eb2e7a50cb6027bf5b0ece6997cc6bf8b78d0ca285019dcd8c8ffcf3c9",
+  "model_revision": "8b2b98c00a6b4d291155e4890773ca8f769aee53",
+  "completion_bounds": {
+    "train": {
+      "min": 59,
+      "max": 495,
+      "count": 2160
+    },
+    "valid": {
+      "min": 118,
+      "max": 481,
+      "count": 588
+    }
+  },
+  "completion_loss_sha256": "f880c689d6f391113f76feff7e38ebeace8409a1a301ec4d67a46d03967e621d",
+  "source_snapshot": "/Users/assweg/Desktop/b2b/porukam-ml-experiments/buyer-curriculum-training-v2/source-snapshots/963dc19513f4021f387a3234d535f368861c9cb84343e8fbebf5977e7dee98bf",
+  "peak_memory_gb": 5.929,
+  "elapsed_seconds": 9130.9,
+  "training_loader": {
+    "name": "train_valid_only_loader_v1",
+    "holdout_file_read": false,
+    "heldout_evaluation": false,
+    "splits": [
+      "train",
+      "valid"
+    ]
+  },
+  "last_valid": {
+    "iteration": 1279,
+    "val_loss": 8.355351019417867e-05,
+    "val_time": 4.570815542001583
+  },
+  "last_train": {
+    "iteration": 1429,
+    "train_loss": 4.0708186133997515e-05,
+    "learning_rate": 9.999999747378752e-06,
+    "iterations_per_second": 0.17703792057097872,
+    "tokens_per_second": 29.565332735353447,
+    "trained_tokens": 378487,
+    "peak_memory": 5.92871422
+  },
+  "error": "KeyboardInterrupt: "
+}

@@ -1,0 +1,8 @@
+{
+  "release": "https://github.com/NawOmen/R136a1/releases/tag/ml-trained-latest-20261020",
+  "asset": "porukam-trained-latest.tar.gz",
+  "bytes": 19918159,
+  "sha256": "3fcd19648940e573eaeac4695e7c18ed9413c85b40b52e216cf1d9ad78043519",
+  "remote_digest_verified": true,
+  "inside_files_verified": 33
+}

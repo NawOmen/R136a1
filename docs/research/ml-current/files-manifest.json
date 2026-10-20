@@ -1,0 +1,170 @@
+{
+  "root_name": "porukam-trained-latest",
+  "files": [
+    {
+      "path": "BASE-MODEL-README.md",
+      "bytes": 666,
+      "sha256": "1407e3e3337063c280b2fe1a63724908a5051cfbf26cd8b98f247432b0382537"
+    },
+    {
+      "path": "adapter_config.json",
+      "bytes": 1350,
+      "sha256": "4833ec3bc1a3d126c26b070e30a13f0822a0ad31e82a0525c197b978e0793fde"
+    },
+    {
+      "path": "adapters.safetensors",
+      "bytes": 20448993,
+      "sha256": "2043a052df09167337bdfd7d003d6988a655bd87ea4bb93aae49d0144251b18e"
+    },
+    {
+      "path": "base-download-manifest.json",
+      "bytes": 12408,
+      "sha256": "c4b6f3fa889ca3248901bafc92d36214d2b6ce9fb12b87e5a94b0ca3eccc9cc1"
+    },
+    {
+      "path": "cpu-preflight.json",
+      "bytes": 405,
+      "sha256": "494f5f24b65dd7df2ea3ea7316834afd14808272fb7b87a2bdd849e9da6d6445"
+    },
+    {
+      "path": "evaluation-valid.jsonl",
+      "bytes": 2259491,
+      "sha256": "cbf672e955537be1b8f9dd2dd73ea160b24536710a32d79c73da0acbee03ce31"
+    },
+    {
+      "path": "manifest.json",
+      "bytes": 4134,
+      "sha256": "6d4427c590478866c2866a852f9455bcdc878631a66fec3f04df6c5f864c20f1"
+    },
+    {
+      "path": "obsolete-weights-removed.json",
+      "bytes": 113866,
+      "sha256": "ac289c0bf77191781ab7021b5816902b07723482c88f90dc0d0c641166841a1c"
+    },
+    {
+      "path": "preparation.json",
+      "bytes": 3374,
+      "sha256": "4921e485cd52c9e7ee953e4d4358170281497415569cde6dd4f9c982872ea99c"
+    },
+    {
+      "path": "processes-after.txt",
+      "bytes": 96099,
+      "sha256": "1ad33511de0b684ac76ddf246a5fdcb5b4d5bebd43243a9a24e73a0e642fea1c"
+    },
+    {
+      "path": "registry-snapshot.json",
+      "bytes": 452221,
+      "sha256": "f7b72968029bf6849921e7e2a6084edd3211dcbfe9b2503da5f0197e49c7d22d"
+    },
+    {
+      "path": "reproduction/aligned_chat_process_v1.py",
+      "bytes": 606,
+      "sha256": "4a9c76fd8bc2aff029dff28ab4922a8ad8e4a1b617f5c4a2ca5d0933da666af5"
+    },
+    {
+      "path": "reproduction/check_buyer_curriculum_training_v2_bounds.py",
+      "bytes": 1755,
+      "sha256": "dc42c7375537d7db24687b3e32179d1f3a83716d7eb81fe693412ac697ef7039"
+    },
+    {
+      "path": "reproduction/completion_loss.py",
+      "bytes": 1598,
+      "sha256": "f880c689d6f391113f76feff7e38ebeace8409a1a301ec4d67a46d03967e621d"
+    },
+    {
+      "path": "reproduction/coverage_iterator_v1.py",
+      "bytes": 4026,
+      "sha256": "ae4c2d86e178e208ac46dee8cdbbaca149093fefd096f09bc6c6f9bbb62585c9"
+    },
+    {
+      "path": "reproduction/device_metrics.py",
+      "bytes": 702,
+      "sha256": "ebc2f72480c194497e9920cc48ec08528ac948d83ed59f7edddac0945106bd11"
+    },
+    {
+      "path": "reproduction/frozen_gated_kernel_v2.py",
+      "bytes": 2431,
+      "sha256": "d7f3a7ef702514ca1da3f26467779a3d07d575ba2b7566a4e10b7befe4cbacb4"
+    },
+    {
+      "path": "reproduction/gpu_lock.py",
+      "bytes": 637,
+      "sha256": "c6f90533b789a39249acfacdc594c3317667fabf23ffa15d5252e427d47e098a"
+    },
+    {
+      "path": "reproduction/heavy_process_guard_v2.py",
+      "bytes": 1885,
+      "sha256": "267ae9fa4250aa1c2bae8ef34a3ce674bc9e7b8a1d29ac416ab098f43768ba3b"
+    },
+    {
+      "path": "reproduction/requirements-lock.txt",
+      "bytes": 651,
+      "sha256": "3e664e9642a05c27fc59c6a1108c0e89e1e646d06b0666376c05639a314d9a8e"
+    },
+    {
+      "path": "reproduction/start_buyer_curriculum_training_v2_session_v1.py",
+      "bytes": 8392,
+      "sha256": "b7d7c4b554220a7f6eb4c4e7ca2f904ae6d84d627add81a3ce45483bccbfee6f"
+    },
+    {
+      "path": "reproduction/train_buyer_v3.py",
+      "bytes": 5813,
+      "sha256": "963dc19513f4021f387a3234d535f368861c9cb84343e8fbebf5977e7dee98bf"
+    },
+    {
+      "path": "reproduction/train_valid_only_loader_v1.py",
+      "bytes": 4351,
+      "sha256": "fde08f1cc46a3ff69ccc6a07efd963b560a8f1e92512d54ce7e97d305f714162"
+    },
+    {
+      "path": "schedule.json",
+      "bytes": 254170,
+      "sha256": "691dac4da54ca1931fa14709f69ff1b4cbc779135e2c072e487a991f35be4229"
+    },
+    {
+      "path": "serve_latest.py",
+      "bytes": 3579,
+      "sha256": "4548ce7b2a56e87669bd259deb83ee7ced93b236e79e0ac5e9c2dd6d1eb3a70a"
+    },
+    {
+      "path": "state.json",
+      "bytes": 2308,
+      "sha256": "7f655e0eab0f62503d1ac5eddc451b5d20352aaee96d9d7605fc20747a83c591"
+    },
+    {
+      "path": "train-batches-issued.jsonl",
+      "bytes": 192416,
+      "sha256": "99005a418b697a273f5af99ce2eac4e9122b296ddb9feb92538556fae96760ac"
+    },
+    {
+      "path": "train.jsonl",
+      "bytes": 12164722,
+      "sha256": "d1afebcdb4c2be8757a8d79359f25c04164e61b3ef2777af5012c43f6ee2aa11"
+    },
+    {
+      "path": "training-v1.metrics.jsonl",
+      "bytes": 399797,
+      "sha256": "8c6a2b4939aa36cca936ec4e8ce210a50b58dbe48e055838270437f070449474"
+    },
+    {
+      "path": "training-v1.runtime.json",
+      "bytes": 3220,
+      "sha256": "59cd02ddf7a1b4616531e55089daef97123e0a7d52384bf46b9bf64cc4c18bd0"
+    },
+    {
+      "path": "training-v1.yaml",
+      "bytes": 710,
+      "sha256": "be4e1b080c6cbd90ee7983e2b6090638393eca4a4e1db14e0ef0426fe447ca34"
+    },
+    {
+      "path": "training.log",
+      "bytes": 86903,
+      "sha256": "988d8906a1776f25a24395fb6692f6d84232e41f9297c0e6d5ce796e86e8f5f3"
+    },
+    {
+      "path": "valid.jsonl",
+      "bytes": 3275822,
+      "sha256": "2f9d292d96c4f80643220cc02244b81d323d4ad0894b872d9177f7304f5ea227"
+    }
+  ]
+}

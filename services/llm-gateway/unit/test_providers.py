@@ -97,3 +97,69 @@ async def test_assistant_uses_compatible_grammar_but_keeps_output_validation(mon
     assert "minLength" not in schema["properties"]["answer"]
     assert "maxLength" not in schema["properties"]["answer"]
     assert schema["properties"]["links"]["maxItems"] == 3
+
+
+@pytest.mark.asyncio
+async def test_trained_mlx_default_route_and_validated_json(monkeypatch):
+    from app.providers import RoutedProvider, TrainedMLXProvider
+    class MLXResponse(FakeResponse):
+        def json(self):
+            return {"choices": [{"message": {"content": self.content}}]}
+    class MLXClient(RecordingClient):
+        async def post(self, url, json):
+            assert url.endswith('/v1/chat/completions')
+            self.payloads.append(json)
+            return MLXResponse('{"category":"Крепёж","facts":[]}')
+    MLXClient.payloads = []
+    monkeypatch.setattr(settings, 'local_llm_backend', 'mlx')
+    monkeypatch.setattr('app.providers.httpx.AsyncClient', MLXClient)
+    provider = RoutedProvider()
+    assert isinstance(provider.local, TrainedMLXProvider)
+    result, route, fallback = await provider.structured('system', 'prompt', RawExtraction, False)
+    assert result.category == 'Крепёж' and route == 'local_qwen' and fallback is None
+    payload = MLXClient.payloads[0]
+    assert payload['model'] == 'default_model'
+    assert payload['temperature'] == 0 and payload['stream'] is False
+    assert payload['max_tokens'] == 640
+    assert 'properties' in payload['messages'][0]['content']
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize('content', ['not json', '{}', '[]'])
+async def test_trained_mlx_bad_response_fails_without_base_fallback(monkeypatch, content):
+    from app.providers import TrainedMLXProvider
+    class BadResponse(FakeResponse):
+        def json(self):
+            return {'choices': [{'message': {'content': content}}]}
+    class Client(RecordingClient):
+        async def post(self, url, json):
+            assert '/api/chat' not in url
+            return BadResponse(content)
+    monkeypatch.setattr('app.providers.httpx.AsyncClient', Client)
+    with pytest.raises(ModelUnavailable):
+        await TrainedMLXProvider().structured('s', 'p', RawExtraction)
+
+
+@pytest.mark.asyncio
+async def test_trained_mlx_network_failure_does_not_call_ollama(monkeypatch):
+    import httpx
+    from app.providers import TrainedMLXProvider
+    urls = []
+    class Client(RecordingClient):
+        async def post(self, url, json):
+            urls.append(url)
+            raise httpx.ConnectError('synthetic unavailable')
+    monkeypatch.setattr('app.providers.httpx.AsyncClient', Client)
+    with pytest.raises(ModelUnavailable):
+        await TrainedMLXProvider().structured('s', 'p', RawExtraction)
+    assert len(urls) == 1 and urls[0].endswith('/v1/chat/completions')
+
+
+@pytest.mark.asyncio
+async def test_trained_text_keeps_vision_separate(monkeypatch):
+    from app.providers import TrainedMLXProvider
+    RecordingClient.payloads = []
+    monkeypatch.setattr('app.providers.httpx.AsyncClient', RecordingClient)
+    await TrainedMLXProvider().vision_text('synthetic', 'p')
+    assert RecordingClient.payloads[0]['model'] == settings.ollama_vision_model
+    assert 'images' in RecordingClient.payloads[0]['messages'][0]
