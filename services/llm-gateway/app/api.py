@@ -440,7 +440,7 @@ async def analyze_buyer_request(
                 "external_route_fallback",
                 "success",
                 "DeepSeek",
-                f"Выполнен возврат к локальной Qwen: {fallback}",
+                f"Выполнен возврат к локальной модели: {fallback}",
             )
         unreadable = (await db.scalars(select(AgentSource).where(
             AgentSource.run_id == run.id, AgentSource.active.is_(False), AgentSource.extracted_text == ""

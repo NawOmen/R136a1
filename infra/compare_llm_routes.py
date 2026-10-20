@@ -1,4 +1,4 @@
-"""Сравнение Qwen и DeepSeek на одинаковых синтетических задачах этапа 4.
+"""Сравнение локальной модели и DeepSeek на одинаковых синтетических задачах этапа 4.
 
 Скрипт не сохраняет ключ и не отправляет реальные данные. Без DEEPSEEK_API_KEY
 выполняется только обязательный локальный маршрут.
@@ -48,7 +48,7 @@ def main() -> None:
                 "options": {"temperature": 0.1, "num_ctx": 8192},
             },
         )
-        print(f"\nЗадача {number} | Qwen: {local_time:.2f} с\n{local[:1000]}")
+        print(f"\nЗадача {number} | Локальная модель: {local_time:.2f} с\n{local[:1000]}")
         if not DEEPSEEK_API_KEY:
             print("DeepSeek: пропущен — ключ не настроен")
             continue
