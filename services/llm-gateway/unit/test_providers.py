@@ -1,6 +1,7 @@
 import pytest
 from pydantic import BaseModel, Field
 
+from app.config import settings
 from app.providers import ModelUnavailable, OllamaProvider, _ollama_schema
 from app.schemas import PlatformAssistantOut, RawExtraction
 
@@ -48,6 +49,8 @@ async def test_ollama_typical_operations_disable_thinking(monkeypatch):
     assert image_text == "На изображении синтетический стакан"
     assert len(RecordingClient.payloads) == 2
     assert all(payload["think"] is False for payload in RecordingClient.payloads)
+    assert RecordingClient.payloads[0]["model"] == settings.ollama_model
+    assert RecordingClient.payloads[1]["model"] == settings.ollama_vision_model
 
 
 def test_ollama_schema_relaxes_only_string_lengths_in_schema_nodes():
