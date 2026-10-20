@@ -91,7 +91,7 @@ a:hover {
 
 .site-header {
   background: color-mix(in srgb, var(--surface) 86%, transparent);
-  backdrop-filter: saturate(180%) blur(8px);
+  -webkit-backdrop-filter: saturate(180%) blur(8px); backdrop-filter: saturate(180%) blur(8px);
   border-bottom: 1px solid var(--border);
   position: sticky;
   top: 0;
@@ -797,7 +797,7 @@ h2 {
 .site-header {
   background: color-mix(in srgb, var(--bg) 94%, transparent);
   border-bottom-color: var(--border);
-  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px); backdrop-filter: blur(18px);
 }
 
 .site-header__inner {

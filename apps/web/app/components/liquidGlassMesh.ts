@@ -1,6 +1,6 @@
 /** Original, bounded WebGL glass mesh. No DOM capture, textures or dependencies. */
 const vertex = `
-precision mediump float;
+precision highp float;
 attribute vec2 a_uv;
 uniform vec2 u_size, u_pointer;
 uniform float u_variant, u_gutter;
@@ -28,7 +28,7 @@ void main() {
 }`;
 
 const fragment = `
-precision mediump float;
+precision highp float;
 uniform vec2 u_size, u_pointer;
 uniform float u_dark, u_variant, u_gutter;
 uniform vec4 u_radii;
@@ -54,11 +54,13 @@ void main() {
   vec3 normal = normalize(v_normal + vec3(gradient * bevel * 1.65, 0.0));
   vec3 light = normalize(vec3(-0.6 + u_pointer.x * 0.38, 0.85 + u_pointer.y * 0.2, 1.1));
   float shine = pow(max(dot(normal, light),0.0), 18.0);
-  float fresnel = pow(1.0 - max(normal.z,0.0), 2.2);
+  float fresnel = pow(1.0 - clamp(normal.z,0.0,1.0), 2.2);
   float lip = exp(-abs(d + 1.5) / 1.1);
   float caustic = exp(-abs(d + 9.0) / 2.0);
   float diagonal = u_variant > 1.5 ? v_uv.x * 0.7 + v_uv.y : v_uv.x * 0.25 - v_uv.y;
-  float reflection = exp(-pow((diagonal - (u_variant > 1.5 ? 0.85 : -0.28) - u_pointer.x * 0.11) / 0.12,2.0));
+  // GLSL pow(x, 2.0) is undefined for negative x; Metal and ANGLE differ here.
+  float reflectionDistance = (diagonal - (u_variant > 1.5 ? 0.85 : -0.28) - u_pointer.x * 0.11) / 0.12;
+  float reflection = exp(-reflectionDistance * reflectionDistance);
   vec3 silver = mix(vec3(0.59,0.71,0.82),vec3(0.91,0.96,1.0),shine);
   vec3 color = mix(silver,vec3(1.0),clamp(lip * 0.8 + shine * 0.5,0.0,1.0));
   color = mix(color,vec3(0.30,0.46,0.63),caustic * 0.38);
@@ -72,6 +74,10 @@ type Material = "rail" | "help" | "procurement";
 export function createGlassMesh(host: HTMLElement, canvas: HTMLCanvasElement, variant: Material) {
   const gl = canvas.getContext("webgl", { alpha: true, antialias: false, depth: false, stencil: false, premultipliedAlpha: false, powerPreference: "low-power" });
   if (!gl) return;
+  // Pixel-space distances and their gradients need full float precision. If the
+  // GPU cannot supply it, keep the CSS material rather than draw corrupt glass.
+  const precision = gl.getShaderPrecisionFormat(gl.FRAGMENT_SHADER, gl.HIGH_FLOAT);
+  if (!precision || precision.precision < 16 || precision.rangeMax < 62) return;
   let gutter = 8;
   const shaders: WebGLShader[] = [];
   const compile = (type: number, source: string) => {

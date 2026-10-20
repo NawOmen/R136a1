@@ -97,6 +97,7 @@ export default function NewNeedPage() {
   const activeScope = useRef("");
   const analysisGeneration = useRef(0);
   const [loadedFilesKey, setLoadedFilesKey] = useState("");
+  const fileRestoreFailed = useRef(false);
   const draftKey = user && companyId ? `porukam:need-draft:${user.id}:${companyId}` : "";
 
   activeScope.current = draftKey;
@@ -105,10 +106,10 @@ export default function NewNeedPage() {
     if (!draftKey) return;
     let cancelled = false;
     const generation = ++analysisGeneration.current;
-    setLoadedFilesKey("");
+    setLoadedFilesKey(""); fileRestoreFailed.current = false;
     setAnalyzing(false); setSubmitting(false); setTranscribing(false); setRecording(false);
     void draftFiles(draftKey).then(saved => { if (!cancelled) { setFiles(saved); setLoadedFilesKey(draftKey); } })
-      .catch(() => { if (!cancelled) { setLoadedFilesKey(draftKey); setDraftNotice("Не удалось восстановить файлы в браузере. Выберите их повторно."); } });
+      .catch(() => { if (!cancelled) { fileRestoreFailed.current = true; setLoadedFilesKey(draftKey); setDraftNotice("Не удалось восстановить файлы в браузере. Выберите их повторно."); } });
     setAgentRun(null); setAnswers({}); setFiles([]); setSavedNeed(null); setManualExpanded(false);
     setRequestDescription(""); setRows([newRow("unit", "шт"), newRow()]); setCategory(PRODUCT_CATEGORIES[0]); setSubcategory("");
     setVolumeUnits(""); setBudgetRub(""); setDeadlineDate(""); setDeliveryAddressId("");
@@ -147,7 +148,8 @@ export default function NewNeedPage() {
   }, [draftKey, loadedDraftKey, requestDescription, category, subcategory, rows, volumeUnits, budgetRub, deadlineDate, deliveryAddressId, visibility, files.length, savedNeed, agentRun, answers]);
 
   useEffect(() => {
-    if (!draftKey || loadedFilesKey !== draftKey) return;
+    if (!draftKey || loadedFilesKey !== draftKey || (fileRestoreFailed.current && !files.length)) return;
+    fileRestoreFailed.current = false;
     void draftFiles(draftKey, files).catch(() => { if (activeScope.current === draftKey) setDraftNotice("Файлы не сохранены: недостаточно места в браузере. Не закрывайте вкладку или выберите файлы повторно."); });
   }, [draftKey, loadedFilesKey, files]);
 
@@ -189,22 +191,36 @@ export default function NewNeedPage() {
     if (!navigator.mediaDevices?.getUserMedia || typeof MediaRecorder === "undefined") {
       setError("Запись с микрофона недоступна. Приложите готовый аудиофайл ниже."); return;
     }
+    let stream: MediaStream | undefined;
     try {
       const scope = draftKey;
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const recordingStream = stream;
       if (activeScope.current !== scope) { stream.getTracks().forEach(track => track.stop()); return; }
-      const chunks: BlobPart[] = [];
-      const recorder = new MediaRecorder(stream);
+      const chunks: Blob[] = [];
+      const mimeType = ["audio/webm;codecs=opus", "audio/mp4", "audio/ogg;codecs=opus"].find(type => MediaRecorder.isTypeSupported(type));
+      const recorder = mimeType ? new MediaRecorder(recordingStream, { mimeType }) : new MediaRecorder(recordingStream);
       recorder.ondataavailable = (event) => { if (event.data.size) chunks.push(event.data); };
       recorder.onstop = () => {
-        stream.getTracks().forEach((track) => track.stop()); setRecording(false); setTranscribing(true);
-        const file = new File([new Blob(chunks, { type: recorder.mimeType || "audio/webm" })], "голосовой-запрос.webm", { type: recorder.mimeType || "audio/webm" });
+        recordingStream.getTracks().forEach((track) => track.stop());
+        if (recorderRef.current === recorder) recorderRef.current = null;
         if (activeScope.current !== scope) return;
+        setRecording(false);
+        if (!chunks.length) { setError("Запись пуста. Повторите запись или приложите аудиофайл."); return; }
+        const type = recorder.mimeType || chunks[0].type || mimeType || "audio/webm";
+        const media = type.split(";")[0].trim().toLowerCase();
+        const extension = media === "audio/mp4" || media === "video/mp4" ? "m4a" : media === "audio/ogg" ? "ogg" : "webm";
+        const file = new File(chunks, `голосовой-запрос.${extension}`, { type });
+        setTranscribing(true);
         setFiles(current => [...current, file]);
         void agents.transcribe(token, file).then((text) => { if (activeScope.current === scope) { setRequestDescription((current) => [current.trim(), text].filter(Boolean).join(" ")); setAgentRun(null); } }).catch((err: Error) => { if (activeScope.current === scope) setError(`${err.message}. Аудиофайл сохранён в материалах; можно повторить анализ.`); }).finally(() => { if (activeScope.current === scope) setTranscribing(false); });
       };
+      recorder.onerror = () => {
+        recordingStream.getTracks().forEach(track => track.stop());
+        if (activeScope.current === scope) { setRecording(false); setError("Не удалось записать звук. Повторите запись или приложите аудиофайл."); }
+      };
       recorderRef.current = recorder; recorder.start(); setRecording(true); setError(null);
-    } catch { setError("Не удалось получить доступ к микрофону. Разрешите доступ или загрузите аудиофайл."); }
+    } catch { stream?.getTracks().forEach(track => track.stop()); setError("Не удалось получить доступ к микрофону. Разрешите доступ или загрузите аудиофайл."); }
   }
 
   async function handleAddAddress() {

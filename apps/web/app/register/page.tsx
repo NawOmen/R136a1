@@ -18,8 +18,10 @@ export default function RegisterPage() {
   const [phone, setPhone] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [ready, setReady] = useState(false);
 
   useEffect(() => {
+    setReady(true);
     if (getToken()) router.replace("/dashboard");
   }, [router]);
 
@@ -63,6 +65,7 @@ export default function RegisterPage() {
       {error && <div className="alert alert-error">{error}</div>}
 
       <form className="card" onSubmit={handleSubmit}>
+        <fieldset className="auth-fields" disabled={!ready || submitting}>
         <div className="field">
           <label htmlFor="last_name">Фамилия<span className="req">*</span></label>
           <input
@@ -136,6 +139,7 @@ export default function RegisterPage() {
             {submitting ? "Регистрируем..." : "Зарегистрироваться"}
           </button>
         </div>
+        </fieldset>
       </form>
 
       <p className="hint">

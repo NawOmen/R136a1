@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import type { ReactNode } from "react";
 import "./globals.css";
 import "./design.css";
@@ -13,6 +13,8 @@ import { PageSurface } from "./components/PageSurface";
 import { Icon } from "./components/Icon";
 
 const manrope = localFont({ src: "./fonts/Manrope-variable.ttf", display: "swap", variable: "--font-manrope", weight: "200 800" });
+
+export const viewport: Viewport = { width: "device-width", initialScale: 1, viewportFit: "cover" };
 
 export const metadata: Metadata = {
   title: "ПоРукам",

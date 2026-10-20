@@ -324,3 +324,55 @@ Liquid-действия содержат отдельные материальн
 Извлечение основано на текущих `app/design.css`, `app/globals.css`, `app/layout.tsx`, `ProductCatalog`, `ProductCard`, `SiteNavigation`, `LiquidSurface` и `liquidGlassMesh`. Пользовательский макет просмотрен; эта документация не заявляет измеренный pixelmatch или полное пиксельное совпадение. Геометрия, шрифт и товарные данные в реализации проверяются отдельно от документирования.
 
 <!-- Current hero assets: matching hero-{help|procurement}-{light|dark}.png posters, then the original procedural Three.js scenes. Legacy WebP artwork is retained only as provenance and is not requested by these pages. -->
+
+## Совместимость и проверка на устройствах
+
+Один дизайн используется во всех браузерах. Для Safari заданы префиксные варианты backdrop-filter и mask-image. Декоративная WebGL-оболочка требует достаточной точности fragment shader; если её нет, остаётся CSS-материал. Формула отражения не использует `pow` с отрицательным основанием: такое вычисление не определено спецификацией GLSL и может давать разный результат на разных GPU. Источник: [спецификация GLSL](https://registry.khronos.org/OpenGL/specs/es/3.2/GLSL_ES_Specification_3.20.html).
+
+На touch-устройствах сохраняются статические материалы и постеры 3D-сцен, без реакции на несуществующее наведение мыши. Поля используют шрифт не меньше 16px; основные компактные переключатели и иконки имеют область нажатия не меньше 44px. Выемки экрана учитываются через safe-area, высота панели аккаунта — через динамический viewport. Масштабирование страницы пользователем разрешено.
+
+Вложения черновика сохраняются локально в IndexedDB как байты и метаданные, затем восстанавливаются в File. Запись микрофона выбирает доступный MIME-тип; MP4 получает расширение `.m4a`. Требуется разрешение на микрофон и защищённое соединение HTTPS (localhost допустим при локальной разработке). При недоступной записи можно приложить готовый файл.
+
+### Автоматическая проверка
+
+Матрица `tests/e2e/compatibility-browser.config.ts`: настольные Chromium и WebKit, iPhone и iPad на WebKit, Android на Chromium. Проверяются обе темы, каталог, поиск, сортировка, избранное, справочные страницы, панель аккаунта, портретная и альбомная ориентация, формы и вложения. Отдельный тест проверяет MP4-запись через подменённый MediaRecorder; это проверка обработки формата, а не физического микрофона. Тест GPU-отражения выполняется только при наличии WebGL с достаточной точностью; пропуск отображается явно.
+
+Перед запуском собрать web с публичными путями того же origin: `NEXT_PUBLIC_API_URL=/gateway NEXT_PUBLIC_MARKETPLACE_URL=/marketplace NEXT_PUBLIC_LLM_GATEWAY_URL=/llm pnpm build:web`. Затем из `tests/e2e` выполнить `pnpm exec playwright install --with-deps chromium webkit` и `pnpm exec playwright test --config compatibility-browser.config.ts`. API в этих сценариях перехвачены синтетическими ответами; это не проверка работающих backend-сервисов.
+
+Эмуляция размера и ввода не воспроизводит Apple GPU/Metal, системный микрофон и производительность реального телефона. WebKit на Linux также не является установленным Safari на macOS: [ограничения движков Playwright](https://playwright.dev/docs/browsers). Окончательная проверка конкретного MacBook проводится на самом устройстве.
+
+### Если на MacBook всё ещё искажаются рамки
+
+1. Открыть адрес сборки, в которую вошли изменения PR #155. До слияния PR обычный адрес основной ветки может показывать предыдущий дизайн. Сравнивать одну и ту же сборку и страницу на обоих компьютерах. Для доступа со второго устройства использовать [HTTPS-профиль из README](../../README.md#другие-устройства-и-https): `localhost` на телефоне или другом Mac указывает на само это устройство, а не на компьютер разработчика. Сертификат должен быть доверенным; API доступны через тот же адрес сайта.
+2. Записать версию Safari из меню «Safari → О Safari», версию macOS и модель/чип из «Об этом Mac». Сбросить только масштаб страницы сочетанием `⌘0`; оставить системные настройки экрана без изменений.
+3. Перезагрузить страницу. Если остаются признаки старой сборки, включить инструменты разработчика в «Safari → Настройки → Дополнения» (пункт показа функций для веб-разработчиков), затем выбрать «Разработка → Очистить кэши» и обновить страницу. Названия могут различаться с языком и версией Safari; см. [включение инструментов](https://developer.apple.com/documentation/safari-developer-tools/enabling-developer-features) и [меню Develop](https://developer.apple.com/documentation/safari-developer-tools/develop-menu). **Не удалять данные сайта, IndexedDB или историю:** там могут находиться несохранённые черновики и вложения.
+4. Проверить главную, каталог, «ИИ-закупки» и «Поддержку» в обеих темах. На Mac провести мышью вдоль правой и левой кромки объёмной рамки и убрать курсор. Проверить, что надписи не деформируются, кромка не исчезает и клики работают. На iPhone/iPad дополнительно повернуть устройство и открыть панель аккаунта; статичный материал на touch — ожидаемое поведение.
+5. Если дефект сохраняется, сделать снимок окна с проблемной кромкой, указать страницу, тему, масштаб и размер окна. Скрыть персональные и коммерческие данные. Для диагностики открыть Web Inspector (`⌥⌘I`), вкладку Console и выполнить приведённый ниже код. Он читает только возможности браузера и геометрию окна; не читает токены, документы, содержимое форм и хранилища.
+
+```js
+(() => {
+  const canvas = document.createElement('canvas');
+  const gl = canvas.getContext('webgl');
+  const precision = gl?.getShaderPrecisionFormat(gl.FRAGMENT_SHADER, gl.HIGH_FLOAT);
+  const result = {
+    browser: navigator.userAgent,
+    viewport: [innerWidth, innerHeight],
+    dpr: devicePixelRatio,
+    backdrop: CSS.supports('backdrop-filter', 'blur(1px)'),
+    webkitBackdrop: CSS.supports('-webkit-backdrop-filter', 'blur(1px)'),
+    mask: CSS.supports('mask-image', 'linear-gradient(black, transparent)'),
+    webkitMask: CSS.supports('-webkit-mask-image', 'linear-gradient(black, transparent)'),
+    webgl: !!gl,
+    highp: precision && { bits: precision.precision, rangeMax: precision.rangeMax },
+    glass: [...document.querySelectorAll('.liquid-surface__mesh')].map(c => ({
+      ready: c.dataset.ready ?? false, width: c.width, height: c.height,
+    })),
+    reducedMotion: matchMedia('(prefers-reduced-motion: reduce)').matches,
+    coarsePointer: matchMedia('(pointer: coarse)').matches,
+  };
+  gl?.getExtension('WEBGL_lose_context')?.loseContext();
+  return JSON.stringify(result, null, 2);
+})();
+```
+
+6. Передать результат и снимок для воспроизведения. Не отключать защиту Safari, CORS, WebGL или экспериментальные настройки ради сайта. Отдельная версия дизайна для одного устройства не требуется: исправление должно учитывать возможности браузера и сохранять рабочие сценарии у остальных пользователей.
