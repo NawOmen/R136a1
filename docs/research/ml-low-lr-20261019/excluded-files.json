@@ -1,0 +1,630 @@
+[
+  {
+    "path": "web-auth-runtime-v1",
+    "reason": "environment/dependency/cache/export/symlink"
+  },
+  {
+    "path": ".gateway-test-venv",
+    "reason": "environment/dependency/cache/export/symlink"
+  },
+  {
+    "path": "knowledge-marketplace-test-runtime-v1",
+    "reason": "environment/dependency/cache/export/symlink"
+  },
+  {
+    "path": "__pycache__",
+    "reason": "environment/dependency/cache/export/symlink"
+  },
+  {
+    "path": "knowledge-pytest-runtime-v1",
+    "reason": "environment/dependency/cache/export/symlink"
+  },
+  {
+    "path": "wheels",
+    "reason": "environment/dependency/cache/export/symlink"
+  },
+  {
+    "path": "exports",
+    "reason": "environment/dependency/cache/export/symlink"
+  },
+  {
+    "path": ".venv",
+    "reason": "environment/dependency/cache/export/symlink"
+  },
+  {
+    "path": "knowledge-migration-runtime-v1",
+    "reason": "environment/dependency/cache/export/symlink"
+  },
+  {
+    "path": "porukam-buyer-natural-test-v6.zip",
+    "reason": "secret-capable/temporary/dependency/database/legacy compressed duplicate"
+  },
+  {
+    "path": "porukam-buyer-natural-test-v5.zip",
+    "reason": "secret-capable/temporary/dependency/database/legacy compressed duplicate"
+  },
+  {
+    "path": "porukam-gateway-integration-v1.zip",
+    "reason": "secret-capable/temporary/dependency/database/legacy compressed duplicate"
+  },
+  {
+    "path": "porukam-buyer-business-fields-v1.zip",
+    "reason": "secret-capable/temporary/dependency/database/legacy compressed duplicate"
+  },
+  {
+    "path": "porukam-buyer-dataset-v6.zip",
+    "reason": "secret-capable/temporary/dependency/database/legacy compressed duplicate"
+  },
+  {
+    "path": ".buyer-role-prompt-controller.lock",
+    "reason": "secret-capable/temporary/dependency/database/legacy compressed duplicate"
+  },
+  {
+    "path": "porukam-buyer-dataset-v5.zip",
+    "reason": "secret-capable/temporary/dependency/database/legacy compressed duplicate"
+  },
+  {
+    "path": "porukam-buyer-marketplace-natural-v1.zip",
+    "reason": "secret-capable/temporary/dependency/database/legacy compressed duplicate"
+  },
+  {
+    "path": "porukam-buyer-dataset-v4.zip",
+    "reason": "secret-capable/temporary/dependency/database/legacy compressed duplicate"
+  },
+  {
+    "path": "porukam-buyer-dataset-v3.zip",
+    "reason": "secret-capable/temporary/dependency/database/legacy compressed duplicate"
+  },
+  {
+    "path": "porukam-buyer-dataset-v2.zip",
+    "reason": "secret-capable/temporary/dependency/database/legacy compressed duplicate"
+  },
+  {
+    "path": "porukam-knowledge-eval-v1.zip",
+    "reason": "secret-capable/temporary/dependency/database/legacy compressed duplicate"
+  },
+  {
+    "path": "porukam-buyer-marketplace-authored-v3.zip",
+    "reason": "secret-capable/temporary/dependency/database/legacy compressed duplicate"
+  },
+  {
+    "path": "porukam-seller-dataset-v2.zip",
+    "reason": "secret-capable/temporary/dependency/database/legacy compressed duplicate"
+  },
+  {
+    "path": "porukam-multimodal-eval-v1.zip",
+    "reason": "secret-capable/temporary/dependency/database/legacy compressed duplicate"
+  },
+  {
+    "path": ".buyer-profile-broad-controller.lock",
+    "reason": "secret-capable/temporary/dependency/database/legacy compressed duplicate"
+  },
+  {
+    "path": "porukam-buyer-marketplace-dataset-v3.zip",
+    "reason": "secret-capable/temporary/dependency/database/legacy compressed duplicate"
+  },
+  {
+    "path": "porukam-buyer-marketplace-authored-v4.zip",
+    "reason": "secret-capable/temporary/dependency/database/legacy compressed duplicate"
+  },
+  {
+    "path": "porukam-buyer-marketplace-dataset-v2.zip",
+    "reason": "secret-capable/temporary/dependency/database/legacy compressed duplicate"
+  },
+  {
+    "path": ".mlx-gpu.lock",
+    "reason": "secret-capable/temporary/dependency/database/legacy compressed duplicate"
+  },
+  {
+    "path": "porukam-buyer-adapter-v4.zip",
+    "reason": "secret-capable/temporary/dependency/database/legacy compressed duplicate"
+  },
+  {
+    "path": "porukam-whisper-eval-v1.zip",
+    "reason": "secret-capable/temporary/dependency/database/legacy compressed duplicate"
+  },
+  {
+    "path": "porukam-seller-eval-v1.zip",
+    "reason": "secret-capable/temporary/dependency/database/legacy compressed duplicate"
+  },
+  {
+    "path": "porukam-buyer-adapter-v3.zip",
+    "reason": "secret-capable/temporary/dependency/database/legacy compressed duplicate"
+  },
+  {
+    "path": "porukam-buyer-adapter-v2.zip",
+    "reason": "secret-capable/temporary/dependency/database/legacy compressed duplicate"
+  },
+  {
+    "path": "gateway-marketplace-need-pg-v3/synthetic-postgresql.sql",
+    "reason": "secret-capable/temporary/dependency/database/legacy compressed duplicate"
+  },
+  {
+    "path": "gateway-marketplace-need-pg-v4/synthetic-postgresql.sql",
+    "reason": "secret-capable/temporary/dependency/database/legacy compressed duplicate"
+  },
+  {
+    "path": "application-backend-full-regression-v2/synthetic-postgresql.sql",
+    "reason": "secret-capable/temporary/dependency/database/legacy compressed duplicate"
+  },
+  {
+    "path": "web-knowledge-editor-v2/synthetic-postgresql.sql",
+    "reason": "secret-capable/temporary/dependency/database/legacy compressed duplicate"
+  },
+  {
+    "path": "gateway-buyer-roles-pg-v2/synthetic-postgresql.sql",
+    "reason": "secret-capable/temporary/dependency/database/legacy compressed duplicate"
+  },
+  {
+    "path": "gateway-knowledge-mixed-valid-v2/synthetic-postgresql.sql",
+    "reason": "secret-capable/temporary/dependency/database/legacy compressed duplicate"
+  },
+  {
+    "path": "application-connected-regression-v1/synthetic-postgresql.sql",
+    "reason": "secret-capable/temporary/dependency/database/legacy compressed duplicate"
+  },
+  {
+    "path": "buyer-prose-recovery-v1/session-v1/.controller.lock",
+    "reason": "secret-capable/temporary/dependency/database/legacy compressed duplicate"
+  },
+  {
+    "path": "buyer-prose-recovery-v1/session-v1/source-snapshots/.venv",
+    "reason": "environment/dependency/cache/export/symlink"
+  },
+  {
+    "path": "gateway-marketplace-need-pg-v2/synthetic-postgresql.sql",
+    "reason": "secret-capable/temporary/dependency/database/legacy compressed duplicate"
+  },
+  {
+    "path": "knowledge-publication-pg-v1/synthetic-postgresql.sql",
+    "reason": "secret-capable/temporary/dependency/database/legacy compressed duplicate"
+  },
+  {
+    "path": "gateway-buyer-budget-paired-valid-v1-cpu/synthetic-postgresql.sql",
+    "reason": "secret-capable/temporary/dependency/database/legacy compressed duplicate"
+  },
+  {
+    "path": "buyer-creation-permission-browser-v1/synthetic-postgresql.sql",
+    "reason": "secret-capable/temporary/dependency/database/legacy compressed duplicate"
+  },
+  {
+    "path": "buyer-commercial-coverage-v1/session-v1/.controller.lock",
+    "reason": "secret-capable/temporary/dependency/database/legacy compressed duplicate"
+  },
+  {
+    "path": "buyer-commercial-coverage-v1/session-v1/source-snapshots/.venv",
+    "reason": "environment/dependency/cache/export/symlink"
+  },
+  {
+    "path": "buyer-prose-boundary-training-v1/session-v1/.controller.lock",
+    "reason": "secret-capable/temporary/dependency/database/legacy compressed duplicate"
+  },
+  {
+    "path": "buyer-prose-boundary-training-v1/session-v1/source-snapshots/.venv",
+    "reason": "environment/dependency/cache/export/symlink"
+  },
+  {
+    "path": "buyer-commercial-coverage-uncompiled-v1/session-v1/.controller.lock",
+    "reason": "secret-capable/temporary/dependency/database/legacy compressed duplicate"
+  },
+  {
+    "path": "buyer-commercial-coverage-uncompiled-v1/session-v1/source-snapshots/.venv",
+    "reason": "environment/dependency/cache/export/symlink"
+  },
+  {
+    "path": "buyer-commercial-coverage-uncompiled-v1/valid-evaluation-continuation-v1/runtime",
+    "reason": "environment/dependency/cache/export/symlink"
+  },
+  {
+    "path": "buyer-commercial-coverage-uncompiled-v1/valid-evaluation-continuation-v1/.controller.lock",
+    "reason": "secret-capable/temporary/dependency/database/legacy compressed duplicate"
+  },
+  {
+    "path": "buyer-commercial-coverage-uncompiled-v1/session-v2/.controller.lock",
+    "reason": "secret-capable/temporary/dependency/database/legacy compressed duplicate"
+  },
+  {
+    "path": "buyer-commercial-coverage-uncompiled-v1/session-v2/source-snapshots/.venv",
+    "reason": "environment/dependency/cache/export/symlink"
+  },
+  {
+    "path": "buyer-commercial-coverage-uncompiled-v1/valid-evaluation-v1/runtime",
+    "reason": "environment/dependency/cache/export/symlink"
+  },
+  {
+    "path": "buyer-commercial-coverage-uncompiled-v1/valid-evaluation-v1/.controller.lock",
+    "reason": "secret-capable/temporary/dependency/database/legacy compressed duplicate"
+  },
+  {
+    "path": "buyer-fullpass-low-lr-v1/valid-continuation-v1/runtime",
+    "reason": "environment/dependency/cache/export/symlink"
+  },
+  {
+    "path": "buyer-fullpass-low-lr-v1/valid-continuation-v1/.controller.lock",
+    "reason": "secret-capable/temporary/dependency/database/legacy compressed duplicate"
+  },
+  {
+    "path": "buyer-fullpass-low-lr-v1/session-v1/.controller.lock",
+    "reason": "secret-capable/temporary/dependency/database/legacy compressed duplicate"
+  },
+  {
+    "path": "buyer-fullpass-low-lr-v1/session-v1/source-snapshots/.venv",
+    "reason": "environment/dependency/cache/export/symlink"
+  },
+  {
+    "path": "buyer-fullpass-low-lr-v1/session-v2/.controller.lock",
+    "reason": "secret-capable/temporary/dependency/database/legacy compressed duplicate"
+  },
+  {
+    "path": "buyer-fullpass-low-lr-v1/session-v2/source-snapshots/.venv",
+    "reason": "environment/dependency/cache/export/symlink"
+  },
+  {
+    "path": "buyer-fullpass-low-lr-v1/valid-evaluation-v1/runtime",
+    "reason": "environment/dependency/cache/export/symlink"
+  },
+  {
+    "path": "buyer-fullpass-low-lr-v1/valid-evaluation-v1/.controller.lock",
+    "reason": "secret-capable/temporary/dependency/database/legacy compressed duplicate"
+  },
+  {
+    "path": "gateway-seller-ollama-diagnostic-v1/.controller.lock",
+    "reason": "secret-capable/temporary/dependency/database/legacy compressed duplicate"
+  },
+  {
+    "path": "web-knowledge-browser-v2/frontend-source/node_modules",
+    "reason": "environment/dependency/cache/export/symlink"
+  },
+  {
+    "path": "web-knowledge-browser-v2/frontend-source/.next",
+    "reason": "environment/dependency/cache/export/symlink"
+  },
+  {
+    "path": "web-declared-dependencies-v1/.pnpm-store",
+    "reason": "environment/dependency/cache/export/symlink"
+  },
+  {
+    "path": "web-declared-dependencies-v1/node_modules",
+    "reason": "environment/dependency/cache/export/symlink"
+  },
+  {
+    "path": "web-declared-dependencies-v1/package-manager/package/dist/node_modules",
+    "reason": "environment/dependency/cache/export/symlink"
+  },
+  {
+    "path": "web-declared-dependencies-v1/apps/web/node_modules",
+    "reason": "environment/dependency/cache/export/symlink"
+  },
+  {
+    "path": "web-declared-dependencies-v1/apps/web/.next",
+    "reason": "environment/dependency/cache/export/symlink"
+  },
+  {
+    "path": "gateway-whisper-valid-v1/licenses/av/AUTHORS.cpython-313.pyc",
+    "reason": "secret-capable/temporary/dependency/database/legacy compressed duplicate"
+  },
+  {
+    "path": "quantization-comparison-6bit-v1/.controller.lock",
+    "reason": "secret-capable/temporary/dependency/database/legacy compressed duplicate"
+  },
+  {
+    "path": "seller-need-review-browser-v1/synthetic-postgresql.sql",
+    "reason": "secret-capable/temporary/dependency/database/legacy compressed duplicate"
+  },
+  {
+    "path": "seller-v2/run-seller-9b-4bit-a-session/.controller.lock",
+    "reason": "secret-capable/temporary/dependency/database/legacy compressed duplicate"
+  },
+  {
+    "path": "gateway-buyer-budget-paired-valid-v1/synthetic-postgresql.sql",
+    "reason": "secret-capable/temporary/dependency/database/legacy compressed duplicate"
+  },
+  {
+    "path": "buyer-prose-frozen-kernel-training-v1/session-v1/.controller.lock",
+    "reason": "secret-capable/temporary/dependency/database/legacy compressed duplicate"
+  },
+  {
+    "path": "buyer-prose-frozen-kernel-training-v1/session-v1/source-snapshots/.venv",
+    "reason": "environment/dependency/cache/export/symlink"
+  },
+  {
+    "path": "buyer-prose-frozen-kernel-training-v1/session-v2/.controller.lock",
+    "reason": "secret-capable/temporary/dependency/database/legacy compressed duplicate"
+  },
+  {
+    "path": "buyer-prose-frozen-kernel-training-v1/session-v2/source-snapshots/.venv",
+    "reason": "environment/dependency/cache/export/symlink"
+  },
+  {
+    "path": "buyer-prose-frozen-kernel-training-v1/valid-evaluation-v1/runtime",
+    "reason": "environment/dependency/cache/export/symlink"
+  },
+  {
+    "path": "buyer-prose-frozen-kernel-training-v1/valid-evaluation-v1/.controller.lock",
+    "reason": "secret-capable/temporary/dependency/database/legacy compressed duplicate"
+  },
+  {
+    "path": "gateway-buyer-evidence-pg-v1/synthetic-postgresql.sql",
+    "reason": "secret-capable/temporary/dependency/database/legacy compressed duplicate"
+  },
+  {
+    "path": "gateway-vision-valid-v1/synthetic-postgresql.sql",
+    "reason": "secret-capable/temporary/dependency/database/legacy compressed duplicate"
+  },
+  {
+    "path": "gateway-vision-valid-v1/.controller.lock",
+    "reason": "secret-capable/temporary/dependency/database/legacy compressed duplicate"
+  },
+  {
+    "path": "gateway-vision-valid-v1/dependency-licenses/onnxruntime",
+    "reason": "environment/dependency/cache/export/symlink"
+  },
+  {
+    "path": "gateway-vision-valid-v1/dependency-licenses/packaging/packaging/licenses/__pycache__",
+    "reason": "environment/dependency/cache/export/symlink"
+  },
+  {
+    "path": "gateway-vision-valid-v1/dependency-licenses/av/av-18.1.0.dist-info/licenses/__pycache__",
+    "reason": "environment/dependency/cache/export/symlink"
+  },
+  {
+    "path": "gateway-vision-valid-v1/dependency-licenses/pip/pip/_vendor/packaging/licenses/__pycache__",
+    "reason": "environment/dependency/cache/export/symlink"
+  },
+  {
+    "path": "knowledge-application-pytest-v3/synthetic-postgresql.sql",
+    "reason": "secret-capable/temporary/dependency/database/legacy compressed duplicate"
+  },
+  {
+    "path": "knowledge-application-pytest-v4/synthetic-postgresql.sql",
+    "reason": "secret-capable/temporary/dependency/database/legacy compressed duplicate"
+  },
+  {
+    "path": "knowledge-application-check-v1/synthetic-postgresql.sql",
+    "reason": "secret-capable/temporary/dependency/database/legacy compressed duplicate"
+  },
+  {
+    "path": "knowledge-application-pytest-v2/synthetic-postgresql.sql",
+    "reason": "secret-capable/temporary/dependency/database/legacy compressed duplicate"
+  },
+  {
+    "path": "knowledge-application-browser-v2/synthetic-postgresql.sql",
+    "reason": "secret-capable/temporary/dependency/database/legacy compressed duplicate"
+  },
+  {
+    "path": "gateway-knowledge-pg-v1/synthetic-postgresql.sql",
+    "reason": "secret-capable/temporary/dependency/database/legacy compressed duplicate"
+  },
+  {
+    "path": "web-knowledge-editor-v1/synthetic-postgresql.sql",
+    "reason": "secret-capable/temporary/dependency/database/legacy compressed duplicate"
+  },
+  {
+    "path": "gateway-buyer-roles-pg-v1/synthetic-postgresql.sql",
+    "reason": "secret-capable/temporary/dependency/database/legacy compressed duplicate"
+  },
+  {
+    "path": "gateway-seller-ollama-valid-v1/.controller.lock",
+    "reason": "secret-capable/temporary/dependency/database/legacy compressed duplicate"
+  },
+  {
+    "path": "application-backend-full-regression-v1/synthetic-postgresql.sql",
+    "reason": "secret-capable/temporary/dependency/database/legacy compressed duplicate"
+  },
+  {
+    "path": "gateway-seller-ollama-grounded-valid-v1/.controller.lock",
+    "reason": "secret-capable/temporary/dependency/database/legacy compressed duplicate"
+  },
+  {
+    "path": "gateway-buyer-role-prompt-valid-v1-cpu/synthetic-postgresql.sql",
+    "reason": "secret-capable/temporary/dependency/database/legacy compressed duplicate"
+  },
+  {
+    "path": "knowledge-publication-pg-v2/synthetic-postgresql.sql",
+    "reason": "secret-capable/temporary/dependency/database/legacy compressed duplicate"
+  },
+  {
+    "path": "buyer-marketplace-v3/run-9b-4bit-a-session/.controller.lock",
+    "reason": "secret-capable/temporary/dependency/database/legacy compressed duplicate"
+  },
+  {
+    "path": "gateway-marketplace-need-pg-v1/synthetic-postgresql.sql",
+    "reason": "secret-capable/temporary/dependency/database/legacy compressed duplicate"
+  },
+  {
+    "path": "buyer-prose-curriculum-v1/__pycache__",
+    "reason": "environment/dependency/cache/export/symlink"
+  },
+  {
+    "path": "gateway-whisper-valid-v3/dependency-licenses/onnxruntime",
+    "reason": "environment/dependency/cache/export/symlink"
+  },
+  {
+    "path": "gateway-whisper-valid-v3/dependency-licenses/packaging/packaging/licenses/__pycache__",
+    "reason": "environment/dependency/cache/export/symlink"
+  },
+  {
+    "path": "gateway-whisper-valid-v3/dependency-licenses/av/av-18.1.0.dist-info/licenses/__pycache__",
+    "reason": "environment/dependency/cache/export/symlink"
+  },
+  {
+    "path": "gateway-whisper-valid-v3/dependency-licenses/pip/pip/_vendor/packaging/licenses/__pycache__",
+    "reason": "environment/dependency/cache/export/symlink"
+  },
+  {
+    "path": "buyer-commercial-mix-v1/session-v1/.controller.lock",
+    "reason": "secret-capable/temporary/dependency/database/legacy compressed duplicate"
+  },
+  {
+    "path": "buyer-commercial-mix-v1/valid-evaluation-v1/runtime",
+    "reason": "environment/dependency/cache/export/symlink"
+  },
+  {
+    "path": "buyer-commercial-mix-v1/valid-evaluation-v1/.controller.lock",
+    "reason": "secret-capable/temporary/dependency/database/legacy compressed duplicate"
+  },
+  {
+    "path": "gateway-buyer-role-prompt-valid-v1/synthetic-postgresql.sql",
+    "reason": "secret-capable/temporary/dependency/database/legacy compressed duplicate"
+  },
+  {
+    "path": "web-dependency-registry-preflight-v1/pnpm-10.28.1.tgz",
+    "reason": "secret-capable/temporary/dependency/database/legacy compressed duplicate"
+  },
+  {
+    "path": "gateway-buyer-profile-broad-valid-v2/synthetic-postgresql.sql",
+    "reason": "secret-capable/temporary/dependency/database/legacy compressed duplicate"
+  },
+  {
+    "path": "gateway-buyer-profile-broad-valid-v2/dependency-licenses/onnxruntime",
+    "reason": "environment/dependency/cache/export/symlink"
+  },
+  {
+    "path": "gateway-buyer-profile-broad-valid-v2/dependency-licenses/packaging/packaging/licenses/__pycache__",
+    "reason": "environment/dependency/cache/export/symlink"
+  },
+  {
+    "path": "gateway-buyer-profile-broad-valid-v2/dependency-licenses/av/av-18.1.0.dist-info/licenses/__pycache__",
+    "reason": "environment/dependency/cache/export/symlink"
+  },
+  {
+    "path": "gateway-buyer-profile-broad-valid-v2/dependency-licenses/pip/pip/_vendor/packaging/licenses/__pycache__",
+    "reason": "environment/dependency/cache/export/symlink"
+  },
+  {
+    "path": "web-knowledge-browser-v1/frontend-source/node_modules",
+    "reason": "environment/dependency/cache/export/symlink"
+  },
+  {
+    "path": "web-knowledge-browser-v1/frontend-source/.next",
+    "reason": "environment/dependency/cache/export/symlink"
+  },
+  {
+    "path": "web-authenticated-frontend-v1/node_modules",
+    "reason": "environment/dependency/cache/export/symlink"
+  },
+  {
+    "path": "web-authenticated-frontend-v1/.next",
+    "reason": "environment/dependency/cache/export/symlink"
+  },
+  {
+    "path": "gateway-buyer-profile-broad-valid-v2-cpu/synthetic-postgresql.sql",
+    "reason": "secret-capable/temporary/dependency/database/legacy compressed duplicate"
+  },
+  {
+    "path": "seller-need-review-browser-v2/synthetic-postgresql.sql",
+    "reason": "secret-capable/temporary/dependency/database/legacy compressed duplicate"
+  },
+  {
+    "path": "web-knowledge-editor-frontend-v1/node_modules",
+    "reason": "environment/dependency/cache/export/symlink"
+  },
+  {
+    "path": "web-knowledge-editor-frontend-v1/.next",
+    "reason": "environment/dependency/cache/export/symlink"
+  },
+  {
+    "path": "gateway-buyer-evidence-pg-v3/synthetic-postgresql.sql",
+    "reason": "secret-capable/temporary/dependency/database/legacy compressed duplicate"
+  },
+  {
+    "path": "gateway-buyer-evidence-pg-v4/synthetic-postgresql.sql",
+    "reason": "secret-capable/temporary/dependency/database/legacy compressed duplicate"
+  },
+  {
+    "path": "web-knowledge-authenticated-v2/auth-runtime-licenses",
+    "reason": "environment/dependency/cache/export/symlink"
+  },
+  {
+    "path": "web-knowledge-authenticated-v2/synthetic-postgresql.sql",
+    "reason": "secret-capable/temporary/dependency/database/legacy compressed duplicate"
+  },
+  {
+    "path": "gateway-buyer-profile-broad-valid-v1-cpu/synthetic-postgresql.sql",
+    "reason": "secret-capable/temporary/dependency/database/legacy compressed duplicate"
+  },
+  {
+    "path": "buyer-prose-training-v1/session-v1/.controller.lock",
+    "reason": "secret-capable/temporary/dependency/database/legacy compressed duplicate"
+  },
+  {
+    "path": "buyer-prose-training-v1/session-v1/source-snapshots/.venv",
+    "reason": "environment/dependency/cache/export/symlink"
+  },
+  {
+    "path": "gateway-buyer-evidence-pg-v5/synthetic-postgresql.sql",
+    "reason": "secret-capable/temporary/dependency/database/legacy compressed duplicate"
+  },
+  {
+    "path": "gateway-buyer-evidence-pg-v2/synthetic-postgresql.sql",
+    "reason": "secret-capable/temporary/dependency/database/legacy compressed duplicate"
+  },
+  {
+    "path": "buyer-prose-cpu-continuation-v1/session-v1/.controller.lock",
+    "reason": "secret-capable/temporary/dependency/database/legacy compressed duplicate"
+  },
+  {
+    "path": "buyer-prose-cpu-continuation-v1/session-v1/source-snapshots/.venv",
+    "reason": "environment/dependency/cache/export/symlink"
+  },
+  {
+    "path": "knowledge-application-check-v4/synthetic-postgresql.sql",
+    "reason": "secret-capable/temporary/dependency/database/legacy compressed duplicate"
+  },
+  {
+    "path": "knowledge-application-check-v3/synthetic-postgresql.sql",
+    "reason": "secret-capable/temporary/dependency/database/legacy compressed duplicate"
+  },
+  {
+    "path": "gateway-buyer-profile-valid-v1/synthetic-postgresql.sql",
+    "reason": "secret-capable/temporary/dependency/database/legacy compressed duplicate"
+  },
+  {
+    "path": "gateway-buyer-profile-valid-v1/.controller.lock",
+    "reason": "secret-capable/temporary/dependency/database/legacy compressed duplicate"
+  },
+  {
+    "path": "gateway-buyer-profile-valid-v1/dependency-licenses/onnxruntime",
+    "reason": "environment/dependency/cache/export/symlink"
+  },
+  {
+    "path": "gateway-buyer-profile-valid-v1/dependency-licenses/packaging/packaging/licenses/__pycache__",
+    "reason": "environment/dependency/cache/export/symlink"
+  },
+  {
+    "path": "gateway-buyer-profile-valid-v1/dependency-licenses/av/av-18.1.0.dist-info/licenses/__pycache__",
+    "reason": "environment/dependency/cache/export/symlink"
+  },
+  {
+    "path": "gateway-buyer-profile-valid-v1/dependency-licenses/pip/pip/_vendor/packaging/licenses/__pycache__",
+    "reason": "environment/dependency/cache/export/symlink"
+  },
+  {
+    "path": "gateway-integration-v1/dependency-licenses/pip/pip___vendor__packaging__licenses____pycache______init__.cpython-313.pyc",
+    "reason": "secret-capable/temporary/dependency/database/legacy compressed duplicate"
+  },
+  {
+    "path": "gateway-integration-v1/dependency-licenses/pip/pip___vendor__packaging__licenses____pycache_____spdx.cpython-313.pyc",
+    "reason": "secret-capable/temporary/dependency/database/legacy compressed duplicate"
+  },
+  {
+    "path": "knowledge-application-browser-v1/synthetic-postgresql.sql",
+    "reason": "secret-capable/temporary/dependency/database/legacy compressed duplicate"
+  },
+  {
+    "path": "buyer-adoption-browser-v1/synthetic-postgresql.sql",
+    "reason": "secret-capable/temporary/dependency/database/legacy compressed duplicate"
+  },
+  {
+    "path": "knowledge-application-check-v2/synthetic-postgresql.sql",
+    "reason": "secret-capable/temporary/dependency/database/legacy compressed duplicate"
+  },
+  {
+    "path": "knowledge-application-pytest-v1/synthetic-postgresql.sql",
+    "reason": "secret-capable/temporary/dependency/database/legacy compressed duplicate"
+  },
+  {
+    "path": "quantization-comparison-v1/.controller.lock",
+    "reason": "secret-capable/temporary/dependency/database/legacy compressed duplicate"
+  }
+]
