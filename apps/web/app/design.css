@@ -392,4 +392,31 @@ html { --page-gutter:clamp(35px,2.73vw,44px); --header-gutter:clamp(32px,2.73vw,
   .catalog-categories nav { -webkit-overflow-scrolling:touch; }
 }
 
-.auth-fields { min-width:0; margin:0; padding:0; border:0; }
+.auth-fields,.form-fieldset { min-width:0; margin:0; padding:0; border:0; }
+
+/* Compact stock and order thresholds; neither implies a reserved allocation. */
+.product-stock { position:absolute; top:10px; left:10px; max-width:calc(100% - 62px); padding:5px 8px; border-radius:6px; color:var(--text-muted); background:var(--surface); font-size:11px; font-weight:650; line-height:1.35; }
+.product-stock--available { color:var(--success); background:var(--success-soft); }
+.market-product__visual>span.product-stock { font-size:11px; font-weight:650; opacity:1; }
+.product-gallery { position:relative; }
+.market-price>small { font-size:.62em; font-weight:600; }
+.product-conditions { color:var(--text-muted); font-size:12px; line-height:1.4; }
+:root[data-theme="dark"] .catalog-categories button svg { color:var(--primary); }
+
+.date-input { position:relative; display:block; width:100%; min-width:0; }
+.date-input>input { width:100%; padding-right:44px; font-variant-numeric:tabular-nums; }
+.date-input__trigger { position:absolute; top:50%; right:2px; transform:translateY(-50%); display:grid; place-items:center; width:40px; height:40px; border:0; border-radius:8px; background:transparent; color:var(--text-muted); cursor:pointer; }
+.date-input__trigger:hover { color:var(--text); background:var(--primary-soft); }
+.date-input__trigger:disabled { cursor:default; opacity:.5; }
+.date-calendar { position:fixed; z-index:100; width:288px; max-width:calc(100vw - 16px); max-height:calc(100dvh - 16px); overflow:auto; padding:12px; border:1px solid var(--border); border-radius:14px; color:var(--text); background:var(--picker-solid); box-shadow:var(--shadow-md); }
+.date-calendar__head { display:flex; justify-content:space-between; align-items:center; gap:8px; margin-bottom:8px; }
+.date-calendar__head strong { font-size:14px; text-transform:capitalize; }
+.date-calendar button { min-height:36px; border:0; border-radius:7px; color:var(--text); background:transparent; font:inherit; cursor:pointer; }
+.date-calendar__head button { display:grid; place-items:center; width:36px; }
+.date-calendar button:hover:not(:disabled) { background:var(--primary-soft); }
+.date-calendar button:disabled { opacity:.35; cursor:default; }
+.date-calendar__grid { display:grid; grid-template-columns:repeat(7,minmax(0,1fr)); gap:1px; text-align:center; font-size:13px; font-variant-numeric:tabular-nums; }
+.date-calendar__grid>span { padding:6px 0; color:var(--text-muted); }
+.date-calendar__grid [aria-pressed="true"] { background:var(--primary); color:var(--on-primary); }
+.date-calendar__close { width:100%; margin-top:8px; }
+@media (pointer:coarse) { .date-input__trigger { width:44px; height:44px; } .date-calendar button { min-height:44px; } }

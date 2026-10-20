@@ -1,4 +1,5 @@
 "use client";
+import { formatDate } from "../../lib/dates";
 import { russianMessage } from "../../lib/russianMessages";
 import CommercialEstimate from "../../components/CommercialEstimate";
 
@@ -291,11 +292,11 @@ export default function NeedDetailPage() {
           </div>
           <div>
             <dt>Срок выполнения</dt>
-            <dd>{need.deadline_date}</dd>
+            <dd>{formatDate(need.deadline_date)}</dd>
           </div>
           <div>
             <dt>Карточка актуальна до</dt>
-            <dd>{need.valid_until ?? "—"}</dd>
+            <dd>{formatDate(need.valid_until)}</dd>
           </div>
           <div>
             <dt>Видимость</dt>
@@ -360,7 +361,7 @@ export default function NeedDetailPage() {
                     <div className="company-meta">
                       КП {offer.id} · Цена: {formatRub(offer.price_rub, 12)} · Объём: {formatUnits(offer.available_units, itemUnit(need.characteristics))} ·
                       минимальный заказ: {formatUnits(offer.moq_units, itemUnit(need.characteristics))} · Логистика: {formatRub(offer.delivery_cost_rub)} ·
-                      Срок: {offer.lead_time_days} дн. · Действует до: {offer.valid_until ?? "не ограничено"}
+                      Срок: {offer.lead_time_days} дн. · Действует до: {formatDate(offer.valid_until, "не ограничено")}
                     </div>
                   </div>
                   <span className={`badge badge-${offer.status}`}>

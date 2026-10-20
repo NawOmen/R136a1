@@ -1,6 +1,9 @@
 import { registryCharacteristicLabel } from "./categoryProfiles";
+import { formatDate, formatDateTime } from "./dates";
+import { russianUnit } from "./units";
 
 const labels: Record<string, string> = {
+  text: "Текст", number: "Число", integer: "Целое число", boolean: "Да или нет", string: "Текст", includes_vat: "С НДС", no_vat: "Без НДС", unsupported: "Не поддерживается", rules_pending_review: "Правила ожидают проверки", open_for_offers: "Принимаются предложения", stock: "Поставка со склада", capacity: "Производство под заказ", self_pickup: "Самовывоз", buyer_carrier: "Перевозчик покупателя", seller_delivery: "Доставка продавца",
   certificate: "Сертификат", declaration: "Декларация соответствия", test_report: "Протокол испытаний", license: "Разрешение", other: "Прочее", specification_review: "Предметная проверка",
   draft: "Черновик", pending: "Ожидает решения", pending_review: "На проверке", active: "Действует", inactive: "Не действует",
   approved: "Подтверждено", confirmed: "Подтверждено", rejected: "Отклонено", cancelled: "Отменено", expired: "Срок истёк", completed: "Завершено",
@@ -20,7 +23,7 @@ const labels: Record<string, string> = {
   category_id: "Категория", source: "Источник", source_id: "Источник", source_name: "Название источника", source_kind: "Вид источника", content_hash: "Хеш содержимого", sources: "Источники", source_refs: "Ссылки на источники", locator: "Положение в источнике", excerpt: "Фрагмент источника", confidence: "Уверенность", label: "Название", key: "Поле", value: "Значение", status: "Статус", properties: "Требования", conflicts: "Противоречия", questions: "Вопросы", warnings: "Предупреждения", matches: "Кандидаты", summary: "Результат", can_confirm: "Можно подтвердить", buyer_company_id: "Компания покупателя", original_value: "Исходное значение", original_unit: "Исходная единица", normalized_unit: "Единица хранения", confirmed_by_user_id: "Кем подтверждено", confirmed_at: "Когда подтверждено", resolved_conflicts: "Разрешённые противоречия",
   unit: "Единица заказа", dimensions_mm: "Габариты, мм", print: "Печать", top_diameter_mm: "Диаметр верха, мм", bottom_diameter_mm: "Диаметр дна, мм", width_mm: "Ширина, мм", length_mm: "Длина, мм", body_material: "Материал", inner_coating: "Покрытие", product_type: "Тип изделия", material_grade: "Марка материала", complexity: "Сложность и операции", packaging: "Упаковка", quality_control: "Контроль качества", trial_batch: "Пробная партия", mandatory_requirements: "Обязательные требования",
   cohort_key: "Сопоставимая группа", product_name: "Название товара", delivery_price_rub: "Доставка, ₽", discount_rub: "Скидка, ₽", charge_lines: "Дополнительные расходы", estimate_complete: "Полнота сметы", events: "События", missing: "Недостающие сведения", cost_revision: "Версия затрат", cost_effective_from: "Затраты действуют с", cost_source: "Источник затрат", cost_tax_basis: "Налоговая база затрат", profit_missing_reason: "Причина отсутствия прибыли", cost_history: "История затрат", type: "Вид", amount_rub: "Сумма, ₽", date: "Дата", name: "Название", id: "Номер", notes: "Примечания",
-  unchanged: "Без изменений", new: "Новый", updated: "Обновлён", added: "Добавлен", skipped: "Пропущен", changed: "Изменён", created_at: "Создано", unit_price_rub: "Цена за единицу, ₽", moq_units: "Минимальный заказ", stock_units: "Остаток", is_published: "Опубликован", price_tiers: "Ценовые ступени", min_units: "Минимальное количество", delivery_region: "Регион доставки", request_text: "Описание покупателя", text: "Текст", image: "Изображение", audio: "Аудиозапись",
+  unchanged: "Без изменений", new: "Новый", updated: "Обновлён", added: "Добавлен", skipped: "Пропущен", changed: "Изменён", created_at: "Создано", unit_price_rub: "Цена за единицу, ₽", moq_units: "Минимальный заказ", stock_units: "Остаток", is_published: "Опубликован", price_tiers: "Ценовые ступени", min_units: "Минимальное количество", delivery_region: "Регион доставки", request_text: "Описание покупателя", image: "Изображение", audio: "Аудиозапись",
 };
 
 export function russianLabel(key: string, fallback = "Дополнительное поле"): string {
@@ -32,8 +35,12 @@ export function displayValue(value: unknown): string {
   if (value == null || value === "") return "Не указано";
   if (typeof value === "boolean") return value ? "Да" : "Нет";
   if (Array.isArray(value)) return value.map(displayValue).join("; ");
-  if (typeof value === "object") return Object.entries(value).map(([key, item], index) => `${russianLabel(key, `Дополнительное поле № ${index + 1}`)}: ${displayValue(item)}`).join("; ");
-  if (typeof value === "string") return labels[value] ?? value;
+  if (typeof value === "object") return Object.entries(value).map(([key, item], index) => `${russianLabel(key, `Дополнительное поле № ${index + 1}`)}: ${["unit", "normalized_unit", "original_unit", "input_unit", "stored_unit", "from_unit", "to_unit"].includes(key) && typeof item === "string" ? russianUnit(item) : displayValue(item)}`).join("; ");
+  if (typeof value === "string") {
+    if (/^\d{4}-\d{2}-\d{2}$/.test(value)) return formatDate(value, "Дата не указана");
+    if (/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/.test(value)) return formatDateTime(value, "Дата не указана");
+    return labels[value] ?? value;
+  }
   return String(value);
 }
 

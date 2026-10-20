@@ -1,4 +1,5 @@
 "use client";
+import { DateInput } from "../../components/DateInput";
 
 // Создание потребности (POST /needs). Форма покупателя: компания (can_buy),
 // категория, характеристики (пары «ключ/значение»), объём, бюджет, срок,
@@ -99,6 +100,7 @@ export default function NewNeedPage() {
   const [loadedFilesKey, setLoadedFilesKey] = useState("");
   const fileRestoreFailed = useRef(false);
   const draftKey = user && companyId ? `porukam:need-draft:${user.id}:${companyId}` : "";
+  const draftReady = Boolean(draftKey && loadedDraftKey === draftKey && loadedFilesKey === draftKey);
 
   activeScope.current = draftKey;
 
@@ -561,7 +563,9 @@ export default function NewNeedPage() {
       {draftNotice && <p className="hint" role="status">{draftNotice}</p>}
       {savedNeed && <p className="alert alert-warning">Черновик уже создан. <Link href={`/needs/${savedNeed.id}`}>Открыть сохранённую потребность</Link>. Повторная отправка продолжит загрузку в этот черновик.</p>}
 
-      <form className="card" onSubmit={handleSubmit}>
+      {!draftReady && <p className="hint" role="status">Загружаем черновик…</p>}
+      <form className="card" onSubmit={handleSubmit} aria-busy={!draftReady}>
+        <fieldset className="form-fieldset" disabled={!draftReady}>
         {available.length > 1 ? (
           <div className="field">
             <label htmlFor="company_id">
@@ -898,12 +902,11 @@ export default function NewNeedPage() {
           <label htmlFor="deadline_date">
             Срок выполнения<span className="req">*</span>
           </label>
-          <input
+          <DateInput
             id="deadline_date"
-            type="date"
             min={new Date(Date.now() - new Date().getTimezoneOffset() * 60_000).toISOString().slice(0, 10)}
             value={deadlineDate}
-            onChange={(event) => setDeadlineDate(event.target.value)}
+            onValueChange={(event) => setDeadlineDate(event)}
             required
           />
         </div>
@@ -973,6 +976,7 @@ export default function NewNeedPage() {
         </div>
         </ValidatedFields>
         </details>
+        </fieldset>
       </form>
     </div>
   );

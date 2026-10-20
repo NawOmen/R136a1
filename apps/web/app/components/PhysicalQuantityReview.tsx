@@ -2,7 +2,7 @@
 import { russianMessage } from "../lib/russianMessages";
 import { russianLabel } from "../lib/presentation";
 import { useEffect, useState } from "react";
-import { formatRub, marketplace, QuantityConversionPreview } from "../lib/marketplace";
+import { russianUnit, formatRub, marketplace, QuantityConversionPreview } from "../lib/marketplace";
 
 export default function PhysicalQuantityReview({ kind, values, approved, onApproval }: {
   kind: "product" | "need"; values: Record<string, unknown>; approved: boolean; onApproval: (approved: boolean) => void;
@@ -31,10 +31,10 @@ export default function PhysicalQuantityReview({ kind, values, approved, onAppro
   if (!preview || preview.factor === 1) return <p className="hint">Штуки, рулоны, упаковки и комплекты — целыми числами. Физические объёмы — в том числе дробными, без округления.</p>;
   const labels: Record<string, string> = { volume_units: "Объём", moq_units: "Минимальный заказ", stock_units: "Остаток" };
   return <div className="field">
-    <p className="hint">Точный пересчёт: 1 {preview.input_unit} = {preview.factor} {preview.stored_unit}. В заказах и ресурсах будет использоваться {preview.stored_unit}.</p>
-    {Object.entries(preview.quantities).map(([key, value]) => value != null && <p key={key}>{labels[key] ?? russianLabel(key)}: {value} {preview.stored_unit}</p>)}
-    {preview.price_rub != null && <p>Цена: {formatRub(preview.price_rub, 12)} / {preview.stored_unit}</p>}
-    {preview.price_tiers?.map(tier=><p key={tier.min_units}>От {tier.min_units} {preview.stored_unit}: {formatRub(tier.unit_price_rub, 12)} / {preview.stored_unit}</p>)}
+    <p className="hint">Точный пересчёт: 1 {russianUnit(preview.input_unit)} = {preview.factor} {russianUnit(preview.stored_unit)}. В заказах и ресурсах будет использоваться {russianUnit(preview.stored_unit)}.</p>
+    {Object.entries(preview.quantities).map(([key, value]) => value != null && <p key={key}>{labels[key] ?? russianLabel(key)}: {value} {russianUnit(preview.stored_unit)}</p>)}
+    {preview.price_rub != null && <p>Цена: {formatRub(preview.price_rub, 12)} / {russianUnit(preview.stored_unit)}</p>}
+    {preview.price_tiers?.map(tier=><p key={tier.min_units}>От {tier.min_units} {russianUnit(preview.stored_unit)}: {formatRub(tier.unit_price_rub, 12)} / {russianUnit(preview.stored_unit)}</p>)}
     <label><input type="checkbox" required checked={approved} onChange={(event) => onApproval(event.target.checked)} /> Пересчёт объёма и цены проверен</label>
   </div>;
 }

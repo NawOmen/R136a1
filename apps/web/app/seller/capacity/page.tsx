@@ -1,4 +1,5 @@
 "use client";
+import { formatDate } from "../../lib/dates";
 
 // Календарь мощностей (GET/PUT /companies/{id}/capacity).
 // Таблица на ближайшие 30 дней для выбранного ресурса и единицы измерения.
@@ -215,13 +216,13 @@ export default function SellerCapacityPage() {
               <tbody>
                 {dates.map((date) => (
                   <tr key={date}>
-                    <td>{date}</td>
+                    <td>{formatDate(date)}</td>
                     <td>
                       <input
                         type="number"
                         min={reserved[date] ?? 0}
                         step="1"
-                        aria-label={`Общая мощность на ${date}`}
+                        aria-label={`Общая мощность на ${formatDate(date)}`}
                         value={values[date] ?? ""}
                         placeholder="0"
                         onChange={(event) =>

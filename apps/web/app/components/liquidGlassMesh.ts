@@ -70,6 +70,23 @@ void main() {
 
 type Material = "rail" | "help" | "procurement";
 
+/** Check the real framebuffer, not just successful shader compilation. */
+function intactFrame(gl: WebGLRenderingContext, variant: Material, width: number, height: number, gutter: number) {
+  const pixel = new Uint8Array(4);
+  const alpha = (x: number, y: number) => {
+    gl.readPixels(Math.round((gutter + (width - 2 * gutter) * x) / width * gl.drawingBufferWidth),
+      Math.round((gutter + (height - 2 * gutter) * y) / height * gl.drawingBufferHeight), 1, 1, gl.RGBA, gl.UNSIGNED_BYTE, pixel);
+    return pixel[3];
+  };
+  // The interior is translucent in both themes. The opaque cyan slabs in the
+  // reported Safari captures violate this bound; a lost/empty frame also fails.
+  for (const x of [.25, .5, .75]) for (const y of variant === "rail" ? [.5] : [.25, .5, .75]) {
+    if (alpha(x, y) > 96) return false;
+  }
+  const reflectionY = variant === "procurement" ? .5 : .405;
+  return alpha(.5, reflectionY) > 5 && gl.getError() === gl.NO_ERROR;
+}
+
 /** Original glass renderer for action and guidance shells; categories use CSS only. */
 export function createGlassMesh(host: HTMLElement, canvas: HTMLCanvasElement, variant: Material) {
   const gl = canvas.getContext("webgl", { alpha: true, antialias: false, depth: false, stencil: false, premultipliedAlpha: false, powerPreference: "low-power" });
@@ -77,7 +94,7 @@ export function createGlassMesh(host: HTMLElement, canvas: HTMLCanvasElement, va
   // Pixel-space distances and their gradients need full float precision. If the
   // GPU cannot supply it, keep the CSS material rather than draw corrupt glass.
   const precision = gl.getShaderPrecisionFormat(gl.FRAGMENT_SHADER, gl.HIGH_FLOAT);
-  if (!precision || precision.precision < 16 || precision.rangeMax < 62) return;
+  if (!precision || precision.precision < 16 || precision.rangeMax < 62) { host.dataset.glassFallback = "precision"; return; }
   let gutter = 8;
   const shaders: WebGLShader[] = [];
   const compile = (type: number, source: string) => {
@@ -89,8 +106,14 @@ export function createGlassMesh(host: HTMLElement, canvas: HTMLCanvasElement, va
   };
   const program = gl.createProgram(), buffer = gl.createBuffer();
   let frame = 0, disposed = false, visible = true, lost = false, width = 0, height = 0, previous = 0;
+  let verified = false, cleanup: (() => void) | undefined;
   let x = 0, y = 0, vx = 0, vy = 0, tx = 0, ty = 0;
-  const release = () => { if (buffer) gl.deleteBuffer(buffer); if (program) gl.deleteProgram(program); for (const shader of shaders) gl.deleteShader(shader); };
+  const release = () => {
+    // A lost context has already invalidated its resources. Deleting old handles
+    // after restoration contaminates the new context's error state.
+    if (lost) return;
+    if (buffer) gl.deleteBuffer(buffer); if (program) gl.deleteProgram(program); for (const shader of shaders) gl.deleteShader(shader);
+  };
   try {
     if (!program || !buffer) throw new Error("allocation");
     gl.attachShader(program, compile(gl.VERTEX_SHADER, vertex)); gl.attachShader(program, compile(gl.FRAGMENT_SHADER, fragment)); gl.linkProgram(program);
@@ -120,6 +143,12 @@ export function createGlassMesh(host: HTMLElement, canvas: HTMLCanvasElement, va
     gl.uniform2f(size,width,height); gl.uniform2f(pointer,x,-y);
     gl.uniform1f(dark,document.documentElement.dataset.theme === "dark" ? 1 : 0);
     gl.clearColor(0,0,0,0); gl.clear(gl.COLOR_BUFFER_BIT); gl.drawArrays(gl.TRIANGLES,0,points.length / 2);
+    if (!verified) {
+      if (!intactFrame(gl, variant, width, height, gutter)) {
+        cleanup?.(); host.dataset.glassFallback = "invalid-frame"; return;
+      }
+      verified = true; delete host.dataset.glassFallback;
+    }
     if (!canvas.dataset.ready) { canvas.dataset.ready = "true"; host.dataset.meshReady = "true"; }
     if (moving) request();
   };
@@ -150,10 +179,11 @@ export function createGlassMesh(host: HTMLElement, canvas: HTMLCanvasElement, va
   host.addEventListener("pointermove",move); host.addEventListener("pointerleave",reset); host.addEventListener("pointercancel",reset);
   canvas.addEventListener("webglcontextlost",contextLost); window.addEventListener("blur",pause); document.addEventListener("visibilitychange",pause);
   resize.observe(host); intersection.observe(host); theme.observe(document.documentElement,{attributes:true,attributeFilter:["data-theme"]});
-  return () => {
+  cleanup = () => {
     disposed = true; cancelAnimationFrame(frame); resize.disconnect(); intersection.disconnect(); theme.disconnect();
     host.removeEventListener("pointermove",move); host.removeEventListener("pointerleave",reset); host.removeEventListener("pointercancel",reset);
     canvas.removeEventListener("webglcontextlost",contextLost); window.removeEventListener("blur",pause); document.removeEventListener("visibilitychange",pause);
     delete canvas.dataset.ready; delete host.dataset.meshReady; host.style.removeProperty("--glass-gutter"); release();
   };
+  return cleanup;
 }

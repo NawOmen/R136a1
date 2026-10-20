@@ -1,3 +1,5 @@
+import { russianUnit } from "./units";
+export { russianUnit } from "./units";
 import { russianLabel, displayValue } from "./presentation";
 import { russianFetch, russianMessage, validationMessage } from "./russianMessages";
 import { displayMoney, type Money } from "./money";
@@ -823,7 +825,7 @@ export function characteristicLabel(key: string, profile?: CategoryProfileSnapsh
 export function formatCharacteristics(characteristics: Record<string, unknown>, profile?: CategoryProfileSnapshot | null): string {
   const entries = Object.entries(characteristics);
   if (entries.length === 0) return "—";
-  return entries.map(([key, value]) => `${characteristicLabel(key, profile)}: ${displayValue(value)}`).join(" · ");
+  return entries.map(([key, value]) => `${characteristicLabel(key, profile)}: ${["unit", "единица измерения"].includes(key) && typeof value === "string" ? russianUnit(value) : displayValue(value)}`).join(" · ");
 }
 
 export function formatRub(value: Money | null | undefined, maximumFractionDigits = 2): string {
@@ -832,11 +834,11 @@ export function formatRub(value: Money | null | undefined, maximumFractionDigits
 
 export function itemUnit(characteristics?: Record<string, unknown>): string {
   const value = characteristics?.unit ?? characteristics?.["единица измерения"];
-  return typeof value === "string" && value.trim() ? value.trim() : "шт.";
+  return typeof value === "string" && value.trim() ? russianUnit(value.trim()) : "шт.";
 }
 
 export function formatUnits(value: number, unit = "шт."): string {
-  return new Intl.NumberFormat("ru-RU", { maximumFractionDigits: 0 }).format(value) + " " + unit;
+  return new Intl.NumberFormat("ru-RU", { maximumFractionDigits: 0 }).format(value) + " " + russianUnit(unit);
 }
 
 // ---------- Разбор ошибок валидации FastAPI (422) ----------

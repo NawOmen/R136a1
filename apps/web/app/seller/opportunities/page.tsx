@@ -1,4 +1,5 @@
 "use client";
+import { DateInput } from "../../components/DateInput";
 import { russianMessage } from "../../lib/russianMessages";
 import CommercialTermsFields, { emptyCommercialTerms } from "../../components/CommercialTermsFields";
 import type { CommercialTerms } from "../../lib/marketplace";
@@ -11,6 +12,7 @@ import {
   Coalition,
   formatRub,
   formatUnits,
+  russianUnit,
   GroupOffer,
   MarketOpportunity,
   marketplace,
@@ -240,10 +242,10 @@ export default function MarketOpportunitiesPage() {
           </p>
           <div className="form-grid">
             <div className="field"><label>Цена за единицу, ₽</label><input type="number" step="any" min="0.000000000001" required value={unitPrice} onChange={(e) => setUnitPrice(e.target.value)} /></div>
-            <div className="field"><label>Подтверждённая мощность, {draftCoalition.unit}</label><input type="number" min="1" required value={capacity} onChange={(e) => setCapacity(e.target.value)} /></div>
-            <div className="field"><label>Окончание набора</label><input type="date" required value={fillDeadline} onChange={(e) => setFillDeadline(e.target.value)} /></div>
-            <div className="field"><label>Начало производства</label><input type="date" required value={productionStart} onChange={(e) => setProductionStart(e.target.value)} /></div>
-            <div className="field"><label>Окончание производства</label><input type="date" required value={productionEnd} onChange={(e) => setProductionEnd(e.target.value)} /></div>
+            <div className="field"><label>Подтверждённая мощность, {russianUnit(draftCoalition.unit)}</label><input type="number" min="1" required value={capacity} onChange={(e) => setCapacity(e.target.value)} /></div>
+            <div className="field"><label>Окончание набора</label><DateInput required value={fillDeadline} onValueChange={(e) => setFillDeadline(e)} /></div>
+            <div className="field"><label>Начало производства</label><DateInput required value={productionStart} onValueChange={(e) => setProductionStart(e)} /></div>
+            <div className="field"><label>Окончание производства</label><DateInput required value={productionEnd} onValueChange={(e) => setProductionEnd(e)} /></div>
           </div>
           <h3>Отдельные условия покупателей</h3>
           {draftCoalition.members.map((member, index) => (

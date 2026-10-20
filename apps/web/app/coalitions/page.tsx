@@ -1,4 +1,5 @@
 "use client";
+import { formatDate } from "../lib/dates";
 import { russianMessage } from "../lib/russianMessages";
 import { russianLabel } from "../lib/presentation";
 import CommercialEstimate from "../components/CommercialEstimate";
@@ -126,11 +127,11 @@ export default function CoalitionsPage() {
                     <p>
                       Итого: {formatRub(ownMember.total_cost_rub)} · Эффект относительно альтернативы: {ownMember.benefit_rub === null ? "база сравнения отсутствует" : formatRub(ownMember.benefit_rub)}
                     </p>
-                    <p className="hint">Решение вашей компании: {ownMember.approval_status}</p>
+                    <p className="hint">Решение вашей компании: {russianLabel(ownMember.approval_status, "Требуется решение")}</p>
                     {coalition.group_offer && (
                       <p>
-                        Производство: {coalition.group_offer.production_start ?? "—"} — {coalition.group_offer.production_end ?? "—"} ·
-                        Подтвердить до: {coalition.group_offer.fill_deadline ?? "—"}
+                        Производство: {formatDate(coalition.group_offer.production_start)} — {formatDate(coalition.group_offer.production_end)} ·
+                        Подтвердить до: {formatDate(coalition.group_offer.fill_deadline)}
                       </p>
                     )}
                     {coalition.status === "awaiting_approvals" && ownMember.approval_status === "pending" && (

@@ -1,4 +1,5 @@
 "use client";
+import { DateInput } from "./DateInput";
 
 import { canonicalCharacteristicKey } from "../lib/categoryProfiles";
 import { russianMessage } from "../lib/russianMessages";
@@ -79,8 +80,8 @@ export default function NeedDraftEditor({ need, onSaved }: { need: Need; onSaved
       <button type="button" className="btn btn-secondary btn-sm" onClick={() => setRows([...rows, { key: "", value: "", original: "" }])}>Добавить характеристику</button>
       <div className="field"><label htmlFor="edit-quantity">Количество единиц</label><input id="edit-quantity" required type="number" min="0.000001" step="any" value={quantity} onChange={e => setQuantity(e.target.value)} /></div>
       <div className="field"><label htmlFor="edit-budget">Бюджет, ₽</label><input id="edit-budget" type="number" min="0.01" step="0.01" value={budget} onChange={e => setBudget(e.target.value)} /></div>
-      <div className="field"><label htmlFor="edit-deadline">Срок поставки</label><input id="edit-deadline" type="date" required value={deadline} onChange={e => setDeadline(e.target.value)} /></div>
-      <div className="field"><label htmlFor="edit-valid">Актуально до</label><input id="edit-valid" type="date" required value={validUntil} onChange={e => setValidUntil(e.target.value)} /></div>
+      <div className="field"><label htmlFor="edit-deadline">Срок поставки</label><DateInput id="edit-deadline" required value={deadline} onValueChange={e => setDeadline(e)} /></div>
+      <div className="field"><label htmlFor="edit-valid">Актуально до</label><DateInput id="edit-valid" required value={validUntil} onValueChange={e => setValidUntil(e)} /></div>
       <div className="field"><label htmlFor="edit-address">Адрес доставки</label><select id="edit-address" value={address} onChange={e => setAddress(e.target.value)}><option value="">Не указан</option>{addresses.map(item => <option key={item.id} value={item.id}>{item.address}</option>)}</select></div>
       <div className="field"><label htmlFor="edit-visibility">Видимость</label><select id="edit-visibility" value={visibility} onChange={e => setVisibility(e.target.value as Need["visibility"])}><option value="open_anonymized">Открытая (анонимизированная)</option><option value="closed">Закрытая</option>{visibility === "selected_producers" && <option value="selected_producers">Для выбранных производителей</option>}</select></div>
       <PhysicalQuantityReview kind="need" values={{ characteristics: Object.fromEntries(rows.filter(row => row.key.trim()).map(row => [row.key.trim(), row.value])), volume_units: quantity }} approved={quantityApproved} onApproval={setQuantityApproved} />

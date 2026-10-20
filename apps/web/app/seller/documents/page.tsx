@@ -1,4 +1,6 @@
 "use client";
+import { DateInput } from "../../components/DateInput";
+import { formatDate } from "../../lib/dates";
 
 // Документы компании (GET/POST /companies/{id}/documents, DELETE /documents/{id}).
 // Загрузка — multipart (file + name + document_type + область действия).
@@ -416,11 +418,10 @@ export default function SellerDocumentsPage() {
             <label htmlFor="valid_until">
               Действует до<span className="opt">проверяющий укажет фактический срок</span>
             </label>
-            <input
+            <DateInput
               id="valid_until"
-              type="date"
               value={validUntil}
-              onChange={(event) => setValidUntil(event.target.value)}
+              onValueChange={(event) => setValidUntil(event)}
             />
           </div>
           <div className="field">
@@ -462,7 +463,7 @@ export default function SellerDocumentsPage() {
             {expiring.map((document) => (
               <li key={document.id} className="company-item">
                 <span className="company-item__name">{document.name}</span>
-                <span className="company-meta">Действует до {document.valid_until ?? "—"}</span>
+                <span className="company-meta">Действует до {formatDate(document.valid_until)}</span>
               </li>
             ))}
           </ul>
@@ -504,7 +505,7 @@ export default function SellerDocumentsPage() {
                         </div>
                       )}
                       {document.valid_until && (
-                        <div className="company-meta">Действует до {document.valid_until}</div>
+                        <div className="company-meta">Действует до {formatDate(document.valid_until)}</div>
                       )}
                       {document.verification_note && (
                         <div className="company-meta">Решение проверяющего: {document.verification_note}</div>

@@ -1,4 +1,6 @@
 "use client";
+import { DateInput } from "../components/DateInput";
+import { formatDate } from "../lib/dates";
 
 // Мои потребности (GET /needs/mine): статус, объём, бюджет, срок,
 // переход к деталям. Повтор — новый черновик с новыми датами:
@@ -153,7 +155,7 @@ export default function MyNeedsPage() {
                   {need.category} · {formatUnits(need.volume_units)}
                 </span>
                 <span className="company-meta">
-                  Бюджет: {formatRub(need.budget_rub)} · Срок: {need.deadline_date}
+                  Бюджет: {formatRub(need.budget_rub)} · Срок: {formatDate(need.deadline_date)}
                 </span>
                 <span className={`badge badge-${need.status}`}>{NEED_STATUS_LABELS[need.status]}</span>
               </Link>
@@ -185,23 +187,21 @@ export default function MyNeedsPage() {
                   ) : null}
                   <div className="field">
                     <label htmlFor={`deadline-${need.id}`}>Новый срок выполнения</label>
-                    <input
+                    <DateInput
                       id={`deadline-${need.id}`}
-                      type="date"
                       value={deadline}
                       disabled={repeating}
-                      onChange={(event) => changeDates(event.target.value)}
+                      onValueChange={(event) => changeDates(event)}
                       required
                     />
                   </div>
                   <div className="field">
                     <label htmlFor={`valid-${need.id}`}>Карточка актуальна до</label>
-                    <input
+                    <DateInput
                       id={`valid-${need.id}`}
-                      type="date"
                       value={validUntil}
                       disabled={repeating}
-                      onChange={(event) => changeDates(event.target.value, true)}
+                      onValueChange={(event) => changeDates(event, true)}
                     />
                   </div>
                   <div className="actions">

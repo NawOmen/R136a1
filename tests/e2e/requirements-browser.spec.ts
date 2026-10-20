@@ -175,6 +175,7 @@ test("clarified unreadable material is omitted by content hash while same-name v
     if (path.endsWith("/physical/needs") && request.method() === "POST") {
       creations++;
       expect(request.postDataJSON().subcategory).toBe("Коробки");
+      expect(request.postDataJSON().deadline_date).toBe("2026-12-20");
       return route.fulfill({ status: 201, json: { id: needId, status: "draft" } });
     }
     if (path.endsWith(`/needs/${needId}/files`)) { uploads.push(request.postDataBuffer()!.toString()); return route.fulfill({ status: 201, json: { id: needId } }); }
@@ -195,6 +196,7 @@ test("clarified unreadable material is omitted by content hash while same-name v
   await page.getByRole("button", { name: "Перенести подтверждённые данные в карточку" }).click();
   await expect(page.locator("#subcategory")).toHaveValue("Коробки");
   await expect(page.locator("#delivery_address_id")).toHaveValue("00000000-0000-4000-8000-000000000092");
+  await page.locator("#deadline_date").fill("20.12.26");
   await (await volumeCheck).finished();
   await expect(page.getByText("Проверяем точность объёма…", { exact: true })).toHaveCount(0);
   await page.waitForLoadState("networkidle");
