@@ -74,11 +74,11 @@ class OllamaProvider:
                 content = response.json()["message"]["content"]
             return response_model.model_validate(_json_from_text(content))
         except (httpx.HTTPError, KeyError, ValueError, ValidationError, json.JSONDecodeError) as exc:
-            raise ModelUnavailable("Локальная Qwen недоступна или вернула неверный JSON") from exc
+            raise ModelUnavailable("Локальная модель недоступна или вернула неверный JSON") from exc
 
     async def vision_text(self, image_base64: str, prompt: str) -> str:
         payload = {
-            "model": settings.ollama_model,
+            "model": settings.ollama_vision_model,
             "stream": False,
             "think": False,
             "messages": [

@@ -22,7 +22,9 @@ class Settings(BaseSettings):
     jwt_algorithm: Literal["HS256"] = "HS256"
 
     ollama_base_url: str = "http://host.docker.internal:11434"
-    ollama_model: str = "qwen3.5:9b"
+    # Основная модель — обученный локальный кандидат; изображения распознаёт отдельная vision-модель.
+    ollama_model: str = "porukam-buyer-9b:latest"
+    ollama_vision_model: str = "qwen3.5:9b"
     ollama_timeout_seconds: float = 180.0
     llm_context_tokens: int = 8192
     local_inference_cost_rub_per_minute: Decimal = Field(default=Decimal("0.35"),ge=0,le=Decimal("999999999999.999999999999"),max_digits=24,decimal_places=12,allow_inf_nan=False)

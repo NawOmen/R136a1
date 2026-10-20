@@ -28,7 +28,7 @@ ROLE_PASSPORTS: dict[str, dict] = {
                   "extract_requirements", "review_anonymized_facts"],
         "company_scope": "Покупатель видит только свои процессы; поиск исключает его компанию.",
         "prompt_version": PROMPT_VERSION,
-        "model": "qwen3.5:9b (локально); внешний разбор — только обезличенные факты",
+        "model": "porukam-buyer-9b:latest (локальный разбор); qwen3.5:9b (локальное OCR изображений); внешний разбор — только обезличенные факты",
         "schema_version": SCHEMA_VERSION,
         "implemented_by": "model",
         "time_limits": "Локальный вызов до 180 c, внешний разбор до 45 c; текст ограничен max_combined_text_chars.",
@@ -46,7 +46,7 @@ ROLE_PASSPORTS: dict[str, dict] = {
         "tools": ["search_capability_passports", "apply_user_clarification", "human_approval", "invalidate_source"],
         "company_scope": "Действия выполняются от компании-покупателя; смена компании не переносит чужой процесс.",
         "prompt_version": PROMPT_VERSION,
-        "model": "qwen3.5:9b (локально)",
+        "model": "porukam-buyer-9b:latest (локально)",
         "schema_version": SCHEMA_VERSION,
         "implemented_by": "model",
         "time_limits": "Наследует лимиты расследования; уточнения без ограничения по числу шагов, каждый шаг версионируется.",
@@ -64,7 +64,7 @@ ROLE_PASSPORTS: dict[str, dict] = {
         "tools": ["seller_explain"],
         "company_scope": "Требуется право can_sell компании; чужие паспорта недоступны.",
         "prompt_version": SELLER_PROMPT_VERSION,
-        "model": "qwen3.5:9b (локально); при недоступности — rules_only без модели",
+        "model": "porukam-buyer-9b:latest (локально); при недоступности — rules_only без модели",
         "schema_version": "seller-explain-1",
         "implemented_by": "model",
         "time_limits": "Локальный вызов до 180 c; при сбое возвращается rules_only, а не выдуманное объяснение.",
@@ -130,8 +130,16 @@ ROLE_PASSPORTS: dict[str, dict] = {
 }
 
 MODEL_MANIFEST: dict[str, dict] = {
+    "porukam-buyer-9b:latest": {
+        "role": "Обученный на синтетических данных локальный кандидат для извлечения фактов, объяснений и справочника; оригиналы клиентских материалов не покидают контур.",
+        "quality_gate": "Формат, обязательные поля и завершение сценария проверяются автоматически; семантическая приёмка независимым экспертным ревью ещё не пройдена, модель допущена только к тестовому контуру.",
+        "latency_budget": "До 180 c на вызов; фактическая задержка сохраняется в duration_ms каждого процесса.",
+        "ram_vram": "MLX int4, около 5 ГБ в памяти на Apple Silicon; размещение, swap и OOM проверяются на фактическом узле.",
+        "license": "Производная от Qwen3.5-9B; лицензия базовых весов и условия адаптера сверяются с картой дистрибутива перед публикацией.",
+        "data_rule": "Оригиналы обрабатываются только локально; наружу уходят лишь обезличенные факты.",
+    },
     "qwen3.5:9b": {
-        "role": "Локальное извлечение, объяснения, справочник; оригиналы клиентских материалов не покидают контур.",
+        "role": "Локальное распознавание изображений (OCR/vision) и резервный локальный маршрут; оригиналы клиентских материалов не покидают контур.",
         "quality_gate": "Автоматическая проверка формата ответа, обязательных полей и завершения сценария; отдельная экспертная оценка не требуется.",
         "latency_budget": "До 180 c на вызов; фактическая задержка сохраняется в duration_ms каждого процесса.",
         "ram_vram": "Требования задаются картой развёртывания Ollama; gateway хранит только факт маршрута и длительность.",

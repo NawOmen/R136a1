@@ -514,6 +514,8 @@ docker compose --env-file .env -f infra/docker-compose.yml -f /tmp/porukam-ollam
 docker compose --env-file .env -f infra/docker-compose.yml -f /tmp/porukam-ollama.compose.yml exec ollama ollama pull qwen3.5:9b
 ```
 
+`qwen3.5:9b` нужна для распознавания изображений. Обученный `porukam-buyer-9b:latest` собирается из MLX-базы и адаптера командой `python3 infra/build_local_model.py` и импортируется в тот экземпляр Ollama, который обслуживает Gateway; для Ollama в контейнере каталог слитой модели монтируется внутрь и `ollama create` выполняется через `docker exec`. Без MLX-рантайма (Linux/RTX) используйте `OLLAMA_MODEL=qwen3.5:9b`.
+
 Ollama и Gateway находятся в общей Docker-сети; порт модели не публикуется на хосте. Сохраняйте оба `-f` при последующих командах обновления этого варианта стенда. Постоянный файл дополнения лучше хранить в операторском каталоге вместо `/tmp`. Для воспроизводимого стенда зафиксируйте проверенный digest образа и версию модели.
 
 Это CPU-режим; на MacBook Docker не использует Apple GPU. Для Linux/Windows с поддерживаемой NVIDIA GPU, драйвером и NVIDIA Container Toolkit в `services.ollama` дополнения задайте `gpus: all`. Сервисы приложения по-прежнему обращаются к модели только через LLM Gateway.
@@ -620,7 +622,7 @@ docker compose --env-file .env -f infra/docker-compose.yml up -d --force-recreat
 
 Основной ноутбук: Intel Core Ultra 7 255H, RTX 5060 8 ГБ, 32 ГБ RAM. Второй узел — MacBook Pro 16 с M1 Pro и 16 ГБ unified memory. Дополнительная резервная машина — Ryzen 5 5600, RTX 2060 Super 8 ГБ, 16 ГБ RAM. Сайт, PostgreSQL и хранилище могут работать на сервере, а локальная модель — на ноутбуке; Gateway должен иметь приватный сетевой доступ к модели. Открытый в интернете порт Ollama не требуется. Выбор узла и балансировка двух ноутбуков требуют явной настройки адреса; базовый Gateway сам не обнаруживает второй ноутбук и не переключается на него автоматически.
 
-Основная модель — `qwen3.5:9b`, кеш аудио — faster-whisper `small`/`int8`. Версии и контрольные параметры моделей фиксируются в [infra/models.lock.json](infra/models.lock.json). CUDA используется только при доступном NVIDIA GPU; в Docker на MacBook выполняется CPU-инференс. Оценивать скорость нужно на фактической машине и контексте; старые замеры не являются гарантией производительности. Внешняя консультация отделена от локального извлечения. Поиск/RAG и эмбеддинги не объявляются подключёнными по одному упоминанию модели.
+Основная текстовая модель — локальный обученный кандидат `porukam-buyer-9b:latest` (MLX int4: база Qwen3.5-9B и LoRA-адаптер, сборка через [infra/build_local_model.py](infra/build_local_model.py)); изображения распознаёт `qwen3.5:9b`, кеш аудио — faster-whisper `small`/`int8`. Кандидат прошёл автоматические проверки формата, но семантическая приёмка независимым экспертом ещё не пройдена, поэтому он допущен к тестовому контуру. Сборка safetensors исполняется MLX-рантаймом Ollama на Apple Silicon; на узле без такого рантайма задайте `OLLAMA_MODEL=qwen3.5:9b` до подготовки GGUF. Версии и контрольные параметры моделей фиксируются в [infra/models.lock.json](infra/models.lock.json). CUDA используется только при доступном NVIDIA GPU; в Docker на MacBook выполняется CPU-инференс. Оценивать скорость нужно на фактической машине и контексте; старые замеры не являются гарантией производительности. Внешняя консультация отделена от локального извлечения. Поиск/RAG и эмбеддинги не объявляются подключёнными по одному упоминанию модели.
 
 <a id="interface"></a>
 ### Интерфейс и дизайн
@@ -808,6 +810,60 @@ CSV с этим идентификатором читает тот же сним
 | unknown-time: Неизвестные трудозатраты и стоимость переключения | completed | не определено | 200.00 | -97.00 | не определено |
 | known-supplier: Постоянный поставщик: лишняя автоматизация дороже | completed | -250.00 | -350.00 | -97.00 | не определено |
 | commission: Сценарная комиссия поставщика включена в его расходы | completed | 600.00 | 750.00 | 53.00 | не определено |
+
+## Все листья текущего каталога
+
+Профили и предметные примеры анализируются для каждого листа. Число товаров и прохождение коммерческого пути — отдельные свойства.
+
+| ID / раздел / лист | Допуск | Обязательные поля | Единицы | Проверки приёмки | Рабочее наполнение |
+|---|---|---|---|---|---|
+| packaging.paper-cups / Упаковка и тара / Бумажные стаканы | existing_rules | material, volume_ml | шт, упак | объём, швы, герметичность | есть |
+| packaging.food-packaging / Упаковка и тара / Пищевая упаковка | existing_rules | material, dimensions_mm, purpose | шт, упак | размер, материал, чистота | есть |
+| packaging.bags / Упаковка и тара / Пакеты | existing_rules | material, dimensions_mm, thickness_mm | шт, упак | размер, толщина, швы | есть |
+| packaging.boxes / Упаковка и тара / Коробки | existing_rules | material, dimensions_mm | шт, упак | размер, прочность, комплектность | есть |
+| packaging.bottles-canisters / Упаковка и тара / Бутылки и канистры | existing_rules | material, volume_ml, purpose | шт, упак | объём, крышка, герметичность | есть |
+| packaging.film / Упаковка и тара / Плёнка | existing_rules | material, width_mm, thickness_mm | м, кг, рулон, г, мм | ширина, толщина, длина рулона | есть |
+| materials.paper-cardboard / Сырьё и материалы / Бумага и картон | existing_rules | material, format, grammage_g_m2 | кг, м², шт, упак, г, см² | формат, плотность, влажность | есть |
+| materials.polymers / Сырьё и материалы / Полимеры | existing_rules | material, grade | кг, т, г | марка, партия, паспорт качества | есть |
+| materials.metals / Сырьё и материалы / Металлы | existing_rules | material, grade, dimensions_mm, standard | кг, т, м, шт, г, мм | марка, размер, партия, сертификат качества | есть |
+| materials.textile / Сырьё и материалы / Текстиль | existing_rules | composition, width_cm | м, м², рулон, шт, мм, см² | состав, ширина, плотность, дефекты | есть |
+| materials.chemical-feedstock / Сырьё и материалы / Химическое сырьё | existing_rules | composition, grade, purpose, storage_conditions | кг, т, л, г, мл | состав, партия, паспорт безопасности | есть |
+| equipment.manufacturing / Оборудование / Производственное | existing_rules | model, process, power_kw | шт, комплект | модель, паспорт, проверка запуска | есть |
+| equipment.retail / Оборудование / Торговое | existing_rules | model, dimensions_mm, purpose | шт, комплект | модель, размеры, комплектность | есть |
+| equipment.warehouse / Оборудование / Складское | existing_rules | model, dimensions_mm, weight_kg | шт, комплект | модель, грузоподъёмность, комплектность | есть |
+| equipment.food / Оборудование / Пищевое | existing_rules | model, process, power_kw | шт, комплект | модель, материалы контакта, запуск | есть |
+| equipment.spare-parts / Оборудование / Запасные части | existing_rules | model, compatibility, material | шт, комплект | номер детали, совместимость, размеры | есть |
+| construction.finishing / Строительство / Отделочные материалы | existing_rules | material, purpose, product_kind | шт, м, м², кг, упак, мешок, м³, г, мм, см², мл | размер, покрытие, партия, дефекты | есть |
+| construction.fasteners / Строительство / Крепёж | existing_rules | material, standard, product_kind | шт, кг, упак, г | резьба, диаметр, длина, класс | есть |
+| construction.engineering / Строительство / Инженерные системы | existing_rules | model, dimensions_mm, purpose | шт, м, комплект, мм | модель, присоединение, назначение | есть |
+| construction.tools / Строительство / Инструмент | existing_rules | model, material, purpose | шт, комплект | модель, назначение, комплектность | есть |
+| food.drinks / Продукты питания / Напитки | existing_rules | composition, volume_ml, storage_conditions, shelf_life_days | шт, л, упак, мл | партия, маркировка, срок, упаковка | есть |
+| food.groceries / Продукты питания / Бакалея | existing_rules | composition, grade, storage_conditions, shelf_life_days | кг, т, шт, упак, г | партия, масса, срок, маркировка | есть |
+| food.frozen / Продукты питания / Замороженная продукция | existing_rules | composition, storage_conditions, temperature_min_c, temperature_max_c, shelf_life_days | кг, шт, упак, г | температурная цепь, партия, срок | есть |
+| food.ingredients / Продукты питания / Ингредиенты | existing_rules | composition, grade, purpose, storage_conditions, shelf_life_days | кг, т, л, г, мл | состав, партия, срок, назначение | есть |
+| business-supplies.stationery / Товары для бизнеса / Канцелярия | existing_rules | material, format | шт, упак, комплект | формат, количество, комплектность | есть |
+| business-supplies.household / Товары для бизнеса / Хозяйственные товары | existing_rules | material, purpose, dimensions_mm | шт, упак, комплект | материал, назначение, размеры | есть |
+| business-supplies.workwear / Товары для бизнеса / Спецодежда | existing_rules | composition, size, purpose | шт, комплект | размер, состав, защитное назначение | есть |
+| business-supplies.furniture / Товары для бизнеса / Мебель | existing_rules | material, dimensions_mm, finish | шт, комплект | размер, покрытие, сборка, устойчивость | есть |
+| electronics.components / Электроника / Компоненты | existing_rules | model, product_kind | шт, упак, м, бухта, мм | модель, напряжение, интерфейс | есть |
+| electronics.computers / Электроника / Компьютерная техника | existing_rules | model, interface | шт, комплект | модель, конфигурация, комплектность | есть |
+| electronics.communication / Электроника / Связь | existing_rules | model, interface, purpose | шт, комплект | модель, интерфейс, работоспособность | есть |
+| electronics.automation / Электроника / Автоматизация | existing_rules | model, voltage_v, interface, process | шт, комплект | модель, напряжение, интерфейс, процесс | есть |
+| transport.containers / Транспорт и логистика / Тара для перевозки | existing_rules | material, dimensions_mm, weight_kg | шт, комплект | размер, грузоподъёмность, комплектность | есть |
+| transport.components / Транспорт и логистика / Комплектующие | existing_rules | model, compatibility, material | шт, комплект | модель, совместимость, материал | есть |
+| transport.warehousing / Транспорт и логистика / Складские услуги | existing_rules | service_scope, storage_conditions, output | шт, м², комплект, см² | объём услуги, условия, акт | есть |
+| printing.labels / Полиграфия и реклама / Этикетки | existing_rules | material, dimensions_mm, finish | шт, рулон, м², см² | размер, материал, адгезия, печать | есть |
+| printing.printing / Полиграфия и реклама / Печать | existing_rules | material, format, process, color | шт, м², комплект, см² | формат, цвет, согласованный макет | есть |
+| printing.signs / Полиграфия и реклама / Вывески | existing_rules | material, dimensions_mm, process | шт, комплект | размер, материал, крепление, макет | есть |
+| printing.merchandise / Полиграфия и реклама / Сувенирная продукция | existing_rules | material, dimensions_mm, process | шт, комплект | размер, материал, согласованный макет | есть |
+| manufacturing-services.contract-manufacturing / Услуги производства / Контрактное производство | existing_rules | process, material, output | шт, кг, м, комплект, г, мм | спецификация, результат, акт | есть |
+| manufacturing-services.packing / Услуги производства / Фасовка | existing_rules | process, packaging, output | шт, кг, упак, г | масса, тара, маркировка, акт | есть |
+| manufacturing-services.processing / Услуги производства / Обработка | existing_rules | process, material, dimensions_mm, standard | шт, кг, м, м², г, мм, см² | размер, допуск, стандарт, акт | есть |
+| manufacturing-services.assembly / Услуги производства / Сборка | existing_rules | process, compatibility, output | шт, комплект | совместимость, комплектность, акт | есть |
+| medical-hygiene.consumables / Медицина и гигиена / Расходные материалы | unsupported | material, size, purpose | шт, упак | назначение, регистрация, партия | профиль |
+| medical-hygiene.protection / Медицина и гигиена / Средства защиты | existing_rules | material, size, purpose | шт, комплект, упак | защитное назначение, размер, маркировка | есть |
+| medical-hygiene.hygiene / Медицина и гигиена / Гигиеническая продукция | existing_rules | composition, purpose, packaging | шт, л, упак, мл | состав, назначение, партия | есть |
+| other.other-products / Другое / Другая продукция | existing_rules | purpose, material, dimensions_mm | шт, кг, м, м², л, рулон, упак, комплект, г, мм, см², мл | согласованная спецификация и назначение | есть |
 <!-- business-model:end -->
 
 

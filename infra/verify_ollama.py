@@ -1,4 +1,8 @@
-"""Проверка локальной LLM Qwen3.5 9B через Ollama и замер производительности.
+"""Проверка локальных моделей Ollama и замер производительности.
+
+Основная модель — обученный кандидат (`OLLAMA_MODEL`), изображения распознаёт
+отдельная vision-модель (`OLLAMA_VISION_MODEL`). Скрипт проверяет наличие обеих
+моделей и измеряет скорость генерации основной.
 
 Измеряет:
 - скорость генерации (ток/с) при холодном и прогретом запуске;
@@ -10,11 +14,13 @@
 """
 
 import json
+import os
 import time
 import urllib.request
 
-OLLAMA = "http://localhost:11434"
-MODEL = "qwen3.5:9b"
+OLLAMA = os.getenv("OLLAMA_BASE_URL", "http://localhost:11434")
+MODEL = os.getenv("OLLAMA_MODEL", "porukam-buyer-9b:latest")
+VISION_MODEL = os.getenv("OLLAMA_VISION_MODEL", "qwen3.5:9b")
 PROMPT = "Одним предложением ответь: что такое одноразовый бумажный стакан для горячих напитков?"
 
 
@@ -24,7 +30,15 @@ def get(path: str) -> dict:
 
 
 def generate(prompt: str, stream: bool = False) -> dict:
-    payload = json.dumps({"model": MODEL, "prompt": prompt, "stream": stream}).encode("utf-8")
+    payload = json.dumps(
+        {
+            "model": MODEL,
+            "prompt": prompt,
+            "stream": stream,
+            "think": False,
+            "options": {"temperature": 0.1, "num_ctx": 8192, "num_predict": 128},
+        }
+    ).encode("utf-8")
     req = urllib.request.Request(
         OLLAMA + "/api/generate", data=payload, headers={"Content-Type": "application/json"}
     )
@@ -60,9 +74,19 @@ def generate(prompt: str, stream: bool = False) -> dict:
     }
 
 
+def normalize(name: str) -> str:
+    return name if ":" in name else f"{name}:latest"
+
+
 def main() -> None:
     tags = get("/api/tags")
-    print("Модели в Ollama:", [m["name"] for m in tags.get("models", [])])
+    available = {m["name"] for m in tags.get("models", [])}
+    print("Модели в Ollama:", sorted(available))
+    for required in dict.fromkeys((MODEL, VISION_MODEL)):
+        state = "найдена" if normalize(required) in available else "НЕ найдена"
+        print(f"  {required}: {state}")
+    if normalize(MODEL) not in available:
+        raise SystemExit(f"Основная модель {MODEL} не найдена в Ollama")
 
     print("\n[1] Холодный запуск (модель загружается в память)...")
     cold = generate(PROMPT, stream=True)

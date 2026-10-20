@@ -10,7 +10,7 @@ import time
 import urllib.request
 
 OLLAMA_URL = os.getenv("OLLAMA_BASE_URL", "http://localhost:11434")
-OLLAMA_MODEL = os.getenv("OLLAMA_MODEL", "qwen3.5:9b")
+OLLAMA_MODEL = os.getenv("OLLAMA_MODEL", "porukam-buyer-9b:latest")
 DEEPSEEK_URL = os.getenv("DEEPSEEK_BASE_URL", "https://api.deepseek.com")
 DEEPSEEK_MODEL = os.getenv("DEEPSEEK_MODEL", "deepseek-v4-pro")
 DEEPSEEK_API_KEY = os.getenv("DEEPSEEK_API_KEY", "")
