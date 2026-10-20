@@ -13,6 +13,19 @@ async function publicApi(page: Page) {
 async function noOverflow(page: Page) {
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
 }
+async function compactProductBody(page: Page, contentHeightLimit: number) {
+  const body = page.locator(".market-product__body").first();
+  const minimumOrder = body.locator(".product-conditions");
+  await expect(minimumOrder).toHaveText("От 100 шт.");
+  await expect(minimumOrder).toBeVisible();
+  const minimumOrderHeight = (await minimumOrder.boundingBox())!.height;
+  // The required MOQ is one compact extra row; retain the original budget for
+  // the title, price, verification and padding instead of shrinking their text.
+  expect(minimumOrderHeight).toBeLessThanOrEqual(18);
+  const gap = await body.evaluate(el => parseFloat(getComputedStyle(el).rowGap));
+  const contentHeight = (await body.boundingBox())!.height - minimumOrderHeight - gap;
+  expect(contentHeight).toBeLessThanOrEqual(contentHeightLimit);
+}
 
 test("products lead the first viewport, with persistent themes, exact prices and working search", async ({ page }) => {
   await publicApi(page);
@@ -24,7 +37,7 @@ test("products lead the first viewport, with persistent themes, exact prices and
   const photo = await page.locator(".market-product__visual").first().boundingBox();
   expect(photo).not.toBeNull();
   expect(photo!.width / photo!.height).toBeCloseTo(1.546, 1);
-  expect((await page.locator(".market-product__body").first().boundingBox())!.height).toBeLessThanOrEqual(100);
+  await compactProductBody(page, 100);
   expect(await page.locator(".market-product h2").first().evaluate(el => parseFloat(getComputedStyle(el).fontSize))).toBeGreaterThanOrEqual(15);
   expect(await page.locator(".site-header__logo img").evaluateAll(els => els.every(el => getComputedStyle(el).filter === "none"))).toBe(true);
   await expect(page.getByRole("heading", { name: "Всё для вашего бизнеса" })).toBeVisible();
@@ -118,7 +131,7 @@ test("mobile market, keyboard navigation and reduced motion at 320, 390 and 768 
     await expect(page.locator(".market-product").last()).toBeVisible();
     const photo = await page.locator(".market-product__visual").first().boundingBox();
     expect(photo!.width / photo!.height).toBeCloseTo(width < 760 ? 1.2 : 1.546, 1);
-    expect((await page.locator(".market-product__body").first().boundingBox())!.height).toBeLessThanOrEqual(width < 760 ? 120 : 100);
+    await compactProductBody(page, width < 760 ? 120 : 100);
     await noOverflow(page);
     const menu = page.getByRole("button", { name: "Открыть навигацию", exact: true });
     await menu.click();
