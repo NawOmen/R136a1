@@ -21,7 +21,9 @@ test("glass really redraws on hover, rests in idle, and never moves readable con
   for (const [path, selector] of [["/", ".storefront-hero .liquid-action"], ["/knowledge", ".help-hero"], ["/ai-procurement", ".procurement-hero"]]) {
     await page.goto(path);
     const shell = page.locator(selector), canvas = shell.locator(":scope > .liquid-surface__mesh");
-    await expect(canvas).toHaveAttribute("data-ready", "true");
+    // Software GPU compilation can queue behind the independent Three.js scene.
+    await expect(canvas).toHaveAttribute("data-ready", "true", { timeout: 15000 });
+    expect(await canvas.evaluate(c => c.getContext("webgl")!.getContextAttributes()!.premultipliedAlpha)).toBe(true);
     await page.locator(".page-surface").evaluate(async element => { await document.fonts.ready; await Promise.all(element.getAnimations().map(animation => animation.finished)); });
     await page.mouse.move(1, 1);
     await expect.poll(() => canvas.evaluate(c => {

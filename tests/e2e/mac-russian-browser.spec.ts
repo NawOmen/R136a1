@@ -102,6 +102,59 @@ test("a corrupt GPU framebuffer never replaces the CSS material", async ({ page,
   expect(errors).toEqual([]);
 });
 
+for (const failure of ["dark-preflight", "rgb-preflight", "theme-change", "pointer-entry", "settled-motion"] as const) {
+  test(`glass rejects ${failure} corruption and retains readable moving material`, async ({ page, isMobile }, info) => {
+    test.skip(isMobile, "Touch uses the static material.");
+    const errors = await prepare(page);
+    await page.addInitScript(mode => {
+      const read = WebGLRenderingContext.prototype.readPixels;
+      WebGLRenderingContext.prototype.readPixels = function(...args: Parameters<typeof read>) {
+        Reflect.apply(read, this, args);
+        const program = this.getParameter(this.CURRENT_PROGRAM) as WebGLProgram;
+        const dark = program && this.getUniform(program, this.getUniformLocation(program, "u_dark"));
+        const pointer = program && this.getUniform(program, this.getUniformLocation(program, "u_pointer")) as Float32Array | null;
+        const armed = mode === "rgb-preflight" || (mode === "dark-preflight" ? dark === 1 : (window as Window & { corruptGlass?: boolean }).corruptGlass && (mode !== "settled-motion" || pointer && Math.abs(pointer[0]) > .2));
+        const pixels = args[6];
+        if (armed && pixels instanceof Uint8Array) for (let i = 0; i < pixels.length; i += 4) {
+          if (mode === "rgb-preflight") pixels[i] = pixels[i + 1] = pixels[i + 2] = 255;
+          else pixels[i + 3] = 255;
+        }
+      };
+    }, failure);
+    await page.goto("/");
+    const shell = page.locator(".storefront-hero .liquid-action"), material = shell.locator(".liquid-surface__material"), canvas = shell.locator("canvas"), copy = shell.locator("a");
+    if (!["dark-preflight", "rgb-preflight"].includes(failure)) {
+      await expect(canvas).toHaveAttribute("data-ready", "true");
+      await page.evaluate(() => { (window as Window & { corruptGlass?: boolean }).corruptGlass = true; });
+      if (failure === "theme-change") await page.locator("html").evaluate(el => el.dataset.theme = "dark");
+      else if (failure === "settled-motion") { const box = (await shell.boundingBox())!; await page.mouse.move(box.x + box.width * .85, box.y + box.height * .2); }
+      else await shell.hover({ position: { x: 30, y: 15 } });
+    }
+    await expect(shell).toHaveAttribute("data-glass-fallback", "invalid-frame");
+    await expect(canvas).not.toHaveAttribute("data-ready", "true");
+    await expect(material).toBeVisible();
+    await page.locator(".page-surface").evaluate(async el => { await document.fonts.ready; await Promise.all(el.getAnimations().map(animation => animation.finished)); });
+    await page.mouse.move(1, 1);
+    await expect.poll(() => shell.evaluate(el => el.style.getPropertyValue("--glass-tilt-x"))).toBe("");
+    const bounds = await copy.boundingBox();
+    const box = (await shell.boundingBox())!;
+    await page.mouse.move(box.x + box.width * .85, box.y + box.height * .2);
+    await expect.poll(() => shell.evaluate(el => el.style.getPropertyValue("--glass-tilt-x"))).not.toBe("");
+    await expect.poll(() => material.evaluate(el => getComputedStyle(el).transform)).toContain("matrix3d");
+    expect(await copy.boundingBox()).toEqual(bounds);
+    for (const theme of ["light", "dark"]) {
+      await page.locator("html").evaluate((el, value) => el.dataset.theme = value, theme);
+      await page.screenshot({ path: info.outputPath(`${failure}-${theme}.png`), animations: "disabled" });
+      expect(await canvas.evaluate(el => getComputedStyle(el).opacity)).toBe("0");
+    }
+    await page.emulateMedia({ reducedMotion: "reduce" });
+    await expect.poll(() => material.evaluate(el => getComputedStyle(el).transform)).toBe("none");
+    await copy.click();
+    await expect(page).toHaveURL(/\/needs\/new|\/login/);
+    expect(errors).toEqual([]);
+  });
+}
+
 test("both guidance shells keep readable actions across the Mac screenshot themes", async ({ page, isMobile }, info) => {
   test.skip(isMobile, "Desktop comparison uses the Mac screenshot dimensions.");
   const errors = await prepare(page);

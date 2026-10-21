@@ -65,17 +65,22 @@ void main() {
   vec3 color = mix(silver,vec3(1.0),clamp(lip * 0.8 + shine * 0.5,0.0,1.0));
   color = mix(color,vec3(0.30,0.46,0.63),caustic * 0.38);
   float alpha = lip * 0.72 + bevel * 0.24 + fresnel * 0.22 + shine * bevel * 0.42 + reflection * (0.13 - u_dark * 0.07);
-  gl_FragColor = vec4(color, clamp(alpha,0.0,0.86) * coverage);
+  // Supply premultiplied pixels directly to the page compositor. Transparent
+  // highlights must not retain full-intensity RGB around edges or reflections.
+  float opacity = clamp(alpha,0.0,0.86) * coverage;
+  gl_FragColor = vec4(color * opacity, opacity);
 }`;
 
 type Material = "rail" | "help" | "procurement";
 
 /** Check the real framebuffer, not just successful shader compilation. */
-function intactFrame(gl: WebGLRenderingContext, variant: Material, width: number, height: number, gutter: number) {
+function intactFrame(gl: WebGLRenderingContext, variant: Material, width: number, height: number, gutter: number, pointerX = 0, bufferWidth = gl.drawingBufferWidth, bufferHeight = gl.drawingBufferHeight) {
   const pixel = new Uint8Array(4);
+  let invalidColor = false;
   const alpha = (x: number, y: number) => {
-    gl.readPixels(Math.round((gutter + (width - 2 * gutter) * x) / width * gl.drawingBufferWidth),
-      Math.round((gutter + (height - 2 * gutter) * y) / height * gl.drawingBufferHeight), 1, 1, gl.RGBA, gl.UNSIGNED_BYTE, pixel);
+    gl.readPixels(Math.round((gutter + (width - 2 * gutter) * x) / width * bufferWidth),
+      Math.round((gutter + (height - 2 * gutter) * y) / height * bufferHeight), 1, 1, gl.RGBA, gl.UNSIGNED_BYTE, pixel);
+    if (pixel[0] > pixel[3] + 1 || pixel[1] > pixel[3] + 1 || pixel[2] > pixel[3] + 1) { invalidColor = true; return 255; }
     return pixel[3];
   };
   // The interior is translucent in both themes. The opaque cyan slabs in the
@@ -83,14 +88,14 @@ function intactFrame(gl: WebGLRenderingContext, variant: Material, width: number
   for (const x of [.25, .5, .75]) for (const y of variant === "rail" ? [.5] : [.25, .5, .75]) {
     if (alpha(x, y) > 96) return false;
   }
-  const reflectionY = variant === "procurement" ? .5 : .405;
-  return alpha(.5, reflectionY) > 5 && gl.getError() === gl.NO_ERROR;
+  const reflectionY = variant === "procurement" ? .5 + pointerX * .11 : .405 - pointerX * .11;
+  return alpha(.5, reflectionY) > 5 && !invalidColor && gl.getError() === gl.NO_ERROR;
 }
 
 /** Original glass renderer for action and guidance shells; categories use CSS only. */
 export function createGlassMesh(host: HTMLElement, canvas: HTMLCanvasElement, variant: Material) {
-  const gl = canvas.getContext("webgl", { alpha: true, antialias: false, depth: false, stencil: false, premultipliedAlpha: false, powerPreference: "low-power" });
-  if (!gl) return;
+  const gl = canvas.getContext("webgl", { alpha: true, antialias: false, depth: false, stencil: false, premultipliedAlpha: true, powerPreference: "low-power" });
+  if (!gl) { host.dataset.glassFallback = "no-webgl"; return; }
   // Pixel-space distances and their gradients need full float precision. If the
   // GPU cannot supply it, keep the CSS material rather than draw corrupt glass.
   const precision = gl.getShaderPrecisionFormat(gl.FRAGMENT_SHADER, gl.HIGH_FLOAT);
@@ -106,7 +111,7 @@ export function createGlassMesh(host: HTMLElement, canvas: HTMLCanvasElement, va
   };
   const program = gl.createProgram(), buffer = gl.createBuffer();
   let frame = 0, disposed = false, visible = true, lost = false, width = 0, height = 0, previous = 0;
-  let verified = false, cleanup: (() => void) | undefined;
+  let verified = false, checkFrame = true, wasMoving = false, pointerActive = false, cleanup: (() => void) | undefined;
   let x = 0, y = 0, vx = 0, vy = 0, tx = 0, ty = 0;
   const release = () => {
     // A lost context has already invalidated its resources. Deleting old handles
@@ -118,7 +123,7 @@ export function createGlassMesh(host: HTMLElement, canvas: HTMLCanvasElement, va
     if (!program || !buffer) throw new Error("allocation");
     gl.attachShader(program, compile(gl.VERTEX_SHADER, vertex)); gl.attachShader(program, compile(gl.FRAGMENT_SHADER, fragment)); gl.linkProgram(program);
     if (!gl.getProgramParameter(program, gl.LINK_STATUS)) throw new Error("link");
-  } catch { release(); return; }
+  } catch { release(); host.dataset.glassFallback = "shader"; return; }
   const points: number[] = [];
   const columns = 64, rows = variant === "rail" ? 8 : 24;
   for (let j = 0; j < rows; j++) for (let i = 0; i < columns; i++) {
@@ -131,6 +136,11 @@ export function createGlassMesh(host: HTMLElement, canvas: HTMLCanvasElement, va
   const size = gl.getUniformLocation(program!, "u_size"), pointer = gl.getUniformLocation(program!, "u_pointer"), dark = gl.getUniformLocation(program!, "u_dark");
   gl.uniform1f(gl.getUniformLocation(program!, "u_variant"), variant === "rail" ? 0 : variant === "help" ? 1 : 2);
   const request = () => { if (!frame && !disposed && !lost && visible && !document.hidden && width > 0 && height > 0) frame = requestAnimationFrame(draw); };
+  const render = (px: number, py: number, theme: number) => {
+    gl.uniform2f(pointer,px,py); gl.uniform1f(dark,theme);
+    gl.clearColor(0,0,0,0); gl.clear(gl.COLOR_BUFFER_BIT); gl.drawArrays(gl.TRIANGLES,0,points.length / 2);
+  };
+  const reject = () => { cleanup?.(); host.dataset.glassFallback = "invalid-frame"; };
   const draw = (time: number) => {
     frame = 0;
     const dt = previous ? Math.min((time - previous) / 1000, 0.032) : 1 / 60; previous = time;
@@ -140,21 +150,37 @@ export function createGlassMesh(host: HTMLElement, canvas: HTMLCanvasElement, va
     const moving = Math.abs(tx-x) + Math.abs(ty-y) + Math.abs(vx) + Math.abs(vy) > 0.002;
     if (!moving) { x = tx; y = ty; vx = vy = 0; previous = 0; }
     gl.viewport(0,0,canvas.width,canvas.height);
-    gl.uniform2f(size,width,height); gl.uniform2f(pointer,x,-y);
-    gl.uniform1f(dark,document.documentElement.dataset.theme === "dark" ? 1 : 0);
-    gl.clearColor(0,0,0,0); gl.clear(gl.COLOR_BUFFER_BIT); gl.drawArrays(gl.TRIANGLES,0,points.length / 2);
+    gl.uniform2f(size,width,height);
     if (!verified) {
-      if (!intactFrame(gl, variant, width, height, gutter)) {
-        cleanup?.(); host.dataset.glassFallback = "invalid-frame"; return;
+      // Validate both themes and bent states before exposing the canvas. A good
+      // initial light frame does not establish that this GPU draws dark/hover.
+      // Use a small viewport for these hidden probes, then check the actual full
+      // frame too. Avoid rendering six full-size hero images on startup/resize.
+      const scale = Math.min(1,160 / canvas.width,96 / canvas.height);
+      const probeWidth = Math.max(1,Math.round(canvas.width * scale)), probeHeight = Math.max(1,Math.round(canvas.height * scale));
+      gl.viewport(0,0,probeWidth,probeHeight);
+      for (const theme of [0, 1]) for (const [px, py] of [[0, 0], [-.9, -.9], [.9, .9]]) {
+        render(px,py,theme);
+        if (!intactFrame(gl,variant,width,height,gutter,px,probeWidth,probeHeight)) { reject(); return; }
       }
-      verified = true; delete host.dataset.glassFallback;
+      gl.viewport(0,0,canvas.width,canvas.height);
+      verified = true; checkFrame = true; delete host.dataset.glassFallback;
     }
+    render(x,-y,document.documentElement.dataset.theme === "dark" ? 1 : 0);
+    // One check on pointer entry and when motion settles, never an idle loop or
+    // synchronous readback on every pointermove / animation frame.
+    if (checkFrame || wasMoving && !moving) {
+      if (!intactFrame(gl,variant,width,height,gutter,x)) { reject(); return; }
+      checkFrame = false;
+    }
+    wasMoving = moving;
     if (!canvas.dataset.ready) { canvas.dataset.ready = "true"; host.dataset.meshReady = "true"; }
     if (moving) request();
   };
-  const reset = () => { tx = ty = 0; request(); };
+  const reset = () => { tx = ty = 0; pointerActive = false; checkFrame = true; request(); };
   const move = (event: PointerEvent) => {
     if (event.pointerType !== "mouse") return;
+    if (!pointerActive) { checkFrame = true; pointerActive = true; }
     const box = host.getBoundingClientRect();
     tx = Math.max(-1,Math.min(1,(event.clientX - box.left) / box.width * 2 - 1));
     ty = Math.max(-1,Math.min(1,(event.clientY - box.top) / box.height * 2 - 1)); request();
@@ -164,6 +190,7 @@ export function createGlassMesh(host: HTMLElement, canvas: HTMLCanvasElement, va
     if (!document.hidden) request();
   };
   const resize = new ResizeObserver(() => {
+    verified = false;
     const box = host.getBoundingClientRect();
     gutter = Math.max(8,Math.min(32,box.left,window.innerWidth - box.right));
     host.style.setProperty("--glass-gutter",`${gutter}px`); gl.uniform1f(guardBand,gutter);
@@ -174,8 +201,8 @@ export function createGlassMesh(host: HTMLElement, canvas: HTMLCanvasElement, va
     gl.uniform4f(corners,parseFloat(style.borderTopLeftRadius),parseFloat(style.borderTopRightRadius),parseFloat(style.borderBottomRightRadius),parseFloat(style.borderBottomLeftRadius)); request();
   });
   const intersection = new IntersectionObserver(entries => { visible = entries[0].isIntersecting; if (!visible) pause(); else request(); });
-  const theme = new MutationObserver(request);
-  const contextLost = (event: Event) => { event.preventDefault(); lost = true; cancelAnimationFrame(frame); frame = 0; delete canvas.dataset.ready; delete host.dataset.meshReady; };
+  const theme = new MutationObserver(() => { verified = false; request(); });
+  const contextLost = (event: Event) => { event.preventDefault(); lost = true; cancelAnimationFrame(frame); frame = 0; host.dataset.glassFallback = "lost-context"; delete canvas.dataset.ready; delete host.dataset.meshReady; };
   host.addEventListener("pointermove",move); host.addEventListener("pointerleave",reset); host.addEventListener("pointercancel",reset);
   canvas.addEventListener("webglcontextlost",contextLost); window.addEventListener("blur",pause); document.addEventListener("visibilitychange",pause);
   resize.observe(host); intersection.observe(host); theme.observe(document.documentElement,{attributes:true,attributeFilter:["data-theme"]});
