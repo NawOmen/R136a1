@@ -146,25 +146,28 @@ export default function NewCompanyPage() {
           />
         </div>
 
-        <label className="checkbox">
-          <input
-            type="checkbox"
-            checked={canBuy}
-            onChange={(event) => setCanBuy(event.target.checked)}
-          />
-          Покупаю
-        </label>
-        <label className="checkbox">
-          <input
-            type="checkbox"
-            checked={canSell}
-            onChange={(event) => setCanSell(event.target.checked)}
-          />
-          Продаю
-        </label>
-        {!canBuy && !canSell && (
-          <p className="hint mode-hint">Выберите хотя бы один режим: «Покупаю» или «Продаю».</p>
-        )}
+        <fieldset className="company-mode-group" aria-describedby={!canBuy && !canSell ? "company-mode-hint" : undefined}>
+          <legend className="visually-hidden">Режимы работы компании</legend>
+          <label className="checkbox">
+            <input
+              type="checkbox"
+              checked={canBuy}
+              onChange={(event) => setCanBuy(event.target.checked)}
+            />
+            Покупаю
+          </label>
+          <label className="checkbox">
+            <input
+              type="checkbox"
+              checked={canSell}
+              onChange={(event) => setCanSell(event.target.checked)}
+            />
+            Продаю
+          </label>
+          {!canBuy && !canSell && (
+            <p className="hint mode-hint" id="company-mode-hint">Выберите хотя бы один режим: «Покупаю» или «Продаю».</p>
+          )}
+        </fieldset>
 
         <div className="actions">
           <button type="submit" className="btn btn-primary" disabled={submitting || (!canBuy && !canSell)}>

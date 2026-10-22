@@ -1,0 +1,930 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-10-18T11:11:02.490495+00:00",
+  "title": "Design System: ПоРукам — торговая витрина",
+  "extensions": {
+    "colorMeta": {
+      "scene": {
+        "role": "neutral",
+        "displayName": "scene",
+        "canonical": "rgb(247 250 252)",
+        "tonalRamp": [
+          "oklch(15% 0.0042 236.50)",
+          "oklch(26% 0.0042 236.50)",
+          "oklch(38% 0.0042 236.50)",
+          "oklch(49% 0.0042 236.50)",
+          "oklch(61% 0.0042 236.50)",
+          "oklch(72% 0.0042 236.50)",
+          "oklch(84% 0.0042 236.50)",
+          "oklch(95% 0.0042 236.50)"
+        ]
+      },
+      "bg": {
+        "role": "neutral",
+        "displayName": "bg",
+        "canonical": "rgb(247 250 252)",
+        "tonalRamp": [
+          "oklch(15% 0.0042 236.50)",
+          "oklch(26% 0.0042 236.50)",
+          "oklch(38% 0.0042 236.50)",
+          "oklch(49% 0.0042 236.50)",
+          "oklch(61% 0.0042 236.50)",
+          "oklch(72% 0.0042 236.50)",
+          "oklch(84% 0.0042 236.50)",
+          "oklch(95% 0.0042 236.50)"
+        ]
+      },
+      "bg-accent": {
+        "role": "neutral",
+        "displayName": "bg-accent",
+        "canonical": "rgb(235 244 251)",
+        "tonalRamp": [
+          "oklch(15% 0.0134 240.95)",
+          "oklch(26% 0.0134 240.95)",
+          "oklch(38% 0.0134 240.95)",
+          "oklch(49% 0.0134 240.95)",
+          "oklch(61% 0.0134 240.95)",
+          "oklch(72% 0.0134 240.95)",
+          "oklch(84% 0.0134 240.95)",
+          "oklch(95% 0.0134 240.95)"
+        ]
+      },
+      "surface": {
+        "role": "neutral",
+        "displayName": "surface",
+        "canonical": "rgb(255 255 255)",
+        "tonalRamp": [
+          "oklch(15% 0.0000 89.88)",
+          "oklch(26% 0.0000 89.88)",
+          "oklch(38% 0.0000 89.88)",
+          "oklch(49% 0.0000 89.88)",
+          "oklch(61% 0.0000 89.88)",
+          "oklch(72% 0.0000 89.88)",
+          "oklch(84% 0.0000 89.88)",
+          "oklch(95% 0.0000 89.88)"
+        ]
+      },
+      "surface-raised": {
+        "role": "neutral",
+        "displayName": "surface-raised",
+        "canonical": "rgb(248 251 254)",
+        "tonalRamp": [
+          "oklch(15% 0.0051 247.88)",
+          "oklch(26% 0.0051 247.88)",
+          "oklch(38% 0.0051 247.88)",
+          "oklch(49% 0.0051 247.88)",
+          "oklch(61% 0.0051 247.88)",
+          "oklch(72% 0.0051 247.88)",
+          "oklch(84% 0.0051 247.88)",
+          "oklch(95% 0.0051 247.88)"
+        ]
+      },
+      "text": {
+        "role": "neutral",
+        "displayName": "text",
+        "canonical": "rgb(9 9 34)",
+        "tonalRamp": [
+          "oklch(15% 0.0512 278.82)",
+          "oklch(26% 0.0512 278.82)",
+          "oklch(38% 0.0512 278.82)",
+          "oklch(49% 0.0512 278.82)",
+          "oklch(61% 0.0512 278.82)",
+          "oklch(72% 0.0512 278.82)",
+          "oklch(84% 0.0512 278.82)",
+          "oklch(95% 0.0512 278.82)"
+        ]
+      },
+      "text-muted": {
+        "role": "neutral",
+        "displayName": "text-muted",
+        "canonical": "rgb(83 94 115)",
+        "tonalRamp": [
+          "oklch(15% 0.0366 263.28)",
+          "oklch(26% 0.0366 263.28)",
+          "oklch(38% 0.0366 263.28)",
+          "oklch(49% 0.0366 263.28)",
+          "oklch(61% 0.0366 263.28)",
+          "oklch(72% 0.0366 263.28)",
+          "oklch(84% 0.0366 263.28)",
+          "oklch(95% 0.0366 263.28)"
+        ]
+      },
+      "border": {
+        "role": "neutral",
+        "displayName": "border",
+        "canonical": "rgb(219 232 243)",
+        "tonalRamp": [
+          "oklch(15% 0.0205 243.43)",
+          "oklch(26% 0.0205 243.43)",
+          "oklch(38% 0.0205 243.43)",
+          "oklch(49% 0.0205 243.43)",
+          "oklch(61% 0.0205 243.43)",
+          "oklch(72% 0.0205 243.43)",
+          "oklch(84% 0.0205 243.43)",
+          "oklch(95% 0.0205 243.43)"
+        ]
+      },
+      "primary": {
+        "role": "primary",
+        "displayName": "primary",
+        "canonical": "rgb(18 53 108)",
+        "tonalRamp": [
+          "oklch(15% 0.1041 259.35)",
+          "oklch(26% 0.1041 259.35)",
+          "oklch(38% 0.1041 259.35)",
+          "oklch(49% 0.1041 259.35)",
+          "oklch(61% 0.1041 259.35)",
+          "oklch(72% 0.1041 259.35)",
+          "oklch(84% 0.1041 259.35)",
+          "oklch(95% 0.1041 259.35)"
+        ]
+      },
+      "primary-hover": {
+        "role": "primary",
+        "displayName": "primary-hover",
+        "canonical": "rgb(34 85 143)",
+        "tonalRamp": [
+          "oklch(15% 0.1098 253.87)",
+          "oklch(26% 0.1098 253.87)",
+          "oklch(38% 0.1098 253.87)",
+          "oklch(49% 0.1098 253.87)",
+          "oklch(61% 0.1098 253.87)",
+          "oklch(72% 0.1098 253.87)",
+          "oklch(84% 0.1098 253.87)",
+          "oklch(95% 0.1098 253.87)"
+        ]
+      },
+      "primary-soft": {
+        "role": "primary",
+        "displayName": "primary-soft",
+        "canonical": "rgb(218 238 252)",
+        "tonalRamp": [
+          "oklch(15% 0.0285 238.24)",
+          "oklch(26% 0.0285 238.24)",
+          "oklch(38% 0.0285 238.24)",
+          "oklch(49% 0.0285 238.24)",
+          "oklch(61% 0.0285 238.24)",
+          "oklch(72% 0.0285 238.24)",
+          "oklch(84% 0.0285 238.24)",
+          "oklch(95% 0.0285 238.24)"
+        ]
+      },
+      "on-primary": {
+        "role": "primary",
+        "displayName": "on-primary",
+        "canonical": "rgb(255 255 255)",
+        "tonalRamp": [
+          "oklch(15% 0.0000 89.88)",
+          "oklch(26% 0.0000 89.88)",
+          "oklch(38% 0.0000 89.88)",
+          "oklch(49% 0.0000 89.88)",
+          "oklch(61% 0.0000 89.88)",
+          "oklch(72% 0.0000 89.88)",
+          "oklch(84% 0.0000 89.88)",
+          "oklch(95% 0.0000 89.88)"
+        ]
+      },
+      "glass-header": {
+        "role": "neutral",
+        "displayName": "glass-header",
+        "canonical": "rgb(255 255 255 / .97)",
+        "tonalRamp": [
+          "oklch(15% 0.0000 89.88)",
+          "oklch(26% 0.0000 89.88)",
+          "oklch(38% 0.0000 89.88)",
+          "oklch(49% 0.0000 89.88)",
+          "oklch(61% 0.0000 89.88)",
+          "oklch(72% 0.0000 89.88)",
+          "oklch(84% 0.0000 89.88)",
+          "oklch(95% 0.0000 89.88)"
+        ]
+      },
+      "glass-edge": {
+        "role": "neutral",
+        "displayName": "glass-edge",
+        "canonical": "rgb(208 226 241)",
+        "tonalRamp": [
+          "oklch(15% 0.0282 243.12)",
+          "oklch(26% 0.0282 243.12)",
+          "oklch(38% 0.0282 243.12)",
+          "oklch(49% 0.0282 243.12)",
+          "oklch(61% 0.0282 243.12)",
+          "oklch(72% 0.0282 243.12)",
+          "oklch(84% 0.0282 243.12)",
+          "oklch(95% 0.0282 243.12)"
+        ]
+      },
+      "field-bg": {
+        "role": "neutral",
+        "displayName": "field-bg",
+        "canonical": "rgb(255 255 255)",
+        "tonalRamp": [
+          "oklch(15% 0.0000 89.88)",
+          "oklch(26% 0.0000 89.88)",
+          "oklch(38% 0.0000 89.88)",
+          "oklch(49% 0.0000 89.88)",
+          "oklch(61% 0.0000 89.88)",
+          "oklch(72% 0.0000 89.88)",
+          "oklch(84% 0.0000 89.88)",
+          "oklch(95% 0.0000 89.88)"
+        ]
+      },
+      "picker-bg": {
+        "role": "neutral",
+        "displayName": "picker-bg",
+        "canonical": "rgb(255 255 255 / .98)",
+        "tonalRamp": [
+          "oklch(15% 0.0000 89.88)",
+          "oklch(26% 0.0000 89.88)",
+          "oklch(38% 0.0000 89.88)",
+          "oklch(49% 0.0000 89.88)",
+          "oklch(61% 0.0000 89.88)",
+          "oklch(72% 0.0000 89.88)",
+          "oklch(84% 0.0000 89.88)",
+          "oklch(95% 0.0000 89.88)"
+        ]
+      },
+      "picker-solid": {
+        "role": "neutral",
+        "displayName": "picker-solid",
+        "canonical": "rgb(255 255 255)",
+        "tonalRamp": [
+          "oklch(15% 0.0000 89.88)",
+          "oklch(26% 0.0000 89.88)",
+          "oklch(38% 0.0000 89.88)",
+          "oklch(49% 0.0000 89.88)",
+          "oklch(61% 0.0000 89.88)",
+          "oklch(72% 0.0000 89.88)",
+          "oklch(84% 0.0000 89.88)",
+          "oklch(95% 0.0000 89.88)"
+        ]
+      },
+      "danger": {
+        "role": "semantic",
+        "displayName": "danger",
+        "canonical": "rgb(163 42 63)",
+        "tonalRamp": [
+          "oklch(15% 0.1563 15.75)",
+          "oklch(26% 0.1563 15.75)",
+          "oklch(38% 0.1563 15.75)",
+          "oklch(49% 0.1563 15.75)",
+          "oklch(61% 0.1563 15.75)",
+          "oklch(72% 0.1563 15.75)",
+          "oklch(84% 0.1563 15.75)",
+          "oklch(95% 0.1563 15.75)"
+        ]
+      },
+      "danger-soft": {
+        "role": "semantic",
+        "displayName": "danger-soft",
+        "canonical": "rgb(251 235 238)",
+        "tonalRamp": [
+          "oklch(15% 0.0178 4.52)",
+          "oklch(26% 0.0178 4.52)",
+          "oklch(38% 0.0178 4.52)",
+          "oklch(49% 0.0178 4.52)",
+          "oklch(61% 0.0178 4.52)",
+          "oklch(72% 0.0178 4.52)",
+          "oklch(84% 0.0178 4.52)",
+          "oklch(95% 0.0178 4.52)"
+        ]
+      },
+      "success": {
+        "role": "semantic",
+        "displayName": "success",
+        "canonical": "rgb(19 137 99)",
+        "tonalRamp": [
+          "oklch(15% 0.1138 164.57)",
+          "oklch(26% 0.1138 164.57)",
+          "oklch(38% 0.1138 164.57)",
+          "oklch(49% 0.1138 164.57)",
+          "oklch(61% 0.1138 164.57)",
+          "oklch(72% 0.1138 164.57)",
+          "oklch(84% 0.1138 164.57)",
+          "oklch(95% 0.1138 164.57)"
+        ]
+      },
+      "success-soft": {
+        "role": "semantic",
+        "displayName": "success-soft",
+        "canonical": "rgb(231 247 240)",
+        "tonalRamp": [
+          "oklch(15% 0.0192 167.93)",
+          "oklch(26% 0.0192 167.93)",
+          "oklch(38% 0.0192 167.93)",
+          "oklch(49% 0.0192 167.93)",
+          "oklch(61% 0.0192 167.93)",
+          "oklch(72% 0.0192 167.93)",
+          "oklch(84% 0.0192 167.93)",
+          "oklch(95% 0.0192 167.93)"
+        ]
+      },
+      "warning": {
+        "role": "semantic",
+        "displayName": "warning",
+        "canonical": "rgb(124 82 27)",
+        "tonalRamp": [
+          "oklch(15% 0.0888 69.38)",
+          "oklch(26% 0.0888 69.38)",
+          "oklch(38% 0.0888 69.38)",
+          "oklch(49% 0.0888 69.38)",
+          "oklch(61% 0.0888 69.38)",
+          "oklch(72% 0.0888 69.38)",
+          "oklch(84% 0.0888 69.38)",
+          "oklch(95% 0.0888 69.38)"
+        ]
+      },
+      "warning-soft": {
+        "role": "semantic",
+        "displayName": "warning-soft",
+        "canonical": "rgb(249 239 221)",
+        "tonalRamp": [
+          "oklch(15% 0.0261 82.39)",
+          "oklch(26% 0.0261 82.39)",
+          "oklch(38% 0.0261 82.39)",
+          "oklch(49% 0.0261 82.39)",
+          "oklch(61% 0.0261 82.39)",
+          "oklch(72% 0.0261 82.39)",
+          "oklch(84% 0.0261 82.39)",
+          "oklch(95% 0.0261 82.39)"
+        ]
+      },
+      "dark-scene": {
+        "role": "neutral",
+        "displayName": "dark-scene",
+        "canonical": "rgb(8 17 30)",
+        "tonalRamp": [
+          "oklch(15% 0.0305 257.27)",
+          "oklch(26% 0.0305 257.27)",
+          "oklch(38% 0.0305 257.27)",
+          "oklch(49% 0.0305 257.27)",
+          "oklch(61% 0.0305 257.27)",
+          "oklch(72% 0.0305 257.27)",
+          "oklch(84% 0.0305 257.27)",
+          "oklch(95% 0.0305 257.27)"
+        ]
+      },
+      "dark-bg": {
+        "role": "neutral",
+        "displayName": "dark-bg",
+        "canonical": "rgb(12 23 38)",
+        "tonalRamp": [
+          "oklch(15% 0.0342 256.41)",
+          "oklch(26% 0.0342 256.41)",
+          "oklch(38% 0.0342 256.41)",
+          "oklch(49% 0.0342 256.41)",
+          "oklch(61% 0.0342 256.41)",
+          "oklch(72% 0.0342 256.41)",
+          "oklch(84% 0.0342 256.41)",
+          "oklch(95% 0.0342 256.41)"
+        ]
+      },
+      "dark-bg-accent": {
+        "role": "neutral",
+        "displayName": "dark-bg-accent",
+        "canonical": "rgb(23 39 57)",
+        "tonalRamp": [
+          "oklch(15% 0.0402 252.22)",
+          "oklch(26% 0.0402 252.22)",
+          "oklch(38% 0.0402 252.22)",
+          "oklch(49% 0.0402 252.22)",
+          "oklch(61% 0.0402 252.22)",
+          "oklch(72% 0.0402 252.22)",
+          "oklch(84% 0.0402 252.22)",
+          "oklch(95% 0.0402 252.22)"
+        ]
+      },
+      "dark-surface": {
+        "role": "neutral",
+        "displayName": "dark-surface",
+        "canonical": "rgb(16 29 45)",
+        "tonalRamp": [
+          "oklch(15% 0.0363 254.26)",
+          "oklch(26% 0.0363 254.26)",
+          "oklch(38% 0.0363 254.26)",
+          "oklch(49% 0.0363 254.26)",
+          "oklch(61% 0.0363 254.26)",
+          "oklch(72% 0.0363 254.26)",
+          "oklch(84% 0.0363 254.26)",
+          "oklch(95% 0.0363 254.26)"
+        ]
+      },
+      "dark-surface-raised": {
+        "role": "neutral",
+        "displayName": "dark-surface-raised",
+        "canonical": "rgb(27 44 63)",
+        "tonalRamp": [
+          "oklch(15% 0.0418 252.02)",
+          "oklch(26% 0.0418 252.02)",
+          "oklch(38% 0.0418 252.02)",
+          "oklch(49% 0.0418 252.02)",
+          "oklch(61% 0.0418 252.02)",
+          "oklch(72% 0.0418 252.02)",
+          "oklch(84% 0.0418 252.02)",
+          "oklch(95% 0.0418 252.02)"
+        ]
+      },
+      "dark-text": {
+        "role": "neutral",
+        "displayName": "dark-text",
+        "canonical": "rgb(232 241 249)",
+        "tonalRamp": [
+          "oklch(15% 0.0144 244.72)",
+          "oklch(26% 0.0144 244.72)",
+          "oklch(38% 0.0144 244.72)",
+          "oklch(49% 0.0144 244.72)",
+          "oklch(61% 0.0144 244.72)",
+          "oklch(72% 0.0144 244.72)",
+          "oklch(84% 0.0144 244.72)",
+          "oklch(95% 0.0144 244.72)"
+        ]
+      },
+      "dark-text-muted": {
+        "role": "neutral",
+        "displayName": "dark-text-muted",
+        "canonical": "rgb(170 192 212)",
+        "tonalRamp": [
+          "oklch(15% 0.0373 245.72)",
+          "oklch(26% 0.0373 245.72)",
+          "oklch(38% 0.0373 245.72)",
+          "oklch(49% 0.0373 245.72)",
+          "oklch(61% 0.0373 245.72)",
+          "oklch(72% 0.0373 245.72)",
+          "oklch(84% 0.0373 245.72)",
+          "oklch(95% 0.0373 245.72)"
+        ]
+      },
+      "dark-border": {
+        "role": "neutral",
+        "displayName": "dark-border",
+        "canonical": "rgb(52 76 103)",
+        "tonalRamp": [
+          "oklch(15% 0.0544 252.05)",
+          "oklch(26% 0.0544 252.05)",
+          "oklch(38% 0.0544 252.05)",
+          "oklch(49% 0.0544 252.05)",
+          "oklch(61% 0.0544 252.05)",
+          "oklch(72% 0.0544 252.05)",
+          "oklch(84% 0.0544 252.05)",
+          "oklch(95% 0.0544 252.05)"
+        ]
+      },
+      "dark-primary": {
+        "role": "primary",
+        "displayName": "dark-primary",
+        "canonical": "rgb(184 211 238)",
+        "tonalRamp": [
+          "oklch(15% 0.0476 248.38)",
+          "oklch(26% 0.0476 248.38)",
+          "oklch(38% 0.0476 248.38)",
+          "oklch(49% 0.0476 248.38)",
+          "oklch(61% 0.0476 248.38)",
+          "oklch(72% 0.0476 248.38)",
+          "oklch(84% 0.0476 248.38)",
+          "oklch(95% 0.0476 248.38)"
+        ]
+      },
+      "dark-primary-hover": {
+        "role": "primary",
+        "displayName": "dark-primary-hover",
+        "canonical": "rgb(214 231 248)",
+        "tonalRamp": [
+          "oklch(15% 0.0295 248.15)",
+          "oklch(26% 0.0295 248.15)",
+          "oklch(38% 0.0295 248.15)",
+          "oklch(49% 0.0295 248.15)",
+          "oklch(61% 0.0295 248.15)",
+          "oklch(72% 0.0295 248.15)",
+          "oklch(84% 0.0295 248.15)",
+          "oklch(95% 0.0295 248.15)"
+        ]
+      },
+      "dark-primary-soft": {
+        "role": "primary",
+        "displayName": "dark-primary-soft",
+        "canonical": "rgb(36 60 84)",
+        "tonalRamp": [
+          "oklch(15% 0.0518 249.52)",
+          "oklch(26% 0.0518 249.52)",
+          "oklch(38% 0.0518 249.52)",
+          "oklch(49% 0.0518 249.52)",
+          "oklch(61% 0.0518 249.52)",
+          "oklch(72% 0.0518 249.52)",
+          "oklch(84% 0.0518 249.52)",
+          "oklch(95% 0.0518 249.52)"
+        ]
+      },
+      "dark-on-primary": {
+        "role": "primary",
+        "displayName": "dark-on-primary",
+        "canonical": "rgb(12 23 38)",
+        "tonalRamp": [
+          "oklch(15% 0.0342 256.41)",
+          "oklch(26% 0.0342 256.41)",
+          "oklch(38% 0.0342 256.41)",
+          "oklch(49% 0.0342 256.41)",
+          "oklch(61% 0.0342 256.41)",
+          "oklch(72% 0.0342 256.41)",
+          "oklch(84% 0.0342 256.41)",
+          "oklch(95% 0.0342 256.41)"
+        ]
+      },
+      "dark-glass-header": {
+        "role": "neutral",
+        "displayName": "dark-glass-header",
+        "canonical": "rgb(12 23 38 / .97)",
+        "tonalRamp": [
+          "oklch(15% 0.0342 256.41)",
+          "oklch(26% 0.0342 256.41)",
+          "oklch(38% 0.0342 256.41)",
+          "oklch(49% 0.0342 256.41)",
+          "oklch(61% 0.0342 256.41)",
+          "oklch(72% 0.0342 256.41)",
+          "oklch(84% 0.0342 256.41)",
+          "oklch(95% 0.0342 256.41)"
+        ]
+      },
+      "dark-glass-edge": {
+        "role": "neutral",
+        "displayName": "dark-glass-edge",
+        "canonical": "rgb(74 108 139)",
+        "tonalRamp": [
+          "oklch(15% 0.0630 246.85)",
+          "oklch(26% 0.0630 246.85)",
+          "oklch(38% 0.0630 246.85)",
+          "oklch(49% 0.0630 246.85)",
+          "oklch(61% 0.0630 246.85)",
+          "oklch(72% 0.0630 246.85)",
+          "oklch(84% 0.0630 246.85)",
+          "oklch(95% 0.0630 246.85)"
+        ]
+      },
+      "dark-field-bg": {
+        "role": "neutral",
+        "displayName": "dark-field-bg",
+        "canonical": "rgb(10 23 38)",
+        "tonalRamp": [
+          "oklch(15% 0.0355 253.05)",
+          "oklch(26% 0.0355 253.05)",
+          "oklch(38% 0.0355 253.05)",
+          "oklch(49% 0.0355 253.05)",
+          "oklch(61% 0.0355 253.05)",
+          "oklch(72% 0.0355 253.05)",
+          "oklch(84% 0.0355 253.05)",
+          "oklch(95% 0.0355 253.05)"
+        ]
+      },
+      "dark-picker-bg": {
+        "role": "neutral",
+        "displayName": "dark-picker-bg",
+        "canonical": "rgb(20 36 53)",
+        "tonalRamp": [
+          "oklch(15% 0.0390 250.96)",
+          "oklch(26% 0.0390 250.96)",
+          "oklch(38% 0.0390 250.96)",
+          "oklch(49% 0.0390 250.96)",
+          "oklch(61% 0.0390 250.96)",
+          "oklch(72% 0.0390 250.96)",
+          "oklch(84% 0.0390 250.96)",
+          "oklch(95% 0.0390 250.96)"
+        ]
+      },
+      "dark-picker-solid": {
+        "role": "neutral",
+        "displayName": "dark-picker-solid",
+        "canonical": "rgb(20 36 53)",
+        "tonalRamp": [
+          "oklch(15% 0.0390 250.96)",
+          "oklch(26% 0.0390 250.96)",
+          "oklch(38% 0.0390 250.96)",
+          "oklch(49% 0.0390 250.96)",
+          "oklch(61% 0.0390 250.96)",
+          "oklch(72% 0.0390 250.96)",
+          "oklch(84% 0.0390 250.96)",
+          "oklch(95% 0.0390 250.96)"
+        ]
+      },
+      "dark-danger": {
+        "role": "semantic",
+        "displayName": "dark-danger",
+        "canonical": "rgb(255 183 192)",
+        "tonalRamp": [
+          "oklch(15% 0.0843 10.73)",
+          "oklch(26% 0.0843 10.73)",
+          "oklch(38% 0.0843 10.73)",
+          "oklch(49% 0.0843 10.73)",
+          "oklch(61% 0.0843 10.73)",
+          "oklch(72% 0.0843 10.73)",
+          "oklch(84% 0.0843 10.73)",
+          "oklch(95% 0.0843 10.73)"
+        ]
+      },
+      "dark-danger-soft": {
+        "role": "semantic",
+        "displayName": "dark-danger-soft",
+        "canonical": "rgb(65 38 54)",
+        "tonalRamp": [
+          "oklch(15% 0.0477 343.87)",
+          "oklch(26% 0.0477 343.87)",
+          "oklch(38% 0.0477 343.87)",
+          "oklch(49% 0.0477 343.87)",
+          "oklch(61% 0.0477 343.87)",
+          "oklch(72% 0.0477 343.87)",
+          "oklch(84% 0.0477 343.87)",
+          "oklch(95% 0.0477 343.87)"
+        ]
+      },
+      "dark-success": {
+        "role": "semantic",
+        "displayName": "dark-success",
+        "canonical": "rgb(153 222 187)",
+        "tonalRamp": [
+          "oklch(15% 0.0852 161.78)",
+          "oklch(26% 0.0852 161.78)",
+          "oklch(38% 0.0852 161.78)",
+          "oklch(49% 0.0852 161.78)",
+          "oklch(61% 0.0852 161.78)",
+          "oklch(72% 0.0852 161.78)",
+          "oklch(84% 0.0852 161.78)",
+          "oklch(95% 0.0852 161.78)"
+        ]
+      },
+      "dark-success-soft": {
+        "role": "semantic",
+        "displayName": "dark-success-soft",
+        "canonical": "rgb(26 59 49)",
+        "tonalRamp": [
+          "oklch(15% 0.0432 171.50)",
+          "oklch(26% 0.0432 171.50)",
+          "oklch(38% 0.0432 171.50)",
+          "oklch(49% 0.0432 171.50)",
+          "oklch(61% 0.0432 171.50)",
+          "oklch(72% 0.0432 171.50)",
+          "oklch(84% 0.0432 171.50)",
+          "oklch(95% 0.0432 171.50)"
+        ]
+      },
+      "dark-warning": {
+        "role": "semantic",
+        "displayName": "dark-warning",
+        "canonical": "rgb(241 204 151)",
+        "tonalRamp": [
+          "oklch(15% 0.0802 76.29)",
+          "oklch(26% 0.0802 76.29)",
+          "oklch(38% 0.0802 76.29)",
+          "oklch(49% 0.0802 76.29)",
+          "oklch(61% 0.0802 76.29)",
+          "oklch(72% 0.0802 76.29)",
+          "oklch(84% 0.0802 76.29)",
+          "oklch(95% 0.0802 76.29)"
+        ]
+      },
+      "dark-warning-soft": {
+        "role": "semantic",
+        "displayName": "dark-warning-soft",
+        "canonical": "rgb(61 49 33)",
+        "tonalRamp": [
+          "oklch(15% 0.0316 74.29)",
+          "oklch(26% 0.0316 74.29)",
+          "oklch(38% 0.0316 74.29)",
+          "oklch(49% 0.0316 74.29)",
+          "oklch(61% 0.0316 74.29)",
+          "oklch(72% 0.0316 74.29)",
+          "oklch(84% 0.0316 74.29)",
+          "oklch(95% 0.0316 74.29)"
+        ]
+      }
+    },
+    "typographyMeta": {
+      "display": {
+        "displayName": "display",
+        "purpose": "Заголовок складского баннера."
+      },
+      "headline": {
+        "displayName": "headline",
+        "purpose": "Роль текущей типографической иерархии."
+      },
+      "product-title": {
+        "displayName": "product-title",
+        "purpose": "Роль текущей типографической иерархии."
+      },
+      "price": {
+        "displayName": "price",
+        "purpose": "Точная цена с отдельной единицей и табличными цифрами."
+      },
+      "body": {
+        "displayName": "body",
+        "purpose": "Роль текущей типографической иерархии."
+      },
+      "label": {
+        "displayName": "label",
+        "purpose": "Роль текущей типографической иерархии."
+      },
+      "navigation": {
+        "displayName": "navigation",
+        "purpose": "Роль текущей типографической иерархии."
+      },
+      "prose": {
+        "displayName": "prose",
+        "purpose": "Роль текущей типографической иерархии."
+      },
+      "help": {
+        "displayName": "help",
+        "purpose": "Роль текущей типографической иерархии."
+      },
+      "guidance-title": {
+        "displayName": "guidance-title",
+        "purpose": "Заголовки справочных поверхностей."
+      }
+    },
+    "shadows": [
+      {
+        "name": "surface-small",
+        "value": "0 3px 10px rgb(44 85 124 / .05)",
+        "purpose": "Карточки и категории."
+      },
+      {
+        "name": "surface-medium",
+        "value": "0 15px 36px rgb(36 67 104 / .1)",
+        "purpose": "Меню и диалоги."
+      },
+      {
+        "name": "focus-ring",
+        "value": "0 0 0 3px rgb(44 116 191 / .2)",
+        "purpose": "Фокус рабочего поля."
+      },
+      {
+        "name": "mesh-ready",
+        "value": "0 18px 38px rgb(29 53 76 / .12)",
+        "purpose": "Внешняя тень без дублирования оптической кромки."
+      },
+      {
+        "name": "mesh-ready-dark",
+        "value": "0 18px 38px rgb(0 6 17 / .3)",
+        "purpose": "Та же роль в тёмной теме."
+      }
+    ],
+    "motion": [
+      {
+        "name": "ease-out",
+        "value": "cubic-bezier(.22,1,.36,1)",
+        "purpose": "Выход панели и короткие состояния."
+      },
+      {
+        "name": "button-state",
+        "value": "background 220ms ease, color 220ms ease, transform 140ms cubic-bezier(.22,1,.36,1)",
+        "purpose": "Рабочие кнопки; reduced motion отключает переходы."
+      },
+      {
+        "name": "category-state",
+        "value": "background 180ms ease, border-color 180ms ease",
+        "purpose": "Спокойный выбор категории."
+      },
+      {
+        "name": "bounded-shell-spring",
+        "value": "mass:1; stiffness:100; damping:10; stop-threshold:0.002",
+        "purpose": "Только декоративная сетка; по запросу, без idle-цикла и без движения текста."
+      },
+      {
+        "name": "glass-guard-band",
+        "value": "8–32px viewport-aware; projected displacement bounded smoothly to min(24px,gutter−6px)",
+        "purpose": "Prevent GPU edge clipping in action and guidance shells, including spring overshoot. Categories use CSS only."
+      }
+    ],
+    "breakpoints": [
+      {
+        "name": "compact-desktop",
+        "value": "1170px"
+      },
+      {
+        "name": "three-columns",
+        "value": "1000px"
+      },
+      {
+        "name": "two-columns-mobile",
+        "value": "760px"
+      },
+      {
+        "name": "narrow-mobile",
+        "value": "360px"
+      }
+    ]
+  },
+  "components": [
+    {
+      "name": "Основная кнопка",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "Рабочее подтверждаемое действие; пример не выполняет операцию.",
+      "html": "<button class=\"ds-primary\" type=\"button\">Продолжить</button>",
+      "css": ".ds-primary{display:inline-flex;align-items:center;justify-content:center;gap:9px;min-height:44px;padding:11px 18px;border:1px solid transparent;border-radius:12px;font-size:14px;font-weight:650;line-height:1.4;cursor:pointer;font-family:var(--font-manrope,Manrope),\"Segoe UI\",sans-serif;transition:background 220ms ease;background:var(--primary,rgb(18 53 108));color:var(--on-primary,white)}.ds-primary:hover{background:var(--primary-hover,rgb(34 85 143))}.ds-primary:focus-visible{outline:2px solid var(--primary,rgb(18 53 108));outline-offset:4px;}.ds-primary:active{transform:translateY(1px) scale(.98)}.ds-primary:disabled{opacity:.5;cursor:not-allowed}@media(prefers-reduced-motion:reduce){.ds-primary{transition:none;transform:none}}"
+    },
+    {
+      "name": "Вторичная кнопка",
+      "kind": "button",
+      "refersTo": "button-secondary",
+      "description": "Спокойное дополнительное действие.",
+      "html": "<button class=\"ds-secondary\" type=\"button\">Повторить</button>",
+      "css": ".ds-secondary{display:inline-flex;align-items:center;justify-content:center;gap:9px;min-height:44px;padding:11px 18px;border:1px solid transparent;border-radius:12px;font-size:14px;font-weight:650;line-height:1.4;cursor:pointer;font-family:var(--font-manrope,Manrope),\"Segoe UI\",sans-serif;transition:background 220ms ease;background:var(--surface-raised,rgb(248 251 254));color:var(--text,rgb(9 9 34));border-color:var(--border,rgb(219 232 243))}.ds-secondary:hover{background:var(--primary-soft,rgb(218 238 252))}.ds-secondary:focus-visible{outline:2px solid var(--primary,rgb(18 53 108));outline-offset:4px;}.ds-secondary:active{transform:translateY(1px) scale(.98)}@media(prefers-reduced-motion:reduce){.ds-secondary{transition:none;transform:none}}"
+    },
+    {
+      "name": "Объёмное действие: статическая оболочка",
+      "kind": "button",
+      "refersTo": "liquid-action-primary",
+      "description": "CSS fallback ключевой кнопки; реальная сетка живёт отдельно от надписи.",
+      "html": "<button type=\"button\" class=\"ds-liquid\">Создать потребность<svg width=\"18\" height=\"18\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" aria-hidden=\"true\"><path d=\"M5 12h14m-6-6 6 6-6 6\"/></svg></button>",
+      "css": ".ds-liquid{display:inline-flex;align-items:center;justify-content:center;gap:14px;min-height:44px;padding:10px 23px;border:0;border-radius:19px;background:linear-gradient(145deg,var(--primary-hover,rgb(34 85 143)),var(--primary,rgb(18 53 108)));color:var(--on-primary,white);font-size:12px;font-weight:700;line-height:1.4;font-family:var(--font-manrope,Manrope),\"Segoe UI\",sans-serif;box-shadow:inset 0 2px 2px rgb(255 255 255 / .95),inset 0 -3px 7px rgb(74 111 145 / .18),0 14px 32px rgb(29 53 76 / .12);cursor:pointer}.ds-liquid:hover{box-shadow:0 18px 38px rgb(29 53 76 / .12)}.ds-liquid:focus-visible{outline:2px solid var(--primary,rgb(18 53 108));outline-offset:4px;}@media(forced-colors:active){.ds-liquid{background:ButtonFace;color:ButtonText;border:1px solid ButtonText;box-shadow:none}}"
+    },
+    {
+      "name": "Контурное действие баннера",
+      "kind": "button",
+      "refersTo": "liquid-action-outline",
+      "description": "Статическая оптическая оболочка над неизменной надписью.",
+      "html": "<a class=\"ds-liquid-outline\" href=\"/needs/new\">Разместить потребность<svg width=\"19\" height=\"19\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" aria-hidden=\"true\"><path d=\"M5 12h14m-6-6 6 6-6 6\"/></svg></a>",
+      "css": ".ds-liquid-outline{display:inline-flex;align-items:center;justify-content:center;gap:14px;min-height:48px;padding:11px 24px;border:1px solid rgb(44 106 190);border-radius:10px;color:rgb(25 81 163);background:rgb(255 255 255 / .82);font-family:var(--font-manrope,Manrope),\"Segoe UI\",sans-serif;font-size:15px;font-weight:700;line-height:1.4;text-decoration:none;box-shadow:inset 0 2px 2px rgb(255 255 255 / .95),inset 0 -3px 7px rgb(74 111 145 / .18),0 14px 32px rgb(29 53 76 / .12)}.ds-liquid-outline:hover{box-shadow:0 18px 38px rgb(29 53 76 / .12)}.ds-liquid-outline:focus-visible{outline:2px solid var(--primary,rgb(18 53 108));outline-offset:4px}@media(forced-colors:active){.ds-liquid-outline{border-color:LinkText;color:LinkText;background:Canvas;box-shadow:none}}"
+    },
+    {
+      "name": "Поиск",
+      "kind": "input",
+      "refersTo": "market-search",
+      "description": "Доступная компактная форма с настоящим полем и кнопкой.",
+      "html": "<form class=\"ds-search\" role=\"search\" onsubmit=\"return false\"><svg width=\"18\" height=\"18\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" aria-hidden=\"true\"><circle cx=\"10\" cy=\"10\" r=\"6\"/><path d=\"m15 15 5 5\"/></svg><input aria-label=\"Найти товар\" placeholder=\"Найти товар или производителя\"><button type=\"submit\">Найти <svg width=\"18\" height=\"18\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" aria-hidden=\"true\"><path d=\"M5 12h14m-6-6 6 6-6 6\"/></svg></button></form>",
+      "css": ".ds-search{display:flex;align-items:center;gap:10px;max-width:520px;height:42px;padding:2px 2px 2px 14px;border:1px solid var(--border,rgb(219 232 243));border-radius:25px;background:var(--surface-raised,rgb(248 251 254));color:var(--text-muted,rgb(83 94 115));font-family:var(--font-manrope,Manrope),\"Segoe UI\",sans-serif;}.ds-search input{width:100%;min-width:0;height:36px;padding:0;border:0;outline:0;background:transparent;color:var(--text,rgb(9 9 34));font:12px var(--font-manrope,Manrope),sans-serif}.ds-search button{display:flex;align-items:center;gap:14px;min-width:100px;height:36px;padding:0 17px;border:0;border-radius:23px;background:var(--primary,rgb(18 53 108));color:var(--on-primary,white);font:650 12px var(--font-manrope,Manrope),sans-serif;cursor:pointer}.ds-search button:hover{background:var(--primary-hover,rgb(34 85 143))}.ds-search:focus-within{box-shadow:0 0 0 3px rgb(44 116 191 / .2)}.ds-search button:focus-visible{outline:2px solid var(--primary,rgb(18 53 108));outline-offset:4px;}@media(max-width:1000px){.ds-search{height:48px}.ds-search input,.ds-search button{height:44px}}"
+    },
+    {
+      "name": "Поле формы",
+      "kind": "input",
+      "refersTo": "field",
+      "description": "Подпись и видимый фокус для рабочего ввода.",
+      "html": "<label class=\"ds-field\">Название потребности<input type=\"text\" placeholder=\"Что нужно закупить?\"></label>",
+      "css": ".ds-field{display:grid;gap:8px;color:var(--text,rgb(9 9 34));font-size:14px;font-weight:600;font-family:var(--font-manrope,Manrope),\"Segoe UI\",sans-serif;}.ds-field input{min-height:46px;padding:12px 14px;border:1px solid var(--border,rgb(219 232 243));border-radius:10px;background:var(--field-bg,white);color:var(--text,rgb(9 9 34));font:400 14px var(--font-manrope,Manrope),sans-serif}.ds-field input:hover{border-color:var(--primary,rgb(18 53 108))}.ds-field input:focus-visible{outline:none;border-color:var(--primary,rgb(18 53 108));box-shadow:0 0 0 3px rgb(44 116 191 / .2)}"
+    },
+    {
+      "name": "Разделы рынка",
+      "kind": "nav",
+      "refersTo": "market-navigation",
+      "description": "Два маршрута с явно выбранным текущим разделом.",
+      "html": "<nav class=\"ds-lanes\" aria-label=\"Раздел рынка\"><a aria-current=\"page\" href=\"/catalog\">Товары</a><a href=\"/needs\">Потребности</a></nav>",
+      "css": ".ds-lanes{display:inline-flex;gap:2px;padding:3px;border:1px solid var(--border,rgb(219 232 243));border-radius:24px;background:var(--surface,white);font-family:var(--font-manrope,Manrope),\"Segoe UI\",sans-serif;}.ds-lanes a{display:inline-flex;align-items:center;justify-content:center;min-height:34px;padding:6px 12px;border-radius:20px;font-size:12px;font-weight:600;color:var(--text-muted,rgb(83 94 115));text-decoration:none}.ds-lanes a[aria-current]{background:var(--primary-soft,rgb(218 238 252));color:var(--text,rgb(9 9 34))}.ds-lanes a:hover{background:var(--bg-accent,rgb(235 244 251))}.ds-lanes a:focus-visible{outline:2px solid var(--primary,rgb(18 53 108));outline-offset:4px;}"
+    },
+    {
+      "name": "Категория",
+      "kind": "chip",
+      "refersTo": "category",
+      "description": "Плотная объёмная кнопка категории с фаской/тенью и aria-pressed. CSS hover scale1.025/180ms; без liquid, canvas и WebGL. Reduced motion/touch статичны.",
+      "html": "<button class=\"ds-category\" type=\"button\" aria-pressed=\"true\"><svg width=\"29\" height=\"29\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.7\" aria-hidden=\"true\"><path d=\"m12 3 9 5-9 5-9-5Zm-9 5v10l9 5 9-5V8M12 13v10\"/></svg>Все категории</button>",
+      "css": ".ds-category{display:inline-flex;align-items:center;justify-content:center;gap:20px;min-width:150px;height:clamp(54px,4.22vw,60px);padding:10px 22px;border:1px solid var(--border,rgb(219 232 243));border-radius:9px;background:var(--surface,white);color:var(--text,rgb(9 9 34));font-size:12px;font-weight:550;font-family:var(--font-manrope,Manrope),\"Segoe UI\",sans-serif;box-shadow:inset 0 1px 0 rgb(255 255 255 / .9),0 3px 0 rgb(188 207 224 / .55),0 6px 10px rgb(29 53 76 / .07);cursor:pointer;transition:transform 180ms var(--ease-out,cubic-bezier(.22,1,.36,1)),background 180ms ease,border-color 180ms ease}.ds-category svg{color:rgb(27 88 172)}.ds-category[aria-pressed=true]{background:var(--primary-soft,rgb(218 238 252));border-color:rgb(181 212 237);font-weight:750}.ds-category:hover{border-color:rgb(145 184 221)}.ds-category:focus-visible{outline:2px solid var(--primary,rgb(18 53 108));outline-offset:4px;}@media(prefers-reduced-motion:reduce){.ds-category{transition:none}}@media(hover:hover) and (pointer:fine) and (prefers-reduced-motion:no-preference){.ds-category:hover{transform:scale(1.025)}.ds-category:active{transform:scale(1.005);transition-duration:100ms}}"
+    },
+    {
+      "name": "Карточка предложения",
+      "kind": "card",
+      "refersTo": "product-card",
+      "description": "Схема карточки без выдуманного товара, цены и проверки производителя.",
+      "html": "<article class=\"ds-product\"><a href=\"/catalog\"><div class=\"ds-product-visual\">Без фотографии</div><div class=\"ds-product-body\"><h3>Название из каталога</h3><div class=\"ds-product-price\">Цена из каталога <small>/ ед.</small></div><p>Условия предложения</p></div></a></article>",
+      "css": ".ds-product{width:286px;padding:3px;overflow:hidden;border:1px solid var(--border,rgb(219 232 243));border-radius:9px;background:var(--surface,white);color:var(--text,rgb(9 9 34));box-shadow:0 3px 10px rgb(44 85 124 / .05);font-family:var(--font-manrope,Manrope),\"Segoe UI\",sans-serif;}.ds-product a{display:block;color:inherit;text-decoration:none;border-radius:7px}.ds-product-visual{display:flex;align-items:center;justify-content:center;aspect-ratio:1.546;border-radius:5px 5px 0 0;background:var(--bg-accent,rgb(235 244 251));color:var(--text-muted,rgb(83 94 115));font-size:11px}.ds-product-body{display:flex;flex-direction:column;gap:7px;min-height:99px;padding:9px 14px 11px}.ds-product h3{margin:0;font-size:15px;font-weight:750;line-height:1.35;letter-spacing:-.025em}.ds-product-price{font-size:23px;font-weight:800;line-height:1.2;letter-spacing:-.035em;font-variant-numeric:tabular-nums}.ds-product small{font-size:12px;font-weight:400}.ds-product p{margin:0;color:var(--text-muted,rgb(83 94 115));font-size:11px}.ds-product a:hover{text-decoration:none}.ds-product a:focus-visible{outline:2px solid var(--primary,rgb(18 53 108));outline-offset:4px;}"
+    },
+    {
+      "name": "Избранное в браузере",
+      "kind": "button",
+      "refersTo": "product-card",
+      "description": "Независимый переключатель; без JavaScript показано состояние выбора.",
+      "html": "<button class=\"ds-favorite\" type=\"button\" aria-pressed=\"true\" aria-label=\"Убрать из избранного\" title=\"Сохраняется в этом браузере\"><svg width=\"20\" height=\"20\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.8\" aria-hidden=\"true\"><path d=\"M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.7l-1.1-1.1a5.5 5.5 0 0 0-7.8 7.8L12 21l8.8-8.6a5.5 5.5 0 0 0 0-7.8Z\"/></svg></button>",
+      "css": ".ds-favorite{position:relative;isolation:isolate;display:grid;place-items:center;width:44px;height:44px;padding:12px;border:0;background:transparent;color:var(--text,rgb(9 9 34));cursor:pointer}.ds-favorite::before{content:\"\";position:absolute;inset:8px;z-index:-1;border-radius:6px;background:var(--surface,white)}.ds-favorite[aria-pressed=true]{color:rgb(25 82 164)}.ds-favorite[aria-pressed=true] svg{fill:var(--primary-soft,rgb(218 238 252))}.ds-favorite:hover::before{background:var(--bg-accent,rgb(235 244 251))}.ds-favorite:focus-visible{outline:2px solid var(--primary,rgb(18 53 108));outline-offset:4px;outline-offset:2px}"
+    }
+  ],
+  "narrative": {
+    "northStar": "Понятная торговая витрина",
+    "overview": "Понятная торговая витрина соединяет почти белую голубоватую сцену, настоящие белые карточки, тёмные чернила и синие действия. Плотная композиция помогает сразу увидеть товар и цену; объёмная оптика остаётся локальным свойством ключевых кнопок. Исходные цвета логотипа и изображений товаров сохраняются.\n\nВизуальная власть принадлежит пользовательскому [макету](.impeccable/references/approved-storefront.png); его воспроизведение прямо запрошено пользователем. Предыдущая серебристая сцена заменена. Тёмная тема даёт полный чернильный аналог шапки, поиска, меню, карточек и форм. Контракт композиции хранится в [market.md](.impeccable/surfaces/market.md); продуктовые ограничения — в [PRODUCT.md](PRODUCT.md), с приоритетом его последней коррекции.",
+    "keyCharacteristics": [
+      "Почти белый фон, белые карточки, компактная шапка и сдержанные синие действия.",
+      "Локальный кириллический Manrope, короткое название, заметная точная цена и явная единица.",
+      "Отдельные кнопки категорий и мягкое увеличение переключателей1.025/180ms при наведении мышью; оптика ключевых действий изгибается отдельно от текста и области нажатия.",
+      "Правые иллюстрации справки — самостоятельные 3D-модели с поворотом за мышью; первый кадр берётся из текущей сцены, без смены прежней картинки на модель."
+    ],
+    "rules": [
+      {
+        "name": "The Reference Authority Rule",
+        "body": "Воспроизводить утверждённый пользовательский макет; фактические категории, цены, изображения и статусы брать из текущего API.",
+        "section": "colors"
+      },
+      {
+        "name": "The Stable Content Rule",
+        "body": "Деформируется только декоративная оболочка: надпись, текст, ссылка и область нажатия остаются неподвижны.",
+        "section": "elevation"
+      }
+    ],
+    "dos": [
+      "**Do** сохранять исходные цвета логотипа и товаров и использовать предоставленный складской материал.",
+      "**Do** показывать фактические цену, единицу, категорию и статус доступного предложения.",
+      "**Do** сохранять обе темы, клавиатурный фокус и статическую замену оптики.",
+      "**Do** оставлять отдельные кнопки категорий и плотную сетку с адаптацией к ширине."
+    ],
+    "donts": [
+      "**Don't** возвращать отвергнутую серебристую сцену, водяной след, фоновый параллакс или фоновую анимацию.",
+      "**Don't** придумывать популярность, коммерческие показатели, email или подтверждение производителя.",
+      "**Don't** переносить образцовые товары и цены из картинки вместо фактических данных.",
+      "**Don't** заменять поставляемый Manrope шрифтом Encode Sans по предположению автоматического сопоставления.",
+      "**Don't** искажать текст или изображения карточек при наведении."
+    ]
+  }
+}

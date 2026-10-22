@@ -1,3 +1,4 @@
+import { formatDate } from "../../apps/web/app/lib/dates";
 import { expect, test, type Page } from "@playwright/test";
 
 function password(role: "BUYER" | "SELLER" | "ADMIN"): string {
@@ -117,7 +118,7 @@ test(`${classified ? "Точная классификация через API" : 
     await page.getByLabel("Бюджет, ₽", { exact: false }).fill("5000");
     const deadline = new Date();
     deadline.setUTCDate(deadline.getUTCDate() + 30);
-    await page.getByLabel("Срок выполнения", { exact: false }).fill(deadline.toISOString().slice(0, 10));
+    await page.getByLabel("Срок выполнения", { exact: false }).fill(formatDate(deadline.toISOString().slice(0, 10)));
     const address = page.getByLabel("Адрес доставки", { exact: false });
     await expect(address.locator('option:not([value=""])').first()).toBeAttached();
     await address.selectOption(await address.locator('option:not([value=""])').first().getAttribute("value") as string);

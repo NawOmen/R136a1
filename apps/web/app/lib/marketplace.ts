@@ -1,3 +1,5 @@
+import { russianUnit } from "./units";
+export { russianUnit } from "./units";
 import { russianLabel, displayValue } from "./presentation";
 import { russianFetch, russianMessage, validationMessage } from "./russianMessages";
 import { displayMoney, type Money } from "./money";
@@ -86,6 +88,10 @@ export interface Product {
 }
 
 export interface ProductImage { id: string; file_name: string; content_type: string; position: number }
+export function primaryProductImage(images: ProductImage[]): ProductImage | undefined {
+  return images.find(image => !image.file_name?.startsWith("Схематическая иллюстрация:") && !image.file_name?.startsWith("Иллюстрация товара:"))
+    ?? images.find(image => image.file_name?.startsWith("Иллюстрация товара:"));
+}
 export interface ProductSource { label: string; reference: string }
 export interface ProductPriceTier { min_units: number; unit_price_rub: Money }
 export interface SellerAnalytics { company_id: string; products_total: number; products_published: number; deals_total: number; sold_units: number; revenue_rub: Money | null; available_capacity_units: number; capacity_utilization_pct: number | null }
@@ -786,7 +792,7 @@ export const DOCUMENT_TYPES: { value: string; label: string }[] = [
 
 export const DOCUMENT_STATUS_LABELS: Record<string, string> = {
   unverified: "Загружено, не проверено",
-  verified: "Проверено человеком",
+  verified: "Проверено",
   rejected: "Не соответствует",
 };
 
@@ -819,7 +825,7 @@ export function characteristicLabel(key: string, profile?: CategoryProfileSnapsh
 export function formatCharacteristics(characteristics: Record<string, unknown>, profile?: CategoryProfileSnapshot | null): string {
   const entries = Object.entries(characteristics);
   if (entries.length === 0) return "—";
-  return entries.map(([key, value]) => `${characteristicLabel(key, profile)}: ${displayValue(value)}`).join(" · ");
+  return entries.map(([key, value]) => `${characteristicLabel(key, profile)}: ${["unit", "единица измерения"].includes(key) && typeof value === "string" ? russianUnit(value) : displayValue(value)}`).join(" · ");
 }
 
 export function formatRub(value: Money | null | undefined, maximumFractionDigits = 2): string {
@@ -828,11 +834,24 @@ export function formatRub(value: Money | null | undefined, maximumFractionDigits
 
 export function itemUnit(characteristics?: Record<string, unknown>): string {
   const value = characteristics?.unit ?? characteristics?.["единица измерения"];
-  return typeof value === "string" && value.trim() ? value.trim() : "шт.";
+  return typeof value === "string" && value.trim() ? russianUnit(value.trim()) : "шт.";
 }
 
 export function formatUnits(value: number, unit = "шт."): string {
-  return new Intl.NumberFormat("ru-RU", { maximumFractionDigits: 0 }).format(value) + " " + unit;
+  const normalized = russianUnit(unit);
+  const forms: Record<string, [string, string, string]> = {
+    "предложение": ["предложение", "предложения", "предложений"],
+    "рулон": ["рулон", "рулона", "рулонов"],
+    "бухта": ["бухта", "бухты", "бухт"],
+    "упаковка": ["упаковка", "упаковки", "упаковок"],
+    "коробка": ["коробка", "коробки", "коробок"],
+    "комплект": ["комплект", "комплекта", "комплектов"],
+    "мешок": ["мешок", "мешка", "мешков"],
+    "пачка": ["пачка", "пачки", "пачек"],
+  };
+  const plural = new Intl.PluralRules("ru-RU").select(Math.round(value));
+  const label = forms[normalized]?.[plural === "one" ? 0 : plural === "few" ? 1 : 2] ?? normalized;
+  return new Intl.NumberFormat("ru-RU", { maximumFractionDigits: 0 }).format(value) + " " + label;
 }
 
 // ---------- Разбор ошибок валидации FastAPI (422) ----------
@@ -1070,8 +1089,8 @@ export const marketplace = {
     return marketplaceFetchBlob(`/api/v1/companies/${companyId}/commercial-report.csv?${params}`, token);
   },
   // Публичный каталог (без Bearer)
-  getCatalog(): Promise<Product[]> {
-    return marketplaceFetch("/api/v1/products", {}).then((body) => unwrapList<Product>(body, ["products", "items"]));
+  getCatalog(sort: "catalog" | "popular" = "catalog"): Promise<Product[]> {
+    return marketplaceFetch(`/api/v1/products${sort === "popular" ? "?sort=popular" : ""}`, {}).then((body) => unwrapList<Product>(body, ["products", "items"]));
   },
 
   getProductDetail(productId: string): Promise<PublicProductDetail> {

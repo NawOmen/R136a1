@@ -1,0 +1,43 @@
+{
+  "prompt": "Use case: product-mockup.\nAsset type: original synthetic Russian B2B catalogue product illustration, photorealistic.\nPrimary request: One single M8 galvanized steel hexagonal nut. Standard six-sided hex nut with a clear central internally threaded hole, visible coherent spiral screw thread, silver zinc-plated finish, subtle authentic metal surface texture. Resting on one flat face at a slight three-quarter angle, top opening and two external hex faces visible. No bolt and no washer.\nScene/backdrop: seamless almost-white neutral studio background, subtle soft contact shadow.\nComposition/framing: wide horizontal 3:2 image, exactly one nut centered, complete outline visible, generous margins on every side, macro product photo, no crop.\nStyle/medium: realistic studio catalogue photography, sharp believable steel material, soft diffuse lighting.\nConstraints: no actual manufacturer, no trademarks, no logos, no labels, no text, no numbers, no watermark, no people, no tools, no unrelated props, no collage.",
+  "createdAt": "2026-10-22T05:43:11.999864+00:00",
+  "schemaVersion": 1,
+  "tool": "image_gen.imagegen",
+  "provider": "builtin",
+  "mode": "built-in generate",
+  "origin": "AI-generated synthetic product illustration; not an actual supplier photograph",
+  "origin_ru": "Авторская синтетическая иллюстрация товара, созданная ИИ; не фотография товара поставщика",
+  "useCase": "product-mockup",
+  "generatorOriginalPath": "/Users/assweg/.codex/generated_images/01a1621e-2855-7aa0-b1cc-7b71d0db9dd6/exec-7b5fac87-0ef8-40d6-85a4-492a16e48046.png",
+  "generatorOriginalSha256": "db5ef20c21e8df99801999e6d7597e52ddde99156f8739f7aaf4a11ef8bd64f5",
+  "sourcePath": "/Users/assweg/.codex/generated_images/01a1621e-2855-7aa0-b1cc-7b71d0db9dd6/exec-7b5fac87-0ef8-40d6-85a4-492a16e48046.png",
+  "sourceSha256": "db5ef20c21e8df99801999e6d7597e52ddde99156f8739f7aaf4a11ef8bd64f5",
+  "sourceDimensions": [
+    1536,
+    1024
+  ],
+  "sourceBytes": 1859132,
+  "deliveryPath": "services/marketplace/seed_media/nut.webp",
+  "deliverySha256": "84faf50bee793ee1c762685b6d71007a5acfb21a4c50f156a1e5b84b5f4a848a",
+  "deliveryDimensions": [
+    768,
+    512
+  ],
+  "deliveryBytes": 19198,
+  "conversion": {
+    "library": "Pillow 13.0.0 (WebP)",
+    "format": "WebP",
+    "quality": 82,
+    "method": 6,
+    "resized": true,
+    "cropped": false,
+    "retouched": false
+  },
+  "verification": {
+    "subject": "manually inspected",
+    "wholeProductVisible": true,
+    "noBrandingOrText": true,
+    "background": "almost-white neutral studio",
+    "note": "Generated for synthetic catalogue specifications. Whole product visible; image is an illustration rather than evidence of actual supplier stock."
+  }
+}

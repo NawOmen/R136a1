@@ -1,0 +1,41 @@
+{
+  "prompt": "Use case: product-mockup.\nAsset type: standalone synthetic Russian B2B catalogue product illustration, photorealistic.\nPrimary request: A small neat stack of thin plain matte light-brown solid cardboard sheets, 1000×700mm, 250grams per square meter, NOT corrugated cardboard. Show sheet rectangular proportions10:7 and the very thin clean edges, one upper sheet slightly offset. No printing. Three-quarter view.\nScene/backdrop: clean seamless off-white studio background #f8f8f6, subtle natural soft contact shadow.\nComposition/framing: square 1:1 image, whole product centered occupying75%of frame, generous margins, no crop.\nStyle/medium: realistic clean studio catalogue photography, crisp believable materials, soft diffuse lighting.\nConstraints: original synthetic product illustration, no real manufacturer, no trademark, no logos, no text, no numbers, no UI, no watermarks, no people, no unrelated props, no colored filter.",
+  "createdAt": "2026-10-21T15:57:17.501702+00:00",
+  "schemaVersion": 1,
+  "tool": "image_gen.imagegen",
+  "mode": "built-in generate",
+  "origin": "AI-generated synthetic product illustration; not an actual supplier photograph",
+  "origin_ru": "Авторская синтетическая иллюстрация товара, созданная ИИ; не фотография товара поставщика",
+  "useCase": "product-mockup",
+  "generatorOriginalPath": "/Users/assweg/.codex/generated_images/01a15f23-f64f-7981-98bc-11e983869fbb/exec-94a97cd2-56fe-490f-aee5-89753700567d.png",
+  "generatorOriginalSha256": "aad50104fd37391125f8fd750c9dc5f733ff05e8d22c151c4596160c0a1852ea",
+  "sourcePath": "/Users/assweg/.codex/generated_images/01a15f23-f64f-7981-98bc-11e983869fbb/exec-94a97cd2-56fe-490f-aee5-89753700567d.png",
+  "sourceSha256": "aad50104fd37391125f8fd750c9dc5f733ff05e8d22c151c4596160c0a1852ea",
+  "sourceDimensions": [
+    1254,
+    1254
+  ],
+  "deliveryPath": "services/marketplace/seed_media/cardboard_sheet.webp",
+  "deliverySha256": "a2e4275fcd3d15cbc5c122dcd0b7bea3f1866fe8a8c3bfe88f4ae1f7fe467c36",
+  "deliveryDimensions": [
+    768,
+    768
+  ],
+  "deliveryBytes": 19978,
+  "conversion": {
+    "library": "libwebp cwebp",
+    "format": "WebP",
+    "quality": 86,
+    "method": 6,
+    "resized": true,
+    "cropped": false,
+    "retouched": false
+  },
+  "verification": {
+    "subject": "manually inspected",
+    "wholeProductVisible": true,
+    "noBrandingOrText": true,
+    "background": "off-white studio",
+    "note": "Generated for synthetic catalogue specifications. Whole product visible; image is an illustration rather than evidence of actual supplier stock."
+  }
+}

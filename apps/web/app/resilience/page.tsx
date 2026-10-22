@@ -1,4 +1,5 @@
 "use client";
+import { formatDateTime } from "../lib/dates";
 import { russianMessage } from "../lib/russianMessages";
 import { russianLabel } from "../lib/presentation";
 import CommercialEstimate from "../components/CommercialEstimate";
@@ -97,7 +98,7 @@ export default function ResiliencePage() {
           {plan.status === "stale" && <p className="alert alert-error">Прежние расчёты сохранены для истории. <Link href={`/needs/${plan.need_id}`}>Получите новые КП и создайте ресурсный план по текущей спецификации.</Link></p>}
           <p>Исходная конфигурация: {formatRub(plan.baseline_total_cost_rub)} · {plan.baseline_lead_time_days} дн. · версия {plan.version}</p>
           <p>Текущая полная смета: {formatRub(plan.current_total_cost_rub)} · {plan.current_lead_time_days} дн.</p>
-          {plan.commercial_snapshot && <p>Уже согласованное удержание резерва: {formatRub(plan.commercial_snapshot.reserve_holding_total_rub)}. Оно остаётся понесённым расходом при отмене и входит в итог; новые удержания согласуются отдельно.</p>}
+          {plan.commercial_snapshot && <p>Согласованное удержание резерва: {formatRub(plan.commercial_snapshot.reserve_holding_total_rub)}. Входит в итог и остаётся расходом при отмене. Новые удержания согласуются отдельно.</p>}
           {!plan.confirmed_at && plan.commercial_snapshot && <p className="alert alert-error">Смета изменилась. До повторного согласия замена не активируется.</p>}
           <p className="hint">Автозамена: {plan.auto_replace_within_thresholds ? "разрешена" : "требует подтверждения"}; пороги: +{plan.max_price_increase_pct}% и +{plan.max_delay_days} дн.</p>
           <div className="market-grid">
@@ -105,7 +106,7 @@ export default function ResiliencePage() {
             <div><strong>Резерв: {plan.reserves.length}</strong><p className="hint">горячий: {plan.reserves.filter((r) => r.effective_tier === "hot").length}; тёплый: {plan.reserves.filter((r) => r.effective_tier === "warm").length}; холодный: {plan.reserves.filter((r) => r.effective_tier === "cold").length}</p></div>
           </div>
           {plan.baseline_allocations.map(item=><div key={item.company_id}><p>Смета основного поставщика #{item.company_id.slice(0,8)}</p><CommercialEstimate value={item.commercial_snapshot?.estimate} /></div>)}
-          {plan.reserves.filter(item=>item.confirmation_status === "approved").map(item=><div key={item.id}><p>КП резерва #{item.company_id.slice(0,8)} ({item.effective_tier === "hot" ? "горячий, подтверждённый" : "требует подтверждения — не гарантированный объём"}; удержание до {item.held_until ?? "—"}{item.switchover_days != null ? `; переключение за ${item.switchover_days} дн.` : ""}). {item.availability_reason && <span className="hint"> {item.availability_reason}.</span>} Доступно: {formatUnits(item.available_units)}. При переключении плата за уже согласованное удержание повторно не начисляется.</p><CommercialEstimate value={item.commercial_snapshot?.estimate} /></div>)}
+          {plan.reserves.filter(item=>item.confirmation_status === "approved").map(item=><div key={item.id}><p>КП резерва #{item.company_id.slice(0,8)} ({item.effective_tier === "hot" ? "горячий, подтверждённый" : "требует подтверждения — не гарантированный объём"}; удержание до {formatDateTime(item.held_until)}{item.switchover_days != null ? `; переключение за ${item.switchover_days} дн.` : ""}). {item.availability_reason && <span className="hint"> {item.availability_reason}.</span>} Доступно: {formatUnits(item.available_units)}. При переключении плата за уже согласованное удержание повторно не начисляется.</p><CommercialEstimate value={item.commercial_snapshot?.estimate} /></div>)}
           {plan.current_allocations.map((item, index) => <p key={`${item.company_id}-${index}`}>Текущее назначение #{item.company_id.slice(0, 8)}: {formatUnits(item.units)}{item.role === "executed" ? " · уже исполнено" : ""}{item.deal_id && <> · <Link href="/deals">Отгрузка и приёмка в сделках</Link></>}</p>)}
           {plan.scenarios.some(item => item.status === "calculated" && !item.is_current) && <p className="alert alert-error">Расчёт устарел: условия резерва или исполнение изменились. Пересчитайте план перед подтверждением.</p>}
           <p><strong>N-1:</strong> {n1.length} сценариев · <strong>N-2:</strong> {n2.length} сценариев</p>

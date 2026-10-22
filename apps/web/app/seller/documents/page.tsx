@@ -1,4 +1,6 @@
 "use client";
+import { DateInput } from "../../components/DateInput";
+import { formatDate } from "../../lib/dates";
 
 // Документы компании (GET/POST /companies/{id}/documents, DELETE /documents/{id}).
 // Загрузка — multipart (file + name + document_type + область действия).
@@ -212,8 +214,8 @@ export default function SellerDocumentsPage() {
         </Link>
       </div>
       <p className="subtitle">
-        Загрузка не подтверждает подлинность и применимость. Доказательством считается только документ,
-        который проверяющий площадки подтвердил для нужной категории и срок которого не истёк.
+        Загрузка не подтверждает подлинность и применимость. Нужен действующий документ,
+        подтверждённый проверяющим для нужной категории.
       </p>
 
       {available.length > 1 && (
@@ -234,7 +236,7 @@ export default function SellerDocumentsPage() {
       <section className="card">
         <h2>Проверка допуска по категории</h2>
         <p className="hint">
-          Отчёт показывает, каких доказательств не хватает для публикации товара. Обязательные требования
+          Проверьте недостающие доказательства. Невыполненные обязательные требования
           блокируют публикацию до решения проверяющего.
         </p>
         <div className="form-grid">
@@ -306,8 +308,7 @@ export default function SellerDocumentsPage() {
             )}
             {admission.requirements.length === 0 ? (
               <p className="hint mode-hint">
-                Правила проверки документов для этой категории ещё не настроены. Доступна
-                проверку компании.
+                Правила документов для этой категории ещё не настроены. Доступна только проверка компании.
               </p>
             ) : (
               <ul className="company-list">
@@ -417,11 +418,10 @@ export default function SellerDocumentsPage() {
             <label htmlFor="valid_until">
               Действует до<span className="opt">проверяющий укажет фактический срок</span>
             </label>
-            <input
+            <DateInput
               id="valid_until"
-              type="date"
               value={validUntil}
-              onChange={(event) => setValidUntil(event.target.value)}
+              onValueChange={(event) => setValidUntil(event)}
             />
           </div>
           <div className="field">
@@ -456,14 +456,14 @@ export default function SellerDocumentsPage() {
         <section className="card" aria-live="polite">
           <h2>Истекающие подтверждения</h2>
           <p className="hint">
-            У этих документов скоро закончится срок: продлите их до блокировки новых публикаций и сделок.
-            Действующие договорённости не отменяются автоматически.
+            Продлите документы до блокировки новых публикаций и сделок.
+            Действующие договорённости автоматически не отменяются.
           </p>
           <ul className="company-list">
             {expiring.map((document) => (
               <li key={document.id} className="company-item">
                 <span className="company-item__name">{document.name}</span>
-                <span className="company-meta">Действует до {document.valid_until ?? "—"}</span>
+                <span className="company-meta">Действует до {formatDate(document.valid_until)}</span>
               </li>
             ))}
           </ul>
@@ -505,7 +505,7 @@ export default function SellerDocumentsPage() {
                         </div>
                       )}
                       {document.valid_until && (
-                        <div className="company-meta">Действует до {document.valid_until}</div>
+                        <div className="company-meta">Действует до {formatDate(document.valid_until)}</div>
                       )}
                       {document.verification_note && (
                         <div className="company-meta">Решение проверяющего: {document.verification_note}</div>

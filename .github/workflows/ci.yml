@@ -137,12 +137,19 @@ jobs:
       - name: Check generated category registry
         run: python3 scripts/sync_category_registry.py --check
       - name: Build
+        env:
+          NEXT_PUBLIC_API_URL: /gateway
+          NEXT_PUBLIC_MARKETPLACE_URL: /marketplace
+          NEXT_PUBLIC_LLM_GATEWAY_URL: /llm
         run: pnpm build:web
       - name: Install browser for requirement acceptance checks
         working-directory: tests/e2e
-        run: pnpm exec playwright install --with-deps chromium --only-shell
+        run: pnpm exec playwright install --with-deps chromium webkit
       - name: Requirement draft browser acceptance
         working-directory: tests/e2e
         run: pnpm exec playwright test --config requirements-browser.config.ts
+      - name: Safari, iPhone, iPad and Android compatibility
+        working-directory: tests/e2e
+        run: pnpm exec playwright test --config compatibility-browser.config.ts
       - name: Build web Docker image
         run: docker build --file apps/web/Dockerfile --tag porukam-web:ci .

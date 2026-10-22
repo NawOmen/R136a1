@@ -1,0 +1,41 @@
+{
+  "prompt": "Use case: product-mockup.\nAsset type: standalone Russian B2B catalogue product illustration, photorealistic.\nPrimary request: One plain general-purpose work jacket, Russian size 52, woven fabric blend 65% polyester and 35% cotton. Deep navy body with simple graphite shoulder and pocket panels. Ordinary everyday workwear with front zipper, fold-down collar, long sleeves, two lower pockets and simple chest pockets. No protective, reflective or certified PPE features.\nScene/backdrop: clean seamless off-white studio background, #f8f8f6, subtle natural soft contact shadow.\nComposition/framing: square 1:1 image, 1024 × 1024 if available. Full jacket photographed straight from front, hanging naturally on invisible support with sleeves slightly away from torso. Whole garment centered, fills about 78% of the frame, cuffs and hem fully visible with clear margins.\nStyle/medium: realistic clean studio catalogue photography, crisp believable woven fabric details, soft diffuse lighting.\nConstraints: authored synthetic product illustration, no real manufacturer or trademark. No human, mannequin, visible hanger, other objects, printed labels, logos, text, numbers, reflective strips, safety claims, UI, watermark, colored filter or crop.",
+  "createdAt": "2026-10-17T07:49:49.796Z",
+  "schemaVersion": 1,
+  "tool": "image_gen.imagegen",
+  "mode": "built-in generate",
+  "origin": "AI-generated synthetic product illustration; not an actual supplier photograph",
+  "origin_ru": "Авторская синтетическая иллюстрация товара, созданная ИИ; не фотография товара поставщика",
+  "useCase": "product-mockup",
+  "generatorOriginalPath": "/home/houz/.codex/generated_images/01a148d3-8514-7671-b1f0-24c7126bc16e/exec-f39d7ea4-7490-4240-aa12-8c96c16ce9a6.png",
+  "generatorOriginalSha256": "3865b305317773960d256d772d97ca3acf7fadcab67e3cead7abd553d60c6fcc",
+  "sourcePath": "output/playwright/clear-glass/source/jacket.png",
+  "sourceSha256": "0c6055a6e3bd6ed845f5ab7ed99405745ec697edf0b3000a9a69e0c0fb4ef4f2",
+  "sourceDimensions": [
+    1254,
+    1254
+  ],
+  "deliveryPath": "services/marketplace/seed_media/jacket.webp",
+  "deliverySha256": "e630f6d7a9ab5de299eae522c12c0f85560d431dcc44a8efe469c4181259c88c",
+  "deliveryDimensions": [
+    1254,
+    1254
+  ],
+  "deliveryBytes": 118488,
+  "conversion": {
+    "library": "Pillow",
+    "format": "WebP",
+    "quality": 88,
+    "method": 6,
+    "resized": false,
+    "cropped": false,
+    "retouched": false
+  },
+  "verification": {
+    "subject": "manually inspected",
+    "wholeProductVisible": true,
+    "noBrandingOrText": true,
+    "background": "off-white studio",
+    "note": "Full native dimensions preserved. Object framing is close with the full object visible."
+  }
+}

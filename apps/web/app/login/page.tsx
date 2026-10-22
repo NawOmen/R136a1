@@ -12,8 +12,10 @@ export default function LoginPage() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [ready, setReady] = useState(false);
 
   useEffect(() => {
+    setReady(true);
     if (getToken()) router.replace("/dashboard");
   }, [router]);
 
@@ -40,6 +42,7 @@ export default function LoginPage() {
       {error && <div className="alert alert-error">{error}</div>}
 
       <form className="card" onSubmit={handleSubmit}>
+        <fieldset className="auth-fields" disabled={!ready || submitting}>
         <div className="field">
           <label htmlFor="email">Электронная почта<span className="req">*</span></label>
           <input
@@ -67,6 +70,7 @@ export default function LoginPage() {
             {submitting ? "Входим..." : "Войти"}
           </button>
         </div>
+        </fieldset>
       </form>
 
       <p className="hint">

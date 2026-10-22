@@ -1,0 +1,43 @@
+{
+  "prompt": "Use case: product-mockup.\nAsset type: original synthetic Russian B2B catalogue product illustration, photorealistic.\nPrimary request: One assembled office desk, nominal 1200 mm wide by 600 mm deep by 750 mm high. Simple practical rectangular desk made with a light neutral laminated chipboard desktop, straight smooth light-beige laminate surface with thin finished edges. Exactly four separate plain straight metal legs, one at each corner, in light gray finish; no drawers, no side cabinets, no modesty panel. Three-quarter front view showing desktop and all four support positions. Completely empty desk.\nScene/backdrop: seamless almost-white neutral studio background, subtle soft contact shadow.\nComposition/framing: wide horizontal 3:2 image, exactly one desk centered, whole assembled desktop and feet fully visible with generous margins on every side, no crop.\nStyle/medium: realistic studio catalogue photography, crisp believable laminate and metal materials, soft diffuse lighting.\nConstraints: no actual manufacturer, no trademarks, no logos, no labels, no text, no written dimensions, no watermark, no people, no chair, no computer, no office items, no unrelated props, no collage.",
+  "createdAt": "2026-10-22T05:43:12.227002+00:00",
+  "schemaVersion": 1,
+  "tool": "image_gen.imagegen",
+  "provider": "builtin",
+  "mode": "built-in generate",
+  "origin": "AI-generated synthetic product illustration; not an actual supplier photograph",
+  "origin_ru": "Авторская синтетическая иллюстрация товара, созданная ИИ; не фотография товара поставщика",
+  "useCase": "product-mockup",
+  "generatorOriginalPath": "/Users/assweg/.codex/generated_images/01a1621e-2855-7aa0-b1cc-7b71d0db9dd6/exec-ab21ad9d-6e08-4701-9560-acd958d5671e.png",
+  "generatorOriginalSha256": "744415dcc36185cb3ebd05372d678cb179f4d789d4284707b7f5a09f7ed9766d",
+  "sourcePath": "/Users/assweg/.codex/generated_images/01a1621e-2855-7aa0-b1cc-7b71d0db9dd6/exec-ab21ad9d-6e08-4701-9560-acd958d5671e.png",
+  "sourceSha256": "744415dcc36185cb3ebd05372d678cb179f4d789d4284707b7f5a09f7ed9766d",
+  "sourceDimensions": [
+    1536,
+    1024
+  ],
+  "sourceBytes": 1512730,
+  "deliveryPath": "services/marketplace/seed_media/desk.webp",
+  "deliverySha256": "83f8b9dc9160c463db3732f3a5759be8d2151997a58b6c0061cc1cb5b19832fd",
+  "deliveryDimensions": [
+    768,
+    512
+  ],
+  "deliveryBytes": 5048,
+  "conversion": {
+    "library": "Pillow 13.0.0 (WebP)",
+    "format": "WebP",
+    "quality": 82,
+    "method": 6,
+    "resized": true,
+    "cropped": false,
+    "retouched": false
+  },
+  "verification": {
+    "subject": "manually inspected",
+    "wholeProductVisible": true,
+    "noBrandingOrText": true,
+    "background": "almost-white neutral studio",
+    "note": "Generated for synthetic catalogue specifications. Whole product visible; image is an illustration rather than evidence of actual supplier stock."
+  }
+}

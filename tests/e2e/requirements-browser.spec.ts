@@ -14,13 +14,27 @@ async function prepare(page: Page) {
   });
   await page.goto("/needs/new");
   await expect(page.locator("#company_id")).toHaveValue(companies[0].id);
+  await page.waitForLoadState("networkidle");
 }
 
 test("503, reload, role and company switching preserve independent input and source files", async ({ page }) => {
   await prepare(page);
   const description = page.locator("#request_description");
+  await expect(page.getByText("Выбрать файлы", { exact: true })).toBeVisible();
+  await expect(page.getByText("Файлы не выбраны", { exact: true })).toBeVisible();
+  await expect(page.locator("#need_files")).toBeEnabled();
+  await page.locator("#need_files").focus();
+  await expect(page.locator("#need_files")).toBeFocused();
+  await page.getByRole("button", { name: "Заполнить вручную", exact: true }).click();
+  await expect(page.getByRole("textbox", { name: "Характеристика 1: название", exact: true })).toHaveValue("Единица заказа");
+  await page.getByText("3. Карточка запроса — проверьте и отправьте", { exact: true }).click();
   await description.fill("Нужны столы из дерева, 30 штук, для офиса");
+  // A readable label must not rename the persisted API characteristic key.
+  await expect.poll(() => page.evaluate(() => Object.values(sessionStorage).some(value => {
+    try { return JSON.parse(value).rows?.some((row: { key: string }) => row.key === "unit"); } catch { return false; }
+  }))).toBe(true);
   await page.locator("#need_files").setInputFiles({ name: "синтетическая-спецификация.txt", mimeType: "text/plain", buffer: Buffer.from("Материал: дерево; количество: 30 шт") });
+  await expect(page.getByText("Выбрано файлов: 1", { exact: true })).toBeVisible();
   await page.getByRole("button", { name: "Разобрать материалы", exact: true }).click();
   await expect(page.getByRole("alert").filter({ hasText: "Локальная модель недоступна" })).toBeVisible();
   await expect(description).toHaveValue(/30 штук/);
@@ -34,7 +48,9 @@ test("503, reload, role and company switching preserve independent input and sou
   await page.locator("#company_id").selectOption(companies[0].id);
   await expect(description).toHaveValue(/30 штук/);
   await expect(page.getByText(/Восстановленные или выбранные файлы: 1/)).toBeVisible();
+  await page.waitForLoadState("networkidle");
   await page.goto("/seller");
+  await page.waitForLoadState("networkidle");
   await page.goto("/needs/new");
   await expect(description).toHaveValue(/30 штук/);
   // A transport failure has the same preservation behavior as a 503.
@@ -48,7 +64,7 @@ test("microphone denial keeps the local audio-file path available", async ({ pag
   await page.addInitScript(() => Object.defineProperty(navigator, "mediaDevices", { configurable: true, value: { getUserMedia: () => Promise.reject(new DOMException("Denied", "NotAllowedError")) } }));
   await prepare(page);
   await page.getByRole("button", { name: /Продиктовать запрос/ }).click();
-  await expect(page.getByText(/Не удалось получить доступ к микрофону/)).toBeVisible();
+  await expect(page.getByText(/Не удалось получить доступ к микрофону|Запись с микрофона недоступна/)).toBeVisible();
   await page.locator("#need_files").setInputFiles({ name: "синтетическая-запись.wav", mimeType: "audio/wav", buffer: Buffer.from("synthetic-audio") });
   await expect(page.getByText(/Восстановленные или выбранные файлы: 1/)).toBeVisible();
   await page.reload();
@@ -125,6 +141,20 @@ test("clarified unreadable material is omitted by content hash while same-name v
       unreadable_sources: [{ source_id: "file_2", name: "source.m4a", content_hash: hash }], omitted_source_hashes: [] as string[] } };
   const needId = "00000000-0000-4000-8000-000000000091";
   const uploads: string[] = [];
+  // WebKit's interception protocol omits File bytes from postDataBuffer even
+  // for a new File(['text'], ...). Inspect the actual outgoing FormData in-page
+  // as well as the request endpoint/count, without replacing or changing it.
+  await page.addInitScript(() => {
+    const original = window.fetch;
+    Object.assign(window, { sourceUploads: [] as string[] });
+    window.fetch = async (input, init) => {
+      if (String(input).endsWith("/needs/00000000-0000-4000-8000-000000000091/files") && init?.body instanceof FormData) {
+        const serialized = await new Response(init.body).text();
+        (window as unknown as { sourceUploads: string[] }).sourceUploads.push(serialized);
+      }
+      return original(input, init);
+    };
+  });
   let creations = 0;
   await page.route("**/api/**", async route => {
     const request = route.request();
@@ -145,11 +175,13 @@ test("clarified unreadable material is omitted by content hash while same-name v
     if (path.endsWith("/physical/needs") && request.method() === "POST") {
       creations++;
       expect(request.postDataJSON().subcategory).toBe("Коробки");
+      expect(request.postDataJSON().deadline_date).toBe("2026-12-20");
       return route.fulfill({ status: 201, json: { id: needId, status: "draft" } });
     }
     if (path.endsWith(`/needs/${needId}/files`)) { uploads.push(request.postDataBuffer()!.toString()); return route.fulfill({ status: 201, json: { id: needId } }); }
     return route.fulfill({ json: [] });
   });
+  await page.waitForLoadState("networkidle");
   await page.reload();
   await page.locator("#request_description").fill("Нужно 250 гофрокоробов 400×300×300 мм в Москву за 14 дней, бюджет 25000 рублей");
   await page.locator("#need_files").setInputFiles([
@@ -160,9 +192,14 @@ test("clarified unreadable material is omitted by content hash while same-name v
   await page.getByLabel("Часть материалов не прочитана. Продолжить без них?").selectOption("Да, продолжить без них");
   await page.getByRole("button", { name: "Сохранить ответы", exact: true }).click();
   await expect(page.getByText(/По вашему решению непрочитанные материалы/)).toBeVisible();
+  const volumeCheck = page.waitForResponse(response => response.url().endsWith("/physical-quantities/preview"));
   await page.getByRole("button", { name: "Перенести подтверждённые данные в карточку" }).click();
   await expect(page.locator("#subcategory")).toHaveValue("Коробки");
   await expect(page.locator("#delivery_address_id")).toHaveValue("00000000-0000-4000-8000-000000000092");
+  await page.locator("#deadline_date").fill("20.12.26");
+  await (await volumeCheck).finished();
+  await expect(page.getByText("Проверяем точность объёма…", { exact: true })).toHaveCount(0);
+  await page.waitForLoadState("networkidle");
   await page.reload();
   await expect(page.locator("#subcategory")).toHaveValue("Коробки");
   await expect(page.getByText(/По вашему решению непрочитанные материалы/)).toBeVisible();
@@ -170,8 +207,11 @@ test("clarified unreadable material is omitted by content hash while same-name v
   await expect(page).toHaveURL(new RegExp(`/needs/${needId}$`));
   expect(creations).toBe(1);
   expect(uploads).toHaveLength(1);
-  expect(uploads[0]).toContain("valid synthetic source");
-  expect(uploads[0]).not.toContain("synthetic corrupt content");
+  expect(uploads[0]).toContain('filename="source.m4a"');
+  const sourceUploads = await page.evaluate(() => (window as unknown as { sourceUploads: string[] }).sourceUploads);
+  expect(sourceUploads).toHaveLength(1);
+  expect(sourceUploads[0]).toContain("valid synthetic source");
+  expect(sourceUploads[0]).not.toContain("synthetic corrupt content");
 });
 
 test("category guidance adds its required fields without cup-specific defaults", async ({ page }) => {
@@ -197,6 +237,7 @@ test("narrow request form keeps file selection inside the viewport", async ({ pa
   await page.goto("/needs/new");
   const files = page.locator("#need_files");
   await expect(files).toBeVisible();
+  await expect(files).toBeEnabled();
   await files.setInputFiles({ name: "Требования-к-закупке.txt", mimeType: "text/plain", buffer: Buffer.from("Синтетические требования") });
   await expect(page.getByText(/Восстановленные или выбранные файлы: 1/)).toBeVisible();
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);

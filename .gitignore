@@ -68,3 +68,8 @@ docs/contest/*.inspect.ndjson
 # Local browser sessions can contain credentials and must never be committed
 .playwright-cli/
 output/playwright/
+
+# Local design build products and pixel-diff inspection output
+/.impeccable/
+/apps/web/.impeccable/build/
+/apps/web/.impeccable/review/diff/

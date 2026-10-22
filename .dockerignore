@@ -21,3 +21,9 @@ postgres-data
 minio-data
 nats-data
 **/*.log
+
+**/.impeccable
+Liquid design
+.playwright-cli
+output/playwright
+docs/handoff

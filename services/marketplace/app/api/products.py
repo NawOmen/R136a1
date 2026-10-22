@@ -1,10 +1,11 @@
 import uuid
 from datetime import datetime, timezone
 from urllib.parse import quote
+from typing import Literal
 
 from fastapi import APIRouter, Depends, File, HTTPException, Response, UploadFile, status
 from pydantic import ValidationError
-from sqlalchemy import delete, select
+from sqlalchemy import case, delete, func, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -19,7 +20,7 @@ from ..deps import (
     require_verified_company,
 )
 from ..experience import notify_market_watchers, validate_characteristics
-from ..models import Product, ProductImage, ProductPriceObservation
+from ..models import Deal, DealExecutionEvent, Offer, Product, ProductImage, ProductPriceObservation
 from ..resources import lock_company, reservations, occupies
 from ..matching import run_market_rematch
 from ..schemas import (
@@ -49,10 +50,33 @@ async def _product_out(product: Product, db: AsyncSession) -> ProductOut:
 
 
 @router.get("/products", response_model=list[ProductOut])
-async def list_catalog(db: AsyncSession = Depends(get_db)):
-    result = await db.execute(
-        select(Product).where(Product.is_published.is_(True)).order_by(Product.created_at.desc())
-    )
+async def list_catalog(sort: Literal["catalog", "popular"] = "catalog", db: AsyncSession = Depends(get_db)):
+    query = select(Product).where(Product.is_published.is_(True))
+    if sort == "popular":
+        # One purchase per need/product with positive confirmed net acceptance.
+        # Split receipts/retries do not add purchases; full returns remove them.
+        net_units = func.sum(case(
+            (DealExecutionEvent.kind == "acceptance", DealExecutionEvent.units),
+            (DealExecutionEvent.kind == "return", -DealExecutionEvent.units),
+            else_=0,
+        ))
+        accepted = (select(DealExecutionEvent.deal_id)
+            .where(DealExecutionEvent.status == "confirmed",
+                   DealExecutionEvent.kind.in_(["acceptance", "return"]))
+            .group_by(DealExecutionEvent.deal_id).having(net_units > 0).subquery())
+        purchases = (select(Offer.product_id, func.count(func.distinct(Deal.need_id)).label("purchases"))
+            .join(Deal, Deal.offer_id == Offer.id)
+            .join(accepted, accepted.c.deal_id == Deal.id)
+            .join(Product, Product.id == Offer.product_id)
+            .where(Product.is_published.is_(True),
+                   Deal.seller_company_id == Product.company_id,
+                   Offer.company_id == Deal.seller_company_id,
+                   Deal.buyer_company_id != Deal.seller_company_id)
+            .group_by(Offer.product_id).subquery())
+        has_image = select(ProductImage.id).where(ProductImage.product_id == Product.id).exists()
+        query = query.outerjoin(purchases, purchases.c.product_id == Product.id).order_by(
+            func.coalesce(purchases.c.purchases, 0).desc(), has_image.desc())
+    result = await db.execute(query.order_by(Product.created_at.desc(), Product.id))
     return [await _product_out(product, db) for product in await publicly_available_products(db, list(result.scalars()))]
 
 

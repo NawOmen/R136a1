@@ -1,0 +1,42 @@
+{
+  "prompt": "Use case: product-mockup.\nAsset type: standalone photorealistic Russian B2B catalogue product illustration, authored synthetic visual, not a supplier photograph.\nScene/backdrop: seamless almost-white neutral studio background #f8f8f6, soft diffuse studio light, small soft contact shadow.\nStyle/medium: crisp realistic catalogue product photography, believable proportions and material details.\nComposition/framing: horizontal landscape 3:2 frame, whole single product centered and comfortably inside frame, generous clear margins on every side, no cropping. The object occupies about 65-75 percent of the image. Camera three-quarter view unless the subject specifies flat lay.\nConstraints: no brand, no logo, no labels, no text, no digits, no watermark, no people, no extra props, no collage, no icon, no decorative graphics outside the product. Show exactly the requested product.\nPrimary request: One black wired computer mouse, generic model МШ-03 without any printed model text. Smooth slightly matte black molded plastic, ordinary two-button shape with central scroll wheel. The attached black cable is arranged in a neat loose loop beside the mouse, terminating in a clearly visible recognizable USB-C male connector with its symmetric rounded metal tip, NOT a USB-A plug. Entire mouse, cable and USB-C connector must be inside the frame.",
+  "createdAt": "2026-10-22T05:43:43.371835Z",
+  "schemaVersion": 1,
+  "tool": "image_gen.imagegen",
+  "provider": "builtin",
+  "mode": "built-in generate",
+  "origin": "AI-generated synthetic product illustration; not an actual supplier photograph",
+  "origin_ru": "Авторская синтетическая иллюстрация товара, созданная ИИ; не фотография товара поставщика",
+  "useCase": "product-mockup",
+  "generatorOriginalPath": "/Users/assweg/.codex/generated_images/01a1621e-7389-76c2-98fa-fc450c2c2dff/exec-219fc39e-83a5-4262-8e53-82a498a67f53.png",
+  "generatorOriginalSha256": "08b9993b98380e228792034ecc0247ae354cdf1c97f67e4d36234f1bc022e196",
+  "sourcePath": "/Users/assweg/.codex/generated_images/01a1621e-7389-76c2-98fa-fc450c2c2dff/exec-219fc39e-83a5-4262-8e53-82a498a67f53.png",
+  "sourceSha256": "08b9993b98380e228792034ecc0247ae354cdf1c97f67e4d36234f1bc022e196",
+  "sourceDimensions": [
+    1536,
+    1024
+  ],
+  "deliveryPath": "services/marketplace/seed_media/office_mouse.webp",
+  "deliverySha256": "33fbfce4251a366b70ee5a57e07dda07c65c6adf912433c77a0c41129382306b",
+  "deliveryDimensions": [
+    768,
+    512
+  ],
+  "deliveryBytes": 16576,
+  "conversion": {
+    "library": "Pillow",
+    "format": "WebP",
+    "quality": 82,
+    "method": 6,
+    "resized": true,
+    "cropped": false,
+    "retouched": false
+  },
+  "verification": {
+    "subject": "manually inspected",
+    "wholeProductVisible": true,
+    "noBrandingOrText": true,
+    "background": "off-white studio",
+    "note": "Black mouse, entire wire and recognizable USB-C connector visible."
+  }
+}

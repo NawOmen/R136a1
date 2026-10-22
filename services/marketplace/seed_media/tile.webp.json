@@ -1,0 +1,41 @@
+{
+  "prompt": "Use case: product-mockup.\nAsset type: standalone synthetic Russian B2B catalogue product illustration, photorealistic.\nPrimary request: One neat unopened-size stack of12 square matte pale warm-gray ceramic floor tiles, each300×300mm, corresponding to one1.08squaremetre package, with a plain brown unprinted low cardboard tray under the stack. One top tile slightly offset to reveal thickness and square edges. No decorative pattern. Three-quarter view.\nScene/backdrop: clean seamless off-white studio background #f8f8f6, subtle natural soft contact shadow.\nComposition/framing: square 1:1 image, whole product centered occupying75%of frame, generous margins on ALL four sides, no crop.\nStyle/medium: realistic clean studio catalogue photography, crisp believable materials, soft diffuse lighting.\nConstraints: original synthetic product illustration, no real manufacturer, no trademark, no logos, no text, no numbers, no UI, no watermarks, no people, no unrelated props, no colored filter.",
+  "createdAt": "2026-10-21T15:57:17.847415+00:00",
+  "schemaVersion": 1,
+  "tool": "image_gen.imagegen",
+  "mode": "built-in generate",
+  "origin": "AI-generated synthetic product illustration; not an actual supplier photograph",
+  "origin_ru": "Авторская синтетическая иллюстрация товара, созданная ИИ; не фотография товара поставщика",
+  "useCase": "product-mockup",
+  "generatorOriginalPath": "/Users/assweg/.codex/generated_images/01a15f23-f64f-7981-98bc-11e983869fbb/exec-2133a4b5-283b-41a5-b92e-d503f8f49e87.png",
+  "generatorOriginalSha256": "7df4b97342fb51e18f9b7d6580664fddf576dd805cbbf4d9ff75b2a561eb4a78",
+  "sourcePath": "/Users/assweg/.codex/generated_images/01a15f23-f64f-7981-98bc-11e983869fbb/exec-2133a4b5-283b-41a5-b92e-d503f8f49e87.png",
+  "sourceSha256": "7df4b97342fb51e18f9b7d6580664fddf576dd805cbbf4d9ff75b2a561eb4a78",
+  "sourceDimensions": [
+    1254,
+    1254
+  ],
+  "deliveryPath": "services/marketplace/seed_media/tile.webp",
+  "deliverySha256": "aea87cb3b262044c945727898fced4879cf619e022cb17c3b6725ffd64467d34",
+  "deliveryDimensions": [
+    768,
+    768
+  ],
+  "deliveryBytes": 30940,
+  "conversion": {
+    "library": "libwebp cwebp",
+    "format": "WebP",
+    "quality": 86,
+    "method": 6,
+    "resized": true,
+    "cropped": false,
+    "retouched": false
+  },
+  "verification": {
+    "subject": "manually inspected",
+    "wholeProductVisible": true,
+    "noBrandingOrText": true,
+    "background": "off-white studio",
+    "note": "Generated for synthetic catalogue specifications. Whole product visible; image is an illustration rather than evidence of actual supplier stock."
+  }
+}

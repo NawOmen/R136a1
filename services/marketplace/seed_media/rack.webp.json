@@ -1,0 +1,42 @@
+{
+  "prompt": "Use case: product-mockup.\nAsset type: standalone photorealistic Russian B2B catalogue product illustration, authored synthetic visual, not a supplier photograph.\nScene/backdrop: seamless almost-white neutral studio background #f8f8f6, soft diffuse studio light, small soft contact shadow.\nStyle/medium: crisp realistic catalogue product photography, believable proportions and material details.\nComposition/framing: horizontal landscape 3:2 frame, whole single product centered and comfortably inside frame, generous clear margins on every side, no cropping. The object occupies about 65-75 percent of the image. Camera three-quarter view unless the subject specifies flat lay.\nConstraints: no brand, no logo, no labels, no text, no digits, no watermark, no people, no extra props, no collage, no icon, no decorative graphics outside the product. Show exactly the requested product.\nPrimary request: One empty metal storage rack with exactly FIVE horizontal shelves, nominal dimensions height 1800 mm, width 900 mm, depth 400 mm. Four upright steel corner posts and five flat steel shelves, neutral gray powder coating. Tall narrow sturdy industrial shelving rack. All five shelves and all four corners are clearly visible. Nothing stored on the shelves.",
+  "createdAt": "2026-10-22T05:43:43.204666Z",
+  "schemaVersion": 1,
+  "tool": "image_gen.imagegen",
+  "provider": "builtin",
+  "mode": "built-in generate",
+  "origin": "AI-generated synthetic product illustration; not an actual supplier photograph",
+  "origin_ru": "Авторская синтетическая иллюстрация товара, созданная ИИ; не фотография товара поставщика",
+  "useCase": "product-mockup",
+  "generatorOriginalPath": "/Users/assweg/.codex/generated_images/01a1621e-7389-76c2-98fa-fc450c2c2dff/exec-2618fb91-195a-4d46-bedf-31b4d2fb683e.png",
+  "generatorOriginalSha256": "0ef9ea8b30438f0a3c4a2f219bd593db6523067b13fb2c5a6cb76af876c9cff4",
+  "sourcePath": "/Users/assweg/.codex/generated_images/01a1621e-7389-76c2-98fa-fc450c2c2dff/exec-2618fb91-195a-4d46-bedf-31b4d2fb683e.png",
+  "sourceSha256": "0ef9ea8b30438f0a3c4a2f219bd593db6523067b13fb2c5a6cb76af876c9cff4",
+  "sourceDimensions": [
+    1536,
+    1024
+  ],
+  "deliveryPath": "services/marketplace/seed_media/rack.webp",
+  "deliverySha256": "53e5064f840444296928c38f9f1575afb15a1b9bec965a37189b0280e246ca1a",
+  "deliveryDimensions": [
+    768,
+    512
+  ],
+  "deliveryBytes": 8938,
+  "conversion": {
+    "library": "Pillow",
+    "format": "WebP",
+    "quality": 82,
+    "method": 6,
+    "resized": true,
+    "cropped": false,
+    "retouched": false
+  },
+  "verification": {
+    "subject": "manually inspected",
+    "wholeProductVisible": true,
+    "noBrandingOrText": true,
+    "background": "off-white studio",
+    "note": "Five empty shelves, steel gray coating, whole rack and feet visible."
+  }
+}

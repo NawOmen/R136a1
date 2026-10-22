@@ -1,0 +1,41 @@
+{
+  "prompt": "Use case: product-mockup.\nAsset type: standalone synthetic Russian B2B catalogue product illustration, photorealistic.\nPrimary request: One small laser-cut plain rectangular steel plate, nominal100×80×2mm, aspect ratio5:4, flat thin2mmedge, clean straight laser-cut edges, brushed raw gray steel surface, no holes, no cutouts, no writing. A simple manufactured blank for contractproduction, lying flat at a three-quarter angle.\nScene/backdrop: clean seamless off-white studio background #f8f8f6, subtle natural soft contact shadow.\nComposition/framing: square 1:1 image, whole product centered occupying75%of frame, generous margins on ALL four sides, no crop.\nStyle/medium: realistic clean studio catalogue photography, crisp believable materials, soft diffuse lighting.\nConstraints: original synthetic product illustration, no real manufacturer, no trademark, no logos, no text, no numbers, no UI, no watermarks, no people, no unrelated props, no colored filter.",
+  "createdAt": "2026-10-21T15:57:18.620775+00:00",
+  "schemaVersion": 1,
+  "tool": "image_gen.imagegen",
+  "mode": "built-in generate",
+  "origin": "AI-generated synthetic product illustration; not an actual supplier photograph",
+  "origin_ru": "Авторская синтетическая иллюстрация товара, созданная ИИ; не фотография товара поставщика",
+  "useCase": "product-mockup",
+  "generatorOriginalPath": "/Users/assweg/.codex/generated_images/01a15f23-f64f-7981-98bc-11e983869fbb/exec-1c1b5b1f-6f78-44eb-92d3-9f2d8acd624b.png",
+  "generatorOriginalSha256": "6db516ccd902776998b6fb574ed0631937d7ebc4cba628751d77e8e56937261c",
+  "sourcePath": "/Users/assweg/.codex/generated_images/01a15f23-f64f-7981-98bc-11e983869fbb/exec-1c1b5b1f-6f78-44eb-92d3-9f2d8acd624b.png",
+  "sourceSha256": "6db516ccd902776998b6fb574ed0631937d7ebc4cba628751d77e8e56937261c",
+  "sourceDimensions": [
+    1254,
+    1254
+  ],
+  "deliveryPath": "services/marketplace/seed_media/laser_part_2.webp",
+  "deliverySha256": "b8e8e1a591337127e3f238deeff54586142c8cb6dd15125f2052b2131f9a87d2",
+  "deliveryDimensions": [
+    768,
+    768
+  ],
+  "deliveryBytes": 32038,
+  "conversion": {
+    "library": "libwebp cwebp",
+    "format": "WebP",
+    "quality": 86,
+    "method": 6,
+    "resized": true,
+    "cropped": false,
+    "retouched": false
+  },
+  "verification": {
+    "subject": "manually inspected",
+    "wholeProductVisible": true,
+    "noBrandingOrText": true,
+    "background": "off-white studio",
+    "note": "Generated for synthetic catalogue specifications. Whole product visible; image is an illustration rather than evidence of actual supplier stock."
+  }
+}
