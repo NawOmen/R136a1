@@ -21,7 +21,7 @@ colors:
   picker-solid: "rgb(255 255 255)"
   danger: "rgb(163 42 63)"
   danger-soft: "rgb(251 235 238)"
-  success: "rgb(19 137 99)"
+  success: "rgb(17 116 83)"
   success-soft: "rgb(231 247 240)"
   warning: "rgb(124 82 27)"
   warning-soft: "rgb(249 239 221)"

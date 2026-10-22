@@ -32,6 +32,20 @@ test("stock labels and exact starting prices stay readable in both themes", asyn
     const badge = (await cards.first().locator(".product-stock").boundingBox())!, image = (await cards.first().locator(".market-product__visual").boundingBox())!;
     expect(badge.y).toBeGreaterThanOrEqual(image.y);
     expect(badge.y + badge.height).toBeLessThan(image.y + image.height);
+    const contrasts = await cards.locator(".product-stock").evaluateAll(items => {
+      const luminance = (color: string) => {
+        const rgb = color.match(/[\d.]+/g)!.slice(0, 3).map(Number).map(value => {
+          const channel = value / 255;
+          return channel <= .04045 ? channel / 12.92 : ((channel + .055) / 1.055) ** 2.4;
+        });
+        return rgb[0] * .2126 + rgb[1] * .7152 + rgb[2] * .0722;
+      };
+      return items.map(item => {
+        const style = getComputedStyle(item), foreground = luminance(style.color), background = luminance(style.backgroundColor);
+        return (Math.max(foreground, background) + .05) / (Math.min(foreground, background) + .05);
+      });
+    });
+    expect(Math.min(...contrasts)).toBeGreaterThanOrEqual(4.5);
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
   }
   expect(errors).toEqual([]);

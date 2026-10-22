@@ -235,7 +235,7 @@ select option,select optgroup { color: var(--text); background: var(--picker-sol
   --primary:rgb(18 53 108); --primary-hover:rgb(34 85 143); --primary-soft:rgb(218 238 252); --on-primary:rgb(255 255 255);
   --shell-text:rgb(9 9 34); --shell-muted:rgb(72 87 112); --glass-edge:rgb(208 226 241); --glass-header:rgb(255 255 255 / .97);
   --field-bg:rgb(255 255 255); --picker-bg:rgb(255 255 255 / .98); --picker-solid:rgb(255 255 255);
-  --danger:rgb(163 42 63); --danger-soft:rgb(251 235 238); --success:rgb(19 137 99); --success-soft:rgb(231 247 240); --warning:rgb(124 82 27); --warning-soft:rgb(249 239 221);
+  --danger:rgb(163 42 63); --danger-soft:rgb(251 235 238); --success:rgb(17 116 83); --success-soft:rgb(231 247 240); --warning:rgb(124 82 27); --warning-soft:rgb(249 239 221);
   --radius:12px; --radius-sm:8px; --shadow-sm:0 3px 10px rgb(44 85 124 / .05); --shadow-md:0 15px 36px rgb(36 67 104 / .1); --focus-ring:0 0 0 3px rgb(44 116 191 / .2);
   --ease-out:cubic-bezier(.22,1,.36,1); --type-prose:1rem; --type-help:.875rem; --type-lead:1.125rem; color-scheme:light;
 }
