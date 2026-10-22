@@ -10,8 +10,8 @@ import os
 from pathlib import Path
 import sys
 
-ADAPTER_SHA256 = "2043a052df09167337bdfd7d003d6988a655bd87ea4bb93aae49d0144251b18e"
-ADAPTER_CONFIG_SHA256 = "4833ec3bc1a3d126c26b070e30a13f0822a0ad31e82a0525c197b978e0793fde"
+ADAPTER_SHA256 = "b2cf30b111109ee10439b4308cb97058ab00a85115eedd36118bbc534e52b665"
+ADAPTER_CONFIG_SHA256 = "f715c2cac7c67a67b59f3bc0d178df986bd766d34aa9e68d809d2cd2d6b01262"
 BASE_REVISION = "8b2b98c00a6b4d291155e4890773ca8f769aee53"
 
 def digest(path: Path) -> str:
@@ -53,7 +53,7 @@ def main() -> None:
         verify(a.base, a.adapter)
     except (ValueError, KeyError, OSError) as exc:
         p.exit(1, f"Проверка модели не пройдена: {exc}\n")
-    print("База и последний адаптер проверены. Качество последнего адаптера не оценено.")
+    print("База и последний адаптер проверены. Фиксированная проверка:404/412exact; автономное применение не принято.")
     if not a.serve:
         print("Сервер не запущен. Для запуска оператором добавьте --serve.")
         return

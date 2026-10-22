@@ -1,7 +1,0 @@
-{
-  "removed_files": 531,
-  "freed_bytes": 10858415283,
-  "retained_adapter": "adapters.safetensors",
-  "base_retained": "../model-9b-4bit",
-  "metrics_logs_preserved": true
-}

@@ -24,7 +24,7 @@ class Settings(BaseSettings):
     ollama_base_url: str = "http://host.docker.internal:11434"
     local_llm_backend: Literal["mlx", "ollama"] = "mlx"
     mlx_base_url: str = "http://host.docker.internal:8080"
-    trained_model_version: str = "porukam-buyer-1424-2043a052df09"
+    trained_model_version: str = "porukam-buyer-b2cf30b11110"
     mlx_timeout_seconds: float = 180.0
     mlx_max_tokens: int = Field(default=640, ge=1, le=2048)
 

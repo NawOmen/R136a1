@@ -28,7 +28,7 @@ ROLE_PASSPORTS: dict[str, dict] = {
                   "extract_requirements", "review_anonymized_facts"],
         "company_scope": "Покупатель видит только свои процессы; поиск исключает его компанию.",
         "prompt_version": PROMPT_VERSION,
-        "model": "porukam-buyer-1424-2043a052df09 (локальный разбор); qwen3.5:9b (локальное OCR изображений); внешний разбор — только обезличенные факты",
+        "model": "porukam-buyer-b2cf30b11110 (локальный разбор); qwen3.5:9b (локальное OCR изображений); внешний разбор — только обезличенные факты",
         "schema_version": SCHEMA_VERSION,
         "implemented_by": "model",
         "time_limits": "Локальный вызов до 180 c, внешний разбор до 45 c; текст ограничен max_combined_text_chars.",
@@ -46,7 +46,7 @@ ROLE_PASSPORTS: dict[str, dict] = {
         "tools": ["search_capability_passports", "apply_user_clarification", "human_approval", "invalidate_source"],
         "company_scope": "Действия выполняются от компании-покупателя; смена компании не переносит чужой процесс.",
         "prompt_version": PROMPT_VERSION,
-        "model": "porukam-buyer-1424-2043a052df09 (локально)",
+        "model": "porukam-buyer-b2cf30b11110 (локально)",
         "schema_version": SCHEMA_VERSION,
         "implemented_by": "model",
         "time_limits": "Наследует лимиты расследования; уточнения без ограничения по числу шагов, каждый шаг версионируется.",
@@ -64,7 +64,7 @@ ROLE_PASSPORTS: dict[str, dict] = {
         "tools": ["seller_explain"],
         "company_scope": "Требуется право can_sell компании; чужие паспорта недоступны.",
         "prompt_version": SELLER_PROMPT_VERSION,
-        "model": "porukam-buyer-1424-2043a052df09 (локально); при недоступности — rules_only без модели",
+        "model": "porukam-buyer-b2cf30b11110 (локально); при недоступности — rules_only без модели",
         "schema_version": "seller-explain-1",
         "implemented_by": "model",
         "time_limits": "Локальный вызов до 180 c; при сбое возвращается rules_only, а не выдуманное объяснение.",
@@ -130,9 +130,9 @@ ROLE_PASSPORTS: dict[str, dict] = {
 }
 
 MODEL_MANIFEST: dict[str, dict] = {
-    "porukam-buyer-1424-2043a052df09": {
+    "porukam-buyer-b2cf30b11110": {
         "role": "Обученный на синтетических данных локальный кандидат для извлечения фактов, объяснений и справочника; оригиналы клиентских материалов не покидают контур.",
-        "quality_gate": "Формат, обязательные поля и завершение сценария проверяются автоматически; семантическая приёмка независимым экспертным ревью ещё не пройдена, последний сохранённый адаптер не проходил оценку качества; эксплуатация требует ручной приёмки.",
+        "quality_gate": "Формат, обязательные поля и завершение сценария проверяются автоматически; семантическая приёмка независимым экспертным ревью ещё не пройдена, последний адаптер дал404/412exact, но авторскийнабор2/8; автономное применение не принято.",
         "latency_budget": "До 180 c на вызов; фактическая задержка сохраняется в duration_ms каждого процесса.",
         "ram_vram": "MLX int4, около 5 ГБ в памяти на Apple Silicon; размещение, swap и OOM проверяются на фактическом узле.",
         "license": "Производная от Qwen3.5-9B; лицензия базовых весов и условия адаптера сверяются с картой дистрибутива перед публикацией.",
