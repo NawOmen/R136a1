@@ -10,9 +10,9 @@
 - [Рабочий прототип и путь обеих сторон](#working-prototype).
 - [Безопасность, доверие, контроль и оценка](#safety-and-evaluation).
 - [Проверяемый охват и доказательства](#verification).
-- [Запуск через Docker](#docker-start), [проверки](#checks), [HTTPS](#secure-deployment) и [восстановление](#operations).
+- [Запуск через Docker](#docker-start), [HTTPS](#secure-deployment) и [восстановление](#operations).
 - [Точные определения метрик](#commercial-metrics), [автоматизация ИИ](#agent-quality) и [экономические примеры](#business-model).
-- [Правовой контур](#legal), [источники](#sources) и [назначение оставшихся файлов](#documentation).
+- [Источники](#sources) и [назначение оставшихся файлов](#documentation).
 
 Российские компании, русскоязычный интерфейс, расчёты в рублях. Продукт рассчитан на разные виды бизнеса и множество категорий, без ограничения одной отраслью.
 
@@ -1101,8 +1101,6 @@ WebP-иллюстрации из `services/marketplace/seed_media`, включа
 - [OR-Tools: CP-SAT](https://developers.google.com/optimization/cp/cp_solver).
 - [PyMuPDF: License and Copyright](https://pymupdf.readthedocs.io/en/latest/about.html#license-and-copyright).
 - [B2B-Center: помощник закупщика](https://www.b2b-center.ru/news/?id=593) и [агент категоризации](https://www.b2b-center.ru/news/?id=622): основания сравнения с существующей автоматизацией, без вывода о превосходстве нашего продукта.
-
-Навыки и плагины — инструменты разработки, а не автоматически подключённые функции сайта. Применение Code Scout/Graphify, TinyFish и дизайн-инструментов описано в AGENTS.md и SKILL.md. Новый внешний сервис подключается под конкретную задачу, с минимальными правами и допустимым составом данных; установка навыка не даёт разрешения отправлять документы или публиковать материалы.
 
 <a id="documentation"></a>
 ## Что хранится в репозитории
