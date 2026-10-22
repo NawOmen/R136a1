@@ -36,7 +36,9 @@ test("catalogue images, exact prices, sorting, touch controls and both themes re
   await page.goto("/");
   await expect(page.locator(".market-product")).toHaveCount(4);
   await expect(page.locator(".market-price").first()).toContainText("38,123456789123");
-  await expect.poll(() => page.locator(".market-product img").first().evaluate(image => (image as HTMLImageElement).naturalWidth)).toBeGreaterThan(0);
+  const photos = page.locator(".market-product img");
+  await expect(photos).toHaveCount(4);
+  await expect.poll(() => photos.evaluateAll(images => images.every(image => (image as HTMLImageElement).complete && (image as HTMLImageElement).naturalWidth > 0))).toBe(true);
   const visual = (await page.locator(".market-product__visual").first().boundingBox())!;
   const image = (await page.locator(".market-product img").first().boundingBox())!;
   // A percentage-height image in a grid can retain its intrinsic square height
