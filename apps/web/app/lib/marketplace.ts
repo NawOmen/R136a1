@@ -838,7 +838,19 @@ export function itemUnit(characteristics?: Record<string, unknown>): string {
 }
 
 export function formatUnits(value: number, unit = "шт."): string {
-  return new Intl.NumberFormat("ru-RU", { maximumFractionDigits: 0 }).format(value) + " " + russianUnit(unit);
+  const normalized = russianUnit(unit);
+  const forms: Record<string, [string, string, string]> = {
+    "рулон": ["рулон", "рулона", "рулонов"],
+    "бухта": ["бухта", "бухты", "бухт"],
+    "упаковка": ["упаковка", "упаковки", "упаковок"],
+    "коробка": ["коробка", "коробки", "коробок"],
+    "комплект": ["комплект", "комплекта", "комплектов"],
+    "мешок": ["мешок", "мешка", "мешков"],
+    "пачка": ["пачка", "пачки", "пачек"],
+  };
+  const plural = new Intl.PluralRules("ru-RU").select(Math.round(value));
+  const label = forms[normalized]?.[plural === "one" ? 0 : plural === "few" ? 1 : 2] ?? normalized;
+  return new Intl.NumberFormat("ru-RU", { maximumFractionDigits: 0 }).format(value) + " " + label;
 }
 
 // ---------- Разбор ошибок валидации FastAPI (422) ----------

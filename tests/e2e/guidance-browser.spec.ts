@@ -1,8 +1,8 @@
 import { expect, test } from "@playwright/test";
 
-test("guidance pages retain keyboard disclosures, actions and narrow layouts", async ({ page }) => {
+for (const width of [320, 390, 1280]) {
+test(`guidance pages retain keyboard disclosures, actions and layout at ${width}px`, async ({ page }) => {
   await page.route("**/api/**", route => route.fulfill({ json: [] }));
-  for (const width of [320, 390, 1280]) {
     await page.setViewportSize({ width, height: 900 });
     await page.goto("/knowledge");
     await expect(page.getByRole("heading", { name: "Помощь с закупкой", exact: true })).toBeVisible();
@@ -23,8 +23,8 @@ test("guidance pages retain keyboard disclosures, actions and narrow layouts", a
     await role.focus(); await page.keyboard.press("Enter");
     await expect(page.getByText("Не выдумывает данные и не подтверждает спецификацию. Карточку проверяет покупатель.")).toBeVisible();
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
-  }
 });
+}
 
 test("the redesigned assistant preserves retry, input, loading protection and safe links", async ({ page }) => {
   await page.addInitScript(() => localStorage.setItem("token", "synthetic-guidance-user"));

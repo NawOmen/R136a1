@@ -9,6 +9,8 @@ import { Icon, IconName } from "./Icon";
 import { LiquidSurface } from "./LiquidSurface";
 
 const allCategories = "Все категории";
+const homePageSize = 10;
+const catalogPageSize = 30;
 
 export function ProductCatalog({ home = false }: { home?: boolean }) {
   const [products, setProducts] = useState<Product[]>([]);
@@ -18,7 +20,7 @@ export function ProductCatalog({ home = false }: { home?: boolean }) {
   const [category, setCategory] = useState(allCategories);
   const [query, setQuery] = useState("");
   const [sort, setSort] = useState("popular");
-  const [limit, setLimit] = useState(home ? 4 : 24);
+  const [limit, setLimit] = useState(home ? homePageSize : catalogPageSize);
   const [favorites, setFavorites] = useState<string[]>([]);
   useEffect(() => {
     const sync = () => { try { const value: unknown = JSON.parse(localStorage.getItem("porukam-product-favorites-v1") ?? "[]"); setFavorites(Array.isArray(value) ? value.filter((id): id is string => typeof id === "string") : []); } catch { setFavorites([]); } };
@@ -68,7 +70,7 @@ export function ProductCatalog({ home = false }: { home?: boolean }) {
   }, [products, category, query, sort, home]);
   // Public GET /products admits only verified companies with sale permission (server admission.py).
   const admin = Boolean(me?.user.is_marketplace_admin);
-  const chooseCategory = (value: string) => { setCategory(value); setLimit(24); };
+  const chooseCategory = (value: string) => { setCategory(value); setLimit(catalogPageSize); };
   const company = me?.companies[0];
 
   const categoryIcons: Record<string, IconName> = { "Упаковка и тара": "package", "Сырьё и материалы": "metal", "Товары для бизнеса": "briefcase", "Оборудование": "chair", "Строительство": "bricks", "Продукты питания": "layers", "Электроника": "link" };
@@ -84,14 +86,14 @@ export function ProductCatalog({ home = false }: { home?: boolean }) {
         <nav>{[allCategories, ...categories].map(item => <button type="button" key={item} aria-label={item} className={item === category ? "active" : ""} aria-pressed={item === category} onClick={() => chooseCategory(item)}><Icon name={categoryIcons[item] ?? "grid"} size={29} /><span>{item === "Упаковка и тара" ? "Упаковка" : item}</span></button>)}</nav>
       </aside>
       <section className="catalog-results" aria-label="Предложения производителей">
-        <div className="catalog-heading-row"><div className="catalog-title-group"><h2>Товары производителей</h2>{home && limit < visible.length && <button type="button" className="catalog-all" onClick={() => setLimit(value => value + 24)}>Показать ещё<Icon name="arrow" size={14} /></button>}</div>
-          <div className="catalog-controls"><nav className="storefront-mode" aria-label="Для компаний">{admin ? <Link className="active" href="/admin">Администрирование</Link> : <><Link className="active" href="/catalog">Покупатель</Link><Link href={me ? "/seller/requests" : "/login"}>Производитель</Link></>}</nav><label className="catalog-sort"><span className="visually-hidden">Порядок</span><select aria-label="Порядок товаров" title={sort === "popular" ? "По числу закупок с подтверждённой приёмкой за вычетом полных возвратов" : "По алфавиту"} value={sort} onChange={event => { setSort(event.target.value); setLimit(home ? 4 : 24); }}><option value="popular">По популярности</option><option value="name">По названию</option></select></label></div>
+        <div className="catalog-heading-row"><div className="catalog-title-group"><h2>Товары производителей</h2>{home && limit < visible.length && <button type="button" className="catalog-all" onClick={() => setLimit(value => value + catalogPageSize)}>Показать ещё<Icon name="arrow" size={14} /></button>}</div>
+          <div className="catalog-controls"><nav className="storefront-mode" aria-label="Для компаний">{admin ? <Link className="active" href="/admin">Администрирование</Link> : <><Link className="active" href="/catalog">Покупатель</Link><Link href={me ? "/seller/requests" : "/login"}>Производитель</Link></>}</nav><label className="catalog-sort"><span className="visually-hidden">Порядок</span><select aria-label="Порядок товаров" title={sort === "popular" ? "По числу закупок с подтверждённой приёмкой за вычетом полных возвратов" : "По алфавиту"} value={sort} onChange={event => { setSort(event.target.value); setLimit(home ? homePageSize : catalogPageSize); }}><option value="popular">По популярности</option><option value="name">По названию</option></select></label></div>
         </div>
         <p className={loading || error ? "catalog-status" : "visually-hidden"} role="status">{loading ? "Загружаем товары…" : error ? "Каталог недоступен" : `${visible.length} предложений`}</p>
         {query && <p className="catalog-query">Поиск: «{query}» <a href={home ? "/" : "/catalog"}>Сбросить</a></p>}
-        {loading ? <div className="product-grid" aria-busy="true" aria-label="Загрузка предложений">{[0, 1, 2, 3].map(i => <div className="product-skeleton" key={i}><span /><i /><i /></div>)}</div>
+        {loading ? <div className="product-grid" aria-busy="true" aria-label="Загрузка предложений">{Array.from({ length: homePageSize }, (_, i) => <div className="product-skeleton" key={i}><span /><i /><i /></div>)}</div>
           : error ? <div className="empty-market" role="alert"><Icon name="box" size={28} /><div><b>Не удалось загрузить предложения</b><p>{error}</p></div><button type="button" className="btn btn-secondary" onClick={() => void load()}>Повторить</button></div>
-          : visible.length ? <><div className="product-grid">{visible.slice(0, limit).map(product => <ProductCard key={product.id} headingLevel={2} product={product} manufacturerVerified favorite={favorites.includes(product.id)} onFavorite={() => toggleFavorite(product.id)} />)}</div>{!home && limit < visible.length && <button className="btn btn-secondary catalog-more" type="button" onClick={() => setLimit(value => value + 24)}>Показать ещё · осталось {visible.length - limit}</button>}</>
+          : visible.length ? <><div className="product-grid">{visible.slice(0, limit).map(product => <ProductCard key={product.id} headingLevel={2} product={product} manufacturerVerified favorite={favorites.includes(product.id)} onFavorite={() => toggleFavorite(product.id)} />)}</div>{!home && limit < visible.length && <button className="btn btn-secondary catalog-more" type="button" onClick={() => setLimit(value => value + catalogPageSize)}>Показать ещё · осталось {visible.length - limit}</button>}</>
           : <div className="empty-market"><Icon name="search" size={28} /><div><b>{query || category !== allCategories ? "Подходящих товаров пока нет" : "Новые предложения появятся здесь"}</b><p>Измените поиск или опишите закупку для производителей.</p></div>{category !== allCategories && <button className="btn btn-secondary" type="button" onClick={() => chooseCategory(allCategories)}>Все категории</button>}{!admin && <Link href="/needs/new" className="btn btn-primary">Создать потребность</Link>}</div>}
       </section>
     </div>

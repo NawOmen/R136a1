@@ -13,19 +13,49 @@ async function publicApi(page: Page) {
 async function noOverflow(page: Page) {
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
 }
-async function compactProductBody(page: Page, contentHeightLimit: number) {
+async function compactProductBody(page: Page, heightLimit: number) {
   const body = page.locator(".market-product__body").first();
   const minimumOrder = body.locator(".product-conditions");
   await expect(minimumOrder).toHaveText("От 100 шт.");
   await expect(minimumOrder).toBeVisible();
   const minimumOrderHeight = (await minimumOrder.boundingBox())!.height;
-  // The required MOQ is one compact extra row; retain the original budget for
-  // the title, price, verification and padding instead of shrinking their text.
+  // MOQ remains readable; the full body budget includes a two-line title
+  // and the verification label at narrow card widths.
   expect(minimumOrderHeight).toBeLessThanOrEqual(18);
-  const gap = await body.evaluate(el => parseFloat(getComputedStyle(el).rowGap));
-  const contentHeight = (await body.boundingBox())!.height - minimumOrderHeight - gap;
-  expect(contentHeight).toBeLessThanOrEqual(contentHeightLimit);
+  expect((await body.boundingBox())!.height).toBeLessThanOrEqual(heightLimit);
 }
+
+for (const [width, columns] of [[320, 2], [360, 2], [390, 2], [430, 2], [740, 2], [768, 3], [1024, 5], [1280, 5], [1440, 5]]) {
+  test(`catalogue has ${columns} readable cards per row at ${width}px`, async ({ page }) => {
+    const assortment = Array.from({ length: 12 }, (_, index) => ({ ...products[index % products.length], id: `layout-${index}` }));
+    await page.route("**/api/**", route => route.fulfill({ json: new URL(route.request().url()).pathname.endsWith("/products") ? assortment : [] }));
+    await page.setViewportSize({ width, height: 900 });
+    await page.goto("/");
+    await expect(page.locator(".market-product")).toHaveCount(10);
+    const cards = await page.locator(".market-product").evaluateAll(items => items.map(item => {
+      const box = item.getBoundingClientRect();
+      return { top: box.top, width: box.width };
+    }));
+    expect(cards.filter(card => Math.abs(card.top - cards[0].top) < 1)).toHaveLength(columns);
+    expect(cards[columns].top).toBeGreaterThan(cards[0].top);
+    expect(cards.every(card => card.width >= 135)).toBe(true);
+    await compactProductBody(page, width <= 760 ? 155 : 150);
+    const favorite = page.locator(".product-favorite").first();
+    const target = (await favorite.boundingBox())!;
+    expect(target.width).toBeGreaterThanOrEqual(44);
+    expect(target.height).toBeGreaterThanOrEqual(44);
+    await noOverflow(page);
+  });
+}
+
+test("section instructions are absent from the shared page layout", async ({ page }) => {
+  await publicApi(page);
+  for (const path of ["/catalog", "/login", "/knowledge", "/ai-procurement"]) {
+    await page.goto(path);
+    await expect(page.locator("main")).toBeVisible();
+    await expect(page.getByText("Как работать с этим разделом", { exact: true })).toHaveCount(0);
+  }
+});
 
 test("products lead the first viewport, with persistent themes, exact prices and working search", async ({ page }) => {
   await publicApi(page);
@@ -37,7 +67,7 @@ test("products lead the first viewport, with persistent themes, exact prices and
   const photo = await page.locator(".market-product__visual").first().boundingBox();
   expect(photo).not.toBeNull();
   expect(photo!.width / photo!.height).toBeCloseTo(1.546, 1);
-  await compactProductBody(page, 100);
+  await compactProductBody(page, 150);
   expect(await page.locator(".market-product h2").first().evaluate(el => parseFloat(getComputedStyle(el).fontSize))).toBeGreaterThanOrEqual(15);
   expect(await page.locator(".site-header__logo img").evaluateAll(els => els.every(el => getComputedStyle(el).filter === "none"))).toBe(true);
   await expect(page.getByRole("heading", { name: "Всё для вашего бизнеса" })).toBeVisible();
@@ -106,18 +136,20 @@ test("home and catalogue preserve server popularity through category and name so
 });
 
 test("the catalogue keeps supplier photos first and reveals the remaining products", async ({ page }) => {
-  const assortment = Array.from({ length: 30 }, (_, index) => ({ ...products[index % products.length], id: `item-${index}`, images: index === 0 ? [{ id: "generated-photo", file_name: "Иллюстрация товара: Коробка.webp", content_type: "image/webp", position: 0 }, { id: "supplier-photo", file_name: "Фото товара.png", content_type: "image/png", position: 1 }] : [] }));
+  const assortment = Array.from({ length: 60 }, (_, index) => ({ ...products[index % products.length], id: `item-${index}`, images: index === 0 ? [{ id: "generated-photo", file_name: "Иллюстрация товара: Коробка.webp", content_type: "image/webp", position: 0 }, { id: "supplier-photo", file_name: "Фото товара.png", content_type: "image/png", position: 1 }] : [] }));
   await page.route("**/api/**", route => route.fulfill({ json: new URL(route.request().url()).pathname.endsWith("/products") ? assortment : [] }));
   await page.goto("/");
-  await expect(page.locator(".market-product")).toHaveCount(4);
+  await expect(page.locator(".market-product")).toHaveCount(10);
   await expect(page.locator(".market-product").first().locator("img")).toHaveAttribute("src", /product-images\/supplier-photo$/);
   await expect(page.locator(".market-product").first().locator(".product-no-photo")).toHaveCount(0);
   await page.getByRole("button", { name: /Показать ещё/ }).click();
-  await expect(page.locator(".market-product")).toHaveCount(28);
+  await expect(page.locator(".market-product")).toHaveCount(40);
   await page.getByRole("button", { name: /Показать ещё/ }).click();
-  await expect(page.locator(".market-product")).toHaveCount(30);
+  await expect(page.locator(".market-product")).toHaveCount(60);
+  await page.getByRole("combobox", { name: "Порядок товаров" }).selectOption("name");
+  await expect(page.locator(".market-product")).toHaveCount(10);
   await page.getByRole("button", { name: "Оборудование", exact: true }).click();
-  await expect(page.locator(".market-product")).toHaveCount(7);
+  await expect(page.locator(".market-product")).toHaveCount(15);
   await expect(page.getByRole("button", { name: /Показать ещё/ })).toHaveCount(0);
 });
 
@@ -131,7 +163,7 @@ test("mobile market, keyboard navigation and reduced motion at 320, 390 and 768 
     await expect(page.locator(".market-product").last()).toBeVisible();
     const photo = await page.locator(".market-product__visual").first().boundingBox();
     expect(photo!.width / photo!.height).toBeCloseTo(width < 760 ? 1.2 : 1.546, 1);
-    await compactProductBody(page, width < 760 ? 120 : 100);
+    await compactProductBody(page, width < 760 ? 155 : 150);
     await noOverflow(page);
     const menu = page.getByRole("button", { name: "Открыть навигацию", exact: true });
     await menu.click();
@@ -177,6 +209,36 @@ test("account sheet covers the viewport, keeps keyboard focus and restores scrol
   await expect(trigger).toBeFocused();
   expect(await page.evaluate(() => document.body.style.overflow)).toBe("");
 });
+
+for (const direction of ["Tab", "Shift+Tab"]) {
+  test(`account sheet keeps ${direction} inside while logout is pending`, async ({ page }) => {
+    await page.addInitScript(() => localStorage.setItem("token", "synthetic-design-user"));
+    let release: () => void = () => {};
+    const pending = new Promise<void>(resolve => { release = resolve; });
+    await page.route("**/api/**", async route => {
+      const path = new URL(route.request().url()).pathname;
+      if (path.endsWith("/auth/logout")) {
+        await pending;
+        return route.fulfill({ status: 503, json: { detail: "Временно недоступно" } });
+      }
+      return route.fulfill({ json: path.endsWith("/auth/me") ? { user: { id: "user-design", first_name: "Анна", last_name: "Соколова", email: "buyer@example.test", is_marketplace_admin: false }, companies: [] } : [] });
+    });
+    page.on("dialog", dialog => dialog.accept());
+    await page.goto("/catalog");
+    await page.getByRole("button", { name: "Открыть личный кабинет", exact: true }).click();
+    const sheet = page.getByRole("dialog", { name: "Меню аккаунта" });
+    await sheet.getByRole("button", { name: "Выйти", exact: true }).click();
+    await expect(sheet.getByRole("button", { name: "Выходим…", exact: true })).toBeDisabled();
+    await page.keyboard.press(direction);
+    const expected = sheet.getByRole("button", { name: direction === "Tab" ? "Закрыть" : "Тема: светлая", exact: true });
+    await expect(expected).toBeFocused();
+    release();
+    await expect(sheet.getByRole("alert")).toContainText("Повторите выход");
+    await page.keyboard.press("Escape");
+    await expect(sheet).toHaveCount(0);
+    await expect(page.getByRole("button", { name: "Открыть личный кабинет", exact: true })).toBeFocused();
+  });
+}
 
 test("home and catalogue retain truthful ordering and keyboard selection", async ({ page }) => {
   await publicApi(page);

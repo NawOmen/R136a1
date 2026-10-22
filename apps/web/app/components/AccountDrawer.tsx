@@ -30,8 +30,11 @@ export function AccountDrawer() {
       const items = drawer?.querySelectorAll<HTMLElement>("a[href], button:not([disabled])");
       if (!items?.length) return;
       const first = items[0], last = items[items.length - 1];
-      if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last.focus(); }
-      else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first.focus(); }
+      // A pending action can disable the focused button. Keep focus inside
+      // even when that element is no longer in the current tab order.
+      const outsideTabOrder = !Array.from(items).some(item => item === document.activeElement);
+      if (event.shiftKey && (outsideTabOrder || document.activeElement === first)) { event.preventDefault(); last.focus(); }
+      else if (!event.shiftKey && (outsideTabOrder || document.activeElement === last)) { event.preventDefault(); first.focus(); }
     };
     document.addEventListener("keydown", handleKey);
     return () => { document.body.style.overflow = previousOverflow; document.removeEventListener("keydown", handleKey); if (previousFocus?.isConnected) previousFocus.focus(); };

@@ -12,7 +12,7 @@ Canonical product requirements and implementation: [README](../../README.md). Th
 
 ## Confirmed scope
 
-The user's own approved storefront image is the visual authority: compact white masthead, warehouse banner, separate blue-icon category controls, four-column product grid, request strip and slim footer. Real products, categories, exact ruble prices, images and admission status come from the API. Home remains a catalogue for signed-in users too; account work starts in the dashboard. Preserve Next.js, business routes, account roles and versioned human approval.
+The user's own approved storefront image is the visual authority: compact white masthead, warehouse banner, separate blue-icon category controls, five-column desktop product grid and two-column phone grid, request strip and slim footer. Real products, categories, exact ruble prices, images and admission status come from the API. Home remains a catalogue for signed-in users too; account work starts in the dashboard. Preserve Next.js, business routes, account roles and versioned human approval.
 
 Light mode is white, silver-gray and navy; dark mode changes the whole scene and reading surfaces. Preserve the original logo and product colors. Cards have compact text below images. Favorites are local to the browser and marked accordingly. Loading, failure/retry and empty results remain distinct. The default order is popularity based on confirmed net acceptance; name sorting is available.
 

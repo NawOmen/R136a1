@@ -2,7 +2,7 @@ import { expect, test } from "@playwright/test";
 import { formatDate, formatDateTime, parseDateInput } from "../../apps/web/app/lib/dates";
 import { displayValue, russianLabel } from "../../apps/web/app/lib/presentation";
 import { startingPrice, productAvailability } from "../../apps/web/app/lib/catalogPresentation";
-import { itemUnit } from "../../apps/web/app/lib/marketplace";
+import { formatUnits, itemUnit } from "../../apps/web/app/lib/marketplace";
 
 test("Russian calendar dates validate leap days without time-zone shifts or API changes", () => {
   expect(formatDate("2026-10-20")).toBe("20.10.26");
@@ -20,6 +20,17 @@ test("Russian calendar dates validate leap days without time-zone shifts or API 
   expect(displayValue({ deadline_date: "2026-11-20", source: "rules_only" })).toBe("Срок поставки: 20.11.26; Источник: Программные правила");
   expect(russianLabel("includes_vat")).toBe("С НДС");
   expect(itemUnit({ unit: "pcs" })).toBe("шт.");
+});
+
+test("catalogue package quantities use Russian count forms without changing units", () => {
+  for (const [quantity, label] of [[1, "рулон"], [2, "рулона"], [5, "рулонов"], [11, "рулонов"], [21, "рулон"]] as const) {
+    expect(formatUnits(quantity, "roll")).toBe(`${quantity} ${label}`);
+  }
+  expect(formatUnits(2, "бухта")).toBe("2 бухты");
+  expect(formatUnits(20, "упаковка")).toBe("20 упаковок");
+  expect(formatUnits(100, "шт.")).toBe("100 шт.");
+  expect(formatUnits(10, "кг")).toBe("10 кг");
+  expect(itemUnit({ unit: "бухта" })).toBe("бухта");
 });
 
 test("catalogue starting price preserves exact decimals and its tier quantity", () => {

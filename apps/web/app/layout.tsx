@@ -5,7 +5,6 @@ import "./design.css";
 import localFont from "next/font/local";
 import Link from "next/link";
 import { AccountDrawer } from "./components/AccountDrawer";
-import { WorkflowGuide } from "./components/WorkflowGuide";
 import { RussianValidation } from "./components/RussianValidation";
 import { SiteNavigation } from "./components/SiteNavigation";
 import { LiquidAtmosphere } from "./components/LiquidAtmosphere";
@@ -39,7 +38,7 @@ export default function RootLayout({ children }: Readonly<{ children: ReactNode 
             <AccountDrawer />
           </div>
         </header>
-        <main id="main-content" tabIndex={-1} className="container main"><PageSurface><WorkflowGuide />{children}</PageSurface></main>
+        <main id="main-content" tabIndex={-1} className="container main"><PageSurface>{children}</PageSurface></main>
         <footer className="site-footer">
           <div className="container footer-grid">
             <Link className="site-header__logo" href="/"><img src="/icon.png" alt="" width="42" height="32" /><span>ПоРукам</span></Link>

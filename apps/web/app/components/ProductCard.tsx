@@ -21,7 +21,6 @@ export function ProductCard({ product, headingLevel = 3, manufacturerVerified = 
         <div className="product-pricing" title={`Цена от ${formatRub(price.price, 12)} при заказе от ${formatUnits(price.minUnits, unit)}`}><strong className="market-price"><small>от </small>{formatRub(price.price, 12)}</strong><span className="market-muted">/ {unit}</span></div>
         <div className="product-conditions">От {formatUnits(product.moq_units, unit)}</div>
         {manufacturerVerified && <div className="manufacturer-status"><Icon name="check" size={14} /><span>Проверенный производитель</span></div>}
-        <span className="product-open" aria-hidden="true"><Icon name="arrow" size={18} /></span>
       </div>
     </Link>
     {onFavorite && <button className="product-favorite" type="button" title="Сохраняется в этом браузере" aria-label={(favorite ? "Убрать из избранного: " : "В избранное: ") + product.name} aria-pressed={favorite} onClick={onFavorite}><Icon name="heart" size={20} /></button>}
