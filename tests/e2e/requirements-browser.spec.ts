@@ -237,6 +237,7 @@ test("narrow request form keeps file selection inside the viewport", async ({ pa
   await page.goto("/needs/new");
   const files = page.locator("#need_files");
   await expect(files).toBeVisible();
+  await expect(files).toBeEnabled();
   await files.setInputFiles({ name: "Требования-к-закупке.txt", mimeType: "text/plain", buffer: Buffer.from("Синтетические требования") });
   await expect(page.getByText(/Восстановленные или выбранные файлы: 1/)).toBeVisible();
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
