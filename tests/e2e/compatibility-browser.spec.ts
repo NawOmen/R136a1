@@ -37,6 +37,14 @@ test("catalogue images, exact prices, sorting, touch controls and both themes re
   await expect(page.locator(".market-product")).toHaveCount(4);
   await expect(page.locator(".market-price").first()).toContainText("38,123456789123");
   await expect.poll(() => page.locator(".market-product img").first().evaluate(image => (image as HTMLImageElement).naturalWidth)).toBeGreaterThan(0);
+  const visual = (await page.locator(".market-product__visual").first().boundingBox())!;
+  const image = (await page.locator(".market-product img").first().boundingBox())!;
+  // A percentage-height image in a grid can retain its intrinsic square height
+  // despite object-fit:contain, cropping its bottom in the shallow photo frame.
+  expect(image.y).toBeGreaterThanOrEqual(visual.y);
+  expect(image.y + image.height).toBeLessThanOrEqual(visual.y + visual.height + 1);
+  expect(image.width).toBeLessThanOrEqual(visual.width + 1);
+  expect(await page.locator(".market-product__visual").evaluateAll(items => items.every(item => getComputedStyle(item).backgroundImage === "none"))).toBe(true);
   const favorite = page.locator(".product-favorite").first();
   if (isMobile) await favorite.tap(); else await favorite.click();
   await expect(favorite).toHaveAttribute("aria-pressed", "true");
