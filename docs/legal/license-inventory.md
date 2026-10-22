@@ -164,7 +164,7 @@ Manrope Variable (200–800, кириллица), получен из [Google Fo
 | `watchfiles` | 1.2.0 | MIT |
 | `websockets` | 17.1 | BSD-3-Clause |
 | `pillow` | 13.0.0 | MIT-CMU (Pillow и включённые компоненты: LICENSE дистрибутива) |
-| `pypdf` | 6.19.0 | BSD-3-Clause |
+| `pypdf` | 6.21.2 | BSD-3-Clause |
 | `av` | 18.1.0 | BSD-3-Clause; предсобранные wheels включают FFmpeg (LGPL/GPL согласно LICENSE wheel) |
 
 ### optimizer
