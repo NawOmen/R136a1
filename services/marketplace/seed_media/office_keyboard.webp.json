@@ -1,0 +1,41 @@
+{
+  "prompt": "Use case: product-mockup.\nAsset type: standalone synthetic Russian B2B catalogue product illustration, photorealistic.\nPrimary request: One generic full-size104-key wired office keyboard, dark charcoal matte plastic, conventional straight compact rectangular body, number pad, standard keycap grid. Attached simple black cable lies neatly in small loose curve beside keyboard, clearly visible USB-C connector at end. Blank unprinted keycaps, no backlighting, no branding. Whole keyboard and cable fully inside frame viewed from above at gentle three-quarter angle.\nScene/backdrop: clean seamless off-white studio background #f8f8f6, subtle natural soft contact shadow.\nComposition/framing: square 1:1 image, whole product centered occupying75%of frame, generous margins on ALL four sides, no crop.\nStyle/medium: realistic clean studio catalogue photography, crisp believable materials, soft diffuse lighting.\nConstraints: original synthetic product illustration, no real manufacturer, no trademark, no logos, no text, no numbers, no UI, no watermarks, no people, no unrelated props, no colored filter.",
+  "createdAt": "2026-10-21T15:57:18.299208+00:00",
+  "schemaVersion": 1,
+  "tool": "image_gen.imagegen",
+  "mode": "built-in generate",
+  "origin": "AI-generated synthetic product illustration; not an actual supplier photograph",
+  "origin_ru": "Авторская синтетическая иллюстрация товара, созданная ИИ; не фотография товара поставщика",
+  "useCase": "product-mockup",
+  "generatorOriginalPath": "/Users/assweg/.codex/generated_images/01a15f23-f64f-7981-98bc-11e983869fbb/exec-6bc2a61d-a155-4a56-966a-66888ddd9a44.png",
+  "generatorOriginalSha256": "629d5f87a753af4c964a240f74351c0748e416821c29b18fcc48bf02db5a2ad7",
+  "sourcePath": "/Users/assweg/.codex/generated_images/01a15f23-f64f-7981-98bc-11e983869fbb/exec-6bc2a61d-a155-4a56-966a-66888ddd9a44.png",
+  "sourceSha256": "629d5f87a753af4c964a240f74351c0748e416821c29b18fcc48bf02db5a2ad7",
+  "sourceDimensions": [
+    1254,
+    1254
+  ],
+  "deliveryPath": "services/marketplace/seed_media/office_keyboard.webp",
+  "deliverySha256": "5e1fbdbab893cf4506d42ff2310da99eaf6888631939ca94ad99565500438cea",
+  "deliveryDimensions": [
+    768,
+    768
+  ],
+  "deliveryBytes": 23968,
+  "conversion": {
+    "library": "libwebp cwebp",
+    "format": "WebP",
+    "quality": 86,
+    "method": 6,
+    "resized": true,
+    "cropped": false,
+    "retouched": false
+  },
+  "verification": {
+    "subject": "manually inspected",
+    "wholeProductVisible": true,
+    "noBrandingOrText": true,
+    "background": "off-white studio",
+    "note": "Generated for synthetic catalogue specifications. Whole product visible; image is an illustration rather than evidence of actual supplier stock."
+  }
+}

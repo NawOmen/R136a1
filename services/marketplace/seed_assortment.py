@@ -35,7 +35,21 @@ GROUP_COLORS = {
 }
 
 LEGACY_COMPARISON_KEYS = ("box", "bolt", "jacket", "desk", "tile", "cable", "lamp")
-PRODUCT_PHOTO_KEYS = ("box", "jacket", "cable", "drinking_water")
+LEGACY_PRODUCT_PHOTO_KEYS = ("box", "jacket", "cable", "drinking_water")
+PRODUCT_PHOTO_KEYS = (
+    "box", "bag", "film", "cardboard_sheet", "steel_plate_2", "fabric",
+    "retail_display", "warehouse_trolley", "tile", "bolt", "drinking_water",
+    "rice_pack", "jacket", "office_paper_a4", "cleaning_bucket_10", "cable",
+    "office_keyboard", "shipping_cage", "label_50", "laser_part_2",
+)
+STOREFRONT_VERSION = "storefront-v1"
+STOREFRONT_ADDITIONAL_KEYS = tuple(key for key in PRODUCT_PHOTO_KEYS if key not in LEGACY_PRODUCT_PHOTO_KEYS)
+
+
+def storefront_product_id(company_id, key):
+    """Keep the four published fixture IDs; never reuse an older seller draft."""
+    suffix = key if key in LEGACY_PRODUCT_PHOTO_KEYS else f"{STOREFRONT_VERSION}:{key}"
+    return uuid.uuid5(NAMESPACE, f"{company_id}:{suffix}")
 
 
 def comparison_assortment():
@@ -140,6 +154,40 @@ async def seed_assortment(db):
     return created
 
 
+async def seed_storefront_assortment(db):
+    """Create the separately versioned public fixtures after the base assortment."""
+    row = (await db.execute(text(
+        "SELECT c.id, m.user_id FROM auth.companies c JOIN auth.company_members m ON m.company_id = c.id "
+        "WHERE c.display_name = 'ООО «Урал Комплект»' AND m.can_sell = true AND m.is_admin = true "
+        "ORDER BY m.user_id LIMIT 1"
+    ))).first()
+    if row is None:
+        return []
+    company_id, user_id = row
+    created = []
+    for row in ASSORTMENT:
+        key, _family, category, subcategory, name, attributes, price, moq, stock, lead = row
+        if key not in STOREFRONT_ADDITIONAL_KEYS:
+            continue
+        product_id = storefront_product_id(company_id, key)
+        if await db.get(Product, product_id) is not None:
+            continue
+        # This separate, versioned fixture does not promote an existing
+        # assortment draft: deliberate unpublication is not distinguishable
+        # from an old unpublished seed entry and must survive every rerun.
+        product = Product(id=product_id, company_id=company_id, created_by_user_id=user_id,
+            external_id=f"synthetic-{STOREFRONT_VERSION}:{key}",
+            sources=[{"label": "Спецификация товара", "reference": f"synthetic_seed:{STOREFRONT_VERSION}:{key}"}],
+            name=name, category=category, subcategory=subcategory, characteristics=dict(attributes),
+            price_rub=Decimal(str(price)), price_tiers=[], moq_units=moq, lead_time_days=lead,
+            stock_units=stock, stock_updated_at=datetime.now(timezone.utc), is_published=False)
+        db.add(product)
+        created.append(product)
+        await db.flush()
+    await seed_product_photos(db)
+    return created
+
+
 async def seed_product_images(db):
     """По одной схематической иллюстрации на группу первому товару продавца №1.
 
@@ -185,7 +233,7 @@ async def seed_product_photos(db):
     for key, _family, category, subcategory, name, attributes, *_ in ASSORTMENT:
         if key not in PRODUCT_PHOTO_KEYS:
             continue
-        product_id = uuid.uuid5(NAMESPACE, f"{seller_id}:{key}")
+        product_id = storefront_product_id(seller_id, key)
         product = await db.get(Product, product_id)
         if product is None or (product.name, product.category, product.subcategory, product.characteristics) != (name, category, subcategory, attributes):
             continue

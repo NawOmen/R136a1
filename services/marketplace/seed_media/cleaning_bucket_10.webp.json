@@ -1,0 +1,41 @@
+{
+  "prompt": "Use case: product-mockup.\nAsset type: standalone synthetic Russian B2B catalogue product illustration, photorealistic.\nPrimary request: One utilitarian10litre polypropylene cleaning bucket, about300mm diameter and300mm tall, medium blue opaque plastic, circular open top, simple swing metal handle with comfortable blue grip. No wringer, no mop, no pouring spout, no measurements or printed markings. Whole bucket in three-quarter view.\nScene/backdrop: clean seamless off-white studio background #f8f8f6, subtle natural soft contact shadow.\nComposition/framing: square 1:1 image, whole product centered occupying75%of frame, generous margins on ALL four sides, no crop.\nStyle/medium: realistic clean studio catalogue photography, crisp believable materials, soft diffuse lighting.\nConstraints: original synthetic product illustration, no real manufacturer, no trademark, no logos, no text, no numbers, no UI, no watermarks, no people, no unrelated props, no colored filter.",
+  "createdAt": "2026-10-21T15:57:18.205812+00:00",
+  "schemaVersion": 1,
+  "tool": "image_gen.imagegen",
+  "mode": "built-in generate",
+  "origin": "AI-generated synthetic product illustration; not an actual supplier photograph",
+  "origin_ru": "Авторская синтетическая иллюстрация товара, созданная ИИ; не фотография товара поставщика",
+  "useCase": "product-mockup",
+  "generatorOriginalPath": "/Users/assweg/.codex/generated_images/01a15f23-f64f-7981-98bc-11e983869fbb/exec-d2a98f52-c2da-49ab-bb87-c6f76eae7a91.png",
+  "generatorOriginalSha256": "8e459fec11f040b3842f80621d3318890bbc38c4fc5a5a8e6a941afbc814aff0",
+  "sourcePath": "/Users/assweg/.codex/generated_images/01a15f23-f64f-7981-98bc-11e983869fbb/exec-d2a98f52-c2da-49ab-bb87-c6f76eae7a91.png",
+  "sourceSha256": "8e459fec11f040b3842f80621d3318890bbc38c4fc5a5a8e6a941afbc814aff0",
+  "sourceDimensions": [
+    1254,
+    1254
+  ],
+  "deliveryPath": "services/marketplace/seed_media/cleaning_bucket_10.webp",
+  "deliverySha256": "9cc48798aeea605336f2236b822b33f4f0a276bcc65a3e5bf99ee2b55e6a8c03",
+  "deliveryDimensions": [
+    768,
+    768
+  ],
+  "deliveryBytes": 19464,
+  "conversion": {
+    "library": "libwebp cwebp",
+    "format": "WebP",
+    "quality": 86,
+    "method": 6,
+    "resized": true,
+    "cropped": false,
+    "retouched": false
+  },
+  "verification": {
+    "subject": "manually inspected",
+    "wholeProductVisible": true,
+    "noBrandingOrText": true,
+    "background": "off-white studio",
+    "note": "Generated for synthetic catalogue specifications. Whole product visible; image is an illustration rather than evidence of actual supplier stock."
+  }
+}

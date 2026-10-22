@@ -1,0 +1,41 @@
+{
+  "prompt": "Use case: product-mockup.\nAsset type: standalone synthetic Russian B2B catalogue product illustration, photorealistic.\nPrimary request: One transparent clear polyethylene stretch-film roll, 500mm long on a plain brown cardboard core, 20 microns thin film, nominal two kilogram roll. Roll resting slightly diagonally with its circular core visible and a very short loose clear edge. Whole roll visible centered.\nScene/backdrop: clean seamless off-white studio background #f8f8f6, subtle natural soft contact shadow.\nComposition/framing: square1:1 image, whole product centered occupying75%of frame, generous margins, no crop.\nStyle/medium: realistic clean studio catalogue photography, crisp believable materials, soft diffuse lighting.\nConstraints: original synthetic product illustration, no real manufacturer, no trademark, no logos, no text, no numbers, no UI, no watermarks, no people, no unrelated props, no colored filter.",
+  "createdAt": "2026-10-21T15:57:17.415989+00:00",
+  "schemaVersion": 1,
+  "tool": "image_gen.imagegen",
+  "mode": "built-in generate",
+  "origin": "AI-generated synthetic product illustration; not an actual supplier photograph",
+  "origin_ru": "Авторская синтетическая иллюстрация товара, созданная ИИ; не фотография товара поставщика",
+  "useCase": "product-mockup",
+  "generatorOriginalPath": "/Users/assweg/.codex/generated_images/01a15f23-f64f-7981-98bc-11e983869fbb/exec-6fcc5b44-32ae-4efb-aee7-23f790fc993f.png",
+  "generatorOriginalSha256": "2bd01ac34e798c56576bb490e664b1b0247f477471851854a4757f7c143c14ee",
+  "sourcePath": "/Users/assweg/.codex/generated_images/01a15f23-f64f-7981-98bc-11e983869fbb/exec-6fcc5b44-32ae-4efb-aee7-23f790fc993f.png",
+  "sourceSha256": "2bd01ac34e798c56576bb490e664b1b0247f477471851854a4757f7c143c14ee",
+  "sourceDimensions": [
+    1254,
+    1254
+  ],
+  "deliveryPath": "services/marketplace/seed_media/film.webp",
+  "deliverySha256": "e8aab0fb386d65df02f4e4e204a53b005d83ca110ee2a0c84f57d6878e81762a",
+  "deliveryDimensions": [
+    768,
+    768
+  ],
+  "deliveryBytes": 14620,
+  "conversion": {
+    "library": "libwebp cwebp",
+    "format": "WebP",
+    "quality": 86,
+    "method": 6,
+    "resized": true,
+    "cropped": false,
+    "retouched": false
+  },
+  "verification": {
+    "subject": "manually inspected",
+    "wholeProductVisible": true,
+    "noBrandingOrText": true,
+    "background": "off-white studio",
+    "note": "Generated for synthetic catalogue specifications. Whole product visible; image is an illustration rather than evidence of actual supplier stock."
+  }
+}

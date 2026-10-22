@@ -15,7 +15,7 @@ from decimal import Decimal
 from sqlalchemy import select, text
 
 from app.database import SessionLocal
-from app.models import CapabilityPassport, DeliveryAddress, Document, Product, ProductionProfile
+from app.models import CapabilityPassport, DeliveryAddress, Document, Product, ProductImage, ProductionProfile
 
 DETAILS = {
     "business_kind": "both",
@@ -161,10 +161,12 @@ async def seed() -> None:
 
         await _seed_category_documents(db, seller_company_id)
 
-        from seed_assortment import NAMESPACE, PRODUCT_PHOTO_KEYS, seed_assortment
+        from seed_assortment import PRODUCT_PHOTO_KEYS, seed_assortment, seed_storefront_assortment, storefront_product_id
         created_assortment = await seed_assortment(db)
-        pictured_ids = {uuid.uuid5(NAMESPACE, f"{seller_company_id}:{key}") for key in PRODUCT_PHOTO_KEYS}
+        created_assortment.extend(await seed_storefront_assortment(db))
+        pictured_ids = {storefront_product_id(seller_company_id, key) for key in PRODUCT_PHOTO_KEYS}
         new_products.extend(product for product in created_assortment if product.id in pictured_ids)
+        await _seed_cup_photos(db, seller_company_id, user_id)
         await db.flush()
         # Only newly created fixtures: reruns never republish a seller's draft.
         # The regular handler checks membership, company, specification and evidence,
@@ -175,6 +177,13 @@ async def seed() -> None:
             from app.deps import CurrentUser
             from app.schemas import PublishIn
             for created in new_products:
+                # The storefront must not publish a blank card if its authored
+                # illustration was not delivered. Existing rows are never promoted
+                # on a later rerun, even after a temporary storage failure.
+                if await db.scalar(select(ProductImage.id).where(
+                    ProductImage.product_id == created.id, ProductImage.content_type == "image/webp",
+                    ProductImage.file_name.startswith("Иллюстрация товара:")).limit(1)) is None:
+                    continue
                 try:
                     await publish_product(created.id, PublishIn(published=True), CurrentUser(user_id), db)
                 except HTTPException as error:
@@ -182,6 +191,62 @@ async def seed() -> None:
                         raise
                     print(f"Карточка «{created.name}» осталась черновиком: {error.detail}")
         await db.commit()
+
+
+async def _seed_cup_photos(db, company_id, user_id) -> None:
+    """Attach volume-specific illustrations only to intact, image-free legacy cups."""
+    from pathlib import Path
+    from app.storage import upload_object
+
+    if user_id is None:
+        return
+    cups = (await db.scalars(select(Product).where(
+        Product.company_id == company_id, Product.created_by_user_id == user_id,
+        Product.category == "Упаковка и тара", Product.subcategory == "Бумажные стаканы"))).all()
+    for volume, price, moq, lead, stock in ((400, "11.2", 20000, 9, 12000), (350, "10.5", 15000, 8, None)):
+        name = f"Стакан {volume} мл PE"
+        attributes = {"volume_ml": volume, "coating": "PE", "material": "крафт-картон 300 г/м²", "food_contact": True, "unit": "шт"}
+        for cup in cups:
+            if (cup.name, cup.characteristics, cup.price_rub, cup.moq_units, cup.lead_time_days, cup.stock_units) != (name, attributes, Decimal(price), moq, lead, stock):
+                continue
+            if await db.scalar(select(ProductImage.id).where(ProductImage.product_id == cup.id).limit(1)) is not None:
+                continue
+            asset = Path(__file__).parent / "seed_media" / f"paper_cup_{volume}.webp"
+            if not asset.is_file():
+                continue
+            file_key = f"products/{cup.id}/seed-photo-paper-cup-{volume}.webp"
+            try:
+                await asyncio.to_thread(upload_object, file_key, asset.read_bytes(), "image/webp")
+            except Exception:
+                continue
+            db.add(ProductImage(product_id=cup.id, position=0, file_name=f"Иллюстрация товара: {name}.webp",
+                                file_key=file_key, content_type="image/webp"))
+            await db.flush()
+
+
+def storefront_documents():
+    """Exact synthetic scopes, selected from the live admission rules; no blanket permit."""
+    from app.assortment import ASSORTMENT
+    from app.category_admission import match_profile
+    from seed_assortment import STOREFRONT_ADDITIONAL_KEYS, STOREFRONT_VERSION
+
+    documents = []
+    for key, _family, category, subcategory, _name, attributes, *_ in ASSORTMENT:
+        if key not in STOREFRONT_ADDITIONAL_KEYS:
+            continue
+        profile = match_profile(category, subcategory, attributes)
+        if profile is None or not profile.supported:
+            continue
+        for requirement in profile.requirements:
+            documents.append({
+                "name": f"Витрина v1: {key} / {requirement.code} (синтетический документ)",
+                "document_type": requirement.document_types[0],
+                "scope_category": category, "scope_subcategory": subcategory,
+                "verification_note": f"Синтетическая проверка точной спецификации. Юридической силы не имеет. synthetic_seed:{STOREFRONT_VERSION}:{key}",
+                "confirms": {field: [value] for field, value in attributes.items() if field != "unit"},
+                "synthetic_seed": f"{STOREFRONT_VERSION}:{key}",
+            })
+    return documents
 
 
 DEMO_DOCUMENTS = (
@@ -225,7 +290,8 @@ def synthetic_document_pdf(item) -> bytes:
     """A readable local fixture, never a signed certificate or real company file."""
     writer = PdfWriter()
     writer.add_blank_page(width=300, height=200)
-    writer.add_metadata({"/Title": item["name"], "/Subject": "Synthetic local fixture; no legal force"})
+    provenance = item.get("synthetic_seed", "legacy-category-document")
+    writer.add_metadata({"/Title": item["name"], "/Subject": f"Synthetic local fixture; no legal force; synthetic_seed:{provenance}"})
     stream = io.BytesIO()
     writer.write(stream)
     return stream.getvalue()
@@ -248,7 +314,7 @@ async def _seed_category_documents(db, seller_company_id) -> None:
     admin_id = admin_row[0] if admin_row else None
     valid_until = datetime.now(timezone.utc).date() + timedelta(days=730)
     from app.storage import upload_object
-    for item in DEMO_DOCUMENTS:
+    for item in (*DEMO_DOCUMENTS, *storefront_documents()):
         existing = (
             await db.execute(
                 select(Document).where(
@@ -263,7 +329,7 @@ async def _seed_category_documents(db, seller_company_id) -> None:
                 await asyncio.to_thread(upload_object, existing.file_key, synthetic_document_pdf(item), "application/pdf")
             # Демо-документ мог быть загружен до появления подтверждённых
             # характеристик: обновляем их, чтобы чек-лист соответствовал данным.
-            if existing.file_key.startswith("demo/synthetic/") and existing.verification_status == "verified" and existing.confirms != item["confirms"]:
+            if "synthetic_seed" not in item and existing.file_key.startswith("demo/synthetic/") and existing.verification_status == "verified" and existing.confirms != item["confirms"]:
                 existing.confirms = item["confirms"]
             continue
         file_key = f"demo/synthetic/{uuid.uuid4()}"

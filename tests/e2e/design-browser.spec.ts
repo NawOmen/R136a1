@@ -57,6 +57,23 @@ test("section instructions are absent from the shared page layout", async ({ pag
   }
 });
 
+test.describe("phone landscape", () => {
+  test.use({ hasTouch: true, isMobile: true });
+  for (const width of [844, 932]) {
+    test(`still has two product columns at ${width}px`, async ({ page }) => {
+      await publicApi(page);
+      await page.setViewportSize({ width, height: 390 });
+      await page.goto("/catalog");
+      await expect(page.locator(".market-product")).toHaveCount(4);
+      const tops = await page.locator(".market-product").evaluateAll(items => items.map(item => item.getBoundingClientRect().top));
+      expect(tops[1]).toBe(tops[0]);
+      expect(tops[2]).toBeGreaterThan(tops[0]);
+      expect((await page.locator(".market-product__visual").first().boundingBox())!.height).toBeLessThanOrEqual(180);
+      await noOverflow(page);
+    });
+  }
+});
+
 test("products lead the first viewport, with persistent themes, exact prices and working search", async ({ page }) => {
   await publicApi(page);
   await page.setViewportSize({ width: 1440, height: 900 });

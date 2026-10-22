@@ -1,0 +1,41 @@
+{
+  "prompt": "Use case: product-mockup.\nAsset type: standalone synthetic Russian B2B catalogue product illustration, photorealistic.\nPrimary request: One empty industrial steel wire-mesh transport container, nominal1200mm wide800mmdeep1000mmtall. Rectangular gray galvanized steel mesh cage with rigid wiregrid sides, reinforced squared corners, welded open-mesh floor on short steel pallet feet, no wheels, no lid. Utilitarian clean factory finish. Whole cage visible in three-quarter view.\nScene/backdrop: clean seamless off-white studio background #f8f8f6, subtle natural soft contact shadow.\nComposition/framing: square 1:1 image, whole product centered occupying75%of frame, generous margins on ALL four sides, no crop.\nStyle/medium: realistic clean studio catalogue photography, crisp believable materials, soft diffuse lighting.\nConstraints: original synthetic product illustration, no real manufacturer, no trademark, no logos, no text, no numbers, no UI, no watermarks, no people, no unrelated props, no colored filter.",
+  "createdAt": "2026-10-21T15:57:18.437798+00:00",
+  "schemaVersion": 1,
+  "tool": "image_gen.imagegen",
+  "mode": "built-in generate",
+  "origin": "AI-generated synthetic product illustration; not an actual supplier photograph",
+  "origin_ru": "Авторская синтетическая иллюстрация товара, созданная ИИ; не фотография товара поставщика",
+  "useCase": "product-mockup",
+  "generatorOriginalPath": "/Users/assweg/.codex/generated_images/01a15f23-f64f-7981-98bc-11e983869fbb/exec-b488c43b-7756-4c7c-9199-f8605e520df6.png",
+  "generatorOriginalSha256": "61056b3b5005fbfe0872bc72c86eda3415cc8494e2834a1999537e56a2712900",
+  "sourcePath": "/Users/assweg/.codex/generated_images/01a15f23-f64f-7981-98bc-11e983869fbb/exec-b488c43b-7756-4c7c-9199-f8605e520df6.png",
+  "sourceSha256": "61056b3b5005fbfe0872bc72c86eda3415cc8494e2834a1999537e56a2712900",
+  "sourceDimensions": [
+    1254,
+    1254
+  ],
+  "deliveryPath": "services/marketplace/seed_media/shipping_cage.webp",
+  "deliverySha256": "d7fd0af0d1f7586bce6ce700cd6d160d9e58fb5da7e070e12594ec7b328a6e1c",
+  "deliveryDimensions": [
+    768,
+    768
+  ],
+  "deliveryBytes": 78782,
+  "conversion": {
+    "library": "libwebp cwebp",
+    "format": "WebP",
+    "quality": 86,
+    "method": 6,
+    "resized": true,
+    "cropped": false,
+    "retouched": false
+  },
+  "verification": {
+    "subject": "manually inspected",
+    "wholeProductVisible": true,
+    "noBrandingOrText": true,
+    "background": "off-white studio",
+    "note": "Generated for synthetic catalogue specifications. Whole product visible; image is an illustration rather than evidence of actual supplier stock."
+  }
+}

@@ -1,0 +1,41 @@
+{
+  "prompt": "Use case: product-mockup.\nAsset type: standalone synthetic Russian B2B catalogue product illustration, photorealistic.\nPrimary request: One realistic steel hexagonal-head bolt M8×40mm, class8.8 style geometry, bare silver-gray steel surface, precise continuous M8 thread for most of40mmlongshaft, robust clean hexhead, subtle machined metal texture. Single bolt lying diagonally with head and threads both in sharp focus, no embossing or text.\nScene/backdrop: clean seamless off-white studio background #f8f8f6, subtle natural soft contact shadow.\nComposition/framing: square 1:1 image, whole product centered occupying75%of frame, generous margins on ALL four sides, no crop.\nStyle/medium: realistic clean studio catalogue photography, crisp believable materials, soft diffuse lighting.\nConstraints: original synthetic product illustration, no real manufacturer, no trademark, no logos, no text, no numbers, no UI, no watermarks, no people, no unrelated props, no colored filter.",
+  "createdAt": "2026-10-21T15:57:17.942770+00:00",
+  "schemaVersion": 1,
+  "tool": "image_gen.imagegen",
+  "mode": "built-in generate",
+  "origin": "AI-generated synthetic product illustration; not an actual supplier photograph",
+  "origin_ru": "Авторская синтетическая иллюстрация товара, созданная ИИ; не фотография товара поставщика",
+  "useCase": "product-mockup",
+  "generatorOriginalPath": "/Users/assweg/.codex/generated_images/01a15f23-f64f-7981-98bc-11e983869fbb/exec-6d49a397-b6d6-47c9-94d1-09ef8fc6a92f.png",
+  "generatorOriginalSha256": "c62ceaf885ec505600c7b0af74ee16a85b38536ae26fa62c51f47b464657e01f",
+  "sourcePath": "/Users/assweg/.codex/generated_images/01a15f23-f64f-7981-98bc-11e983869fbb/exec-6d49a397-b6d6-47c9-94d1-09ef8fc6a92f.png",
+  "sourceSha256": "c62ceaf885ec505600c7b0af74ee16a85b38536ae26fa62c51f47b464657e01f",
+  "sourceDimensions": [
+    1254,
+    1254
+  ],
+  "deliveryPath": "services/marketplace/seed_media/bolt.webp",
+  "deliverySha256": "169532da617584feb3a2b9f7e4b80b852022b6354369d2eb2d8c679568837985",
+  "deliveryDimensions": [
+    768,
+    768
+  ],
+  "deliveryBytes": 32382,
+  "conversion": {
+    "library": "libwebp cwebp",
+    "format": "WebP",
+    "quality": 86,
+    "method": 6,
+    "resized": true,
+    "cropped": false,
+    "retouched": false
+  },
+  "verification": {
+    "subject": "manually inspected",
+    "wholeProductVisible": true,
+    "noBrandingOrText": true,
+    "background": "off-white studio",
+    "note": "Generated for synthetic catalogue specifications. Whole product visible; image is an illustration rather than evidence of actual supplier stock."
+  }
+}
