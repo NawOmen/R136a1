@@ -1,0 +1,43 @@
+{
+  "prompt": "Use case: product-mockup.\nAsset type: original synthetic Russian B2B catalogue product illustration, photorealistic.\nPrimary request: One low rectangular retail sales counter, nominal 900 mm wide by 600 mm deep by 900 mm high. Simple utilitarian freestanding shop counter with solid pale gray laminated front and side panels, light neutral laminate countertop, plain rectangular base, assembled. A low waist-high service counter with no upper display case, no glass vitrine, no tall shelving, no goods or checkout equipment. Three-quarter front view showing front, one side and countertop.\nScene/backdrop: seamless almost-white neutral studio background, subtle soft contact shadow.\nComposition/framing: wide horizontal 3:2 image, exactly one counter centered, entire product visible with generous margins on every side, no crop.\nStyle/medium: realistic studio catalogue photography, crisp believable laminate materials, soft diffuse lighting.\nConstraints: no actual manufacturer, no trademarks, no logos, no labels, no text, no dimensions written in image, no watermark, no people, no unrelated props, no collage.",
+  "createdAt": "2026-10-22T05:43:11.870041+00:00",
+  "schemaVersion": 1,
+  "tool": "image_gen.imagegen",
+  "provider": "builtin",
+  "mode": "built-in generate",
+  "origin": "AI-generated synthetic product illustration; not an actual supplier photograph",
+  "origin_ru": "Авторская синтетическая иллюстрация товара, созданная ИИ; не фотография товара поставщика",
+  "useCase": "product-mockup",
+  "generatorOriginalPath": "/Users/assweg/.codex/generated_images/01a1621e-2855-7aa0-b1cc-7b71d0db9dd6/exec-131eb72b-7245-4beb-b87e-d98a4011d2ad.png",
+  "generatorOriginalSha256": "e43d26e2ae663b1b5b5f8068024ae329eaa82ee15ce755f818131bf47c4d6ee3",
+  "sourcePath": "/Users/assweg/.codex/generated_images/01a1621e-2855-7aa0-b1cc-7b71d0db9dd6/exec-131eb72b-7245-4beb-b87e-d98a4011d2ad.png",
+  "sourceSha256": "e43d26e2ae663b1b5b5f8068024ae329eaa82ee15ce755f818131bf47c4d6ee3",
+  "sourceDimensions": [
+    1536,
+    1024
+  ],
+  "sourceBytes": 1559148,
+  "deliveryPath": "services/marketplace/seed_media/retail_counter.webp",
+  "deliverySha256": "dffa6b9810df54af7fa85cc467ece2c971957ec3d5a6d5da1dc50c81c1d3c242",
+  "deliveryDimensions": [
+    768,
+    512
+  ],
+  "deliveryBytes": 4836,
+  "conversion": {
+    "library": "Pillow 13.0.0 (WebP)",
+    "format": "WebP",
+    "quality": 82,
+    "method": 6,
+    "resized": true,
+    "cropped": false,
+    "retouched": false
+  },
+  "verification": {
+    "subject": "manually inspected",
+    "wholeProductVisible": true,
+    "noBrandingOrText": true,
+    "background": "almost-white neutral studio",
+    "note": "Generated for synthetic catalogue specifications. Whole product visible; image is an illustration rather than evidence of actual supplier stock."
+  }
+}

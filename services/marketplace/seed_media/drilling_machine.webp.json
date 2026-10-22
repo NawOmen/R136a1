@@ -1,0 +1,43 @@
+{
+  "prompt": "Use case: product-mockup.\nAsset type: original synthetic Russian B2B catalogue product illustration, photorealistic.\nPrimary request: One compact benchtop vertical drill press, nominal 1.5 kW industrial workshop machine. A small tabletop drilling machine with heavy cast gray metal base, single vertical steel column, height-adjustable rectangular work table, drill chuck aligned vertically over the table, enclosed dark gray motor and belt housing at top and simple three-spoke feed handle on the side. No drill bit actively cutting, no workpiece. Whole assembled drill press visible in three-quarter view. No branding or model text.\nScene/backdrop: seamless almost-white neutral studio background, subtle soft contact shadow.\nComposition/framing: wide horizontal 3:2 image, exactly one machine centered, complete base and entire top housing visible, generous margins all around, no crop.\nStyle/medium: realistic studio catalogue photography, crisp plausible metal construction, soft diffuse lighting.\nConstraints: no actual manufacturer, no trademarks, no logos, no labels, no text, no numbers, no watermark, no people, no factory setting, no unrelated props, no collage.",
+  "createdAt": "2026-10-22T05:43:11.758745+00:00",
+  "schemaVersion": 1,
+  "tool": "image_gen.imagegen",
+  "provider": "builtin",
+  "mode": "built-in generate",
+  "origin": "AI-generated synthetic product illustration; not an actual supplier photograph",
+  "origin_ru": "Авторская синтетическая иллюстрация товара, созданная ИИ; не фотография товара поставщика",
+  "useCase": "product-mockup",
+  "generatorOriginalPath": "/Users/assweg/.codex/generated_images/01a1621e-2855-7aa0-b1cc-7b71d0db9dd6/exec-5de737c8-d8e4-4256-a512-c7faa681bd3d.png",
+  "generatorOriginalSha256": "1f566459824764935317be4046a02bf37a0e04ca3550b7fde438c42a8156fff9",
+  "sourcePath": "/Users/assweg/.codex/generated_images/01a1621e-2855-7aa0-b1cc-7b71d0db9dd6/exec-5de737c8-d8e4-4256-a512-c7faa681bd3d.png",
+  "sourceSha256": "1f566459824764935317be4046a02bf37a0e04ca3550b7fde438c42a8156fff9",
+  "sourceDimensions": [
+    1536,
+    1024
+  ],
+  "sourceBytes": 1878348,
+  "deliveryPath": "services/marketplace/seed_media/drilling_machine.webp",
+  "deliverySha256": "80abdf435b7728e84b21e6ee683cd371e9ef83746bb9ce659e74a9a5a5ef929c",
+  "deliveryDimensions": [
+    768,
+    512
+  ],
+  "deliveryBytes": 14362,
+  "conversion": {
+    "library": "Pillow 13.0.0 (WebP)",
+    "format": "WebP",
+    "quality": 82,
+    "method": 6,
+    "resized": true,
+    "cropped": false,
+    "retouched": false
+  },
+  "verification": {
+    "subject": "manually inspected",
+    "wholeProductVisible": true,
+    "noBrandingOrText": true,
+    "background": "almost-white neutral studio",
+    "note": "Generated for synthetic catalogue specifications. Whole product visible; image is an illustration rather than evidence of actual supplier stock."
+  }
+}

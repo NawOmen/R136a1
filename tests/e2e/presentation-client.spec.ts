@@ -41,7 +41,7 @@ test("catalogue starting price preserves exact decimals and its tier quantity", 
 test("availability needs fresh seller stock, not publication or verification", () => {
   const now = Date.parse("2026-10-20T10:00:00Z");
   expect(productAvailability({ stock_units: 10, stock_updated_at: "2026-10-20T09:00:00Z" }, now).label).toBe("В наличии");
-  expect(productAvailability({ stock_units: 0, stock_updated_at: "2026-10-20T09:00:00Z" }, now).label).toBe("Под заказ");
+  expect(productAvailability({ stock_units: 0, stock_updated_at: "2026-10-20T09:00:00Z" }, now).label).toBe("Нет в наличии");
   for (const updated of [null, "invalid", "2026-10-12T09:00:00Z", "2026-11-20T09:00:00Z"]) {
     expect(productAvailability({ stock_units: 10, stock_updated_at: updated }, now).label).toBe("Уточнить наличие");
   }

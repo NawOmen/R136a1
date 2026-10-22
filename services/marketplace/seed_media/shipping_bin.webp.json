@@ -1,0 +1,42 @@
+{
+  "prompt": "Use case: product-mockup.\nAsset type: standalone photorealistic Russian B2B catalogue product illustration, authored synthetic visual, not a supplier photograph.\nScene/backdrop: seamless almost-white neutral studio background #f8f8f6, soft diffuse studio light, small soft contact shadow.\nStyle/medium: crisp realistic catalogue product photography, believable proportions and material details.\nComposition/framing: horizontal landscape 3:2 frame, whole single product centered and comfortably inside frame, generous clear margins on every side, no cropping. The object occupies about 65-75 percent of the image. Camera three-quarter view unless the subject specifies flat lay.\nConstraints: no brand, no logo, no labels, no text, no digits, no watermark, no people, no extra props, no collage, no icon, no decorative graphics outside the product. Show exactly the requested product.\nPrimary request: One empty heavy-duty open-top steel shipping/storage container, nominal dimensions 800 mm long, 600 mm wide, 600 mm high. Solid sheet metal walls and solid bottom, neutral gray steel, straight boxlike rectangular shape, realistic welded corner seams, small sturdy metal feet underneath. Open top with visible empty interior. SOLID OPAQUE METAL WALLS, not wire mesh, no perforations, no grille, no basket, no lid. Three-quarter view from slightly above showing empty interior.",
+  "createdAt": "2026-10-22T05:43:43.542164Z",
+  "schemaVersion": 1,
+  "tool": "image_gen.imagegen",
+  "provider": "builtin",
+  "mode": "built-in generate",
+  "origin": "AI-generated synthetic product illustration; not an actual supplier photograph",
+  "origin_ru": "Авторская синтетическая иллюстрация товара, созданная ИИ; не фотография товара поставщика",
+  "useCase": "product-mockup",
+  "generatorOriginalPath": "/Users/assweg/.codex/generated_images/01a1621e-7389-76c2-98fa-fc450c2c2dff/exec-9986dde8-9461-46b2-88f0-620338cfe33a.png",
+  "generatorOriginalSha256": "b264838dc29697140c7767d324ff8ca2d39088fea8fef54a4db393c580f1ac66",
+  "sourcePath": "/Users/assweg/.codex/generated_images/01a1621e-7389-76c2-98fa-fc450c2c2dff/exec-9986dde8-9461-46b2-88f0-620338cfe33a.png",
+  "sourceSha256": "b264838dc29697140c7767d324ff8ca2d39088fea8fef54a4db393c580f1ac66",
+  "sourceDimensions": [
+    1536,
+    1024
+  ],
+  "deliveryPath": "services/marketplace/seed_media/shipping_bin.webp",
+  "deliverySha256": "0418b0ebc6f9dc07468bcf1b68aad86b261bdaee3673cb6e93f493dd23f18919",
+  "deliveryDimensions": [
+    768,
+    512
+  ],
+  "deliveryBytes": 12174,
+  "conversion": {
+    "library": "Pillow",
+    "format": "WebP",
+    "quality": 82,
+    "method": 6,
+    "resized": true,
+    "cropped": false,
+    "retouched": false
+  },
+  "verification": {
+    "subject": "manually inspected",
+    "wholeProductVisible": true,
+    "noBrandingOrText": true,
+    "background": "off-white studio",
+    "note": "Solid metal walls, open top, empty interior and feet visible; no mesh."
+  }
+}

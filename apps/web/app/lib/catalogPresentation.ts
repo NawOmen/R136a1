@@ -13,5 +13,5 @@ export function productAvailability(product: Pick<Product, "stock_units" | "stoc
   const updated = product.stock_updated_at ? Date.parse(product.stock_updated_at) : NaN;
   const fresh = Number.isFinite(updated) && updated <= now + 60_000 && updated >= now - 7 * 86_400_000;
   if (product.stock_units == null || !fresh) return { available: false, label: "Уточнить наличие" };
-  return product.stock_units > 0 ? { available: true, label: "В наличии" } : { available: false, label: "Под заказ" };
+  return product.stock_units > 0 ? { available: true, label: "В наличии" } : { available: false, label: "Нет в наличии" };
 }

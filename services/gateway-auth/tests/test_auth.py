@@ -39,6 +39,7 @@ async def test_register_duplicate_email(client):
     await client.post("/api/v1/auth/register", json=REGISTER)
     r = await client.post("/api/v1/auth/register", json=REGISTER)
     assert r.status_code == 409
+    assert r.json()["detail"] == "Эта электронная почта уже используется"
 
 
 async def test_login_success(client):

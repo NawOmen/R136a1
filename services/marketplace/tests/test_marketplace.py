@@ -282,7 +282,7 @@ async def test_demo_seed_separates_buyer_address_and_seller_data(
     from pypdf import PdfReader
     import io
     docs=(await db_session.scalars(select(Document).where(Document.company_id==seller_company))).all()
-    assert len(docs) == 22
+    assert len(docs) == 43
     assert {(document.scope_category, document.scope_subcategory) for document in docs} == {
         ("Упаковка и тара", "Бумажные стаканы"), ("Упаковка и тара", "Коробки"),
         ("Товары для бизнеса", "Спецодежда"), ("Электроника", "Компоненты"),
@@ -291,10 +291,14 @@ async def test_demo_seed_separates_buyer_address_and_seller_data(
         ("Сырьё и материалы", "Бумага и картон"), ("Сырьё и материалы", "Металлы"),
         ("Сырьё и материалы", "Текстиль"), ("Оборудование", "Торговое"),
         ("Оборудование", "Складское"), ("Строительство", "Отделочные материалы"),
-        ("Строительство", "Крепёж"), ("Продукты питания", "Бакалея"),
+        ("Строительство", "Крепёж"),
         ("Товары для бизнеса", "Канцелярия"), ("Товары для бизнеса", "Хозяйственные товары"),
         ("Электроника", "Компьютерная техника"), ("Транспорт и логистика", "Тара для перевозки"),
         ("Полиграфия и реклама", "Этикетки"), ("Услуги производства", "Контрактное производство"),
+        ("Упаковка и тара", "Бутылки и канистры"), ("Сырьё и материалы", "Полимеры"),
+        ("Оборудование", "Производственное"), ("Товары для бизнеса", "Мебель"),
+        ("Электроника", "Связь"), ("Полиграфия и реклама", "Печать"),
+        ("Услуги производства", "Обработка"),
     }
     for document in docs:
         stored=stub_object_storage[document.file_key]
@@ -325,8 +329,8 @@ async def test_demo_seed_separates_buyer_address_and_seller_data(
     assert seller_addresses == []
     assert await db_session.get(ProductionProfile, seller_company) is not None
     from app.assortment import ASSORTMENT
-    # Two legacy cups and sixteen separately versioned storefront fixtures.
-    assert len(products) == 2 + len(ASSORTMENT) + 16
+    # Two legacy cups and thirty-seven separately versioned storefront fixtures.
+    assert len(products) == 2 + len(ASSORTMENT) + 37
     assert len({product.category for product in products}) >= 4
     stub_object_storage.pop(docs[0].file_key)
     await marketplace_seed.seed()

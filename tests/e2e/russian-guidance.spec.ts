@@ -149,16 +149,143 @@ test("registration requires separate acknowledgements and sends the current regi
     return route.fulfill({json:[]});
   });
   await page.goto("/register");
+  const consents = page.locator(".registration-consents");
+  const consentRows = consents.locator("li");
+  await expect(consentRows).toHaveCount(2);
+  for (const width of [320, 390, 1440]) {
+    await page.setViewportSize({ width, height: 900 });
+    const rows = await consentRows.locator("label").evaluateAll(labels => labels.map(label => {
+      const { x, y, width, height } = label.getBoundingClientRect();
+      return { x, y, width, height };
+    }));
+    expect(rows[1].y).toBeGreaterThanOrEqual(rows[0].y + rows[0].height);
+    expect(Math.abs(rows[1].x - rows[0].x)).toBeLessThanOrEqual(1);
+    expect(rows.every(row => row.height >= 44)).toBe(true);
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+  }
+  const rules = page.getByRole("checkbox", { name: /Принимаю правила работы/ });
+  const privacy = page.getByRole("checkbox", { name: /Ознакомлен с условиями обработки данных/ });
+  await expect(rules).toHaveAttribute("required", "");
+  await expect(privacy).toHaveAttribute("required", "");
+  await expect(consents.getByRole("link", { name: "правила работы", exact: true })).toHaveAttribute("href", "/info/legal");
+  await expect(consents.getByRole("link", { name: "условиями обработки данных", exact: true })).toHaveAttribute("href", "/info/privacy");
   await page.getByLabel("Фамилия", {exact:false}).fill("Проверка");
   await page.locator("#first_name").fill("Аккаунта");
   await page.getByLabel("Электронная почта", {exact:false}).fill("access@demo.ru");
   await page.getByLabel("Пароль", {exact:false}).fill("synthetic-access-password");
   const submit = page.getByRole("button", {name:"Зарегистрироваться", exact:true});
   await submit.click(); expect(registered).toBeNull();
-  await page.getByRole("checkbox", {name:/Принимаю правила работы/}).check();
-  await page.getByRole("checkbox", {name:/Ознакомлен с условиями обработки данных/}).check();
+  await rules.check();
+  await expect(privacy).not.toBeChecked();
+  await submit.click(); expect(registered).toBeNull();
+  await privacy.check();
   await submit.click(); await expect(page).toHaveURL(/\/dashboard/);
   expect(registered).toMatchObject({rules_version:"rules-1",privacy_version:"privacy-1",rules_accepted:true,privacy_acknowledged:true});
+});
+
+test("producer capabilities retain their values in aligned rows with a production photo and missing-photo state", async ({ page }) => {
+  let hasPhoto = true;
+  const limitations = "Нестандартные формы требуют отдельного согласования. " + "Параметры заказа уточняются до подтверждения. ".repeat(8);
+  const producer = {
+    company_id: company.id, display_name: "Синтетическое производство", legal_form: "ООО", region: "Новосибирская область",
+    production_site_address: "Синтетическая производственная площадка", about: "Описание возможностей предоставлено компанией.",
+    has_photo: true, rating: null, reviews_count: 0,
+    capability_details: { business_kind: "both", product_types: "Бумажные стаканы 150–600 мл", complexity: "Флексопечать, макет согласовывается до производства", material_grades: "Крафт-картон с PE-покрытием", limitations, packaging: "Короба по 500 шт., паллетирование по запросу", delivery: "Самовывоз или перевозчик покупателя; доставка оплачивается отдельно", quality_control: "Выборочная проверка размеров и герметичности", trial_batch: "Непечатные образцы по запросу; цена и срок согласуются отдельно" },
+  };
+  await page.route("**/api/**", route => {
+    const path = new URL(route.request().url()).pathname;
+    if (path.endsWith(`/producers/${company.id}/photo`)) return route.fulfill({ contentType: "image/svg+xml", body: '<svg xmlns="http://www.w3.org/2000/svg" width="640" height="480"><rect width="640" height="480" fill="#dbe8f3"/></svg>' });
+    return route.fulfill({ json: path.endsWith(`/producers/${company.id}`) ? { ...producer, has_photo: hasPhoto } : [] });
+  });
+  await page.goto(`/producers/${company.id}`);
+  const facts = page.locator(".capability-facts");
+  await expect(page.getByRole("heading", { name: "Возможности и условия", exact: true })).toBeVisible();
+  await expect(facts.locator("dt")).toHaveText(["Вид деятельности", "Что производите или поставляете", "Сложность и операции", "Марки и разновидности материалов", "Ограничения и исключения", "Упаковка", "Условия отгрузки и доставки", "Контроль качества", "Пробная партия"]);
+  await expect(facts.locator("dd").first()).toHaveText("Производство и склад");
+  await expect(facts.locator("dd").nth(4)).toHaveText(limitations);
+  await expect(page.locator(".producer-hero__media figcaption")).toHaveText("Производство");
+  await expect(page.locator(".producer-hero__media img")).toHaveAttribute("alt", "Производство Синтетическое производство");
+  for (const theme of ["light", "dark"]) {
+    await page.evaluate(value => document.documentElement.dataset.theme = value, theme);
+    for (const width of [320, 390, 1440]) {
+      await page.setViewportSize({ width, height: 900 });
+      const rows = await facts.locator(":scope > div").evaluateAll(items => items.map(row => {
+        const label = row.querySelector("dt")!, value = row.querySelector("dd")!;
+        const labelBox = label.getBoundingClientRect(), valueBox = value.getBoundingClientRect(), rowBox = row.getBoundingClientRect();
+        return { labelX: labelBox.x, labelBottom: labelBox.bottom, valueX: valueBox.x, valueTop: valueBox.top, valueRight: valueBox.right, rowRight: rowBox.right, valueMargin: getComputedStyle(value).marginInlineStart };
+      }));
+      expect(rows.every(row => row.valueMargin === "0px" && row.valueRight <= row.rowRight + 1)).toBe(true);
+      if (width > 760) expect(rows.every(row => row.valueX > row.labelX)).toBe(true);
+      else expect(rows.every(row => Math.abs(row.valueX - row.labelX) <= 1 && row.valueTop >= row.labelBottom)).toBe(true);
+      expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+    }
+  }
+  hasPhoto = false;
+  await page.reload();
+  await expect(page.getByText("Фотография производства ещё не загружена", { exact: true })).toBeVisible();
+  await expect(page.locator(".producer-hero__media img")).toHaveCount(0);
+  await expect(page.locator(".producer-hero__media figcaption")).toHaveCount(0);
+});
+
+test("company mode hint follows the checkbox rows and keeps the selected permissions", async ({ page }) => {
+  let created: Record<string, unknown> | null = null;
+  await page.addInitScript(() => localStorage.setItem("token", "synthetic-company-mode"));
+  await page.route("**/api/**", route => {
+    const path = new URL(route.request().url()).pathname;
+    if (path.endsWith("/auth/me")) return route.fulfill({ json: { user, companies: [] } });
+    if (path.endsWith("/companies") && route.request().method() === "POST") {
+      created = route.request().postDataJSON();
+      return route.fulfill({ json: company });
+    }
+    return route.fulfill({ json: [] });
+  });
+  await page.goto("/company/new");
+  const modes = page.getByRole("group", { name: "Режимы работы компании", exact: true });
+  const buy = modes.getByRole("checkbox", { name: "Покупаю", exact: true });
+  const sell = modes.getByRole("checkbox", { name: "Продаю", exact: true });
+  const hint = modes.locator(".mode-hint");
+  const submit = page.getByRole("button", { name: "Создать компанию", exact: true });
+  await expect(submit).toBeDisabled();
+  await expect(hint).toHaveText("Выберите хотя бы один режим: «Покупаю» или «Продаю».");
+  for (const theme of ["light", "dark"]) {
+    await page.evaluate(value => document.documentElement.dataset.theme = value, theme);
+    for (const width of [320, 390, 1440]) {
+      await page.setViewportSize({ width, height: 900 });
+      const geometry = await modes.evaluate(group => {
+        const rows = Array.from(group.querySelectorAll("label")).map(label => {
+          const { x, top, bottom, height } = label.getBoundingClientRect();
+          return { x, top, bottom, height };
+        });
+        const note = group.querySelector<HTMLElement>(".mode-hint")!, noteBox = note.getBoundingClientRect();
+        return { rows, hintX: noteBox.x, hintTop: noteBox.top, align: getComputedStyle(note).textAlign };
+      });
+      expect(geometry.rows).toHaveLength(2);
+      expect(geometry.rows[1].top).toBeGreaterThanOrEqual(geometry.rows[0].bottom);
+      expect(geometry.rows.every(row => row.height >= 44)).toBe(true);
+      expect(geometry.hintTop).toBeGreaterThanOrEqual(geometry.rows[1].bottom);
+      expect(Math.abs(geometry.hintX - geometry.rows[0].x)).toBeLessThanOrEqual(1);
+      expect(geometry.align).toBe("left");
+      expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+    }
+  }
+  await buy.check();
+  await expect(sell).not.toBeChecked();
+  await expect(submit).toBeEnabled();
+  await expect(hint).toHaveCount(0);
+  await buy.uncheck();
+  await expect(submit).toBeDisabled();
+  await expect(hint).toBeVisible();
+  await sell.check();
+  await expect(buy).not.toBeChecked();
+  await expect(submit).toBeEnabled();
+  await buy.check();
+  await page.getByLabel("Полное название", { exact: false }).fill("ООО Синтетическая компания");
+  await page.getByLabel("Отображаемое название", { exact: false }).fill("Синтетическая компания");
+  await page.getByLabel("ИНН", { exact: false }).fill("0000000000");
+  await page.getByLabel("Юридический адрес", { exact: false }).fill("Синтетический адрес производства");
+  await submit.click();
+  await expect(page).toHaveURL(/\/dashboard/);
+  expect(created).toMatchObject({ can_buy: true, can_sell: true });
 });
 
 

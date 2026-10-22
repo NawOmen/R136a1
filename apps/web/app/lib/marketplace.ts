@@ -792,7 +792,7 @@ export const DOCUMENT_TYPES: { value: string; label: string }[] = [
 
 export const DOCUMENT_STATUS_LABELS: Record<string, string> = {
   unverified: "Загружено, не проверено",
-  verified: "Проверено человеком",
+  verified: "Проверено",
   rejected: "Не соответствует",
 };
 

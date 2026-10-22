@@ -1,0 +1,43 @@
+{
+  "prompt": "Use case: product-mockup.\nAsset type: original synthetic Russian B2B catalogue product illustration, photorealistic.\nPrimary request: One sealed 25 kg sack of dry cement masonry mortar mix. Plain neutral brown kraft paper valve sack, substantial rectangular filled sack with folded sealed top and bottom, realistic heavy powder-filled shape and natural paper wrinkles. Upright slightly leaning stable product, three-quarter front view, no spilled powder.\nScene/backdrop: seamless almost-white neutral studio background, subtle soft contact shadow.\nComposition/framing: wide horizontal 3:2 image, exactly one bag centered, complete sack visible with generous margins all around, no crop.\nStyle/medium: realistic studio catalogue photography, crisp believable kraft paper texture, soft diffuse lighting.\nConstraints: completely blank bag with no actual manufacturer, no trademarks, no logos, no labels, no text, no numbers, no certificates, no watermark, no people, no tools, no unrelated props, no collage.",
+  "createdAt": "2026-10-22T05:43:12.120490+00:00",
+  "schemaVersion": 1,
+  "tool": "image_gen.imagegen",
+  "provider": "builtin",
+  "mode": "built-in generate",
+  "origin": "AI-generated synthetic product illustration; not an actual supplier photograph",
+  "origin_ru": "Авторская синтетическая иллюстрация товара, созданная ИИ; не фотография товара поставщика",
+  "useCase": "product-mockup",
+  "generatorOriginalPath": "/Users/assweg/.codex/generated_images/01a1621e-2855-7aa0-b1cc-7b71d0db9dd6/exec-8a7fa55a-f63f-4572-9fd1-e489bb6bd58c.png",
+  "generatorOriginalSha256": "52a050ae06dbba46010cdd4a30894801e4dcb0067e92dce7917b4206edaae40f",
+  "sourcePath": "/Users/assweg/.codex/generated_images/01a1621e-2855-7aa0-b1cc-7b71d0db9dd6/exec-8a7fa55a-f63f-4572-9fd1-e489bb6bd58c.png",
+  "sourceSha256": "52a050ae06dbba46010cdd4a30894801e4dcb0067e92dce7917b4206edaae40f",
+  "sourceDimensions": [
+    1536,
+    1024
+  ],
+  "sourceBytes": 1857673,
+  "deliveryPath": "services/marketplace/seed_media/mix.webp",
+  "deliverySha256": "3f8e03148a02a1eb8f9f31a7c8e6573f8f372315ba732075dc283b706abd6d1b",
+  "deliveryDimensions": [
+    768,
+    512
+  ],
+  "deliveryBytes": 11080,
+  "conversion": {
+    "library": "Pillow 13.0.0 (WebP)",
+    "format": "WebP",
+    "quality": 82,
+    "method": 6,
+    "resized": true,
+    "cropped": false,
+    "retouched": false
+  },
+  "verification": {
+    "subject": "manually inspected",
+    "wholeProductVisible": true,
+    "noBrandingOrText": true,
+    "background": "almost-white neutral studio",
+    "note": "Generated for synthetic catalogue specifications. Whole product visible; image is an illustration rather than evidence of actual supplier stock."
+  }
+}

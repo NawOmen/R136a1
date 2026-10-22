@@ -30,7 +30,7 @@ async def test_product_photos_upgrade_owned_pictogram_preserve_upload_and_edited
     jacket = ProductImage(product_id=products["jacket"].id, file_name="Фото продавца.png",
                           file_key="supplier-upload.png", content_type="image/png", position=0)
     db_session.add_all([box, jacket])
-    products["drinking_water"].name = "Товар изменён продавцом"
+    products["cable"].name = "Товар изменён продавцом"
     await db_session.flush()
     box_image_id = box.id
     before = {key: (product.price_rub, product.stock_units, product.is_published) for key, product in products.items()}
@@ -42,7 +42,7 @@ async def test_product_photos_upgrade_owned_pictogram_preserve_upload_and_edited
     assert box.id == box_image_id and box.content_type == "image/webp"
     assert box.file_key.endswith("/seed-photo-box.webp")
     assert jacket.file_key == "supplier-upload.png" and jacket.content_type == "image/png"
-    assert not any(image.product_id == products["drinking_water"].id for image in images)
+    assert not any(image.product_id == products["cable"].id for image in images)
     assert len(stub_object_storage) == len(PRODUCT_PHOTO_KEYS) - 2
     assert all(data[:4] == b"RIFF" and data[8:12] == b"WEBP" for data in stub_object_storage.values())
     assert before == {key: (product.price_rub, product.stock_units, product.is_published) for key, product in products.items()}

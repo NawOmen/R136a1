@@ -132,8 +132,10 @@ export default function RegisterPage() {
             autoComplete="tel"
           />
         </div>
-        <label><input type="checkbox" required checked={rulesAccepted} onChange={event => setRulesAccepted(event.target.checked)} /> Принимаю <Link href="/info/legal" target="_blank" rel="noopener">правила работы</Link></label>
-        <label><input type="checkbox" required checked={privacyAcknowledged} onChange={event => setPrivacyAcknowledged(event.target.checked)} /> Ознакомлен с <Link href="/info/privacy" target="_blank" rel="noopener">условиями обработки данных</Link></label>
+        <ul className="registration-consents">
+          <li><label><input type="checkbox" required checked={rulesAccepted} onChange={event => setRulesAccepted(event.target.checked)} /><span>Принимаю <Link href="/info/legal" target="_blank" rel="noopener">правила работы</Link></span></label></li>
+          <li><label><input type="checkbox" required checked={privacyAcknowledged} onChange={event => setPrivacyAcknowledged(event.target.checked)} /><span>Ознакомлен с <Link href="/info/privacy" target="_blank" rel="noopener">условиями обработки данных</Link></span></label></li>
+        </ul>
         <div className="actions">
           <button type="submit" className="btn btn-primary" disabled={submitting}>
             {submitting ? "Регистрируем..." : "Зарегистрироваться"}

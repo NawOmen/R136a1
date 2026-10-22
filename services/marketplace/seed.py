@@ -161,11 +161,20 @@ async def seed() -> None:
 
         await _seed_category_documents(db, seller_company_id)
 
-        from seed_assortment import PRODUCT_PHOTO_KEYS, seed_assortment, seed_storefront_assortment, storefront_product_id
+        from seed_assortment import COMPARISON_STOREFRONT_KEYS, COMPARISON_UNAVAILABLE_KEYS, PRODUCT_PHOTO_KEYS, seed_assortment, seed_storefront_assortment, storefront_product_id
         created_assortment = await seed_assortment(db)
         created_assortment.extend(await seed_storefront_assortment(db))
         pictured_ids = {storefront_product_id(seller_company_id, key) for key in PRODUCT_PHOTO_KEYS}
         new_products.extend(product for product in created_assortment if product.id in pictured_ids)
+        comparison_company_id = await db.scalar(text(
+            "SELECT c.id FROM auth.companies c WHERE c.display_name = :name "
+            "AND EXISTS (SELECT 1 FROM auth.company_members m WHERE m.company_id = c.id AND m.can_sell = true AND m.is_admin = true)"
+        ), {"name": "ООО «Регион Поставка»"})
+        if comparison_company_id is not None:
+            await _seed_category_documents(db, comparison_company_id)
+            new_products.extend(await seed_storefront_assortment(
+                db, seller_name="ООО «Регион Поставка»", keys=COMPARISON_STOREFRONT_KEYS,
+                price_factor=Decimal("1.04"), unavailable_keys=COMPARISON_UNAVAILABLE_KEYS))
         await _seed_cup_photos(db, seller_company_id, user_id)
         await db.flush()
         # Only newly created fixtures: reruns never republish a seller's draft.
@@ -185,12 +194,70 @@ async def seed() -> None:
                     ProductImage.file_name.startswith("Иллюстрация товара:")).limit(1)) is None:
                     continue
                 try:
-                    await publish_product(created.id, PublishIn(published=True), CurrentUser(user_id), db)
+                    await publish_product(created.id, PublishIn(published=True), CurrentUser(created.created_by_user_id or user_id), db)
                 except HTTPException as error:
                     if error.status_code not in (403, 409, 422):
                         raise
                     print(f"Карточка «{created.name}» осталась черновиком: {error.detail}")
+            await _retire_storefront_food_products(db, seller_company_id, user_id)
+        await _seed_production_photo(db, seller_company_id)
         await db.commit()
+
+
+async def _retire_storefront_food_products(db, company_id, user_id) -> None:
+    """Withdraw only the two unchanged food fixtures; retain their history."""
+    from app.assortment import ASSORTMENT
+    from app.api.products import publish_product
+    from app.deps import CurrentUser
+    from app.schemas import PublishIn
+    from seed_assortment import LEGACY_PRODUCT_PHOTO_KEYS, RETIRED_STOREFRONT_KEYS, STOREFRONT_VERSION, storefront_product_id
+
+    for key, _family, category, subcategory, name, attributes, *_ in ASSORTMENT:
+        if key not in RETIRED_STOREFRONT_KEYS:
+            continue
+        product = await db.get(Product, storefront_product_id(company_id, key))
+        if product is None or not product.is_published or product.company_id != company_id:
+            continue
+        if (product.name, product.category, product.subcategory, product.characteristics) != (name, category, subcategory, attributes):
+            continue
+        if key in LEGACY_PRODUCT_PHOTO_KEYS:
+            if product.external_id or product.sources:
+                continue
+        elif (product.external_id, product.sources) != (
+            f"synthetic-{STOREFRONT_VERSION}:{key}",
+            [{"label": "Спецификация товара", "reference": f"synthetic_seed:{STOREFRONT_VERSION}:{key}"}],
+        ):
+            continue
+        await publish_product(product.id, PublishIn(published=False), CurrentUser(user_id), db)
+
+
+async def _seed_production_photo(db, company_id) -> None:
+    """Fill only the intact synthetic profile; never replace a supplier image."""
+    from pathlib import Path
+    from app.storage import upload_object
+
+    profile = await db.get(ProductionProfile, company_id)
+    if profile is None:
+        return
+    key = f"production/{company_id}/synthetic-workshop-v1.webp"
+    photo = (profile.photo_file_key, profile.photo_file_name, profile.photo_content_type)
+    if any(photo) and photo != (key, "Синтетическое изображение производства.webp", "image/webp"):
+        return
+    if (profile.about, profile.production_site_address, profile.region) != (
+        "Производство брендированных бумажных стаканов для горячих напитков.",
+        "Свердловская область, г. Екатеринбург, ул. Складская, д. 2", "Свердловская область",
+    ):
+        return
+    asset = Path(__file__).parent / "seed_media" / "production_workshop.webp"
+    if not asset.is_file():
+        return
+    try:
+        await asyncio.to_thread(upload_object, key, asset.read_bytes(), "image/webp")
+    except Exception:
+        return
+    profile.photo_file_key = key
+    profile.photo_file_name = "Синтетическое изображение производства.webp"
+    profile.photo_content_type = "image/webp"
 
 
 async def _seed_cup_photos(db, company_id, user_id) -> None:
