@@ -15,4 +15,4 @@ faster-whisper>=1.2.1,<2.0
 
 # Bounded validation of actual image/PDF/audio structure before processing.
 Pillow>=13.0.0,<14.0
-av>=18.1.0,<19.0
+av>=19.0.1,<20.0
