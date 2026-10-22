@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { api, AUTH_CHANGED_EVENT, getToken, MeResponse } from "../lib/api";
-import { marketplace, Product } from "../lib/marketplace";
+import { formatUnits, marketplace, Product } from "../lib/marketplace";
 import { ProductCard } from "./ProductCard";
 import { Icon, IconName } from "./Icon";
 import { LiquidSurface } from "./LiquidSurface";
@@ -89,7 +89,7 @@ export function ProductCatalog({ home = false }: { home?: boolean }) {
         <div className="catalog-heading-row"><div className="catalog-title-group"><h2>Товары производителей</h2>{home && limit < visible.length && <button type="button" className="catalog-all" onClick={() => setLimit(value => value + catalogPageSize)}>Показать ещё<Icon name="arrow" size={14} /></button>}</div>
           <div className="catalog-controls"><nav className="storefront-mode" aria-label="Для компаний">{admin ? <Link className="active" href="/admin">Администрирование</Link> : <><Link className="active" href="/catalog">Покупатель</Link><Link href={me ? "/seller/requests" : "/login"}>Производитель</Link></>}</nav><label className="catalog-sort"><span className="visually-hidden">Порядок</span><select aria-label="Порядок товаров" title={sort === "popular" ? "По числу закупок с подтверждённой приёмкой за вычетом полных возвратов" : "По алфавиту"} value={sort} onChange={event => { setSort(event.target.value); setLimit(home ? homePageSize : catalogPageSize); }}><option value="popular">По популярности</option><option value="name">По названию</option></select></label></div>
         </div>
-        <p className={loading || error ? "catalog-status" : "visually-hidden"} role="status">{loading ? "Загружаем товары…" : error ? "Каталог недоступен" : `${visible.length} предложений`}</p>
+        <p className={loading || error ? "catalog-status" : "visually-hidden"} role="status">{loading ? "Загружаем товары…" : error ? "Каталог недоступен" : formatUnits(visible.length, "предложение")}</p>
         {query && <p className="catalog-query">Поиск: «{query}» <a href={home ? "/" : "/catalog"}>Сбросить</a></p>}
         {loading ? <div className="product-grid" aria-busy="true" aria-label="Загрузка предложений">{Array.from({ length: homePageSize }, (_, i) => <div className="product-skeleton" key={i}><span /><i /><i /></div>)}</div>
           : error ? <div className="empty-market" role="alert"><Icon name="box" size={28} /><div><b>Не удалось загрузить предложения</b><p>{error}</p></div><button type="button" className="btn btn-secondary" onClick={() => void load()}>Повторить</button></div>

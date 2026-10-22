@@ -102,6 +102,7 @@ test("products lead the first viewport, with persistent themes, exact prices and
   await page.getByRole("textbox", { name: "Поиск по маркетплейсу", exact: true }).fill("Коробки");
   await page.getByRole("textbox", { name: "Поиск по маркетплейсу", exact: true }).press("Enter");
   await expect(page.locator(".market-product")).toHaveCount(1);
+  await expect(page.getByRole("status").filter({ hasText: "1 предложение" })).toHaveCount(1);
   await expect(page.locator(".market-product").locator(".market-product__link")).toHaveAttribute("href", "/catalog/packaging");
   await page.getByRole("textbox", { name: "Поиск по маркетплейсу", exact: true }).fill("");
   await page.getByRole("textbox", { name: "Поиск по маркетплейсу", exact: true }).press("Enter");

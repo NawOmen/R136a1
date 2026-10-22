@@ -840,6 +840,7 @@ export function itemUnit(characteristics?: Record<string, unknown>): string {
 export function formatUnits(value: number, unit = "шт."): string {
   const normalized = russianUnit(unit);
   const forms: Record<string, [string, string, string]> = {
+    "предложение": ["предложение", "предложения", "предложений"],
     "рулон": ["рулон", "рулона", "рулонов"],
     "бухта": ["бухта", "бухты", "бухт"],
     "упаковка": ["упаковка", "упаковки", "упаковок"],
