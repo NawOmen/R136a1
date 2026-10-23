@@ -180,7 +180,7 @@ test("registration requires separate acknowledgements and sends the current regi
   await submit.click(); expect(registered).toBeNull();
   await privacy.check();
   await submit.click(); await expect(page).toHaveURL(/\/dashboard/);
-  expect(registered).toMatchObject({rules_version:"rules-1",privacy_version:"privacy-1",rules_accepted:true,privacy_acknowledged:true});
+  expect(registered).toMatchObject({rules_version:"rules-2",privacy_version:"privacy-2",rules_accepted:true,privacy_acknowledged:true});
 });
 
 test("producer capabilities retain their values in aligned rows with a production photo and missing-photo state", async ({ page }) => {
@@ -342,7 +342,7 @@ test("admin preserves a support answer on failed submission and shows the failur
   });
   await page.goto("/admin");
   await page.getByLabel("Ответ", {exact:true}).fill("Проверьте согласованную дату в карточке заказа.");
-  await page.getByRole("button", {name:"Отправить ответ и закрыть", exact:true}).click();
+  await page.getByRole("button", {name:"Отправить ответ", exact:true}).click();
   await expect(page.getByText("Не удалось сохранить ответ", {exact:true})).toBeVisible();
   await expect(page.getByLabel("Ответ", {exact:true})).toHaveValue("Проверьте согласованную дату в карточке заказа.");
   await page.getByRole("combobox", {name:"Статус",exact:true}).selectOption("verified");

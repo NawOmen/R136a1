@@ -32,7 +32,7 @@ export default function AiProcurementPage() {
       <li><h2>Подтвердите условия</h2><p>Каждая сторона согласует цену, объём, сроки и действия при недоборе.</p></li>
     </ol>
     <section className="guidance-roles" aria-labelledby="agent-roles-heading">
-      <h2 id="agent-roles-heading">Роли и ограничения</h2>
+      <h2 id="agent-roles-heading">Как работают ИИ-закупки: роли и границы ответственности</h2>
       <div className="guidance-disclosures">{roles.map(role => <details className="guidance-disclosure" key={role.title}>
         <summary><span>{role.title}</span><Icon name="arrow" size={19} /></summary>
         <div className="guidance-disclosure__body"><p>{role.description}</p><p>{role.limit}</p></div>

@@ -116,6 +116,7 @@ services:
     build:
       context: ../services/marketplace
     environment:
+      DADATA_API_KEY: ${DADATA_API_KEY:-}
       DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-sborka}:${POSTGRES_PASSWORD:?Задайте POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-sborka}
       JWT_SECRET: ${JWT_SECRET:?Задайте JWT_SECRET}
       MINIO_ENDPOINT: minio:9000

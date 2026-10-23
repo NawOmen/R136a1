@@ -5,8 +5,8 @@ import { useEffect, useState } from "react";
 import { marketplace, EditorRegistry } from "../lib/marketplace";
 import { countUserCharacteristics, requiredCharacteristicKeys } from "../lib/categoryProfiles";
 
-export default function CharacteristicSuggestions({ category, subcategory, keys, onAdd, disabled = false, product = false }: {
-  category: string; subcategory: string; keys: string[]; onAdd: (key: string) => void; disabled?: boolean; product?: boolean;
+export default function CharacteristicSuggestions({ category, subcategory, keys, onAdd, disabled = false, product = false, compact = false }: {
+  category: string; subcategory: string; keys: string[]; onAdd: (key: string) => void; disabled?: boolean; product?: boolean; compact?: boolean;
 }) {
   const [registry,setRegistry]=useState<EditorRegistry["registry"]|null>(null);
   const [error,setError]=useState<string|null>(null);
@@ -25,11 +25,11 @@ export default function CharacteristicSuggestions({ category, subcategory, keys,
   const requiredKeys = requiredCharacteristicKeys(category, subcategory);
   const suggestions=(profile?.fields ?? []).filter(key=>![key,...registry.characteristic_fields[key].aliases].some(alias=>present.has(normalize(alias))))
     .map(key=>({key,...registry.characteristic_fields[key],required:profile?.required_for_product.includes(key),outsideLimit:requiredKeys.has(normalize(key))}));
-  if (!suggestions.length) return null;
+  if (!suggestions.length) return compact ? <button type="button" className="btn btn-secondary btn-sm" disabled={disabled} onClick={() => onAdd("")}>Своё поле</button> : null;
   const full = countUserCharacteristics(keys.map((key) => ({ key })), category, subcategory) >= 25;
   return (
     <>
-      {suggestions.some(field => field.required) && <>
+      {!compact && suggestions.some(field => field.required) && <>
         <p className="hint" role="status">Для описания выбранного изделия уточните: {suggestions.filter(field => field.required).map(field => field.label).join(", ")}. Значения из материалов проверяйте по источнику.</p>
         <button type="button" className="btn btn-secondary btn-sm" disabled={disabled}
           onClick={() => { suggestions.filter(field => field.required).forEach(field => onAdd(field.key)); setLimitMessage(null); }}>
@@ -52,7 +52,7 @@ export default function CharacteristicSuggestions({ category, subcategory, keys,
           {field.label}{product && field.required ? " — обязательно для публикации" : ""}
         </option>)}
       </select>
-      <p className="hint">Поля соответствуют выбранной подкатегории. Дополнительные характеристики можно указать вручную.</p>
+      {compact ? <button type="button" className="btn btn-secondary btn-sm" disabled={disabled || full} onClick={() => onAdd("")}>Своё поле</button> : <p className="hint">Поля соответствуют выбранной подкатегории. Дополнительные характеристики можно указать вручную.</p>}
       {limitMessage && <p role="alert" className="hint">{limitMessage}</p>}
     </>
   );

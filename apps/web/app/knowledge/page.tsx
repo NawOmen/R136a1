@@ -33,7 +33,7 @@ export default function KnowledgePage() {
     try{
       const result=await agents.askPlatform(token,question);
       setAnswer(result.answer);
-      setLinks((result.links ?? []).filter((link) => ["/needs/new", "/dashboard", "/deals", "/support"].includes(link)));
+      setLinks(Array.from(new Set((result.links?.length ? result.links : ["/support"]).filter((link) => ["/needs/new", "/dashboard", "/deals", "/support"].includes(link)))));
     }catch(e){setError(e instanceof Error?russianMessage(e.message):"Помощник недоступен. Проверьте соединение и повторите.");}
     finally{setBusy(false);}
   }
@@ -54,7 +54,7 @@ export default function KnowledgePage() {
         <p className="hint">Отвечает по проверенной справке со ссылкой на источник. Не принимает финансовых решений. Не указывайте пароли и персональные данные.</p>
         <form onSubmit={ask}><div className="field"><label htmlFor="assistant-question">Ваш вопрос</label><textarea id="assistant-question" disabled={busy} maxLength={1000} minLength={3} required value={question} onChange={(e)=>setQuestion(e.target.value)} placeholder="Например, как согласовать условия сделки?" /></div><button className="btn btn-primary" disabled={busy}>{busy?"Думаю…":"Спросить"}<Icon name="arrow" size={18} /></button></form>
         {error && <div className="alert alert-error" role="alert">{error} <button type="button" className="btn btn-secondary btn-sm" onClick={()=>setError(null)}>Понятно</button></div>}
-        {answer && <div className="assistant-answer" aria-live="polite"><p>{answer}</p><p className="hint">Источник: справка ПоРукам.</p>{links.length>0 && <ul>{links.map(link => <li key={link}><Link href={link}>{({"/needs/new":"Создать потребность","/dashboard":"Компании и права","/deals":"Согласование и исполнение","/support":"Поддержка"} as Record<string,string>)[link]}</Link></li>)}</ul>}</div>}
+        {answer && <div className="assistant-answer" aria-live="polite"><p>{answer}</p><p className="hint">Источник: справка ПоРукам.</p>{links.length>0 && <div className="assistant-actions">{links.map(link => <Link className="btn btn-primary" key={link} href={link}>{({"/needs/new":"Создать потребность","/dashboard":"Компании и права","/deals":"Согласование и исполнение","/support":"Поддержка"} as Record<string,string>)[link]}<Icon name="arrow" size={18} /></Link>)}</div>}</div>}
         <Link className="help-support-link" href="/support">Не нашли ответ? Написать в поддержку<Icon name="arrow" size={17} /></Link>
       </aside>
     </div>

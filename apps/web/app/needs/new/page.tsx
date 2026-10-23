@@ -1,9 +1,12 @@
 "use client";
+import { AddressDialog } from "../../components/AddressDialog";
+import { CharacteristicValue } from "../../components/CharacteristicValue";
+import { categoryProfile } from "../../lib/categoryProfiles";
 import { DateInput } from "../../components/DateInput";
 
 // Создание потребности (POST /needs). Форма покупателя: компания (can_buy),
 // категория, характеристики (пары «ключ/значение»), объём, бюджет, срок,
-// адрес доставки (+ добавление адреса через prompt), видимость, файлы.
+// адрес доставки, видимость, файлы.
 
 import { canonicalCharacteristicKey } from "../../lib/categoryProfiles";
 import { russianMessage } from "../../lib/russianMessages";
@@ -28,14 +31,13 @@ import {
   ApiError as MarketplaceError,
   DeliveryAddress,
   marketplace,
-  NEED_VISIBILITY_LABELS,
   NeedVisibility,
   PRODUCT_CATEGORIES,
   PRODUCT_CATEGORY_TREE,
 } from "../../lib/marketplace";
 import { useCompanySelector } from "../../lib/useMe";
 import CharacteristicSuggestions from "../../components/CharacteristicSuggestions";
-import { characteristicField, countUserCharacteristics, requiredCharacteristicKeys, resolveAgentCategory } from "../../lib/categoryProfiles";
+import { countUserCharacteristics, resolveAgentCategory } from "../../lib/categoryProfiles";
 import { CapabilityDescription } from "../../components/CapabilityDescription";
 import { ValidatedFields } from "../../components/ValidatedFields";
 
@@ -68,7 +70,6 @@ export default function NewNeedPage() {
   const [subcategory, setSubcategory] = useState("");
   const [rows, setRows] = useState<CharacteristicRow[]>([
     newRow("unit", "шт"),
-    newRow(),
   ]);
   const [volumeUnits, setVolumeUnits] = useState("");
   const [budgetRub, setBudgetRub] = useState("");
@@ -86,6 +87,8 @@ export default function NewNeedPage() {
   const [analyzing, setAnalyzing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [addressOpen, setAddressOpen] = useState(false);
+  const [characteristicsOpen, setCharacteristicsOpen] = useState(false);
   const [busyAddress, setBusyAddress] = useState(false);
   const [recording, setRecording] = useState(false);
   const [transcribing, setTranscribing] = useState(false);
@@ -113,7 +116,7 @@ export default function NewNeedPage() {
     void draftFiles(draftKey).then(saved => { if (!cancelled) { setFiles(saved); setLoadedFilesKey(draftKey); } })
       .catch(() => { if (!cancelled) { fileRestoreFailed.current = true; setLoadedFilesKey(draftKey); setDraftNotice("Не удалось восстановить файлы в браузере. Выберите их повторно."); } });
     setAgentRun(null); setAnswers({}); setFiles([]); setSavedNeed(null); setManualExpanded(false);
-    setRequestDescription(""); setRows([newRow("unit", "шт"), newRow()]); setCategory(PRODUCT_CATEGORIES[0]); setSubcategory("");
+    setRequestDescription(""); setRows([newRow("unit", "шт")]); setCategory(PRODUCT_CATEGORIES[0]); setSubcategory("");
     setVolumeUnits(""); setBudgetRub(""); setDeadlineDate(""); setDeliveryAddressId("");
     setVisibility("open_anonymized"); setDraftNotice(""); creationKey.current = crypto.randomUUID();
     try {
@@ -225,41 +228,20 @@ export default function NewNeedPage() {
     } catch { stream?.getTracks().forEach(track => track.stop()); setError("Не удалось получить доступ к микрофону. Разрешите доступ или загрузите аудиофайл."); }
   }
 
-  async function handleAddAddress() {
+  async function handleAddAddress(value: { address: string; city: string; region: string }): Promise<boolean> {
     const scope = draftKey;
     const token = getToken();
-    if (!token || !company) return;
-    const address = window.prompt("Введите адрес доставки (улица, дом):");
-    if (!address || !address.trim()) return;
-    const city = window.prompt("Введите город:") ?? "";
-    const region = window.prompt("Введите регион (например, Свердловская область):") ?? "";
-    if (address.trim().length < 5) {
-      setError("Адрес слишком короткий — минимум 5 символов.");
-      return;
-    }
-    if (city.trim().length < 2) {
-      setError("Укажите город (минимум 2 символа).");
-      return;
-    }
-    setBusyAddress(true);
-    setError(null);
+    if (!token || !company) return false;
+    setBusyAddress(true); setError(null);
     try {
-      await marketplace.createAddress(token, company.id, {
-        address: address.trim(),
-        city: city.trim(),
-        region: region.trim() || "Россия",
-        is_default: addresses.length === 0,
-      });
-      const updated = await marketplace.getAddresses(token, company.id);
-      if (activeScope.current !== scope) return;
-      setAddresses(updated);
-      const added = updated.find((item) => item.address === address.trim());
-      setDeliveryAddressId(added?.id ?? updated[0]?.id ?? "");
+      const added = await marketplace.createAddress(token, company.id, { ...value, is_default: addresses.length === 0 });
+      if (activeScope.current !== scope) return false;
+      setAddresses(current => [...current, added]); setDeliveryAddressId(added.id);
+      return true;
     } catch (err) {
-      setError(err instanceof MarketplaceError ? russianMessage(err.message) : "Не удалось добавить адрес.");
-    } finally {
-      if (activeScope.current === scope) setBusyAddress(false);
-    }
+      if (activeScope.current === scope) setError(err instanceof MarketplaceError ? russianMessage(err.message) : "Не удалось добавить адрес.");
+      return false;
+    } finally { if (activeScope.current === scope) setBusyAddress(false); }
   }
 
   useEffect(() => {
@@ -550,7 +532,7 @@ export default function NewNeedPage() {
   }
 
   return (
-    <div>
+    <div className="need-create-page">
       <div className="company-row">
         <h1 className="page-title">Создание потребности</h1>
         <Link href="/needs" className="btn btn-secondary btn-sm">
@@ -562,12 +544,13 @@ export default function NewNeedPage() {
       </p>
 
       {error && <div className="alert alert-error" role="alert">{error}</div>}
-      <p className="hint">1. Опишите → 2. Проверьте → 3. Отправьте. Ввод сохраняется в этой вкладке.</p>
+
       {draftNotice && <p className="hint" role="status">{draftNotice}</p>}
       {savedNeed && <p className="alert alert-warning">Черновик уже создан. <Link href={`/needs/${savedNeed.id}`}>Открыть сохранённую потребность</Link>. Повторная отправка продолжит загрузку в этот черновик.</p>}
 
       {!draftReady && <p className="hint" role="status">Загружаем черновик…</p>}
-      <form className="card" onSubmit={handleSubmit} aria-busy={!draftReady}>
+      {addressOpen && <AddressDialog companyId={companyId} key={draftKey} addresses={addresses} busy={busyAddress} onSave={handleAddAddress} onClose={() => setAddressOpen(false)} />}
+      <form className="card need-create-form" onSubmit={handleSubmit} aria-busy={!draftReady}>
         <fieldset className="form-fieldset" disabled={!draftReady}>
         {available.length > 1 ? (
           <div className="field">
@@ -597,10 +580,9 @@ export default function NewNeedPage() {
         )}
 
         <section className="agent-panel" aria-labelledby="materials-heading">
-          <h2 id="materials-heading">1. Опишите закупку</h2>
+          <h2 id="materials-heading">Что нужно вашему бизнесу?</h2>
           <p className="hint">
-            Напишите задачу или приложите материалы. Проверьте источники, предположения и противоречия.
-            Карточка изменится только после вашего подтверждения.
+            Напишите задачу или приложите материалы. ИИ подготовит карточку для вашей проверки.
           </p>
           <div className="field">
             <label htmlFor="request_description">Что требуется купить</label>
@@ -612,7 +594,7 @@ export default function NewNeedPage() {
               onChange={(event) => { analysisGeneration.current += 1; setRequestDescription(event.target.value); setAgentRun(null); setAnswers({}); }}
               placeholder="Например: нужны 30 рабочих столов из дерева, доставка в Москву..."
             />
-            <div className="voice-row"><button type="button" className={recording ? "btn btn-danger btn-sm" : "btn btn-secondary btn-sm"} disabled={transcribing || analyzing || submitting || loadedFilesKey !== draftKey} onClick={() => void toggleRecording()}><Icon name="mic" size={17} />{transcribing ? "Распознаём…" : recording ? "Остановить запись" : "Продиктовать запрос"}</button><span className="hint">Речь обрабатывается локально и добавляется в текст. Для микрофона в локальной сети может понадобиться HTTPS.</span></div>
+            <div className="voice-row"><button type="button" className={recording ? "btn btn-danger btn-sm" : "btn btn-secondary btn-sm"} disabled={transcribing || analyzing || submitting || loadedFilesKey !== draftKey} onClick={() => void toggleRecording()}><Icon name="mic" size={17} />{transcribing ? "Распознаём…" : recording ? "Остановить запись" : "Продиктовать запрос"}</button><span className="hint">Голос добавится к описанию закупки.</span></div>
           </div>
           <div className="field">
             <label htmlFor="need_files">
@@ -635,7 +617,7 @@ export default function NewNeedPage() {
               </p>
             )}
           </div>
-          <div className="field">
+          <details className="workflow-details"><summary>Настройки обработки</summary><div className="field">
             <label htmlFor="analysis_route">Режим проверки</label>
             <select
               id="analysis_route"
@@ -657,7 +639,7 @@ export default function NewNeedPage() {
               Файлы, текст, названия компаний и значения характеристик остаются локально.
             </label>
           )}
-          <button
+          </details><button
             type="button"
             className="btn btn-primary"
             disabled={analyzing || submitting || loadedFilesKey !== draftKey}
@@ -795,7 +777,7 @@ export default function NewNeedPage() {
         </section>
 
         <details className="workflow-details" ref={manualRef} open={manualExpanded} onToggle={event => setManualExpanded(event.currentTarget.open)}>
-        <summary>3. Карточка запроса — проверьте и отправьте</summary>
+        <summary>Проверить карточку закупки</summary>
         <ValidatedFields>
         <div className="field">
           <label htmlFor="category">
@@ -812,7 +794,7 @@ export default function NewNeedPage() {
 
         <div className="field">
           <label htmlFor="subcategory">Подкатегория<span className="req">*</span></label>
-          <select id="subcategory" required value={subcategory} onChange={(event) => setSubcategory(event.target.value)}>
+          <select id="subcategory" required value={subcategory} onChange={(event) => { const next = event.target.value; setSubcategory(next); setRows(current => { const required = categoryProfile(category, next)?.required_for_product ?? []; const existing = new Set(current.map(row => row.key)); return [...current, ...required.filter(key => !existing.has(key)).map(key => newRow(key))]; }); }}>
             <option value="">Выберите вид товара</option>
             {PRODUCT_CATEGORY_TREE[category].map((item) => <option key={item} value={item}>{item}</option>)}
           </select>
@@ -820,17 +802,7 @@ export default function NewNeedPage() {
         </div>
 
         <div className="field">
-          <label>
-            Характеристики<span className="req">*</span>
-          </label>
-          <CharacteristicSuggestions category={category} subcategory={subcategory} keys={rows.map((row) => row.key)}
-            onAdd={(key) => setRows((current) => {
-              const empty = current.findIndex(row => !row.key.trim() && !row.value.trim());
-              if (empty >= 0) return current.map((row, index) => index === empty ? newRow(key) : row);
-              const required = requiredCharacteristicKeys(category, subcategory);
-              if (countUserCharacteristics(current, category, subcategory) < 25 || required.has(key.trim().toLowerCase().replaceAll("ё", "е"))) return [...current, newRow(key)];
-              return current;
-            })} />
+          {characteristicsOpen && <div className="characteristic-picker"><CharacteristicSuggestions category={category} subcategory={subcategory} keys={rows.map(row => row.key)} compact onAdd={key => { setRows(current => [...current, newRow(key)]); setCharacteristicsOpen(false); }} /></div>}
           {rows.map((row, index) => (
             <div key={index} className="char-row">
               <input
@@ -841,15 +813,7 @@ export default function NewNeedPage() {
                 value={fieldName(row.key)}
                 onChange={(event) => updateRow(index, { key: canonicalCharacteristicKey(event.target.value) })}
               />
-              <input
-                type="text"
-                placeholder={characteristicField(category, subcategory, row.key)?.label ?? "Значение (например, дерево)"}
-                inputMode={characteristicField(category, subcategory, row.key)?.type !== "text" && characteristicField(category, subcategory, row.key) ? "decimal" : "text"}
-                aria-label={`Характеристика ${index + 1}: значение`}
-                required
-                value={row.value}
-                onChange={(event) => updateRow(index, { value: event.target.value })}
-              />
+              <CharacteristicValue category={category} subcategory={subcategory} fieldKey={row.key} value={row.value} label={`Характеристика ${index + 1}: значение`} onChange={value => updateRow(index, { value })} />
               <button
                 type="button"
                 className="btn btn-secondary btn-sm"
@@ -863,7 +827,7 @@ export default function NewNeedPage() {
             type="button"
             className="btn btn-secondary btn-sm"
             disabled={countUserCharacteristics(rows, category, subcategory) >= 25}
-            onClick={() => setRows((current) => [...current, newRow()])}
+            onClick={() => setCharacteristicsOpen(value => !value)}
           >
             + Добавить характеристику
           </button>
@@ -937,7 +901,7 @@ export default function NewNeedPage() {
               type="button"
               className="btn btn-secondary btn-sm"
               disabled={busyAddress}
-              onClick={() => void handleAddAddress()}
+              onClick={() => setAddressOpen(true)}
             >
               {busyAddress ? "Добавляем..." : "+ Добавить адрес"}
             </button>
@@ -947,22 +911,8 @@ export default function NewNeedPage() {
           )}
         </div>
 
-        <div className="field">
-          <label htmlFor="visibility">
-            Видимость<span className="req">*</span>
-          </label>
-          <select
-            id="visibility"
-            value={visibility}
-            onChange={(event) => setVisibility(event.target.value as NeedVisibility)}
-          >
-            {(Object.keys(NEED_VISIBILITY_LABELS) as NeedVisibility[]).map((item) => (
-              <option key={item} value={item}>
-                {NEED_VISIBILITY_LABELS[item]}
-              </option>
-            ))}
-          </select>
-        </div>
+        <p className="hint need-visibility-note">После публикации производители увидят требования без реквизитов вашей компании.</p>
+        {visibility !== "open_anonymized" && <p className="alert alert-warning">Восстановлен запрос с ограниченной видимостью. <button type="button" className="btn btn-secondary btn-sm" onClick={() => setVisibility("open_anonymized")}>Открыть подбор производителям</button></p>}
 
         <div className="actions">
           <PhysicalQuantityReview kind="need" values={{ characteristics: Object.fromEntries(rows.filter(row => row.key.trim()).map(row => [row.key.trim(), row.value])), volume_units: volumeUnits }} approved={quantityApproved} onApproval={setQuantityApproved} />

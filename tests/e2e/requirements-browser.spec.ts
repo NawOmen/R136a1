@@ -27,7 +27,7 @@ test("503, reload, role and company switching preserve independent input and sou
   await expect(page.locator("#need_files")).toBeFocused();
   await page.getByRole("button", { name: "Заполнить вручную", exact: true }).click();
   await expect(page.getByRole("textbox", { name: "Характеристика 1: название", exact: true })).toHaveValue("Единица заказа");
-  await page.getByText("3. Карточка запроса — проверьте и отправьте", { exact: true }).click();
+  await page.getByText("Проверить карточку закупки", { exact: true }).click();
   await description.fill("Нужны столы из дерева, 30 штук, для офиса");
   // A readable label must not rename the persisted API characteristic key.
   await expect.poll(() => page.evaluate(() => Object.values(sessionStorage).some(value => {
@@ -112,6 +112,7 @@ test("S13: external counters need an explicit separate choice and a different re
     return route.fulfill({ status: 503, json: { detail: "Синтетический отказ" } });
   });
   await page.locator("#request_description").fill("Нужно 5000 стаканов в Москву");
+  await page.getByText("Настройки обработки", { exact:true }).click();
   await page.locator("#analysis_route").selectOption("complex_auto");
   const consent = page.getByRole("checkbox", { name: /Разрешаю передать внешней модели DeepSeek/ });
   await expect(consent).not.toBeChecked();
@@ -227,7 +228,6 @@ test("category guidance adds its required fields without cup-specific defaults",
   await page.getByRole("button", { name: "Заполнить вручную", exact: true }).click();
   await page.locator("#category").selectOption("Товары для бизнеса");
   await page.locator("#subcategory").selectOption("Мебель");
-  await page.getByRole("button", { name: "Добавить недостающие обязательные поля" }).click();
   const keys = await page.locator('input[placeholder="Характеристика (например, материал)"]').evaluateAll(inputs => inputs.map(input => (input as HTMLInputElement).value));
   expect(keys).toContain("Габариты, мм");
   expect(keys).not.toContain("Объём, мл");
@@ -245,4 +245,72 @@ test("narrow request form keeps file selection inside the viewport", async ({ pa
   await files.setInputFiles({ name: "Требования-к-закупке.txt", mimeType: "text/plain", buffer: Buffer.from("Синтетические требования") });
   await expect(page.getByText(/Восстановленные или выбранные файлы: 1/)).toBeVisible();
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+});
+
+test("address entry uses an accessible dialog, provider selection and retry without browser prompts", async ({ page }) => {
+  await prepare(page);
+  let saves = 0;
+  const selected = { label: "г Новосибирск, ул Складская, д 12", address: "ул Складская, д 12", city: "Новосибирск", region: "Новосибирская область", house: "12" };
+  page.on("dialog", () => { throw new Error("Native browser prompts must not be used for address entry"); });
+  await page.route("**/address-suggestions?*", route => route.fulfill({ json: [selected] }));
+  await page.route("**/addresses", route => {
+    if (route.request().method() !== "POST") return route.fulfill({ json: [] });
+    saves++;
+    if (saves === 1) return route.fulfill({ status:503, json:{ detail:"Временная ошибка" } });
+    expect(route.request().postDataJSON()).toMatchObject({ address:selected.address, city:selected.city, region:selected.region });
+    return route.fulfill({ status:201, json:{ ...selected, id:"new-address", is_default:true } });
+  });
+  await page.setViewportSize({ width:390, height:844 });
+  await page.getByRole("button", { name:"Заполнить вручную", exact:true }).click();
+  await expect(page.locator("#visibility")).toHaveCount(0);
+  await expect(page.getByRole("combobox", { name:"Характеристика 1: значение", exact:true })).toHaveValue("шт");
+  await page.getByRole("button", { name:"+ Добавить адрес", exact:true }).click();
+  await expect(page.getByRole("dialog")).toBeVisible();
+  await page.getByLabel("Поиск адреса", { exact:true }).fill("Новосибирск Складская 12");
+  await page.getByRole("button", { name:selected.label, exact:true }).click();
+  await expect(page.getByLabel("Регион", { exact:true })).toHaveValue(selected.region);
+  await page.getByRole("button", { name:"Сохранить адрес", exact:true }).click();
+  await expect(page.getByRole("dialog").getByRole("alert")).toContainText("Не удалось сохранить");
+  await expect(page.getByLabel("Улица, дом, строение", { exact:true })).toHaveValue(selected.address);
+  await page.getByRole("button", { name:"Сохранить адрес", exact:true }).click();
+  await expect(page.getByRole("dialog")).toHaveCount(0);
+  await expect(page.locator("#delivery_address_id")).toHaveValue("new-address");
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+  await page.screenshot({ path:"../../output/playwright/need-mobile.png", fullPage:true });
+});
+
+test("support chat preserves failed text and notification bell opens full messages", async ({ page }) => {
+  await page.addInitScript(() => localStorage.setItem("token", "synthetic-chat"));
+  const notification = { id:"notice", type:"support_ticket_updated", message:"Ответ поддержки: уточните номер склада для доставки.", is_read:false };
+  let attempt = 0;
+  await page.route("**/api/**", route => {
+    const path = new URL(route.request().url()).pathname;
+    if (path.endsWith("/auth/me")) return route.fulfill({ json:{ user, companies } });
+    if (path.endsWith("/notifications")) return route.fulfill({ json:[notification] });
+    if (path.endsWith("/read")) return route.fulfill({ json:{ ...notification, is_read:true } });
+    if (path.endsWith("/support/tickets") && route.request().method() === "POST") {
+      attempt++;
+      if (attempt === 1) return route.fulfill({ status:503, json:{ detail:"Недоступно" } });
+      return route.fulfill({ status:201, json:{ id:"message", message:route.request().postDataJSON().message, subject:"Чат с поддержкой", status:"new", company_id:null, admin_response:null, created_at:"2026-10-23T12:00:00Z", updated_at:"2026-10-23T12:00:00Z" } });
+    }
+    return route.fulfill({ json:[] });
+  });
+  await page.setViewportSize({ width:390, height:844 });
+  await page.goto("/support");
+  await page.getByLabel("Сообщение поддержке", { exact:true }).fill("Помогите уточнить адрес склада для заказа");
+  await page.getByRole("button", { name:"Отправить", exact:true }).click();
+  await expect(page.locator(".support-chat > [role=alert]")).toContainText("не отправлено");
+  await expect(page.getByLabel("Сообщение поддержке", { exact:true })).toHaveValue(/адрес склада/);
+  await page.getByRole("button", { name:"Отправить", exact:true }).click();
+  await expect(page.getByRole("log")).toContainText("Помогите уточнить адрес склада");
+  await expect(page.getByLabel("Сообщение поддержке", { exact:true })).toHaveValue("");
+  await page.getByRole("button", { name:/Уведомления, новых/ }).click();
+  await page.getByRole("button", { name:notification.message, exact:true }).click();
+  await expect(page.locator(".notification-detail")).toContainText(notification.message);
+  await expect(page.locator(".notification-detail a")).toHaveAttribute("href", "/support");
+  await page.keyboard.press("Escape");
+  await expect(page.locator(".notification-popover")).toHaveCount(0);
+  await expect(page.getByRole("button", { name:/Уведомления/ })).toBeFocused();
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+  await page.screenshot({ path:"../../output/playwright/support-mobile.png", fullPage:true });
 });

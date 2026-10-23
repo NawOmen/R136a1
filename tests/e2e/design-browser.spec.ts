@@ -166,6 +166,11 @@ test("home and catalogue preserve server popularity through category and name so
   const links = page.locator(".market-product__link");
   for (const path of ["/", "/catalog"]) {
     await page.goto(path);
+    if (path === "/") {
+      await expect(links).toHaveCount(4);
+      expect(await links.evaluateAll(items => items.map(item => item.getAttribute("href")))).toEqual(assortment.map(p => `/catalog/${p.id}`));
+      continue;
+    }
     const sort = page.getByRole("combobox", { name: "Порядок товаров" });
     await expect(sort).toHaveValue("popular");
     await expect(sort.locator("option:checked")).toHaveText("По популярности");
@@ -496,21 +501,11 @@ test("the catalogue keeps supplier photos first and reveals the remaining produc
   await expect(page.locator(".market-product").nth(1).locator("img")).toHaveAttribute("alt", products[1].name);
   await expect(page.locator(".market-product .product-image-note")).toHaveCount(0);
   await expect(page.locator(".market-product").first().locator(".product-no-photo")).toHaveCount(0);
-  await page.getByRole("button", { name: /Показать ещё/ }).click();
-  await expect(page.locator(".market-product")).toHaveCount(40);
-  await page.getByRole("button", { name: /Показать ещё/ }).click();
-  await expect(page.locator(".market-product")).toHaveCount(60);
-  await openCatalogFilters(page);
-  await page.getByLabel("Цена от, ₽", { exact: true }).fill("1");
-  await page.getByRole("button", { name: "Применить фильтры", exact: true }).click();
-  await expect(page.locator(".market-product")).toHaveCount(10);
-  await page.getByRole("button", { name: /Показать ещё/ }).click();
-  await expect(page.locator(".market-product")).toHaveCount(40);
-  await page.getByRole("combobox", { name: "Порядок товаров" }).selectOption("name");
-  await expect(page.locator(".market-product")).toHaveCount(10);
-  await page.getByRole("button", { name: "Оборудование", exact: true }).click();
-  await expect(page.locator(".market-product")).toHaveCount(15);
-  await expect(page.getByRole("button", { name: /Показать ещё/ })).toHaveCount(0);
+  await expect(page.getByRole("heading", { name: "Популярные товары", exact:true })).toBeVisible();
+  await expect(page.locator(".catalog-filters")).toHaveCount(0);
+  await expect(page.getByRole("combobox", { name: "Порядок товаров" })).toHaveCount(0);
+  await page.getByRole("link", { name: /Показать ещё/ }).click();
+  await expect(page).toHaveURL(/\/catalog$/);
   await page.goto("/catalog");
   await expect(page.locator(".market-product")).toHaveCount(30);
   await page.getByRole("button", { name: /Показать ещё/ }).click();
@@ -681,7 +676,7 @@ for (const direction of ["Tab", "Shift+Tab"]) {
 test("home and catalogue retain truthful ordering and keyboard selection", async ({ page }) => {
   await publicApi(page);
   await page.goto("/");
-  await expect(page.getByRole("combobox", { name: "Порядок товаров" })).toHaveValue("popular");
+  await expect(page.getByRole("combobox", { name: "Порядок товаров" })).toHaveCount(0);
   await page.goto("/catalog");
   const sort = page.getByRole("combobox", { name: "Порядок товаров" });
   await sort.focus();
@@ -755,7 +750,7 @@ test("toggle hover grows gently, returns smoothly and respects reduced motion an
   await publicApi(page);
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.emulateMedia({ reducedMotion: "no-preference" });
-  await page.goto("/");
+  await page.goto("/catalog");
   await expect(page.locator(".market-product")).toHaveCount(4);
   const selectors = [".market-lanes a", ".storefront-mode a", ".theme-toggle", ".product-favorite", ".catalog-sort select", ".catalog-categories button"];
   const scale = (selector: string) => page.locator(selector).first().evaluate(el => {

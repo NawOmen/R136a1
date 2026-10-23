@@ -51,6 +51,7 @@ test("glass really redraws on hover, rests in idle, and never moves readable con
     await expect(canvas).not.toHaveAttribute("data-probe-pixels", originalPixels!);
     await page.getByRole("button", { name: "Включить светлую тему", exact: true }).click();
     if (path === "/") {
+      await page.goto("/catalog");
       const food = page.getByRole("button", { name: "Продукты питания", exact: true });
       await food.focus(); await page.keyboard.press("Enter");
       await expect(food).toHaveAttribute("aria-pressed", "true");
@@ -213,7 +214,7 @@ test("solid category buttons gently grow without glass and preserve filtering", 
   await page.emulateMedia({ reducedMotion: "no-preference" });
   const assortment = [product, { ...product, id: "packaging", name: "Коробки", category: "Упаковка и тара" }, { ...product, id: "business", name: "Рабочая одежда", category: "Товары для бизнеса" }];
   await page.route("**/api/**", route => route.fulfill({ json: new URL(route.request().url()).pathname.endsWith("/products") ? assortment : [] }));
-  await page.goto("/");
+  await page.goto("/catalog");
   const rail = page.getByRole("complementary", { name: "Категории товаров" });
   await expect(rail.locator("canvas,.liquid-surface__material")).toHaveCount(0);
   for (const name of ["Все категории","Упаковка и тара","Товары для бизнеса"]) {

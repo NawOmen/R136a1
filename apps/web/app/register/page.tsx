@@ -32,7 +32,7 @@ export default function RegisterPage() {
     setSubmitting(true);
     try {
       const payload: RegisterInput = {
-        rules_version: "rules-1", privacy_version: "privacy-1",
+        rules_version: "rules-2", privacy_version: "privacy-2",
         rules_accepted: true, privacy_acknowledged: true,
         last_name: lastName.trim(),
         first_name: firstName.trim(),
