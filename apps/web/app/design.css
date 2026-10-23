@@ -518,7 +518,8 @@ html { --page-gutter:clamp(35px,2.73vw,44px); --header-gutter:clamp(32px,2.73vw,
 .storefront-products .catalog-title-group { width:100%; justify-content:flex-start; gap:16px; }
 .storefront-products .catalog-title-group h2 { font-size:clamp(28px,2.8vw,36px); }
 .catalog-more { gap:10px; border-radius:14px; }
-.storefront-products .catalog-title-group .catalog-more { margin:0; flex:none; }
+.storefront-products .catalog-title-group .catalog-more { margin:0; flex:none; min-height:34px; padding:7px 12px; gap:7px; border-radius:10px; font-size:13px; line-height:18px; }
+.storefront-products .catalog-more svg { width:16px; height:16px; }
 .notification-control { position:relative; }
 .notification-trigger { position:relative; }
 .notification-dot { position:absolute; right:6px; top:5px; width:7px; height:7px; background:var(--primary); border-radius:50%; }
