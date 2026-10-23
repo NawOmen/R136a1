@@ -1,6 +1,6 @@
 {
   "pid": 94299,
-  "phase": "training_remaining_676",
+  "phase": "failed",
   "started_utc": "2026-10-23T09:57:00Z",
   "planned_microbatches": 676,
   "planned_optimizer_updates": 338,
@@ -10,13 +10,16 @@
   "canonical_modified": false,
   "model_loaded": true,
   "last_completed_metric": {
-    "iteration": 73,
-    "train_loss": 1.6090481949504465e-05,
+    "iteration": 236,
+    "train_loss": 7.856975571485236e-06,
     "learning_rate": 4.999999873689376e-06,
-    "iterations_per_second": 0.17152391790890104,
-    "tokens_per_second": 29.502113880330977,
-    "trained_tokens": 18348,
+    "iterations_per_second": 0.15702739602045981,
+    "tokens_per_second": 25.90952034337587,
+    "trained_tokens": 63835,
     "peak_memory": 5.901844466
   },
-  "elapsed_seconds": 580.7555141448975
+  "elapsed_seconds": 1882.7519590854645,
+  "finished": false,
+  "error": "RuntimeError('[METAL] Command buffer execution failed: Impacting Interactivity (0000000e:kIOGPUCommandBufferCallbackErrorImpactingInteractivity).')",
+  "traceback": "Traceback (most recent call last):\n  File \"/Users/assweg/Desktop/b2b/porukam-ml-experiments/start_restored_continuation_20261023_v2.py\", line 75, in <module>\n    save('training-config.json',args);lora.run(types.SimpleNamespace(**args))\n                                      ~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/Users/assweg/Desktop/b2b/porukam-ml-experiments/.venv/lib/python3.13/site-packages/mlx_lm/lora.py\", line 364, in run\n    train_model(args, model, train_set, valid_set, training_callback)\n    ~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/Users/assweg/Desktop/b2b/porukam-ml-experiments/.venv/lib/python3.13/site-packages/mlx_lm/lora.py\", line 306, in train_model\n    train(\n    ~~~~~^\n        model=model,\n        ^^^^^^^^^^^^\n    ...<4 lines>...\n        training_callback=training_callback,\n        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n    )\n    ^\n  File \"/Users/assweg/Desktop/b2b/porukam-ml-experiments/start_restored_continuation_20261023_v2.py\", line 70, in training\n    result=original(**kw,loss=make_completion_loss(512,64),iterate_batches=iterator)\n  File \"/Users/assweg/Desktop/b2b/porukam-ml-experiments/.venv/lib/python3.13/site-packages/mlx_lm/tuner/trainer.py\", line 331, in train\n    mx.eval(state, losses, n_tokens, grad_accum)\n    ~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nRuntimeError: [METAL] Command buffer execution failed: Impacting Interactivity (0000000e:kIOGPUCommandBufferCallbackErrorImpactingInteractivity).\n"
 }
