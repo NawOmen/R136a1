@@ -51,6 +51,24 @@ test("stock labels and exact starting prices stay readable in both themes", asyn
   expect(errors).toEqual([]);
 });
 
+test("opening the manual form preserves a user's immediate move into the date field", async ({ page }) => {
+  await prepare(page, true);
+  await page.goto("/needs/new");
+  const opener = page.getByRole("button", { name: "Заполнить вручную", exact: true });
+  await expect(opener).toBeEnabled();
+  // Move focus before the queued opening frame, as a fast keyboard user can.
+  await opener.evaluate(async button => {
+    (button as HTMLButtonElement).click();
+    await Promise.resolve();
+    document.querySelector<HTMLInputElement>("#deadline_date")!.focus();
+    return new Promise<void>(resolve => requestAnimationFrame(() => requestAnimationFrame(() => resolve())));
+  });
+  const date = page.locator("#deadline_date");
+  await expect(date).toBeFocused();
+  await page.keyboard.insertText("290228");
+  await expect(date).toHaveValue("29.02.28");
+});
+
 test("Russian date input and calendar validate dates while drafts retain ISO", async ({ page }, info) => {
   const errors = await prepare(page, true);
   await page.goto("/needs/new");

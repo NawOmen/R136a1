@@ -363,8 +363,11 @@ export default function NewNeedPage() {
   }
 
   function openManual() {
+    const opener = document.activeElement;
     setManualExpanded(true);
     requestAnimationFrame(() => {
+      // Do not steal focus if the user has already moved into a field.
+      if (document.activeElement !== opener) return;
       manualRef.current?.scrollIntoView({ block: "start", behavior: "auto" });
       manualRef.current?.querySelector("summary")?.focus();
     });
