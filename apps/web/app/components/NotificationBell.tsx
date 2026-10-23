@@ -45,7 +45,7 @@ export function NotificationBell() {
     {open && <section id="header-notifications" className="notification-popover" aria-label="Уведомления">
       <div className="company-row"><h2>Уведомления</h2><button className="icon-button" aria-label="Закрыть уведомления" onClick={() => { setOpen(false); trigger.current?.focus(); }}><Icon name="close" /></button></div>
       {error && <p role="alert">{error}</p>}
-      {selected ? <div className="notification-detail"><button className="btn btn-secondary btn-sm" onClick={() => setSelected(null)}>← К списку</button><p>{selected.message}</p>{selected.type.startsWith("support_") && <Link href="/support">Открыть чат поддержки →</Link>}</div> : loading ? <p role="status">Загружаем…</p> : items.length ? <ul>{items.slice(0, 8).map(item => <li key={item.id}><button className={item.is_read ? "" : "unread"} onClick={() => void view(item)}>{item.message}</button></li>)}</ul> : <p className="hint">Новых событий пока нет.</p>}
+      {selected ? <div className="notification-detail"><button className="btn btn-secondary btn-sm" onClick={() => setSelected(null)}>← К списку</button><p>{selected.message}</p>{selected.type === "support_ticket_created" ? <Link href="/admin#tickets">Открыть сообщения поддержки →</Link> : selected.type.startsWith("support_") && <Link href="/support">Открыть чат поддержки →</Link>}</div> : loading ? <p role="status">Загружаем…</p> : items.length ? <ul>{items.slice(0, 8).map(item => <li key={item.id}><button className={item.is_read ? "" : "unread"} onClick={() => void view(item)}>{item.message}</button></li>)}</ul> : <p className="hint">Новых событий пока нет.</p>}
       <Link className="notification-all" href="/notifications">Все уведомления →</Link>
     </section>}
   </div>;

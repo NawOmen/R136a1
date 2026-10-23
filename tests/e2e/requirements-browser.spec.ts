@@ -344,6 +344,21 @@ test.describe("AI delivery dates use the buyer's calendar", () => {
   });
 });
 
+test("a new support message notification directs staff to the support queue", async ({ page }) => {
+  await page.addInitScript(() => localStorage.setItem("token", "synthetic-staff"));
+  const notification = { id: "notice", type: "support_ticket_created", message: "Новое сообщение в поддержку: Оплата", is_read: true };
+  await page.route("**/api/**", route => {
+    const path = new URL(route.request().url()).pathname;
+    if (path.endsWith("/auth/me")) return route.fulfill({ json: { user: { ...user, is_marketplace_admin: true }, companies: [] } });
+    if (path.endsWith("/notifications")) return route.fulfill({ json: [notification] });
+    return route.fulfill({ json: [] });
+  });
+  await page.goto("/");
+  await page.getByRole("button", { name: "Уведомления", exact: true }).click();
+  await page.getByRole("button", { name: notification.message, exact: true }).click();
+  await expect(page.locator(".notification-detail a")).toHaveAttribute("href", "/admin#tickets");
+});
+
 test("AI fills a single review card with compact decimals and stale confirmation cannot publish", async ({ page }) => {
   await prepare(page);
   let confirmations = 0, creations = 0;
