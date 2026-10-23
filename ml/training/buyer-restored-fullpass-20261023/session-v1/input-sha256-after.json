@@ -1,0 +1,15 @@
+{
+  "/Users/assweg/Desktop/b2b/porukam-ml-experiments/buyer-restored-fullpass-20261023/train.jsonl": "0d251904829fd3f65d64e2d39040fff1f53039e31cd940461e9231928e8781c1",
+  "/Users/assweg/Desktop/b2b/porukam-ml-experiments/buyer-restored-fullpass-20261023/valid.jsonl": "3adf389130115c29283b04b1a657c8eb7a4a68de6f27b5aaa7949769f58916de",
+  "/Users/assweg/Desktop/b2b/porukam-ml-experiments/buyer-restored-fullpass-20261023/schedule.json": "f5403fc4f979ab73abde05bd4ddf91cece83ca1ece33e4352ee246d429fa3839",
+  "/Users/assweg/Desktop/b2b/porukam-ml-experiments/buyer-restored-fullpass-20261023/preparation.json": "07a3d72a697c47f0b79d4ff8fc11cce3f4bce42ad91bb20c84d74a83167a858b",
+  "/Users/assweg/Desktop/b2b/porukam-ml-experiments/buyer-restored-fullpass-20261023/token-check.json": "b45c812755a7d3148fa1a524263048eef1208e0c4d4bbb181991cf29454db95c",
+  "/Users/assweg/Desktop/b2b/porukam-ml-experiments/porukam-trained-current/adapters.safetensors": "b2cf30b111109ee10439b4308cb97058ab00a85115eedd36118bbc534e52b665",
+  "/Users/assweg/Desktop/b2b/porukam-ml-experiments/porukam-trained-current/adapter_config.json": "f715c2cac7c67a67b59f3bc0d178df986bd766d34aa9e68d809d2cd2d6b01262",
+  "/Users/assweg/Desktop/b2b/porukam-ml-experiments/completion_loss.py": "f880c689d6f391113f76feff7e38ebeace8409a1a301ec4d67a46d03967e621d",
+  "/Users/assweg/Desktop/b2b/porukam-ml-experiments/frozen_gated_kernel_v2.py": "d7f3a7ef702514ca1da3f26467779a3d07d575ba2b7566a4e10b7befe4cbacb4",
+  "/Users/assweg/Desktop/b2b/porukam-ml-experiments/aligned_chat_process_v1.py": "4a9c76fd8bc2aff029dff28ab4922a8ad8e4a1b617f5c4a2ca5d0933da666af5",
+  "/Users/assweg/Desktop/b2b/porukam-ml-experiments/coverage_iterator_v1.py": "ae4c2d86e178e208ac46dee8cdbbaca149093fefd096f09bc6c6f9bbb62585c9",
+  "/Users/assweg/Desktop/b2b/porukam-ml-experiments/heavy_process_guard_v2.py": "267ae9fa4250aa1c2bae8ef34a3ce674bc9e7b8a1d29ac416ab098f43768ba3b",
+  "/Users/assweg/Desktop/b2b/porukam-ml-experiments/start_restored_fullpass_20261023.py": "098b6cb9db87ecb9f987a7a5d5ba10842adcbb468c2ed18085c4620a297ef1f7"
+}

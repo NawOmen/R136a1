@@ -1,0 +1,25 @@
+{
+  "pid": 87481,
+  "phase": "failed",
+  "started_utc": "2026-10-23T09:31:30Z",
+  "planned_microbatches": 676,
+  "planned_optimizer_updates": 338,
+  "saved_original_prefix": 1456,
+  "save_every": 128,
+  "host_pause_seconds": 1.0,
+  "canonical_modified": false,
+  "model_loaded": true,
+  "last_completed_metric": {
+    "iteration": 103,
+    "train_loss": 3.3893025829456747e-05,
+    "learning_rate": 4.999999873689376e-06,
+    "iterations_per_second": 0.13997032978954882,
+    "tokens_per_second": 46.61011981991975,
+    "trained_tokens": 26990,
+    "peak_memory": 5.92871422
+  },
+  "elapsed_seconds": 851.6630280017853,
+  "finished": false,
+  "error": "RuntimeError('[METAL] Command buffer execution failed: Insufficient Memory (00000008:kIOGPUCommandBufferCallbackErrorOutOfMemory).')",
+  "traceback": "Traceback (most recent call last):\n  File \"/Users/assweg/Desktop/b2b/porukam-ml-experiments/start_restored_continuation_20261023.py\", line 73, in <module>\n    save('training-config.json',args);lora.run(types.SimpleNamespace(**args))\n                                      ~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/Users/assweg/Desktop/b2b/porukam-ml-experiments/.venv/lib/python3.13/site-packages/mlx_lm/lora.py\", line 364, in run\n    train_model(args, model, train_set, valid_set, training_callback)\n    ~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/Users/assweg/Desktop/b2b/porukam-ml-experiments/.venv/lib/python3.13/site-packages/mlx_lm/lora.py\", line 306, in train_model\n    train(\n    ~~~~~^\n        model=model,\n        ^^^^^^^^^^^^\n    ...<4 lines>...\n        training_callback=training_callback,\n        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n    )\n    ^\n  File \"/Users/assweg/Desktop/b2b/porukam-ml-experiments/start_restored_continuation_20261023.py\", line 68, in training\n    result=original(**kw,loss=make_completion_loss(512,64),iterate_batches=iterator)\n  File \"/Users/assweg/Desktop/b2b/porukam-ml-experiments/.venv/lib/python3.13/site-packages/mlx_lm/tuner/trainer.py\", line 331, in train\n    mx.eval(state, losses, n_tokens, grad_accum)\n    ~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nRuntimeError: [METAL] Command buffer execution failed: Insufficient Memory (00000008:kIOGPUCommandBufferCallbackErrorOutOfMemory).\n"
+}

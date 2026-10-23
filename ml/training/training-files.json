@@ -1,0 +1,1328 @@
+{
+  "snapshot_utc": "2026-10-23T10:06:45Z",
+  "active_training_snapshot": true,
+  "canonical_version": "b2cf30b11110",
+  "training_in_progress_not_quality_accepted": true,
+  "training_rows": 2132,
+  "remaining_rows": 676,
+  "missing_historical_prose_rows": 28,
+  "base_weights_separate_existing_local_model": true,
+  "excluded": [
+    "runtime dependencies",
+    "caches",
+    "lock files",
+    "closed test files",
+    "unrelated local process command lines"
+  ],
+  "files": [
+    {
+      "path": "buyer-restored-fullpass-20261023/adapter-final/0000016_adapters.safetensors",
+      "bytes": 20448993,
+      "sha256": "f822a3576f91aa0ea2f22c7db9bd80d69a55800fb379f73659467dab507f0c4f",
+      "source_sha256": "f822a3576f91aa0ea2f22c7db9bd80d69a55800fb379f73659467dab507f0c4f",
+      "process_inventory_redacted": false
+    },
+    {
+      "path": "buyer-restored-fullpass-20261023/adapter-final/0000032_adapters.safetensors",
+      "bytes": 20448993,
+      "sha256": "18fccd578d48d4e6c76ab6ac547059933e728349eb5f104e1d36333fe57c239f",
+      "source_sha256": "18fccd578d48d4e6c76ab6ac547059933e728349eb5f104e1d36333fe57c239f",
+      "process_inventory_redacted": false
+    },
+    {
+      "path": "buyer-restored-fullpass-20261023/adapter-final/0000048_adapters.safetensors",
+      "bytes": 20448993,
+      "sha256": "0ed0225fbe4204934a38fc50488728788b90be85c047f59d22b523184902c246",
+      "source_sha256": "0ed0225fbe4204934a38fc50488728788b90be85c047f59d22b523184902c246",
+      "process_inventory_redacted": false
+    },
+    {
+      "path": "buyer-restored-fullpass-20261023/adapter-final/0000064_adapters.safetensors",
+      "bytes": 20448993,
+      "sha256": "051de02a23171167467ae13080c1bb24f4108bbe6d46def66659b982aebba7ed",
+      "source_sha256": "051de02a23171167467ae13080c1bb24f4108bbe6d46def66659b982aebba7ed",
+      "process_inventory_redacted": false
+    },
+    {
+      "path": "buyer-restored-fullpass-20261023/adapter-final/0000080_adapters.safetensors",
+      "bytes": 20448993,
+      "sha256": "36f4334f0e6f010deda5e89b305aec4f2e82717c323b35df18c1a1184e6a5638",
+      "source_sha256": "36f4334f0e6f010deda5e89b305aec4f2e82717c323b35df18c1a1184e6a5638",
+      "process_inventory_redacted": false
+    },
+    {
+      "path": "buyer-restored-fullpass-20261023/adapter-final/0000096_adapters.safetensors",
+      "bytes": 20448993,
+      "sha256": "5d38454091de915d0f6feb95d22d021f7a644cb53067b4ed772054c0c1dd8ff3",
+      "source_sha256": "5d38454091de915d0f6feb95d22d021f7a644cb53067b4ed772054c0c1dd8ff3",
+      "process_inventory_redacted": false
+    },
+    {
+      "path": "buyer-restored-fullpass-20261023/adapter-final/0000112_adapters.safetensors",
+      "bytes": 20448993,
+      "sha256": "b9cfdb6089766c4d5bb9accb222aa829e7a0f9d84c09e9aef4a0d61c7ed6a969",
+      "source_sha256": "b9cfdb6089766c4d5bb9accb222aa829e7a0f9d84c09e9aef4a0d61c7ed6a969",
+      "process_inventory_redacted": false
+    },
+    {
+      "path": "buyer-restored-fullpass-20261023/adapter-final/0000128_adapters.safetensors",
+      "bytes": 20448993,
+      "sha256": "3ce91626374a5b3705a81f073403f5ca1282fcb7a567308774139506b96ca20a",
+      "source_sha256": "3ce91626374a5b3705a81f073403f5ca1282fcb7a567308774139506b96ca20a",
+      "process_inventory_redacted": false
+    },
+    {
+      "path": "buyer-restored-fullpass-20261023/adapter-final/0000144_adapters.safetensors",
+      "bytes": 20448993,
+      "sha256": "f63888f12e5cfd82f0ff71d38713e56f03317ab28dc4467e69fb949f70684fc0",
+      "source_sha256": "f63888f12e5cfd82f0ff71d38713e56f03317ab28dc4467e69fb949f70684fc0",
+      "process_inventory_redacted": false
+    },
+    {
+      "path": "buyer-restored-fullpass-20261023/adapter-final/0000160_adapters.safetensors",
+      "bytes": 20448993,
+      "sha256": "0cbe6bed2118a7056cfc941980c508112e5f68baf20dc9468ef42c3c2f583906",
+      "source_sha256": "0cbe6bed2118a7056cfc941980c508112e5f68baf20dc9468ef42c3c2f583906",
+      "process_inventory_redacted": false
+    },
+    {
+      "path": "buyer-restored-fullpass-20261023/adapter-final/0000176_adapters.safetensors",
+      "bytes": 20448993,
+      "sha256": "c1dcf4b9290af8f2ed320f6d8190c0d4057f841af7ca06ac4e6f5e2dedd186e1",
+      "source_sha256": "c1dcf4b9290af8f2ed320f6d8190c0d4057f841af7ca06ac4e6f5e2dedd186e1",
+      "process_inventory_redacted": false
+    },
+    {
+      "path": "buyer-restored-fullpass-20261023/adapter-final/0000192_adapters.safetensors",
+      "bytes": 20448993,
+      "sha256": "c654cb6517bf452d7b229e5bfe0b2781c4d1f1ba573ed4105a10d62b2c0e885c",
+      "source_sha256": "c654cb6517bf452d7b229e5bfe0b2781c4d1f1ba573ed4105a10d62b2c0e885c",
+      "process_inventory_redacted": false
+    },
+    {
+      "path": "buyer-restored-fullpass-20261023/adapter-final/0000208_adapters.safetensors",
+      "bytes": 20448993,
+      "sha256": "bd4ec95d9e78e76bbbc97796e4642b6f22e49df6721e2e2c94d889682b0f8500",
+      "source_sha256": "bd4ec95d9e78e76bbbc97796e4642b6f22e49df6721e2e2c94d889682b0f8500",
+      "process_inventory_redacted": false
+    },
+    {
+      "path": "buyer-restored-fullpass-20261023/adapter-final/0000224_adapters.safetensors",
+      "bytes": 20448993,
+      "sha256": "17640251f14c0e65cc24257207f76bda6663a71e5745992f2fe0dd9cfc15b1e4",
+      "source_sha256": "17640251f14c0e65cc24257207f76bda6663a71e5745992f2fe0dd9cfc15b1e4",
+      "process_inventory_redacted": false
+    },
+    {
+      "path": "buyer-restored-fullpass-20261023/adapter-final/0000240_adapters.safetensors",
+      "bytes": 20448993,
+      "sha256": "3752452432ead2269ff2fd328cae1a56c2675c022d08c6a251b75d3af9c97691",
+      "source_sha256": "3752452432ead2269ff2fd328cae1a56c2675c022d08c6a251b75d3af9c97691",
+      "process_inventory_redacted": false
+    },
+    {
+      "path": "buyer-restored-fullpass-20261023/adapter-final/0000256_adapters.safetensors",
+      "bytes": 20448993,
+      "sha256": "471ccb6de803f5408581667c0939fdc4d67b4142a23308102ca9316f257c0400",
+      "source_sha256": "471ccb6de803f5408581667c0939fdc4d67b4142a23308102ca9316f257c0400",
+      "process_inventory_redacted": false
+    },
+    {
+      "path": "buyer-restored-fullpass-20261023/adapter-final/0000272_adapters.safetensors",
+      "bytes": 20448993,
+      "sha256": "5e1ca6e76d50e6a2bf91386b7c0af59c05327893e018f16220ed6ccb31f0d810",
+      "source_sha256": "5e1ca6e76d50e6a2bf91386b7c0af59c05327893e018f16220ed6ccb31f0d810",
+      "process_inventory_redacted": false
+    },
+    {
+      "path": "buyer-restored-fullpass-20261023/adapter-final/0000288_adapters.safetensors",
+      "bytes": 20448993,
+      "sha256": "759bddfa0dc54126a6fb74d2b4bd6eb31066313d9a4d13b3e37852365e5b4bcb",
+      "source_sha256": "759bddfa0dc54126a6fb74d2b4bd6eb31066313d9a4d13b3e37852365e5b4bcb",
+      "process_inventory_redacted": false
+    },
+    {
+      "path": "buyer-restored-fullpass-20261023/adapter-final/0000304_adapters.safetensors",
+      "bytes": 20448993,
+      "sha256": "e9aac17e15c9587c9e6107c3ebc8635bd599fac7c177f383533ec3befe4fee71",
+      "source_sha256": "e9aac17e15c9587c9e6107c3ebc8635bd599fac7c177f383533ec3befe4fee71",
+      "process_inventory_redacted": false
+    },
+    {
+      "path": "buyer-restored-fullpass-20261023/adapter-final/0000320_adapters.safetensors",
+      "bytes": 20448993,
+      "sha256": "6ff99d3835d3b1813d50d64c13d7dc68f05a4d389ec6140aa25baf9d2bcbead0",
+      "source_sha256": "6ff99d3835d3b1813d50d64c13d7dc68f05a4d389ec6140aa25baf9d2bcbead0",
+      "process_inventory_redacted": false
+    },
+    {
+      "path": "buyer-restored-fullpass-20261023/adapter-final/0000336_adapters.safetensors",
+      "bytes": 20448993,
+      "sha256": "19c6d5d382787c62ba0fe2f9e4db221ae4ff2070e3a7de732ae844af678b5ce1",
+      "source_sha256": "19c6d5d382787c62ba0fe2f9e4db221ae4ff2070e3a7de732ae844af678b5ce1",
+      "process_inventory_redacted": false
+    },
+    {
+      "path": "buyer-restored-fullpass-20261023/adapter-final/0000352_adapters.safetensors",
+      "bytes": 20448993,
+      "sha256": "7f13c7ad5d0d6cf83a71ab60430ad3ccd011dd668460b12790740ed140e427b6",
+      "source_sha256": "7f13c7ad5d0d6cf83a71ab60430ad3ccd011dd668460b12790740ed140e427b6",
+      "process_inventory_redacted": false
+    },
+    {
+      "path": "buyer-restored-fullpass-20261023/adapter-final/0000368_adapters.safetensors",
+      "bytes": 20448993,
+      "sha256": "0114a3028326ef9ab7d553b8c79150c4769936e9f2ea12b76de44a5d5166cf34",
+      "source_sha256": "0114a3028326ef9ab7d553b8c79150c4769936e9f2ea12b76de44a5d5166cf34",
+      "process_inventory_redacted": false
+    },
+    {
+      "path": "buyer-restored-fullpass-20261023/adapter-final/0000384_adapters.safetensors",
+      "bytes": 20448993,
+      "sha256": "2694072787d816a7fb8b728f567239e4f60dfff930925e6daeaa7b470d300a5e",
+      "source_sha256": "2694072787d816a7fb8b728f567239e4f60dfff930925e6daeaa7b470d300a5e",
+      "process_inventory_redacted": false
+    },
+    {
+      "path": "buyer-restored-fullpass-20261023/adapter-final/0000400_adapters.safetensors",
+      "bytes": 20448993,
+      "sha256": "a5c86c12b4fd4e0ff7c3dd966067ee1c28b2f491f46c7d31f2c1a0cfd023a1eb",
+      "source_sha256": "a5c86c12b4fd4e0ff7c3dd966067ee1c28b2f491f46c7d31f2c1a0cfd023a1eb",
+      "process_inventory_redacted": false
+    },
+    {
+      "path": "buyer-restored-fullpass-20261023/adapter-final/0000416_adapters.safetensors",
+      "bytes": 20448993,
+      "sha256": "be9fccc3b03372e35f3df11fbaaa8ee59de37db6aa825e94d6a6ef99b5f45a34",
+      "source_sha256": "be9fccc3b03372e35f3df11fbaaa8ee59de37db6aa825e94d6a6ef99b5f45a34",
+      "process_inventory_redacted": false
+    },
+    {
+      "path": "buyer-restored-fullpass-20261023/adapter-final/0000432_adapters.safetensors",
+      "bytes": 20448993,
+      "sha256": "ea8c0a5165cfb423ef5e78992247751711520bc834b0c9754d42967a65a63437",
+      "source_sha256": "ea8c0a5165cfb423ef5e78992247751711520bc834b0c9754d42967a65a63437",
+      "process_inventory_redacted": false
+    },
+    {
+      "path": "buyer-restored-fullpass-20261023/adapter-final/0000448_adapters.safetensors",
+      "bytes": 20448993,
+      "sha256": "3ed6c512f52536ca103230ee9f8a1831476f9e07d13157546fbab9ad3b0b1407",
+      "source_sha256": "3ed6c512f52536ca103230ee9f8a1831476f9e07d13157546fbab9ad3b0b1407",
+      "process_inventory_redacted": false
+    },
+    {
+      "path": "buyer-restored-fullpass-20261023/adapter-final/0000464_adapters.safetensors",
+      "bytes": 20448993,
+      "sha256": "d0c0b21248b61bdc5e64eefea2c711a7ae61e2a6387f7a6fdc98f77bfee64cef",
+      "source_sha256": "d0c0b21248b61bdc5e64eefea2c711a7ae61e2a6387f7a6fdc98f77bfee64cef",
+      "process_inventory_redacted": false
+    },
+    {
+      "path": "buyer-restored-fullpass-20261023/adapter-final/0000480_adapters.safetensors",
+      "bytes": 20448993,
+      "sha256": "fc809a47ce86bf7e367c14b1235e760969b7e5df17cbf2709840456a22aea4f4",
+      "source_sha256": "fc809a47ce86bf7e367c14b1235e760969b7e5df17cbf2709840456a22aea4f4",
+      "process_inventory_redacted": false
+    },
+    {
+      "path": "buyer-restored-fullpass-20261023/adapter-final/0000496_adapters.safetensors",
+      "bytes": 20448993,
+      "sha256": "a3877c9a6317858ca7333be1b9e4f332748c88a58b6c8d3890c1fd126a0ff0cb",
+      "source_sha256": "a3877c9a6317858ca7333be1b9e4f332748c88a58b6c8d3890c1fd126a0ff0cb",
+      "process_inventory_redacted": false
+    },
+    {
+      "path": "buyer-restored-fullpass-20261023/adapter-final/0000512_adapters.safetensors",
+      "bytes": 20448993,
+      "sha256": "0a650f9068daac692bdb9cd7ff8dd122463880de0af5a0a1fa1dcb9ac9358641",
+      "source_sha256": "0a650f9068daac692bdb9cd7ff8dd122463880de0af5a0a1fa1dcb9ac9358641",
+      "process_inventory_redacted": false
+    },
+    {
+      "path": "buyer-restored-fullpass-20261023/adapter-final/0000528_adapters.safetensors",
+      "bytes": 20448993,
+      "sha256": "97cc483a41e2a3fe1b70665c29e4821dc1ec5ed02d9f5de37814f68961523ea8",
+      "source_sha256": "97cc483a41e2a3fe1b70665c29e4821dc1ec5ed02d9f5de37814f68961523ea8",
+      "process_inventory_redacted": false
+    },
+    {
+      "path": "buyer-restored-fullpass-20261023/adapter-final/0000544_adapters.safetensors",
+      "bytes": 20448993,
+      "sha256": "2ef81d272c15160cfdbab1bd2841478f7cd1c5c93e0b49d28a9e7c0a3825ffc1",
+      "source_sha256": "2ef81d272c15160cfdbab1bd2841478f7cd1c5c93e0b49d28a9e7c0a3825ffc1",
+      "process_inventory_redacted": false
+    },
+    {
+      "path": "buyer-restored-fullpass-20261023/adapter-final/0000560_adapters.safetensors",
+      "bytes": 20448993,
+      "sha256": "b568d067245379310b531a4c0650804298caea365394d43ed654b7e29a90dd0d",
+      "source_sha256": "b568d067245379310b531a4c0650804298caea365394d43ed654b7e29a90dd0d",
+      "process_inventory_redacted": false
+    },
+    {
+      "path": "buyer-restored-fullpass-20261023/adapter-final/0000576_adapters.safetensors",
+      "bytes": 20448993,
+      "sha256": "6762de29034ca561eebafc71a1af3b489fcd0bcbcc4c8b8347b0aeca04e63973",
+      "source_sha256": "6762de29034ca561eebafc71a1af3b489fcd0bcbcc4c8b8347b0aeca04e63973",
+      "process_inventory_redacted": false
+    },
+    {
+      "path": "buyer-restored-fullpass-20261023/adapter-final/0000592_adapters.safetensors",
+      "bytes": 20448993,
+      "sha256": "c3826be91a260159af062637b792a7d84bc7b323bc1636c3aa2b1bfe60fbe9bf",
+      "source_sha256": "c3826be91a260159af062637b792a7d84bc7b323bc1636c3aa2b1bfe60fbe9bf",
+      "process_inventory_redacted": false
+    },
+    {
+      "path": "buyer-restored-fullpass-20261023/adapter-final/0000608_adapters.safetensors",
+      "bytes": 20448993,
+      "sha256": "ab080cc06ab8cde085bae7c8337c2484d7143996846c1d5aefa3998acbb168b6",
+      "source_sha256": "ab080cc06ab8cde085bae7c8337c2484d7143996846c1d5aefa3998acbb168b6",
+      "process_inventory_redacted": false
+    },
+    {
+      "path": "buyer-restored-fullpass-20261023/adapter-final/0000624_adapters.safetensors",
+      "bytes": 20448993,
+      "sha256": "ad2292d89970fd9c9b4452a735f0f5e428d71ab3229fee080b1eea50ec2ef364",
+      "source_sha256": "ad2292d89970fd9c9b4452a735f0f5e428d71ab3229fee080b1eea50ec2ef364",
+      "process_inventory_redacted": false
+    },
+    {
+      "path": "buyer-restored-fullpass-20261023/adapter-final/0000640_adapters.safetensors",
+      "bytes": 20448993,
+      "sha256": "641a22dbe3c1588ec0ca34d4faf2f9c7984fe8731327c6e9bd83ac93b0af30cc",
+      "source_sha256": "641a22dbe3c1588ec0ca34d4faf2f9c7984fe8731327c6e9bd83ac93b0af30cc",
+      "process_inventory_redacted": false
+    },
+    {
+      "path": "buyer-restored-fullpass-20261023/adapter-final/0000656_adapters.safetensors",
+      "bytes": 20448993,
+      "sha256": "01d5151425ba9bbc3d98b838b35b51d069dabc8a0933f1425e86abfff93efc94",
+      "source_sha256": "01d5151425ba9bbc3d98b838b35b51d069dabc8a0933f1425e86abfff93efc94",
+      "process_inventory_redacted": false
+    },
+    {
+      "path": "buyer-restored-fullpass-20261023/adapter-final/0000672_adapters.safetensors",
+      "bytes": 20448993,
+      "sha256": "48e7df3fa0e492b1d37d0f555f7c0e84169ff2d241ed1fa27bb2587b60f4fd84",
+      "source_sha256": "48e7df3fa0e492b1d37d0f555f7c0e84169ff2d241ed1fa27bb2587b60f4fd84",
+      "process_inventory_redacted": false
+    },
+    {
+      "path": "buyer-restored-fullpass-20261023/adapter-final/0000688_adapters.safetensors",
+      "bytes": 20448993,
+      "sha256": "11a9844928334543c7e6b8d9337f176f4a152b8490d083f2f93519df8179bdfc",
+      "source_sha256": "11a9844928334543c7e6b8d9337f176f4a152b8490d083f2f93519df8179bdfc",
+      "process_inventory_redacted": false
+    },
+    {
+      "path": "buyer-restored-fullpass-20261023/adapter-final/0000704_adapters.safetensors",
+      "bytes": 20448993,
+      "sha256": "45c02fb75bbb289a5fb7b39673367eb7239ad7397ce9bb28762dd0f63a2cb0be",
+      "source_sha256": "45c02fb75bbb289a5fb7b39673367eb7239ad7397ce9bb28762dd0f63a2cb0be",
+      "process_inventory_redacted": false
+    },
+    {
+      "path": "buyer-restored-fullpass-20261023/adapter-final/0000720_adapters.safetensors",
+      "bytes": 20448993,
+      "sha256": "de5785870c36ffe537db35f06554e4ec98cdcc92ff96cb80819361df5e321a7d",
+      "source_sha256": "de5785870c36ffe537db35f06554e4ec98cdcc92ff96cb80819361df5e321a7d",
+      "process_inventory_redacted": false
+    },
+    {
+      "path": "buyer-restored-fullpass-20261023/adapter-final/0000736_adapters.safetensors",
+      "bytes": 20448993,
+      "sha256": "3fca0deb77bcf158bb16a3ed1ea241c8b4bfaa58e3430cd13b71355bf62dcb91",
+      "source_sha256": "3fca0deb77bcf158bb16a3ed1ea241c8b4bfaa58e3430cd13b71355bf62dcb91",
+      "process_inventory_redacted": false
+    },
+    {
+      "path": "buyer-restored-fullpass-20261023/adapter-final/0000752_adapters.safetensors",
+      "bytes": 20448993,
+      "sha256": "7cdc18350bc4f35e2eeb644885de0de2ddd3a7fe8be792bcd5162fbc05bb6fb0",
+      "source_sha256": "7cdc18350bc4f35e2eeb644885de0de2ddd3a7fe8be792bcd5162fbc05bb6fb0",
+      "process_inventory_redacted": false
+    },
+    {
+      "path": "buyer-restored-fullpass-20261023/adapter-final/0000768_adapters.safetensors",
+      "bytes": 20448993,
+      "sha256": "5daa91e9b1aca07b40758778f3691726e684d1a488c72835c137efce25573110",
+      "source_sha256": "5daa91e9b1aca07b40758778f3691726e684d1a488c72835c137efce25573110",
+      "process_inventory_redacted": false
+    },
+    {
+      "path": "buyer-restored-fullpass-20261023/adapter-final/0000784_adapters.safetensors",
+      "bytes": 20448993,
+      "sha256": "a47281601ba1a17c558c7ffd8342ce605f8468dc6612b896ccf2bba060280239",
+      "source_sha256": "a47281601ba1a17c558c7ffd8342ce605f8468dc6612b896ccf2bba060280239",
+      "process_inventory_redacted": false
+    },
+    {
+      "path": "buyer-restored-fullpass-20261023/adapter-final/0000800_adapters.safetensors",
+      "bytes": 20448993,
+      "sha256": "87bd8e08a08fb400838f2f1eb638ff0b27cd263bd811e470e0fd3752295e57a5",
+      "source_sha256": "87bd8e08a08fb400838f2f1eb638ff0b27cd263bd811e470e0fd3752295e57a5",
+      "process_inventory_redacted": false
+    },
+    {
+      "path": "buyer-restored-fullpass-20261023/adapter-final/0000816_adapters.safetensors",
+      "bytes": 20448993,
+      "sha256": "bd7e360b6a399d5c35e5089bb96ec34e4b2e9179d9c477d94c238bd86bc666d9",
+      "source_sha256": "bd7e360b6a399d5c35e5089bb96ec34e4b2e9179d9c477d94c238bd86bc666d9",
+      "process_inventory_redacted": false
+    },
+    {
+      "path": "buyer-restored-fullpass-20261023/adapter-final/0000832_adapters.safetensors",
+      "bytes": 20448993,
+      "sha256": "62663407be9a096a7f5b07dfafb988b288e0b78e77ae314abce93e49660d006a",
+      "source_sha256": "62663407be9a096a7f5b07dfafb988b288e0b78e77ae314abce93e49660d006a",
+      "process_inventory_redacted": false
+    },
+    {
+      "path": "buyer-restored-fullpass-20261023/adapter-final/0000848_adapters.safetensors",
+      "bytes": 20448993,
+      "sha256": "ef4c834d4e452a87a1e9d6d1d42bcf323d0bf9979acf2886eb127b05104c857f",
+      "source_sha256": "ef4c834d4e452a87a1e9d6d1d42bcf323d0bf9979acf2886eb127b05104c857f",
+      "process_inventory_redacted": false
+    },
+    {
+      "path": "buyer-restored-fullpass-20261023/adapter-final/0000864_adapters.safetensors",
+      "bytes": 20448993,
+      "sha256": "eb373c3645c6d5dbac881391daaaa750c3546d4d7603f7223c65b77533be9672",
+      "source_sha256": "eb373c3645c6d5dbac881391daaaa750c3546d4d7603f7223c65b77533be9672",
+      "process_inventory_redacted": false
+    },
+    {
+      "path": "buyer-restored-fullpass-20261023/adapter-final/0000880_adapters.safetensors",
+      "bytes": 20448993,
+      "sha256": "468de95e218b3ba8d73f5f058c7b825b264e303defaf2c5405071a9754363788",
+      "source_sha256": "468de95e218b3ba8d73f5f058c7b825b264e303defaf2c5405071a9754363788",
+      "process_inventory_redacted": false
+    },
+    {
+      "path": "buyer-restored-fullpass-20261023/adapter-final/0000896_adapters.safetensors",
+      "bytes": 20448993,
+      "sha256": "72a9c53d3e4789c2f2d519999e95cbac9a753caa068b640e05b509ef2e5ae641",
+      "source_sha256": "72a9c53d3e4789c2f2d519999e95cbac9a753caa068b640e05b509ef2e5ae641",
+      "process_inventory_redacted": false
+    },
+    {
+      "path": "buyer-restored-fullpass-20261023/adapter-final/0000912_adapters.safetensors",
+      "bytes": 20448993,
+      "sha256": "d67122f69985f614f6dbc69fbaf1272e29f1bb90b05cc50a7b87571c40d9fa19",
+      "source_sha256": "d67122f69985f614f6dbc69fbaf1272e29f1bb90b05cc50a7b87571c40d9fa19",
+      "process_inventory_redacted": false
+    },
+    {
+      "path": "buyer-restored-fullpass-20261023/adapter-final/0000928_adapters.safetensors",
+      "bytes": 20448993,
+      "sha256": "4ee02fa5b11f8c1c85fdc030bb34ea44dccc2f8e3caac01dc9c5e29c305dc0fe",
+      "source_sha256": "4ee02fa5b11f8c1c85fdc030bb34ea44dccc2f8e3caac01dc9c5e29c305dc0fe",
+      "process_inventory_redacted": false
+    },
+    {
+      "path": "buyer-restored-fullpass-20261023/adapter-final/0000944_adapters.safetensors",
+      "bytes": 20448993,
+      "sha256": "ae09fc4a62c2f9fa902466b71159821cf7a6d595ad1f3d19df02affcffb70fc5",
+      "source_sha256": "ae09fc4a62c2f9fa902466b71159821cf7a6d595ad1f3d19df02affcffb70fc5",
+      "process_inventory_redacted": false
+    },
+    {
+      "path": "buyer-restored-fullpass-20261023/adapter-final/0000960_adapters.safetensors",
+      "bytes": 20448993,
+      "sha256": "704f60c05d5ade45c611effeb3fe94fcff438d799234beb2c5dd87e535b4b496",
+      "source_sha256": "704f60c05d5ade45c611effeb3fe94fcff438d799234beb2c5dd87e535b4b496",
+      "process_inventory_redacted": false
+    },
+    {
+      "path": "buyer-restored-fullpass-20261023/adapter-final/0000976_adapters.safetensors",
+      "bytes": 20448993,
+      "sha256": "8b3b4f2c418431d28fd6167130fc9e710bdf0b1fd1227ee5887e7d4db5112cc5",
+      "source_sha256": "8b3b4f2c418431d28fd6167130fc9e710bdf0b1fd1227ee5887e7d4db5112cc5",
+      "process_inventory_redacted": false
+    },
+    {
+      "path": "buyer-restored-fullpass-20261023/adapter-final/0000992_adapters.safetensors",
+      "bytes": 20448993,
+      "sha256": "e6f4ade94e3d4e1db7df7d69964b1c6d6dd84f5647c587589d4656b8129906fc",
+      "source_sha256": "e6f4ade94e3d4e1db7df7d69964b1c6d6dd84f5647c587589d4656b8129906fc",
+      "process_inventory_redacted": false
+    },
+    {
+      "path": "buyer-restored-fullpass-20261023/adapter-final/0001008_adapters.safetensors",
+      "bytes": 20448993,
+      "sha256": "363f9a84e711e614f3cf753d5773c3a8eff5eb890f06c6d0341117caa92d6391",
+      "source_sha256": "363f9a84e711e614f3cf753d5773c3a8eff5eb890f06c6d0341117caa92d6391",
+      "process_inventory_redacted": false
+    },
+    {
+      "path": "buyer-restored-fullpass-20261023/adapter-final/0001024_adapters.safetensors",
+      "bytes": 20448993,
+      "sha256": "3b6aa3dda0d0777367e1516303cb7d20dcefc65679d58dfb6aded001e9c4c928",
+      "source_sha256": "3b6aa3dda0d0777367e1516303cb7d20dcefc65679d58dfb6aded001e9c4c928",
+      "process_inventory_redacted": false
+    },
+    {
+      "path": "buyer-restored-fullpass-20261023/adapter-final/0001040_adapters.safetensors",
+      "bytes": 20448993,
+      "sha256": "d47ea18a0e5e0f69ae731395c08f5af3cfdf71d617e49dc8d4681185de476ee8",
+      "source_sha256": "d47ea18a0e5e0f69ae731395c08f5af3cfdf71d617e49dc8d4681185de476ee8",
+      "process_inventory_redacted": false
+    },
+    {
+      "path": "buyer-restored-fullpass-20261023/adapter-final/0001056_adapters.safetensors",
+      "bytes": 20448993,
+      "sha256": "936bf586c5be51428b2d7692aa671f89e1429c9f7b82cf914862a393bfd3e8a5",
+      "source_sha256": "936bf586c5be51428b2d7692aa671f89e1429c9f7b82cf914862a393bfd3e8a5",
+      "process_inventory_redacted": false
+    },
+    {
+      "path": "buyer-restored-fullpass-20261023/adapter-final/0001072_adapters.safetensors",
+      "bytes": 20448993,
+      "sha256": "0fb8729ffb54cbec759721b2615b50e7b9625eaad516eff507b31e6ce2974bf3",
+      "source_sha256": "0fb8729ffb54cbec759721b2615b50e7b9625eaad516eff507b31e6ce2974bf3",
+      "process_inventory_redacted": false
+    },
+    {
+      "path": "buyer-restored-fullpass-20261023/adapter-final/0001088_adapters.safetensors",
+      "bytes": 20448993,
+      "sha256": "a48445083feb2dd54efe280ae8a76fa2bcdd936e4ed0303bd38f1a95a397ee95",
+      "source_sha256": "a48445083feb2dd54efe280ae8a76fa2bcdd936e4ed0303bd38f1a95a397ee95",
+      "process_inventory_redacted": false
+    },
+    {
+      "path": "buyer-restored-fullpass-20261023/adapter-final/0001104_adapters.safetensors",
+      "bytes": 20448993,
+      "sha256": "f3822298c31f25cf588472c6ee17aab229d3f0db28b7c95121a08f31ebc706eb",
+      "source_sha256": "f3822298c31f25cf588472c6ee17aab229d3f0db28b7c95121a08f31ebc706eb",
+      "process_inventory_redacted": false
+    },
+    {
+      "path": "buyer-restored-fullpass-20261023/adapter-final/0001120_adapters.safetensors",
+      "bytes": 20448993,
+      "sha256": "80497101552aba4e7064a6768c31004c04509f8ccb4974be6687def3da8cecc1",
+      "source_sha256": "80497101552aba4e7064a6768c31004c04509f8ccb4974be6687def3da8cecc1",
+      "process_inventory_redacted": false
+    },
+    {
+      "path": "buyer-restored-fullpass-20261023/adapter-final/0001136_adapters.safetensors",
+      "bytes": 20448993,
+      "sha256": "540088aca28bfec2a6f789eb23a0355ede4f85e1bb9a4d94c4b873dc1b3d76ef",
+      "source_sha256": "540088aca28bfec2a6f789eb23a0355ede4f85e1bb9a4d94c4b873dc1b3d76ef",
+      "process_inventory_redacted": false
+    },
+    {
+      "path": "buyer-restored-fullpass-20261023/adapter-final/0001152_adapters.safetensors",
+      "bytes": 20448993,
+      "sha256": "c8828e9312310d0f6b32a81f5e7d42b889e37b8d7690886add0ed1165aae9f5a",
+      "source_sha256": "c8828e9312310d0f6b32a81f5e7d42b889e37b8d7690886add0ed1165aae9f5a",
+      "process_inventory_redacted": false
+    },
+    {
+      "path": "buyer-restored-fullpass-20261023/adapter-final/0001168_adapters.safetensors",
+      "bytes": 20448993,
+      "sha256": "9756f287acb5e4e10462ba283377ec0a42c6ab3b3f0ef23e537cbf1d51ff71e1",
+      "source_sha256": "9756f287acb5e4e10462ba283377ec0a42c6ab3b3f0ef23e537cbf1d51ff71e1",
+      "process_inventory_redacted": false
+    },
+    {
+      "path": "buyer-restored-fullpass-20261023/adapter-final/0001184_adapters.safetensors",
+      "bytes": 20448993,
+      "sha256": "789f74375a1c3e5a85331cfaac6f88e2e735b7d3d4e6f6b1dd1794648e712808",
+      "source_sha256": "789f74375a1c3e5a85331cfaac6f88e2e735b7d3d4e6f6b1dd1794648e712808",
+      "process_inventory_redacted": false
+    },
+    {
+      "path": "buyer-restored-fullpass-20261023/adapter-final/0001200_adapters.safetensors",
+      "bytes": 20448993,
+      "sha256": "d0ac0f2c14051d4433984f7e0acf0a044a975e890cc815334e2dd0b351139200",
+      "source_sha256": "d0ac0f2c14051d4433984f7e0acf0a044a975e890cc815334e2dd0b351139200",
+      "process_inventory_redacted": false
+    },
+    {
+      "path": "buyer-restored-fullpass-20261023/adapter-final/0001216_adapters.safetensors",
+      "bytes": 20448993,
+      "sha256": "955d4f4258a3c06d6bef3e4c289a2080eee635758d552e7c0d3ce826127cd819",
+      "source_sha256": "955d4f4258a3c06d6bef3e4c289a2080eee635758d552e7c0d3ce826127cd819",
+      "process_inventory_redacted": false
+    },
+    {
+      "path": "buyer-restored-fullpass-20261023/adapter-final/0001232_adapters.safetensors",
+      "bytes": 20448993,
+      "sha256": "54154eda04010f76c8d7d53b522ce53cb7febf3b3fcbd9fc7e8451ee27e0fb21",
+      "source_sha256": "54154eda04010f76c8d7d53b522ce53cb7febf3b3fcbd9fc7e8451ee27e0fb21",
+      "process_inventory_redacted": false
+    },
+    {
+      "path": "buyer-restored-fullpass-20261023/adapter-final/0001248_adapters.safetensors",
+      "bytes": 20448993,
+      "sha256": "fbcca688b6ab17f3503b8be23cdeb049538f126945c90d63caeed3afbfb2a676",
+      "source_sha256": "fbcca688b6ab17f3503b8be23cdeb049538f126945c90d63caeed3afbfb2a676",
+      "process_inventory_redacted": false
+    },
+    {
+      "path": "buyer-restored-fullpass-20261023/adapter-final/0001264_adapters.safetensors",
+      "bytes": 20448993,
+      "sha256": "9d0b24cbe6439f2db7ddfb07a607f679af1fefc021df42feb869a4f2058bea4d",
+      "source_sha256": "9d0b24cbe6439f2db7ddfb07a607f679af1fefc021df42feb869a4f2058bea4d",
+      "process_inventory_redacted": false
+    },
+    {
+      "path": "buyer-restored-fullpass-20261023/adapter-final/0001280_adapters.safetensors",
+      "bytes": 20448993,
+      "sha256": "17da413f72d230464f6fe8a28de4c68d3f6048a3193f7b0534e8a9da3dd15e2f",
+      "source_sha256": "17da413f72d230464f6fe8a28de4c68d3f6048a3193f7b0534e8a9da3dd15e2f",
+      "process_inventory_redacted": false
+    },
+    {
+      "path": "buyer-restored-fullpass-20261023/adapter-final/0001296_adapters.safetensors",
+      "bytes": 20448993,
+      "sha256": "0dcd35444e4dfd977a65c4b400ac77f2105fc3689572bb9e33cc304a5de83faf",
+      "source_sha256": "0dcd35444e4dfd977a65c4b400ac77f2105fc3689572bb9e33cc304a5de83faf",
+      "process_inventory_redacted": false
+    },
+    {
+      "path": "buyer-restored-fullpass-20261023/adapter-final/0001312_adapters.safetensors",
+      "bytes": 20448993,
+      "sha256": "a7aba1120ceac991363662b502306c9a356cd9fe4c3a44f366f86819721db63c",
+      "source_sha256": "a7aba1120ceac991363662b502306c9a356cd9fe4c3a44f366f86819721db63c",
+      "process_inventory_redacted": false
+    },
+    {
+      "path": "buyer-restored-fullpass-20261023/adapter-final/0001328_adapters.safetensors",
+      "bytes": 20448993,
+      "sha256": "ac3620e7fe108e42932436f54941a16ff1544a74d033ec8a6b6085d06058b8e3",
+      "source_sha256": "ac3620e7fe108e42932436f54941a16ff1544a74d033ec8a6b6085d06058b8e3",
+      "process_inventory_redacted": false
+    },
+    {
+      "path": "buyer-restored-fullpass-20261023/adapter-final/0001344_adapters.safetensors",
+      "bytes": 20448993,
+      "sha256": "15c54c7deb66c49f0cdef84c8227d03872c571b9fada8e5f319bd129a9a1b8c9",
+      "source_sha256": "15c54c7deb66c49f0cdef84c8227d03872c571b9fada8e5f319bd129a9a1b8c9",
+      "process_inventory_redacted": false
+    },
+    {
+      "path": "buyer-restored-fullpass-20261023/adapter-final/0001360_adapters.safetensors",
+      "bytes": 20448993,
+      "sha256": "d340d0ed3b699b01d435e1af9586bda62444a989f490a51946dc64e41b10fccc",
+      "source_sha256": "d340d0ed3b699b01d435e1af9586bda62444a989f490a51946dc64e41b10fccc",
+      "process_inventory_redacted": false
+    },
+    {
+      "path": "buyer-restored-fullpass-20261023/adapter-final/0001376_adapters.safetensors",
+      "bytes": 20448993,
+      "sha256": "7ac46750e7198f727e1cdb3e7842664b15ab7e9c80419035ec3b0831037c8e61",
+      "source_sha256": "7ac46750e7198f727e1cdb3e7842664b15ab7e9c80419035ec3b0831037c8e61",
+      "process_inventory_redacted": false
+    },
+    {
+      "path": "buyer-restored-fullpass-20261023/adapter-final/0001392_adapters.safetensors",
+      "bytes": 20448993,
+      "sha256": "9aaab612484036b34fed21e2235fb43a40c0950cc7e10100e426415ef19e3660",
+      "source_sha256": "9aaab612484036b34fed21e2235fb43a40c0950cc7e10100e426415ef19e3660",
+      "process_inventory_redacted": false
+    },
+    {
+      "path": "buyer-restored-fullpass-20261023/adapter-final/0001408_adapters.safetensors",
+      "bytes": 20448993,
+      "sha256": "ec444edfa4f39df8e4f047e2d08503f9f26be07b7bf510d2cf9ee532c55a3645",
+      "source_sha256": "ec444edfa4f39df8e4f047e2d08503f9f26be07b7bf510d2cf9ee532c55a3645",
+      "process_inventory_redacted": false
+    },
+    {
+      "path": "buyer-restored-fullpass-20261023/adapter-final/0001424_adapters.safetensors",
+      "bytes": 20448993,
+      "sha256": "68ca2059ef018248b964e7a0cecdc885f29932dbf93fe1bc17d6626132ee1d29",
+      "source_sha256": "68ca2059ef018248b964e7a0cecdc885f29932dbf93fe1bc17d6626132ee1d29",
+      "process_inventory_redacted": false
+    },
+    {
+      "path": "buyer-restored-fullpass-20261023/adapter-final/0001440_adapters.safetensors",
+      "bytes": 20448993,
+      "sha256": "d2ea4ba43f2c2725bee9c6b57c1cff2646bf2f08ec468046e877cc239f0b883b",
+      "source_sha256": "d2ea4ba43f2c2725bee9c6b57c1cff2646bf2f08ec468046e877cc239f0b883b",
+      "process_inventory_redacted": false
+    },
+    {
+      "path": "buyer-restored-fullpass-20261023/adapter-final/0001456_adapters.safetensors",
+      "bytes": 20448993,
+      "sha256": "9b9670d64468426168b8ed376abd941d1abe0a533d0fc41633d4665f9804990d",
+      "source_sha256": "9b9670d64468426168b8ed376abd941d1abe0a533d0fc41633d4665f9804990d",
+      "process_inventory_redacted": false
+    },
+    {
+      "path": "buyer-restored-fullpass-20261023/adapter-final/adapter_config.json",
+      "bytes": 1257,
+      "sha256": "cb50de9a8e9a5db33b378ccc39c89d4ae7565fcf797f775782e78c9c019f097b",
+      "source_sha256": "cb50de9a8e9a5db33b378ccc39c89d4ae7565fcf797f775782e78c9c019f097b",
+      "process_inventory_redacted": false
+    },
+    {
+      "path": "buyer-restored-fullpass-20261023/adapter-final/adapters.safetensors",
+      "bytes": 20448993,
+      "sha256": "9b9670d64468426168b8ed376abd941d1abe0a533d0fc41633d4665f9804990d",
+      "source_sha256": "9b9670d64468426168b8ed376abd941d1abe0a533d0fc41633d4665f9804990d",
+      "process_inventory_redacted": false
+    },
+    {
+      "path": "buyer-restored-fullpass-20261023/preparation.json",
+      "bytes": 1823,
+      "sha256": "07a3d72a697c47f0b79d4ff8fc11cce3f4bce42ad91bb20c84d74a83167a858b",
+      "source_sha256": "07a3d72a697c47f0b79d4ff8fc11cce3f4bce42ad91bb20c84d74a83167a858b",
+      "process_inventory_redacted": false
+    },
+    {
+      "path": "buyer-restored-fullpass-20261023/schedule.json",
+      "bytes": 251138,
+      "sha256": "f5403fc4f979ab73abde05bd4ddf91cece83ca1ece33e4352ee246d429fa3839",
+      "source_sha256": "f5403fc4f979ab73abde05bd4ddf91cece83ca1ece33e4352ee246d429fa3839",
+      "process_inventory_redacted": false
+    },
+    {
+      "path": "buyer-restored-fullpass-20261023/session-v1/failure-cleanup.json",
+      "bytes": 1176,
+      "sha256": "b6ca5065a7181ae7c0ae6ec788bee6fe89a326a242e24c1e21b41393eb3de715",
+      "source_sha256": "7d1f5eb48afa044f8f136f4c6e9355c8f4765fba162408b4ff74097928a0232d",
+      "process_inventory_redacted": true
+    },
+    {
+      "path": "buyer-restored-fullpass-20261023/session-v1/input-sha256-after.json",
+      "bytes": 2073,
+      "sha256": "3b5103438161dfd36dd4f800d40e0d0b222e1c19e3e9c732e6671bbc1ceb6351",
+      "source_sha256": "3b5103438161dfd36dd4f800d40e0d0b222e1c19e3e9c732e6671bbc1ceb6351",
+      "process_inventory_redacted": false
+    },
+    {
+      "path": "buyer-restored-fullpass-20261023/session-v1/input-sha256.json",
+      "bytes": 2073,
+      "sha256": "3b5103438161dfd36dd4f800d40e0d0b222e1c19e3e9c732e6671bbc1ceb6351",
+      "source_sha256": "3b5103438161dfd36dd4f800d40e0d0b222e1c19e3e9c732e6671bbc1ceb6351",
+      "process_inventory_redacted": false
+    },
+    {
+      "path": "buyer-restored-fullpass-20261023/session-v1/kernel-parity.json",
+      "bytes": 673,
+      "sha256": "68efe31eed894732b03a5217b8527179deb0a4e21681832223eb4250f3b8e077",
+      "source_sha256": "68efe31eed894732b03a5217b8527179deb0a4e21681832223eb4250f3b8e077",
+      "process_inventory_redacted": false
+    },
+    {
+      "path": "buyer-restored-fullpass-20261023/session-v1/locks-released.json",
+      "bytes": 103,
+      "sha256": "3f5845b1f2794dc8119d773fd80d7f2f595b34c92a28f29244d2a18fbf1fbc08",
+      "source_sha256": "3f5845b1f2794dc8119d773fd80d7f2f595b34c92a28f29244d2a18fbf1fbc08",
+      "process_inventory_redacted": false
+    },
+    {
+      "path": "buyer-restored-fullpass-20261023/session-v1/memory-stability.json",
+      "bytes": 226,
+      "sha256": "5ec62b29f99914a70b2004ffba7cf582cd8efb58b8ddef7e4dd9009cae033a36",
+      "source_sha256": "5ec62b29f99914a70b2004ffba7cf582cd8efb58b8ddef7e4dd9009cae033a36",
+      "process_inventory_redacted": false
+    },
+    {
+      "path": "buyer-restored-fullpass-20261023/session-v1/metrics.jsonl",
+      "bytes": 347658,
+      "sha256": "da67b5cd9d5bed8a4da22316b7d0a5697d7141c217f99aa4f14b531d0f7a4512",
+      "source_sha256": "da67b5cd9d5bed8a4da22316b7d0a5697d7141c217f99aa4f14b531d0f7a4512",
+      "process_inventory_redacted": false
+    },
+    {
+      "path": "buyer-restored-fullpass-20261023/session-v1/pip-freeze.txt",
+      "bytes": 651,
+      "sha256": "3e664e9642a05c27fc59c6a1108c0e89e1e646d06b0666376c05639a314d9a8e",
+      "source_sha256": "3e664e9642a05c27fc59c6a1108c0e89e1e646d06b0666376c05639a314d9a8e",
+      "process_inventory_redacted": false
+    },
+    {
+      "path": "buyer-restored-fullpass-20261023/session-v1/preflight-processes.json",
+      "bytes": 412,
+      "sha256": "f431eb6ea44104ddf2930a65580d8bf047b71cdde2c5e067375dbc1b8f044d18",
+      "source_sha256": "1c2b83e8c3b2e9dca809dfba4299c1fe0b781eaadc4a52dcb1bc95ab9a012762",
+      "process_inventory_redacted": true
+    },
+    {
+      "path": "buyer-restored-fullpass-20261023/session-v1/state.json",
+      "bytes": 2251,
+      "sha256": "7c1615b3009ac1457cd1b16b7c10cd9bd5148da741a9675c78db397c05a6a79b",
+      "source_sha256": "7c1615b3009ac1457cd1b16b7c10cd9bd5148da741a9675c78db397c05a6a79b",
+      "process_inventory_redacted": false
+    },
+    {
+      "path": "buyer-restored-fullpass-20261023/session-v1/train-batches-issued.jsonl",
+      "bytes": 198249,
+      "sha256": "06ca5d87ba1b3bf1d02d9700cf55ae278558564e969212bd31a0937dcae5ed9b",
+      "source_sha256": "06ca5d87ba1b3bf1d02d9700cf55ae278558564e969212bd31a0937dcae5ed9b",
+      "process_inventory_redacted": false
+    },
+    {
+      "path": "buyer-restored-fullpass-20261023/session-v1/trainable-scope.json",
+      "bytes": 954,
+      "sha256": "0402f572e88bf377f91d64bd66837def08d517edbcd48fbb7b2ddc601438de5b",
+      "source_sha256": "0402f572e88bf377f91d64bd66837def08d517edbcd48fbb7b2ddc601438de5b",
+      "process_inventory_redacted": false
+    },
+    {
+      "path": "buyer-restored-fullpass-20261023/session-v1/training-config.json",
+      "bytes": 1162,
+      "sha256": "0b67923fa076d93d1f01fc42af16df3640a8139f363cd12b2539c15ba3c150b2",
+      "source_sha256": "0b67923fa076d93d1f01fc42af16df3640a8139f363cd12b2539c15ba3c150b2",
+      "process_inventory_redacted": false
+    },
+    {
+      "path": "buyer-restored-fullpass-20261023/session-v1/validation-loss.jsonl",
+      "bytes": 511,
+      "sha256": "0b18c23f67e44b20d64da81e433670a86e299a5e7b9c2c77a2b8478dac48d92e",
+      "source_sha256": "0b18c23f67e44b20d64da81e433670a86e299a5e7b9c2c77a2b8478dac48d92e",
+      "process_inventory_redacted": false
+    },
+    {
+      "path": "buyer-restored-fullpass-20261023/token-check.json",
+      "bytes": 255490,
+      "sha256": "b45c812755a7d3148fa1a524263048eef1208e0c4d4bbb181991cf29454db95c",
+      "source_sha256": "b45c812755a7d3148fa1a524263048eef1208e0c4d4bbb181991cf29454db95c",
+      "process_inventory_redacted": false
+    },
+    {
+      "path": "buyer-restored-fullpass-20261023/train.jsonl",
+      "bytes": 12023811,
+      "sha256": "0d251904829fd3f65d64e2d39040fff1f53039e31cd940461e9231928e8781c1",
+      "source_sha256": "0d251904829fd3f65d64e2d39040fff1f53039e31cd940461e9231928e8781c1",
+      "process_inventory_redacted": false
+    },
+    {
+      "path": "buyer-restored-fullpass-20261023/valid.jsonl",
+      "bytes": 3294734,
+      "sha256": "3adf389130115c29283b04b1a657c8eb7a4a68de6f27b5aaa7949769f58916de",
+      "source_sha256": "3adf389130115c29283b04b1a657c8eb7a4a68de6f27b5aaa7949769f58916de",
+      "process_inventory_redacted": false
+    },
+    {
+      "path": "buyer-restored-continuation-20261023/adapter-final/adapter_config.json",
+      "bytes": 1296,
+      "sha256": "31c191b456f6743b7fcc45b8d72f2614e942a2dc3d09fa6d498617d769d969f0",
+      "source_sha256": "31c191b456f6743b7fcc45b8d72f2614e942a2dc3d09fa6d498617d769d969f0",
+      "process_inventory_redacted": false
+    },
+    {
+      "path": "buyer-restored-continuation-20261023/adapter-final-v2/adapter_config.json",
+      "bytes": 1299,
+      "sha256": "e7b2f4d9384e3129d29de6897cccd34520851d035285e86e21f728c6ee7304d6",
+      "source_sha256": "e7b2f4d9384e3129d29de6897cccd34520851d035285e86e21f728c6ee7304d6",
+      "process_inventory_redacted": false
+    },
+    {
+      "path": "buyer-restored-continuation-20261023/preparation.json",
+      "bytes": 1364,
+      "sha256": "8ca6d6064f7c2aaeae3ddcf1c1066d568b9dfdd876d85be254cfb8277b54a619",
+      "source_sha256": "8ca6d6064f7c2aaeae3ddcf1c1066d568b9dfdd876d85be254cfb8277b54a619",
+      "process_inventory_redacted": false
+    },
+    {
+      "path": "buyer-restored-continuation-20261023/schedule.json",
+      "bytes": 118411,
+      "sha256": "192ada7ab080ec46293ba3dff14da2b0176cfb9c611acf8fd8cd1d4aad893518",
+      "source_sha256": "192ada7ab080ec46293ba3dff14da2b0176cfb9c611acf8fd8cd1d4aad893518",
+      "process_inventory_redacted": false
+    },
+    {
+      "path": "buyer-restored-continuation-20261023/session-v1/failure-cleanup.json",
+      "bytes": 978,
+      "sha256": "92e2becb21977e9e4537b980870e77a3d14e24ea486fb0df8fdc3fe47077bd7a",
+      "source_sha256": "47bdf6f0c5ed29ce77615e013828e5ba86626840578f0520efaffec9867ef9b3",
+      "process_inventory_redacted": true
+    },
+    {
+      "path": "buyer-restored-continuation-20261023/session-v1/input-sha256-after.json",
+      "bytes": 2295,
+      "sha256": "b0efa7404411c031d9c0278b7ba9064339614ff99214ff2efc4e70dd1dae7b30",
+      "source_sha256": "b0efa7404411c031d9c0278b7ba9064339614ff99214ff2efc4e70dd1dae7b30",
+      "process_inventory_redacted": false
+    },
+    {
+      "path": "buyer-restored-continuation-20261023/session-v1/input-sha256.json",
+      "bytes": 2295,
+      "sha256": "b0efa7404411c031d9c0278b7ba9064339614ff99214ff2efc4e70dd1dae7b30",
+      "source_sha256": "b0efa7404411c031d9c0278b7ba9064339614ff99214ff2efc4e70dd1dae7b30",
+      "process_inventory_redacted": false
+    },
+    {
+      "path": "buyer-restored-continuation-20261023/session-v1/kernel-parity.json",
+      "bytes": 673,
+      "sha256": "68efe31eed894732b03a5217b8527179deb0a4e21681832223eb4250f3b8e077",
+      "source_sha256": "68efe31eed894732b03a5217b8527179deb0a4e21681832223eb4250f3b8e077",
+      "process_inventory_redacted": false
+    },
+    {
+      "path": "buyer-restored-continuation-20261023/session-v1/locks-released.json",
+      "bytes": 103,
+      "sha256": "db089935de96774c2ee72bbc4cb50efe327a4ec0ba64b7109bed0d6b4102f2cf",
+      "source_sha256": "db089935de96774c2ee72bbc4cb50efe327a4ec0ba64b7109bed0d6b4102f2cf",
+      "process_inventory_redacted": false
+    },
+    {
+      "path": "buyer-restored-continuation-20261023/session-v1/memory-stability.json",
+      "bytes": 226,
+      "sha256": "5bfeb74447b141a7e50b5e26664cbd9d6a73d7aa947aeaa8e4748b5a468a59bd",
+      "source_sha256": "5bfeb74447b141a7e50b5e26664cbd9d6a73d7aa947aeaa8e4748b5a468a59bd",
+      "process_inventory_redacted": false
+    },
+    {
+      "path": "buyer-restored-continuation-20261023/session-v1/metrics.jsonl",
+      "bytes": 24051,
+      "sha256": "5960765cb7ea8cc9bbe2ed37ee620fccd21af7efd1ad9a1aa18f4663ed584c5b",
+      "source_sha256": "5960765cb7ea8cc9bbe2ed37ee620fccd21af7efd1ad9a1aa18f4663ed584c5b",
+      "process_inventory_redacted": false
+    },
+    {
+      "path": "buyer-restored-continuation-20261023/session-v1/pip-freeze.txt",
+      "bytes": 651,
+      "sha256": "3e664e9642a05c27fc59c6a1108c0e89e1e646d06b0666376c05639a314d9a8e",
+      "source_sha256": "3e664e9642a05c27fc59c6a1108c0e89e1e646d06b0666376c05639a314d9a8e",
+      "process_inventory_redacted": false
+    },
+    {
+      "path": "buyer-restored-continuation-20261023/session-v1/preflight-processes.json",
+      "bytes": 505,
+      "sha256": "2fa740ab0896f1aa644079839132a1d72c6810d70bfdf83e54ef3b1ed1e2005f",
+      "source_sha256": "73798dd01acc2c6e7e8357e23e20113abb3ec48afd65dc6637ee3f0132eb5639",
+      "process_inventory_redacted": true
+    },
+    {
+      "path": "buyer-restored-continuation-20261023/session-v1/state.json",
+      "bytes": 2309,
+      "sha256": "ac801ea955ce59a2ee4bf3b8053ba9b4f4e488de11cd12f546b1a83c4b9a1347",
+      "source_sha256": "ac801ea955ce59a2ee4bf3b8053ba9b4f4e488de11cd12f546b1a83c4b9a1347",
+      "process_inventory_redacted": false
+    },
+    {
+      "path": "buyer-restored-continuation-20261023/session-v1/train-batches-issued.jsonl",
+      "bytes": 18945,
+      "sha256": "a37571fd92450b5418ce41e50981f96e4de918a3824f208dbe42e1152921a056",
+      "source_sha256": "a37571fd92450b5418ce41e50981f96e4de918a3824f208dbe42e1152921a056",
+      "process_inventory_redacted": false
+    },
+    {
+      "path": "buyer-restored-continuation-20261023/session-v1/trainable-scope.json",
+      "bytes": 954,
+      "sha256": "0402f572e88bf377f91d64bd66837def08d517edbcd48fbb7b2ddc601438de5b",
+      "source_sha256": "0402f572e88bf377f91d64bd66837def08d517edbcd48fbb7b2ddc601438de5b",
+      "process_inventory_redacted": false
+    },
+    {
+      "path": "buyer-restored-continuation-20261023/session-v1/training-config.json",
+      "bytes": 1201,
+      "sha256": "61d252dfd2c4362aab95ccb23992dc6d6999ce98de2f8b23069493847ef61cc4",
+      "source_sha256": "61d252dfd2c4362aab95ccb23992dc6d6999ce98de2f8b23069493847ef61cc4",
+      "process_inventory_redacted": false
+    },
+    {
+      "path": "buyer-restored-continuation-20261023/session-v1/validation-loss.jsonl",
+      "bytes": 84,
+      "sha256": "9d67936bd5038979dcb67776af70080bb8d8e3ac267ee537f5b228b4653522e5",
+      "source_sha256": "9d67936bd5038979dcb67776af70080bb8d8e3ac267ee537f5b228b4653522e5",
+      "process_inventory_redacted": false
+    },
+    {
+      "path": "buyer-restored-continuation-20261023/session-v2/input-sha256.json",
+      "bytes": 2298,
+      "sha256": "76a0fccd19546b1307830caba7e552a112426db397931fe5dcd8df281c81e2f5",
+      "source_sha256": "76a0fccd19546b1307830caba7e552a112426db397931fe5dcd8df281c81e2f5",
+      "process_inventory_redacted": false
+    },
+    {
+      "path": "buyer-restored-continuation-20261023/session-v2/kernel-parity.json",
+      "bytes": 673,
+      "sha256": "68efe31eed894732b03a5217b8527179deb0a4e21681832223eb4250f3b8e077",
+      "source_sha256": "68efe31eed894732b03a5217b8527179deb0a4e21681832223eb4250f3b8e077",
+      "process_inventory_redacted": false
+    },
+    {
+      "path": "buyer-restored-continuation-20261023/session-v2/memory-stability.json",
+      "bytes": 227,
+      "sha256": "9fe6c55708c67103cd51dd665a0006ce77e9d2b7226ce9fdd9762c55922d1531",
+      "source_sha256": "9fe6c55708c67103cd51dd665a0006ce77e9d2b7226ce9fdd9762c55922d1531",
+      "process_inventory_redacted": false
+    },
+    {
+      "path": "buyer-restored-continuation-20261023/session-v2/metrics.jsonl",
+      "bytes": 17065,
+      "sha256": "0d283f170fbdf5552651abe0235c0208b2a143a26aaa15d3ee90ffb82e56ff82",
+      "source_sha256": "0d283f170fbdf5552651abe0235c0208b2a143a26aaa15d3ee90ffb82e56ff82",
+      "process_inventory_redacted": false
+    },
+    {
+      "path": "buyer-restored-continuation-20261023/session-v2/pip-freeze.txt",
+      "bytes": 651,
+      "sha256": "3e664e9642a05c27fc59c6a1108c0e89e1e646d06b0666376c05639a314d9a8e",
+      "source_sha256": "3e664e9642a05c27fc59c6a1108c0e89e1e646d06b0666376c05639a314d9a8e",
+      "process_inventory_redacted": false
+    },
+    {
+      "path": "buyer-restored-continuation-20261023/session-v2/preflight-processes.json",
+      "bytes": 505,
+      "sha256": "2fa740ab0896f1aa644079839132a1d72c6810d70bfdf83e54ef3b1ed1e2005f",
+      "source_sha256": "562511c72169936224365e5aab0a946aa0b625dfedcd1d8e457e0f2b39f77b27",
+      "process_inventory_redacted": true
+    },
+    {
+      "path": "buyer-restored-continuation-20261023/session-v2/restart-protocol.json",
+      "bytes": 294,
+      "sha256": "dea7a46d4b4fb6c03701f49567bfd6bdfe692f83865e4475fd81bbcc34e4b679",
+      "source_sha256": "dea7a46d4b4fb6c03701f49567bfd6bdfe692f83865e4475fd81bbcc34e4b679",
+      "process_inventory_redacted": false
+    },
+    {
+      "path": "buyer-restored-continuation-20261023/session-v2/state.json",
+      "bytes": 638,
+      "sha256": "96809bba866448dc224299fcefd24177031abf44eda5fd44ba04c5534a9b20a1",
+      "source_sha256": "96809bba866448dc224299fcefd24177031abf44eda5fd44ba04c5534a9b20a1",
+      "process_inventory_redacted": false
+    },
+    {
+      "path": "buyer-restored-continuation-20261023/session-v2/train-batches-issued.jsonl",
+      "bytes": 13442,
+      "sha256": "84de031765d859eaa67972f05702cc42560d5a272f644ca44acc3630a3ceefe3",
+      "source_sha256": "84de031765d859eaa67972f05702cc42560d5a272f644ca44acc3630a3ceefe3",
+      "process_inventory_redacted": false
+    },
+    {
+      "path": "buyer-restored-continuation-20261023/session-v2/trainable-scope.json",
+      "bytes": 954,
+      "sha256": "0402f572e88bf377f91d64bd66837def08d517edbcd48fbb7b2ddc601438de5b",
+      "source_sha256": "0402f572e88bf377f91d64bd66837def08d517edbcd48fbb7b2ddc601438de5b",
+      "process_inventory_redacted": false
+    },
+    {
+      "path": "buyer-restored-continuation-20261023/session-v2/training-config.json",
+      "bytes": 1204,
+      "sha256": "4a43fb20d1d205256e8b88caa8d147f17b6ec686a52e3c32fdee3cef77bb5acb",
+      "source_sha256": "4a43fb20d1d205256e8b88caa8d147f17b6ec686a52e3c32fdee3cef77bb5acb",
+      "process_inventory_redacted": false
+    },
+    {
+      "path": "buyer-restored-continuation-20261023/session-v2/validation-loss.jsonl",
+      "bytes": 84,
+      "sha256": "ec47ce63b4e79882a7bcbcde706b05713ea2f6b6595eeb2ea2f0e50472cb0bd6",
+      "source_sha256": "ec47ce63b4e79882a7bcbcde706b05713ea2f6b6595eeb2ea2f0e50472cb0bd6",
+      "process_inventory_redacted": false
+    },
+    {
+      "path": "buyer-restored-continuation-20261023/token-check.json",
+      "bytes": 118749,
+      "sha256": "44f9fa2120e249320e8e63b16c249e5bbe285551fcc5b5f5a2d07d5bac7a1808",
+      "source_sha256": "44f9fa2120e249320e8e63b16c249e5bbe285551fcc5b5f5a2d07d5bac7a1808",
+      "process_inventory_redacted": false
+    },
+    {
+      "path": "buyer-restored-continuation-20261023/train.jsonl",
+      "bytes": 3817083,
+      "sha256": "c2c2b3792a3dc376ecc48c7420c73362114a3c0798fd5b57adc2eee8c4bb995a",
+      "source_sha256": "c2c2b3792a3dc376ecc48c7420c73362114a3c0798fd5b57adc2eee8c4bb995a",
+      "process_inventory_redacted": false
+    },
+    {
+      "path": "buyer-restored-continuation-20261023/valid.jsonl",
+      "bytes": 3294734,
+      "sha256": "3adf389130115c29283b04b1a657c8eb7a4a68de6f27b5aaa7949769f58916de",
+      "source_sha256": "3adf389130115c29283b04b1a657c8eb7a4a68de6f27b5aaa7949769f58916de",
+      "process_inventory_redacted": false
+    },
+    {
+      "path": "prepare_restored_fullpass_20261023.py",
+      "bytes": 2346,
+      "sha256": "7603ea634b39f620b7d9483deccb6f7ba83462437ce5bfa812b665a525194e90",
+      "source_sha256": "7603ea634b39f620b7d9483deccb6f7ba83462437ce5bfa812b665a525194e90",
+      "process_inventory_redacted": false
+    },
+    {
+      "path": "check_restored_tokens_20261023.py",
+      "bytes": 1140,
+      "sha256": "587303eae50ab6daa50a3572428c3d8562ac3e1bc4e8e36bbf369e02f90d615e",
+      "source_sha256": "587303eae50ab6daa50a3572428c3d8562ac3e1bc4e8e36bbf369e02f90d615e",
+      "process_inventory_redacted": false
+    },
+    {
+      "path": "start_restored_fullpass_20261023.py",
+      "bytes": 6554,
+      "sha256": "098b6cb9db87ecb9f987a7a5d5ba10842adcbb468c2ed18085c4620a297ef1f7",
+      "source_sha256": "098b6cb9db87ecb9f987a7a5d5ba10842adcbb468c2ed18085c4620a297ef1f7",
+      "process_inventory_redacted": false
+    },
+    {
+      "path": "prepare_restored_continuation_20261023.py",
+      "bytes": 4005,
+      "sha256": "8cfc4dd4d307ae08de17d5563f9593c0c4b798b3b2aff95d525f00a6e7ffea8e",
+      "source_sha256": "8cfc4dd4d307ae08de17d5563f9593c0c4b798b3b2aff95d525f00a6e7ffea8e",
+      "process_inventory_redacted": false
+    },
+    {
+      "path": "start_restored_continuation_20261023.py",
+      "bytes": 6786,
+      "sha256": "5cc0946a49dcbf41d47405c4eefe82dd485273f2e332cb126976b3249ebb6f2c",
+      "source_sha256": "5cc0946a49dcbf41d47405c4eefe82dd485273f2e332cb126976b3249ebb6f2c",
+      "process_inventory_redacted": false
+    },
+    {
+      "path": "start_restored_continuation_20261023_v2.py",
+      "bytes": 7111,
+      "sha256": "1cb7614d12adada6b4d71d9ce08d4325b74072e335ff2864a9321ea33fef7bad",
+      "source_sha256": "1cb7614d12adada6b4d71d9ce08d4325b74072e335ff2864a9321ea33fef7bad",
+      "process_inventory_redacted": false
+    },
+    {
+      "path": "heavy_process_guard_v2.py",
+      "bytes": 1885,
+      "sha256": "267ae9fa4250aa1c2bae8ef34a3ce674bc9e7b8a1d29ac416ab098f43768ba3b",
+      "source_sha256": "267ae9fa4250aa1c2bae8ef34a3ce674bc9e7b8a1d29ac416ab098f43768ba3b",
+      "process_inventory_redacted": false
+    },
+    {
+      "path": "frozen_gated_kernel_v2.py",
+      "bytes": 2431,
+      "sha256": "d7f3a7ef702514ca1da3f26467779a3d07d575ba2b7566a4e10b7befe4cbacb4",
+      "source_sha256": "d7f3a7ef702514ca1da3f26467779a3d07d575ba2b7566a4e10b7befe4cbacb4",
+      "process_inventory_redacted": false
+    },
+    {
+      "path": "completion_loss.py",
+      "bytes": 1598,
+      "sha256": "f880c689d6f391113f76feff7e38ebeace8409a1a301ec4d67a46d03967e621d",
+      "source_sha256": "f880c689d6f391113f76feff7e38ebeace8409a1a301ec4d67a46d03967e621d",
+      "process_inventory_redacted": false
+    },
+    {
+      "path": "aligned_chat_process_v1.py",
+      "bytes": 606,
+      "sha256": "4a9c76fd8bc2aff029dff28ab4922a8ad8e4a1b617f5c4a2ca5d0933da666af5",
+      "source_sha256": "4a9c76fd8bc2aff029dff28ab4922a8ad8e4a1b617f5c4a2ca5d0933da666af5",
+      "process_inventory_redacted": false
+    },
+    {
+      "path": "coverage_iterator_v1.py",
+      "bytes": 4026,
+      "sha256": "ae4c2d86e178e208ac46dee8cdbbaca149093fefd096f09bc6c6f9bbb62585c9",
+      "source_sha256": "ae4c2d86e178e208ac46dee8cdbbaca149093fefd096f09bc6c6f9bbb62585c9",
+      "process_inventory_redacted": false
+    },
+    {
+      "path": "train_valid_only_loader_v1.py",
+      "bytes": 4351,
+      "sha256": "fde08f1cc46a3ff69ccc6a07efd963b560a8f1e92512d54ce7e97d305f714162",
+      "source_sha256": "fde08f1cc46a3ff69ccc6a07efd963b560a8f1e92512d54ce7e97d305f714162",
+      "process_inventory_redacted": false
+    },
+    {
+      "path": "MLX-LM-LICENSE",
+      "bytes": 1066,
+      "sha256": "ccfab7ccb2ea306f71531c8ca77bb55507606cd90768b1e32b8b52ab5b48cf01",
+      "source_sha256": "ccfab7ccb2ea306f71531c8ca77bb55507606cd90768b1e32b8b52ab5b48cf01",
+      "process_inventory_redacted": false
+    },
+    {
+      "path": "MODEL-LICENSE",
+      "bytes": 11544,
+      "sha256": "bbedc3fda3305820b977265f01b8619d87570a6739de3a5582c3464840f1e57a",
+      "source_sha256": "bbedc3fda3305820b977265f01b8619d87570a6739de3a5582c3464840f1e57a",
+      "process_inventory_redacted": false
+    },
+    {
+      "path": "buyer-restored-fullpass-20261023.log",
+      "bytes": 88667,
+      "sha256": "49f03e4ab434fd88be6dfa00d4887e1b62bf316eb1db4808c35b8afc94324055",
+      "source_sha256": "49f03e4ab434fd88be6dfa00d4887e1b62bf316eb1db4808c35b8afc94324055",
+      "process_inventory_redacted": false
+    },
+    {
+      "path": "buyer-restored-continuation-20261023.log",
+      "bytes": 9129,
+      "sha256": "bdf84c0cfe2ed4aab9f5d3c1b37c81fb2b2777849a98115e52028736c7b3965e",
+      "source_sha256": "bdf84c0cfe2ed4aab9f5d3c1b37c81fb2b2777849a98115e52028736c7b3965e",
+      "process_inventory_redacted": false
+    },
+    {
+      "path": "buyer-restored-continuation-20261023-v2.log",
+      "bytes": 5872,
+      "sha256": "dd4bfd011bc608d542421f144da4984252e542430e7ea7019cb3f8a0a4bfb0bf",
+      "source_sha256": "dd4bfd011bc608d542421f144da4984252e542430e7ea7019cb3f8a0a4bfb0bf",
+      "process_inventory_redacted": false
+    },
+    {
+      "path": "porukam-trained-current/adapters.safetensors",
+      "bytes": 20448993,
+      "sha256": "b2cf30b111109ee10439b4308cb97058ab00a85115eedd36118bbc534e52b665",
+      "source_sha256": "b2cf30b111109ee10439b4308cb97058ab00a85115eedd36118bbc534e52b665",
+      "process_inventory_redacted": false
+    },
+    {
+      "path": "porukam-trained-current/adapter_config.json",
+      "bytes": 1336,
+      "sha256": "f715c2cac7c67a67b59f3bc0d178df986bd766d34aa9e68d809d2cd2d6b01262",
+      "source_sha256": "f715c2cac7c67a67b59f3bc0d178df986bd766d34aa9e68d809d2cd2d6b01262",
+      "process_inventory_redacted": false
+    },
+    {
+      "path": "porukam-trained-current/model.json",
+      "bytes": 1259,
+      "sha256": "98026f6642e4fa91aaa52a00d4f8746d4728faaefc307fb77e34b464cbc7a925",
+      "source_sha256": "98026f6642e4fa91aaa52a00d4f8746d4728faaefc307fb77e34b464cbc7a925",
+      "process_inventory_redacted": false
+    },
+    {
+      "path": "porukam-trained-current/base-download-manifest.json",
+      "bytes": 12408,
+      "sha256": "c4b6f3fa889ca3248901bafc92d36214d2b6ce9fb12b87e5a94b0ca3eccc9cc1",
+      "source_sha256": "c4b6f3fa889ca3248901bafc92d36214d2b6ce9fb12b87e5a94b0ca3eccc9cc1",
+      "process_inventory_redacted": false
+    },
+    {
+      "path": "porukam-trained-current/BASE-MODEL-README.md",
+      "bytes": 666,
+      "sha256": "1407e3e3337063c280b2fe1a63724908a5051cfbf26cd8b98f247432b0382537",
+      "source_sha256": "1407e3e3337063c280b2fe1a63724908a5051cfbf26cd8b98f247432b0382537",
+      "process_inventory_redacted": false
+    },
+    {
+      "path": "porukam-trained-current/serve.py",
+      "bytes": 3624,
+      "sha256": "a71a0b23633d471c30950ddb70d3b96e22994d7af6b8a228b96108518ddabd36",
+      "source_sha256": "a71a0b23633d471c30950ddb70d3b96e22994d7af6b8a228b96108518ddabd36",
+      "process_inventory_redacted": false
+    },
+    {
+      "path": "porukam-trained-current/requirements-serving.txt",
+      "bytes": 45,
+      "sha256": "a037685fcf28c6b42d12ba9cceb2469d63838fc55913d11732167fda0836dea0",
+      "source_sha256": "a037685fcf28c6b42d12ba9cceb2469d63838fc55913d11732167fda0836dea0",
+      "process_inventory_redacted": false
+    },
+    {
+      "path": "porukam-trained-current/README.md",
+      "bytes": 1966,
+      "sha256": "cfb2f7a8f62523f59f8023672eefe05cc30e943f4db1e36918e6d0f434e8d97a",
+      "source_sha256": "cfb2f7a8f62523f59f8023672eefe05cc30e943f4db1e36918e6d0f434e8d97a",
+      "process_inventory_redacted": false
+    },
+    {
+      "path": "archive-source/buyer-marketplace-v3/manifest.json",
+      "bytes": 6000,
+      "sha256": "20bef2b33ab146cf907f75c74d2b3e4854e6b972d226cf6ce86e4f8b4bc4f28a",
+      "source_sha256": "20bef2b33ab146cf907f75c74d2b3e4854e6b972d226cf6ce86e4f8b4bc4f28a",
+      "archive": "porukam-buyer-marketplace-dataset-v3.zip"
+    },
+    {
+      "path": "archive-source/buyer-marketplace-v3/prepared-artifacts-manifest.json",
+      "bytes": 2388,
+      "sha256": "0c6bddc20ace4966310a42e21cda66380a9bd993ac3c902b658975f94bce1674",
+      "source_sha256": "0c6bddc20ace4966310a42e21cda66380a9bd993ac3c902b658975f94bce1674",
+      "archive": "porukam-buyer-marketplace-dataset-v3.zip"
+    },
+    {
+      "path": "archive-source/buyer-marketplace-v3/registry-snapshot.json",
+      "bytes": 452221,
+      "sha256": "f7b72968029bf6849921e7e2a6084edd3211dcbfe9b2503da5f0197e49c7d22d",
+      "source_sha256": "f7b72968029bf6849921e7e2a6084edd3211dcbfe9b2503da5f0197e49c7d22d",
+      "archive": "porukam-buyer-marketplace-dataset-v3.zip"
+    },
+    {
+      "path": "archive-source/buyer-marketplace-v3/selection-184-manifest.json",
+      "bytes": 261,
+      "sha256": "39dabfcc1fad444cf39e120f14b88443fada0d6083580e7078dde835862c424c",
+      "source_sha256": "39dabfcc1fad444cf39e120f14b88443fada0d6083580e7078dde835862c424c",
+      "archive": "porukam-buyer-marketplace-dataset-v3.zip"
+    },
+    {
+      "path": "archive-source/buyer-marketplace-v3/selection-184.jsonl",
+      "bytes": 1065318,
+      "sha256": "a28ede1672b3bd5dd9709b9a102dc051d3038a03cfc99fce48b22fe8ddc4d6b3",
+      "source_sha256": "a28ede1672b3bd5dd9709b9a102dc051d3038a03cfc99fce48b22fe8ddc4d6b3",
+      "archive": "porukam-buyer-marketplace-dataset-v3.zip"
+    },
+    {
+      "path": "archive-source/buyer-marketplace-v3/source-snapshots/category_characteristics.py",
+      "bytes": 6619,
+      "sha256": "f0dad8af8212d9ff0472a0f5466ff289d044b36cfc8c2a2eccb85768cf7e6435",
+      "source_sha256": "f0dad8af8212d9ff0472a0f5466ff289d044b36cfc8c2a2eccb85768cf7e6435",
+      "archive": "porukam-buyer-marketplace-dataset-v3.zip"
+    },
+    {
+      "path": "archive-source/buyer-marketplace-v3/source-snapshots/category_registry.json",
+      "bytes": 452221,
+      "sha256": "f7b72968029bf6849921e7e2a6084edd3211dcbfe9b2503da5f0197e49c7d22d",
+      "source_sha256": "f7b72968029bf6849921e7e2a6084edd3211dcbfe9b2503da5f0197e49c7d22d",
+      "archive": "porukam-buyer-marketplace-dataset-v3.zip"
+    },
+    {
+      "path": "archive-source/buyer-marketplace-v3/source-snapshots/category_registry.py",
+      "bytes": 11546,
+      "sha256": "736cf86b992fee63994020da6a42e473a33692f88e614f635fd32d715d9235d9",
+      "source_sha256": "736cf86b992fee63994020da6a42e473a33692f88e614f635fd32d715d9235d9",
+      "archive": "porukam-buyer-marketplace-dataset-v3.zip"
+    },
+    {
+      "path": "archive-source/buyer-marketplace-v3/source-snapshots/prepare_buyer_marketplace_v3.py",
+      "bytes": 16069,
+      "sha256": "210804c632d91d0b5f93f12b5de869bd02eeecca54b7e4a5019e233c3bae7dd2",
+      "source_sha256": "210804c632d91d0b5f93f12b5de869bd02eeecca54b7e4a5019e233c3bae7dd2",
+      "archive": "porukam-buyer-marketplace-dataset-v3.zip"
+    },
+    {
+      "path": "archive-source/buyer-marketplace-v3/source-snapshots/validate_buyer_marketplace_v3.py",
+      "bytes": 3677,
+      "sha256": "7b914dac9938cf937c4f06a0550632c5f26f3dd5d99c457545c45bf166decca2",
+      "source_sha256": "7b914dac9938cf937c4f06a0550632c5f26f3dd5d99c457545c45bf166decca2",
+      "archive": "porukam-buyer-marketplace-dataset-v3.zip"
+    },
+    {
+      "path": "archive-source/buyer-business-fields-v1/manifest.json",
+      "bytes": 174935,
+      "sha256": "d7fdc9e2df42f52cbe4119ada9915925a88662e8ffcd1de2a519405feccb9163",
+      "source_sha256": "d7fdc9e2df42f52cbe4119ada9915925a88662e8ffcd1de2a519405feccb9163",
+      "archive": "porukam-buyer-business-fields-v1.zip"
+    },
+    {
+      "path": "archive-source/buyer-business-fields-v1/registry-snapshot.json",
+      "bytes": 452221,
+      "sha256": "f7b72968029bf6849921e7e2a6084edd3211dcbfe9b2503da5f0197e49c7d22d",
+      "source_sha256": "f7b72968029bf6849921e7e2a6084edd3211dcbfe9b2503da5f0197e49c7d22d",
+      "archive": "porukam-buyer-business-fields-v1.zip"
+    },
+    {
+      "path": "archive-source/buyer-business-fields-v1/source-snapshots/category_characteristics.py",
+      "bytes": 6619,
+      "sha256": "f0dad8af8212d9ff0472a0f5466ff289d044b36cfc8c2a2eccb85768cf7e6435",
+      "source_sha256": "f0dad8af8212d9ff0472a0f5466ff289d044b36cfc8c2a2eccb85768cf7e6435",
+      "archive": "porukam-buyer-business-fields-v1.zip"
+    },
+    {
+      "path": "archive-source/buyer-business-fields-v1/source-snapshots/category_units.py",
+      "bytes": 3221,
+      "sha256": "383b0e31793a741b3dfebd28c46ad2a5f00883ab2a896f6272aacd3675db673f",
+      "source_sha256": "383b0e31793a741b3dfebd28c46ad2a5f00883ab2a896f6272aacd3675db673f",
+      "archive": "porukam-buyer-business-fields-v1.zip"
+    },
+    {
+      "path": "archive-source/buyer-business-fields-v1/source-snapshots/prepare_buyer_business_fields_v1.py",
+      "bytes": 12606,
+      "sha256": "02a2df536d17733f8abe40a8166face6042b8f05f9555e49a3d4079cea5166ae",
+      "source_sha256": "02a2df536d17733f8abe40a8166face6042b8f05f9555e49a3d4079cea5166ae",
+      "archive": "porukam-buyer-business-fields-v1.zip"
+    },
+    {
+      "path": "archive-source/buyer-business-fields-v1/source-snapshots/registry-snapshot.json",
+      "bytes": 452221,
+      "sha256": "f7b72968029bf6849921e7e2a6084edd3211dcbfe9b2503da5f0197e49c7d22d",
+      "source_sha256": "f7b72968029bf6849921e7e2a6084edd3211dcbfe9b2503da5f0197e49c7d22d",
+      "archive": "porukam-buyer-business-fields-v1.zip"
+    },
+    {
+      "path": "archive-source/buyer-business-fields-v1/source-snapshots/schemas.py",
+      "bytes": 7404,
+      "sha256": "39657e48a3146a17929f7141de0bc00c74d8735de1dbfc53f61fd486d4ef9616",
+      "source_sha256": "39657e48a3146a17929f7141de0bc00c74d8735de1dbfc53f61fd486d4ef9616",
+      "archive": "porukam-buyer-business-fields-v1.zip"
+    }
+  ]
+}

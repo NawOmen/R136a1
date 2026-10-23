@@ -1,0 +1,46 @@
+{
+  "source_archives": [
+    {
+      "archive": "porukam-buyer-marketplace-dataset-v3.zip",
+      "archive_sha256": "27413b4b184b9b3a77d3820cdb8025b91da8a3d580f49adde9d9af19b6cdb113",
+      "member": "buyer-marketplace-v3/train.jsonl",
+      "sha256": "6e90b9da53e9f408e2ef56abe33b90c95f24c284b8ba062c7f8ed8af76cc8bca",
+      "rows": 1472,
+      "bank": "marketplace"
+    },
+    {
+      "archive": "porukam-buyer-marketplace-dataset-v3.zip",
+      "archive_sha256": "27413b4b184b9b3a77d3820cdb8025b91da8a3d580f49adde9d9af19b6cdb113",
+      "member": "buyer-marketplace-v3/valid.jsonl",
+      "sha256": "50f3af8958230d601c94a99c1eda040511f5f363fb8f9e24c854ea721863282a",
+      "rows": 368,
+      "bank": "marketplace"
+    },
+    {
+      "archive": "porukam-buyer-business-fields-v1.zip",
+      "archive_sha256": "164a4b9b471bfd2d31491b7712026f97930bd242a08e75b09d78431b3d603f3b",
+      "member": "buyer-business-fields-v1/train.jsonl",
+      "sha256": "ba6ca3af54eaaeb7185fe79f51a54bfac66c1953c50e40d52a1f678723ac6745",
+      "rows": 660,
+      "bank": "business"
+    },
+    {
+      "archive": "porukam-buyer-business-fields-v1.zip",
+      "archive_sha256": "164a4b9b471bfd2d31491b7712026f97930bd242a08e75b09d78431b3d603f3b",
+      "member": "buyer-business-fields-v1/valid.jsonl",
+      "sha256": "51bbe296ab6993962a31bb9ec95aefd1275e154a4a3fd317d55932a35307fac2",
+      "rows": 220,
+      "bank": "business"
+    }
+  ],
+  "train": 2132,
+  "valid": 588,
+  "excluded_unrestored_prose": 28,
+  "train_valid_prompt_exact_nonoverlap": true,
+  "closed_test_not_opened": true,
+  "one_pass_only": true,
+  "optimizer_reset": true,
+  "learning_rate": 5e-06,
+  "hypothesis": "Additional low-rate rehearsal of recovered synthetic corpus; quality improvement unproven; no automatic extra epochs",
+  "canonical_adapter_preserved": true
+}

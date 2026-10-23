@@ -1,0 +1,14 @@
+[
+  {
+    "a": {
+      "free_percent": 75,
+      "swap_used_MiB": 353.94,
+      "time": 1792747895.1740968
+    },
+    "b": {
+      "free_percent": 75,
+      "swap_used_MiB": 353.94,
+      "time": 1792747905.195599
+    }
+  }
+]

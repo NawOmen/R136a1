@@ -1,0 +1,20 @@
+{
+  "small_gpu_parity": [
+    {
+      "dtype": "mlx.core.float32",
+      "output_max_abs_delta": 2.9103830456733704e-11,
+      "state_max_abs_delta": 6.548361852765083e-11,
+      "downstream_gradient_max_abs_delta": 1.3322676295501878e-15,
+      "tolerance": 1e-05
+    },
+    {
+      "dtype": "mlx.core.bfloat16",
+      "output_max_abs_delta": 0.0,
+      "state_max_abs_delta": 4.3655745685100555e-11,
+      "downstream_gradient_max_abs_delta": 0.0,
+      "tolerance": 0.001
+    }
+  ],
+  "scope": "only modules with zero trainableparameters; lastLoRAtrainingmode unchanged",
+  "limitations": "Numerical tolerances, not bitexact/fullmodelgradient/longtermstability proof"
+}

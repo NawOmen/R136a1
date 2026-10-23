@@ -1,0 +1,23 @@
+{
+  "actual_exit": true,
+  "locks_free": [
+    "/Users/assweg/Desktop/b2b/porukam-ml-experiments/.buyer-profile-broad-controller.lock",
+    "/Users/assweg/Desktop/b2b/porukam-ml-experiments/.buyer-role-prompt-controller.lock",
+    "/Users/assweg/Desktop/b2b/porukam-ml-experiments/.mlx-gpu.lock",
+    "/Users/assweg/Desktop/b2b/porukam-ml-experiments/.restored-continuation-20261023.lock",
+    "/Users/assweg/Desktop/b2b/porukam-ml-experiments/.restored-fullpass-20261023.lock"
+  ],
+  "all_input_sha256_unchanged": true,
+  "own_db_absent": true,
+  "fullps": "[local process inventory omitted]",
+  "other_heavy": [],
+  "ollama_models": [],
+  "last_metric": 103,
+  "new_checkpoint_saved": false,
+  "save_interval": 128,
+  "original_checkpoint1456_preserved": true,
+  "error": "Metal Insufficient Memory",
+  "concurrent_ollama_9b_observed": true,
+  "causality": "Concurrent model and swap growth observed; precise allocation failure causality not isolated",
+  "restarted": false
+}

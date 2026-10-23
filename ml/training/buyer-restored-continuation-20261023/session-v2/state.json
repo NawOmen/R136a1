@@ -1,0 +1,22 @@
+{
+  "pid": 94299,
+  "phase": "training_remaining_676",
+  "started_utc": "2026-10-23T09:57:00Z",
+  "planned_microbatches": 676,
+  "planned_optimizer_updates": 338,
+  "saved_original_prefix": 1456,
+  "save_every": 128,
+  "host_pause_seconds": 1.0,
+  "canonical_modified": false,
+  "model_loaded": true,
+  "last_completed_metric": {
+    "iteration": 73,
+    "train_loss": 1.6090481949504465e-05,
+    "learning_rate": 4.999999873689376e-06,
+    "iterations_per_second": 0.17152391790890104,
+    "tokens_per_second": 29.502113880330977,
+    "trained_tokens": 18348,
+    "peak_memory": 5.901844466
+  },
+  "elapsed_seconds": 580.7555141448975
+}
