@@ -145,7 +145,7 @@ jobs:
       - name: Use Ubuntu archive for browser system dependencies
         run: |
           # The Azure mirror can stall large font and codec downloads on hosted runners.
-          for source in /etc/apt/sources.list /etc/apt/sources.list.d/*.sources /etc/apt/sources.list.d/*.list; do
+          for source in /etc/apt/apt-mirrors.txt /etc/apt/sources.list /etc/apt/sources.list.d/*.sources /etc/apt/sources.list.d/*.list; do
             if [ -f "$source" ]; then
               sudo sed -i 's|http://azure.archive.ubuntu.com/ubuntu|https://archive.ubuntu.com/ubuntu|g' "$source"
             fi
@@ -159,5 +159,12 @@ jobs:
       - name: Safari, iPhone, iPad and Android compatibility
         working-directory: tests/e2e
         run: pnpm exec playwright test --config compatibility-browser.config.ts
+      - name: Preserve browser failure diagnostics
+        if: failure()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: browser-failures-${{ github.sha }}-${{ github.run_attempt }}
+          path: tests/e2e/test-results/
+          retention-days: 7
       - name: Build web Docker image
         run: docker build --file apps/web/Dockerfile --tag porukam-web:ci .

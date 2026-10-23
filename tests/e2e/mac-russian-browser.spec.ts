@@ -57,6 +57,7 @@ test("Russian date input and calendar validate dates while drafts retain ISO", a
   await page.getByRole("button", { name: "Заполнить вручную", exact: true }).click();
   const date = page.locator("#deadline_date");
   await date.fill("290226");
+  await expect(date).toHaveValue("29.02.26");
   await expect.poll(() => date.evaluate((el: HTMLInputElement) => el.validationMessage)).toBe("Введите дату в формате дд.мм.гг.");
   await date.fill("290228");
   await expect(date).toHaveValue("29.02.28");

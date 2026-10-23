@@ -218,7 +218,14 @@ test("producer capabilities retain their values in aligned rows with a productio
       if (width > 760) expect(rows.every(row => row.valueX > row.labelX)).toBe(true);
       else expect(rows.every(row => Math.abs(row.valueX - row.labelX) <= 1 && row.valueTop >= row.labelBottom)).toBe(true);
       // WebKit can commit the document's scroll width after the resized element boxes.
-      await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+      await expect.poll(() => page.evaluate(() => ({
+        viewport: innerWidth,
+        overflow: Math.max(0, document.documentElement.scrollWidth - innerWidth),
+        elements: Array.from(document.querySelectorAll("body *")).filter(element => {
+          const box = element.getBoundingClientRect();
+          return box.width > 0 && box.right > innerWidth + 1;
+        }).map(element => `${element.tagName}.${element.className}`),
+      }))).toMatchObject({ overflow: 0 });
     }
   }
   hasPhoto = false;
@@ -266,7 +273,14 @@ test("company mode hint follows the checkbox rows and keeps the selected permiss
       expect(geometry.hintTop).toBeGreaterThanOrEqual(geometry.rows[1].bottom);
       expect(Math.abs(geometry.hintX - geometry.rows[0].x)).toBeLessThanOrEqual(1);
       expect(geometry.align).toBe("left");
-      await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+      await expect.poll(() => page.evaluate(() => ({
+        viewport: innerWidth,
+        overflow: Math.max(0, document.documentElement.scrollWidth - innerWidth),
+        elements: Array.from(document.querySelectorAll("body *")).filter(element => {
+          const box = element.getBoundingClientRect();
+          return box.width > 0 && box.right > innerWidth + 1;
+        }).map(element => `${element.tagName}.${element.className}`),
+      }))).toMatchObject({ overflow: 0 });
     }
   }
   await buy.check();
