@@ -128,7 +128,6 @@ export default function DashboardPage() {
       {logoutError && <p className="alert alert-error" role="alert">{logoutError}</p>}
       <div className="dashboard-head">
         <div>
-          <span className="eyebrow">Центр управления</span>
           <h1 className="page-title">Личный кабинет</h1>
           <p className="subtitle">
             {fullName} · {user.email} · Статус: {ACCOUNT_STATUS_LABELS[user.account_status]}

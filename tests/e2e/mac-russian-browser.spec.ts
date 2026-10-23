@@ -99,7 +99,7 @@ test("Russian date input and calendar validate dates while drafts retain ISO", a
   await expect(calendar).toHaveCount(0);
   await page.waitForLoadState("networkidle");
   await page.reload();
-  await page.getByRole("button", { name: "Заполнить вручную", exact: true }).click();
+  await expect(page.getByRole("heading", { name:"Детали закупки", exact:true })).toBeVisible();
   await expect(date).toHaveValue("01.03.28");
   await date.scrollIntoViewIfNeeded();
   await page.screenshot({ path: info.outputPath("russian-date.png"), animations: "disabled" });
