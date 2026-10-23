@@ -1,0 +1,80 @@
+{
+  "version": "buyer-marketplace-contracts-synthetic-3",
+  "synthetic": true,
+  "assistant_authored": true,
+  "human_expert_reviewed": false,
+  "supported_leaf_count": 46,
+  "purpose": "Explicit-category canonical-field extraction, not implicit category inference or full production readiness",
+  "registry_sha256": "f7b72968029bf6849921e7e2a6084edd3211dcbfe9b2503da5f0197e49c7d22d",
+  "system_policy_sha256": "0b35ff1a593e631707bef0642e9ba07463519e3cb6b6028543b42ae14645b8fa",
+  "system_sha256_by_category": {
+    "packaging.paper-cups": "7eccceae27815f13c44eb74bd84663dec579dd13399705555de4f64c331bd972",
+    "packaging.food-packaging": "fb5cbac5d3c61836a19a0434d6f6c1e2b2207ec01f8fb1a2e8823ca4c556c687",
+    "packaging.bags": "37ac00fe59464fc1083b8c6f421b4ee5f3de94dcf0fbb6a2c57f775bc09f05ce",
+    "packaging.boxes": "abc98f86693b2b01db41edb43bc48d41e038637c050cdea8a49efe0d7b42c27c",
+    "packaging.bottles-canisters": "6677ef8d39e5fe29c97af9615f9ac5bc5c0cdf4d80abb4290c6843264ddd0355",
+    "packaging.film": "ab0f4e41a264ff1499e46bca7402be3de22a799a434b633c7a1fc93f507c143b",
+    "materials.paper-cardboard": "d69a526db2116d0ac8c770bdb0bddd6c10b46e6afcfc565e5e405d18c118cb33",
+    "materials.polymers": "a53cf4b794dd54ef3ce99f8cf44340565c5690404626fc186488f5be6ffd8928",
+    "materials.metals": "2a22d209bf51c647e0ffa4f60a5faaae05481bb7f901b013affe6d3945a53391",
+    "materials.textile": "203ca136a259e0cea7e8a093e7f666755593fe718b14c09592875b29d4784c77",
+    "materials.chemical-feedstock": "12fc56eccb8c35a523a0940c58889446663155990b2c8b6b78fd545bdbd4a7ba",
+    "equipment.manufacturing": "db99a28b482000c6edda11889faae2859b097857947e417b514f0033df5083e9",
+    "equipment.retail": "e7a4987718e7b073cc0b43819c672147fe7f64c12c9a50bfd3456da876ccf686",
+    "equipment.warehouse": "b9ee855e510e422f97bf3c69938c842450e2165fa504b38341aa507b977444b0",
+    "equipment.food": "c826d8fad89d293c549b05fa5c173db8d6a960853a0b1437e1041f75fee9b596",
+    "equipment.spare-parts": "35f88a81a85cc0c60581f282f8627096a7aed820dabb59c917059888d7fe669b",
+    "construction.finishing": "7a8faf10f3a76e8c12a3b3d735f66e1f1c494e51239a14a16724a2d62911a860",
+    "construction.fasteners": "e4abb555692fee437e4e9e197324262624ead4401dd4495ed888018a0e8e11e3",
+    "construction.engineering": "3a3bc997bfb6907b487fcb589d7832015133b78191f7ffd6f30c713ec772dca1",
+    "construction.tools": "97c7780ba7de405a77ebfcba4deca6b65ee0b1ba48c238e0013fb30a4fefca34",
+    "food.drinks": "808febe297de64490c97fcb5369f457951c083020c5637b03207f93ee534ba29",
+    "food.groceries": "c47ea1e7110070bfa572e68daef004f3bf5099f70e673f152ed6a37305a2dfee",
+    "food.frozen": "cf0d1f52f334a1914d19b9685c56c878fc554838a6f36fe99e9b3d2039b49e0b",
+    "food.ingredients": "6ddff0512d6d40e6b24adadd5441b88fbbf0888933c6ffa8c7d6f661d8820fb9",
+    "business-supplies.stationery": "b6ac9e4338c0e54a2626b765a37daaaaedb6b74c990e5ef3c91fbae0a7f4f37a",
+    "business-supplies.household": "1a1e76f2d48b0f8da10e99a1d2f9a7f532f10aa2049dafeae629db6f309e1be2",
+    "business-supplies.workwear": "aad77e1dfb6088334c70f8b3eb740a7fc51b1e16b09a4a12a9d55a0ab61101ee",
+    "business-supplies.furniture": "6cb56f5505e9e6d6e8922e885595f16c88bbdf418194146f8d706233385a64e6",
+    "electronics.components": "80efad9c2e06ec216bca073e602c97f31921379f394b3819358e710a40e55325",
+    "electronics.computers": "a10dedb603c246eea15333e8360d6674e0d1506c4c739c60a9dd9e40b03365b5",
+    "electronics.communication": "1f914899671105b6baf79cdb36ed18bdb11f69f3702eb8f9b91bc72b9167567d",
+    "electronics.automation": "9e7e2ffd6ee9cc23a899f502cb8a2962571878e17778764eaa23d0e190502780",
+    "transport.containers": "8c79788aed7d5297a28e1765681974329ffd5c80a57fb20863163728e119654a",
+    "transport.components": "d30645687a6408bfa036924a8bedb39d62635f830b07db0b4b3d703b0bc4040a",
+    "transport.warehousing": "95385f7dff6bc7650ad3247f59d286fab4d591bf066d63889745b0c31586520a",
+    "printing.labels": "d2f95d6ca1ba20396a6fb465e4d3cb7d5a784082e53f80c57c76292563005c39",
+    "printing.printing": "dea4c2e3cdf0d86e7770f4b52ad70a77ded8096338706a6929d9c0b040de5018",
+    "printing.signs": "707b981ad6fc5eafc8afe1773b02073163f477fd199c878290001524b76f7f38",
+    "printing.merchandise": "b52073b872db04840591e6e3aa0c08594039949df216b98f4d38e5a15e20129c",
+    "manufacturing-services.contract-manufacturing": "c151ad113cbe21b400a8ecd91d41f0e12c5f2fed71ceb5ff3104d1acf4b8067f",
+    "manufacturing-services.packing": "54108401f6fcdf6b878e3f593b9b2bfd7de94e96f8ef815ec6313ed8592feba3",
+    "manufacturing-services.processing": "566237a4f87f352e263e76bd5f7ab5d3e6760236b1ab1300f209e39999f82453",
+    "manufacturing-services.assembly": "f49caecccdee84a8a87823905f9325bff8f256b8081f701a7bcac490de1b59b1",
+    "medical-hygiene.protection": "719cf14fb95ec09f622fffbd31cdc6cc9fedd58595d72695b92a2adb5c6e2dd9",
+    "medical-hygiene.hygiene": "aaef1b1cec6f1fc7ca082841e6f9a1098b2337df21cee4c2306af3a5526be284",
+    "other.other-products": "4adefe3a05b1b3745bda1ed7428d4162d8403e42dc705859ec55dcc963f5bb4c"
+  },
+  "label_policy": "Only category profile fields and common fields; no extra factual information in the generic introduction; numbers separate from original_unit",
+  "splits": {
+    "train": {
+      "count": 1472,
+      "sha256": "6e90b9da53e9f408e2ef56abe33b90c95f24c284b8ba062c7f8ed8af76cc8bca"
+    },
+    "valid": {
+      "count": 368,
+      "sha256": "50f3af8958230d601c94a99c1eda040511f5f363fb8f9e24c854ea721863282a"
+    },
+    "test": {
+      "count": 368,
+      "sha256": "8c7aa314a21e996ce326cf9eb461933392a6ba476e6d28bc069d45b86b459fa5"
+    }
+  },
+  "limitations": [
+    "Category is explicitly supplied, no proof of inference from product name",
+    "Hypothetical explicit requirements are not independently reviewed industry specifications; synthetic model/grade/TU labels are not real certificates",
+    "All field values need independent subject-matter review",
+    "No medical consumables, long documents, OCR or speech",
+    "No source-to-product conversion tested through Gateway yet"
+  ]
+}

@@ -1,0 +1,10 @@
+{
+  "fullps": "[local process inventory omitted]",
+  "locks": [
+    "/Users/assweg/Desktop/b2b/porukam-ml-experiments/.buyer-profile-broad-controller.lock",
+    "/Users/assweg/Desktop/b2b/porukam-ml-experiments/.buyer-role-prompt-controller.lock",
+    "/Users/assweg/Desktop/b2b/porukam-ml-experiments/.mlx-gpu.lock",
+    "/Users/assweg/Desktop/b2b/porukam-ml-experiments/.restored-continuation-20261023.lock",
+    "/Users/assweg/Desktop/b2b/porukam-ml-experiments/.restored-fullpass-20261023.lock"
+  ]
+}

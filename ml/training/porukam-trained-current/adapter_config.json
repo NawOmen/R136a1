@@ -1,0 +1,42 @@
+{
+    "adapter_path": "/Users/assweg/Desktop/b2b/porukam-ml-experiments/buyer-curriculum-remainder-v1/adapter-736",
+    "batch_size": 1,
+    "clear_cache_threshold": 0,
+    "config": "/Users/assweg/Desktop/b2b/porukam-ml-experiments/buyer-curriculum-remainder-v1/training-v1.yaml",
+    "data": "/Users/assweg/Desktop/b2b/porukam-ml-experiments/buyer-curriculum-remainder-v1",
+    "fine_tune_type": "lora",
+    "grad_accumulation_steps": 2,
+    "grad_checkpoint": true,
+    "iters": 736,
+    "learning_rate": 1e-05,
+    "lora_parameters": {
+        "rank": 64,
+        "dropout": 0.05,
+        "scale": 2.0
+    },
+    "lr_schedule": null,
+    "mask_prompt": true,
+    "max_seq_length": 1280,
+    "model": "/Users/assweg/Desktop/b2b/porukam-ml-experiments/model-9b-4bit",
+    "num_layers": 1,
+    "optimizer": "adam",
+    "optimizer_config": {
+        "adam": {},
+        "adamw": {},
+        "muon": {},
+        "sgd": {},
+        "adafactor": {}
+    },
+    "project_name": null,
+    "report_to": null,
+    "resume_adapter_file": "/Users/assweg/Desktop/b2b/porukam-ml-experiments/porukam-trained-latest/adapters.safetensors",
+    "save_every": 16,
+    "seed": 1205,
+    "steps_per_eval": 256,
+    "steps_per_report": 1,
+    "test": false,
+    "test_batches": 500,
+    "train": true,
+    "trust_remote_code": false,
+    "val_batches": 1
+}

@@ -1,0 +1,30 @@
+{
+  "prepared_utc": "2026-10-13T17:13:03.906137+00:00",
+  "corpus_frozen": true,
+  "trained": false,
+  "independent_expertise": false,
+  "files": {
+    "dataset-validation.json": "d6a1ff6ac9bb529f56563c88c2d5056e214a298b435501cdbdebbf6ca3a19006",
+    "manifest.json": "20bef2b33ab146cf907f75c74d2b3e4854e6b972d226cf6ce86e4f8b4bc4f28a",
+    "memory-9b-4bit-2layers.yaml": "a8a61b1f1f5f9efcb9fff2c841ece06fd66de6a62b5ba916ea6f63b015eab009",
+    "memory-9b-6bit-2layers.yaml": "8fd526173cc9f0b0f43d62c52f03d7d89b66e48df06b15f59aa1243031c66c5a",
+    "memory-probe-data/train.jsonl": "14c94d6ea0ecc58c6adc5fbea1741529bf6b155a646ded2f58bd9b49c4587918",
+    "memory-probe-data/valid.jsonl": "e70c55052704f4fa70ff5f174557b4dbb790b8cef612d6fc3384e4f5f7a4ebba",
+    "memory-probe-preparation.json": "14cd5e617389ec9d8e336c84dbd43b14dc54536bb8855ef4073a12c6fe6fd26f",
+    "policy-review.json": "30f2d999f5e3a0c908e4628114a1ef804546406b6310c2eaebe223a846d7975a",
+    "registry-snapshot.json": "f7b72968029bf6849921e7e2a6084edd3211dcbfe9b2503da5f0197e49c7d22d",
+    "selection-184-manifest.json": "39dabfcc1fad444cf39e120f14b88443fada0d6083580e7078dde835862c424c",
+    "selection-184.jsonl": "a28ede1672b3bd5dd9709b9a102dc051d3038a03cfc99fce48b22fe8ddc4d6b3",
+    "selection.jsonl": "50f3af8958230d601c94a99c1eda040511f5f363fb8f9e24c854ea721863282a",
+    "source-snapshots/category_characteristics.py": "f0dad8af8212d9ff0472a0f5466ff289d044b36cfc8c2a2eccb85768cf7e6435",
+    "source-snapshots/category_registry.json": "f7b72968029bf6849921e7e2a6084edd3211dcbfe9b2503da5f0197e49c7d22d",
+    "source-snapshots/category_registry.py": "736cf86b992fee63994020da6a42e473a33692f88e614f635fd32d715d9235d9",
+    "source-snapshots/prepare_buyer_marketplace_v3.py": "210804c632d91d0b5f93f12b5de869bd02eeecca54b7e4a5019e233c3bae7dd2",
+    "source-snapshots/validate_buyer_marketplace_v3.py": "7b914dac9938cf937c4f06a0550632c5f26f3dd5d99c457545c45bf166decca2",
+    "test.jsonl": "8c7aa314a21e996ce326cf9eb461933392a6ba476e6d28bc069d45b86b459fa5",
+    "train.jsonl": "6e90b9da53e9f408e2ef56abe33b90c95f24c284b8ba062c7f8ed8af76cc8bca",
+    "valid.jsonl": "50f3af8958230d601c94a99c1eda040511f5f363fb8f9e24c854ea721863282a",
+    "validation-policy.json": "f0c97ac277761a31cb117d7aa5c45e0b41134ae8ee4ec07d545a0a9b4e77e7ec",
+    "validation.log": "7dcdf887a7a2ed812acfe3834054b14abc5574480ea3742c98ce89e61eed10ca"
+  }
+}

@@ -77,10 +77,10 @@ def _model_version(used_route: str) -> str:
     if used_route == "external_deepseek":
         return settings.deepseek_model
     if used_route == "local_qwen+external_deepseek":
-        return f"{settings.ollama_model}+{settings.deepseek_model}"
+        return f"{settings.trained_model_version if settings.local_llm_backend == 'mlx' else settings.ollama_model}+{settings.deepseek_model}"
     if used_route == "rules_only":
         return "rules_only"
-    return settings.ollama_model
+    return settings.trained_model_version if settings.local_llm_backend == "mlx" else settings.ollama_model
 
 
 async def owned_run(db, run_id, user, *, lock=False):
@@ -440,7 +440,7 @@ async def analyze_buyer_request(
                 "external_route_fallback",
                 "success",
                 "DeepSeek",
-                f"Выполнен возврат к локальной Qwen: {fallback}",
+                f"Выполнен возврат к локальной модели: {fallback}",
             )
         unreadable = (await db.scalars(select(AgentSource).where(
             AgentSource.run_id == run.id, AgentSource.active.is_(False), AgentSource.extracted_text == ""

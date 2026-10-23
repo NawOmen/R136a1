@@ -1,4 +1,4 @@
-"""Сравнение Qwen и DeepSeek на одинаковых синтетических задачах этапа 4.
+"""Сравнение локальной модели и DeepSeek на одинаковых синтетических задачах этапа 4.
 
 Скрипт не сохраняет ключ и не отправляет реальные данные. Без DEEPSEEK_API_KEY
 выполняется только обязательный локальный маршрут.
@@ -10,7 +10,7 @@ import time
 import urllib.request
 
 OLLAMA_URL = os.getenv("OLLAMA_BASE_URL", "http://localhost:11434")
-OLLAMA_MODEL = os.getenv("OLLAMA_MODEL", "qwen3.5:9b")
+MLX_URL = os.getenv("MLX_BASE_URL", "http://localhost:8080")
 DEEPSEEK_URL = os.getenv("DEEPSEEK_BASE_URL", "https://api.deepseek.com")
 DEEPSEEK_MODEL = os.getenv("DEEPSEEK_MODEL", "deepseek-v4-pro")
 DEEPSEEK_API_KEY = os.getenv("DEEPSEEK_API_KEY", "")
@@ -38,17 +38,16 @@ def main() -> None:
     print("Все задачи синтетические; реальные клиентские материалы не отправляются.")
     for number, task in enumerate(TASKS, start=1):
         local_time, local = post(
-            f"{OLLAMA_URL.rstrip('/')}/api/chat",
+            f"{MLX_URL.rstrip('/')}/v1/chat/completions",
             {
-                "model": OLLAMA_MODEL,
+                "model": "default_model",
                 "stream": False,
-                "think": False,
                 "messages": [{"role": "user", "content": task}],
-                "format": "json",
-                "options": {"temperature": 0.1, "num_ctx": 8192},
+                "temperature": 0,
+                "max_tokens": 640,
             },
         )
-        print(f"\nЗадача {number} | Qwen: {local_time:.2f} с\n{local[:1000]}")
+        print(f"\nЗадача {number} | Локальная модель: {local_time:.2f} с\n{local[:1000]}")
         if not DEEPSEEK_API_KEY:
             print("DeepSeek: пропущен — ключ не настроен")
             continue

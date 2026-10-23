@@ -1,0 +1,22 @@
+{
+  "pid": 66655,
+  "phase": "failed",
+  "started_utc": "2026-10-23T05:56:39Z",
+  "planned_microbatches": 2132,
+  "planned_optimizer_updates": 1066,
+  "canonical_modified": false,
+  "model_loaded": true,
+  "last_completed_metric": {
+    "iteration": 1471,
+    "train_loss": 5.957859684713185e-05,
+    "learning_rate": 4.999999873689376e-06,
+    "iterations_per_second": 0.0237201531670479,
+    "tokens_per_second": 6.404441355102933,
+    "trained_tokens": 393641,
+    "peak_memory": 5.938692076
+  },
+  "elapsed_seconds": 9735.629130125046,
+  "finished": false,
+  "error": "RuntimeError('[METAL] Command buffer execution failed: Impacting Interactivity (0000000e:kIOGPUCommandBufferCallbackErrorImpactingInteractivity).')",
+  "traceback": "Traceback (most recent call last):\n  File \"/Users/assweg/Desktop/b2b/porukam-ml-experiments/start_restored_fullpass_20261023.py\", line 71, in <module>\n    save('training-config.json',args);lora.run(types.SimpleNamespace(**args))\n                                      ~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/Users/assweg/Desktop/b2b/porukam-ml-experiments/.venv/lib/python3.13/site-packages/mlx_lm/lora.py\", line 364, in run\n    train_model(args, model, train_set, valid_set, training_callback)\n    ~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/Users/assweg/Desktop/b2b/porukam-ml-experiments/.venv/lib/python3.13/site-packages/mlx_lm/lora.py\", line 306, in train_model\n    train(\n    ~~~~~^\n        model=model,\n        ^^^^^^^^^^^^\n    ...<4 lines>...\n        training_callback=training_callback,\n        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n    )\n    ^\n  File \"/Users/assweg/Desktop/b2b/porukam-ml-experiments/start_restored_fullpass_20261023.py\", line 66, in training\n    result=original(**kw,loss=make_completion_loss(512,64),iterate_batches=iterator)\n  File \"/Users/assweg/Desktop/b2b/porukam-ml-experiments/.venv/lib/python3.13/site-packages/mlx_lm/tuner/trainer.py\", line 331, in train\n    mx.eval(state, losses, n_tokens, grad_accum)\n    ~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nRuntimeError: [METAL] Command buffer execution failed: Impacting Interactivity (0000000e:kIOGPUCommandBufferCallbackErrorImpactingInteractivity).\n"
+}

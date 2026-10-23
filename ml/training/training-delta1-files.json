@@ -1,0 +1,70 @@
+{
+  "snapshot_utc": "2026-10-23T10:54:34Z",
+  "base_manifest": "training-files.json",
+  "purpose": "Final failed session-v2 artifacts, saved128suffix/original1584; no restart or quality claim",
+  "files": [
+    {
+      "path": "buyer-restored-continuation-20261023/adapter-final-v2/0000128_adapters.safetensors",
+      "bytes": 20448993,
+      "sha256": "9aba5de96f01fa7c907a101e43a255a5e75f033f8e0fba547d6cd178059e3c33",
+      "source_sha256": "9aba5de96f01fa7c907a101e43a255a5e75f033f8e0fba547d6cd178059e3c33",
+      "process_inventory_redacted": false
+    },
+    {
+      "path": "buyer-restored-continuation-20261023/adapter-final-v2/adapters.safetensors",
+      "bytes": 20448993,
+      "sha256": "9aba5de96f01fa7c907a101e43a255a5e75f033f8e0fba547d6cd178059e3c33",
+      "source_sha256": "9aba5de96f01fa7c907a101e43a255a5e75f033f8e0fba547d6cd178059e3c33",
+      "process_inventory_redacted": false
+    },
+    {
+      "path": "buyer-restored-continuation-20261023/session-v2/state.json",
+      "bytes": 2346,
+      "sha256": "baa05e03384471339d7ccaf1e8f53767e65b87f7b820f6bd69dcb1bd52c514c4",
+      "source_sha256": "baa05e03384471339d7ccaf1e8f53767e65b87f7b820f6bd69dcb1bd52c514c4",
+      "process_inventory_redacted": false
+    },
+    {
+      "path": "buyer-restored-continuation-20261023/session-v2/train-batches-issued.jsonl",
+      "bytes": 43525,
+      "sha256": "76937a4d27880774c302f66603ebab97300b0c05b1a107893f52f9f489604dfe",
+      "source_sha256": "76937a4d27880774c302f66603ebab97300b0c05b1a107893f52f9f489604dfe",
+      "process_inventory_redacted": false
+    },
+    {
+      "path": "buyer-restored-continuation-20261023/session-v2/locks-released.json",
+      "bytes": 103,
+      "sha256": "c97b620d6e8a701cdd27312d71726c7fee1f88aa076f5152fc6a2ffe39c4645f",
+      "source_sha256": "c97b620d6e8a701cdd27312d71726c7fee1f88aa076f5152fc6a2ffe39c4645f",
+      "process_inventory_redacted": false
+    },
+    {
+      "path": "buyer-restored-continuation-20261023/session-v2/input-sha256-after.json",
+      "bytes": 2298,
+      "sha256": "76a0fccd19546b1307830caba7e552a112426db397931fe5dcd8df281c81e2f5",
+      "source_sha256": "76a0fccd19546b1307830caba7e552a112426db397931fe5dcd8df281c81e2f5",
+      "process_inventory_redacted": false
+    },
+    {
+      "path": "buyer-restored-continuation-20261023/session-v2/failure-cleanup.json",
+      "bytes": 1125,
+      "sha256": "e3d02faaf54796e37e005e917ef5cdce328ab4ea17eb2364fb3d6ebbb4a3c291",
+      "source_sha256": "98db83859278475598c925d47be70881ceb6860b94baf4a781b1ef95e6d6b118",
+      "process_inventory_redacted": true
+    },
+    {
+      "path": "buyer-restored-continuation-20261023/session-v2/metrics.jsonl",
+      "bytes": 55411,
+      "sha256": "4623ac8f342e5d7973c045abb4818cc1f116974bd0d640222ace28383413b1aa",
+      "source_sha256": "4623ac8f342e5d7973c045abb4818cc1f116974bd0d640222ace28383413b1aa",
+      "process_inventory_redacted": false
+    },
+    {
+      "path": "buyer-restored-continuation-20261023-v2.log",
+      "bytes": 16510,
+      "sha256": "d807372b730a884423b2f4296c9da420a0131ac433d37049be0b45a151ac8402",
+      "source_sha256": "d807372b730a884423b2f4296c9da420a0131ac433d37049be0b45a151ac8402",
+      "process_inventory_redacted": false
+    }
+  ]
+}

@@ -1,0 +1,44 @@
+{
+  "files": [
+    {
+      "path": "BASE-MODEL-README.md",
+      "bytes": 666,
+      "sha256": "1407e3e3337063c280b2fe1a63724908a5051cfbf26cd8b98f247432b0382537"
+    },
+    {
+      "path": "README.md",
+      "bytes": 1966,
+      "sha256": "cfb2f7a8f62523f59f8023672eefe05cc30e943f4db1e36918e6d0f434e8d97a"
+    },
+    {
+      "path": "adapter_config.json",
+      "bytes": 1336,
+      "sha256": "f715c2cac7c67a67b59f3bc0d178df986bd766d34aa9e68d809d2cd2d6b01262"
+    },
+    {
+      "path": "adapters.safetensors",
+      "bytes": 20448993,
+      "sha256": "b2cf30b111109ee10439b4308cb97058ab00a85115eedd36118bbc534e52b665"
+    },
+    {
+      "path": "base-download-manifest.json",
+      "bytes": 12408,
+      "sha256": "c4b6f3fa889ca3248901bafc92d36214d2b6ce9fb12b87e5a94b0ca3eccc9cc1"
+    },
+    {
+      "path": "model.json",
+      "bytes": 1259,
+      "sha256": "98026f6642e4fa91aaa52a00d4f8746d4728faaefc307fb77e34b464cbc7a925"
+    },
+    {
+      "path": "requirements-serving.txt",
+      "bytes": 45,
+      "sha256": "a037685fcf28c6b42d12ba9cceb2469d63838fc55913d11732167fda0836dea0"
+    },
+    {
+      "path": "serve.py",
+      "bytes": 3624,
+      "sha256": "a71a0b23633d471c30950ddb70d3b96e22994d7af6b8a228b96108518ddabd36"
+    }
+  ]
+}

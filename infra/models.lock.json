@@ -1,5 +1,28 @@
 {
-  "local_llm": {"provider": "ollama", "model": "qwen3.5:9b", "context_tokens": 8192},
-  "speech_to_text": {"provider": "faster-whisper", "model": "small", "compute_type": "int8"},
+  "local_llm": {
+    "provider": "mlx_lm.server",
+    "model": "porukam-buyer-b2cf30b11110",
+    "api_model": "default_model",
+    "base_model": "mlx-community/Qwen3.5-9B-4bit",
+    "base_revision": "8b2b98c00a6b4d291155e4890773ca8f769aee53",
+    "adapter_sha256": "b2cf30b111109ee10439b4308cb97058ab00a85115eedd36118bbc534e52b665",
+    "saved_training_step": 2160,
+    "last_metric_step": 2160,
+    "planned_steps": 2160,
+    "full_pass_complete": true,
+    "quality_status": "Проверка412 завершена:404exact; авторскийнабор2/8; автономное применение не принято",
+    "build_script": "infra/build_local_model.py",
+    "training_report": "docs/research/local-ml-training-report.md"
+  },
+  "vision_llm": {
+    "provider": "ollama",
+    "model": "qwen3.5:9b",
+    "purpose": "локальное OCR/распознавание изображений; у текстового обученного кандидата нет vision-башни"
+  },
+  "speech_to_text": {
+    "provider": "faster-whisper",
+    "model": "small",
+    "compute_type": "int8"
+  },
   "note": "Перед защитой оператор проверяет наличие этих моделей локально; внешняя LLM для офлайн-режима отключается."
 }

@@ -1,0 +1,30 @@
+{
+  "pid": 66655,
+  "actual_exit": true,
+  "fullps_no_heavy": true,
+  "fullps": "[local process inventory omitted]",
+  "locks_free": [
+    "/Users/assweg/Desktop/b2b/porukam-ml-experiments/.buyer-profile-broad-controller.lock",
+    "/Users/assweg/Desktop/b2b/porukam-ml-experiments/.buyer-role-prompt-controller.lock",
+    "/Users/assweg/Desktop/b2b/porukam-ml-experiments/.mlx-gpu.lock",
+    "/Users/assweg/Desktop/b2b/porukam-ml-experiments/.restored-fullpass-20261023.lock"
+  ],
+  "ollama_models": [],
+  "own_db_absent": true,
+  "all_input_sha256_unchanged": true,
+  "last_metric": 1471,
+  "issued_not_completed": 1472,
+  "latest_saved_checkpoint_step": 1456,
+  "latest_saved_checkpoint_sha256": "9b9670d64468426168b8ed376abd941d1abe0a533d0fc41633d4665f9804990d",
+  "rolling_adapter_sha256": "9b9670d64468426168b8ed376abd941d1abe0a533d0fc41633d4665f9804990d",
+  "persisted_prefix_bank_counts": {
+    "business": 469,
+    "marketplace": 987
+  },
+  "remaining_after_saved_prefix": 676,
+  "full_pass_completed": false,
+  "cause_recorded": "Metal Impacting Interactivity at mx.eval",
+  "optimizer_rng_not_saved": true,
+  "canonical_preserved": true,
+  "rerun_started": false
+}

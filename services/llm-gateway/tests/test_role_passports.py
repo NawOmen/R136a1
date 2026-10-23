@@ -42,7 +42,7 @@ async def test_code_implemented_roles_state_no_llm(client):
 
 
 def test_model_manifest_records_selection_criteria():
-    assert {"qwen3.5:9b", "deepseek-v4-pro"} <= set(MODEL_MANIFEST)
+    assert {"porukam-buyer-b2cf30b11110", "qwen3.5:9b", "deepseek-v4-pro"} <= set(MODEL_MANIFEST)
     for model, record in MODEL_MANIFEST.items():
         for field in ("role", "quality_gate", "latency_budget", "ram_vram", "license", "data_rule"):
             assert record[field], (model, field)

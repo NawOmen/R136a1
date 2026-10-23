@@ -11,6 +11,8 @@ from app.security import CurrentUser, get_current_user
 @pytest.mark.asyncio
 @pytest.mark.parametrize("source_ids, expected_status", [(["purchase"], 200), (["unknown"], 200), (["purchase"] * 3, 503)])
 async def test_platform_assistant_with_ollama_grammar_compatibility(monkeypatch, source_ids, expected_status):
+    from app.config import settings
+    monkeypatch.setattr(settings, "local_llm_backend", "ollama")
     app = FastAPI()
     app.include_router(router)
     async def authenticated_user():
