@@ -217,7 +217,8 @@ test("producer capabilities retain their values in aligned rows with a productio
       expect(rows.every(row => row.valueMargin === "0px" && row.valueRight <= row.rowRight + 1)).toBe(true);
       if (width > 760) expect(rows.every(row => row.valueX > row.labelX)).toBe(true);
       else expect(rows.every(row => Math.abs(row.valueX - row.labelX) <= 1 && row.valueTop >= row.labelBottom)).toBe(true);
-      expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+      // WebKit can commit the document's scroll width after the resized element boxes.
+      await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
     }
   }
   hasPhoto = false;
@@ -265,7 +266,7 @@ test("company mode hint follows the checkbox rows and keeps the selected permiss
       expect(geometry.hintTop).toBeGreaterThanOrEqual(geometry.rows[1].bottom);
       expect(Math.abs(geometry.hintX - geometry.rows[0].x)).toBeLessThanOrEqual(1);
       expect(geometry.align).toBe("left");
-      expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+      await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
     }
   }
   await buy.check();
