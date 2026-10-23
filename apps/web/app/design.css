@@ -516,6 +516,7 @@ html { --page-gutter:clamp(35px,2.73vw,44px); --header-gutter:clamp(32px,2.73vw,
 .help-shortcuts a:active { transform:scale(.98); }
 .storefront-products { margin-top:32px; }
 .storefront-products .catalog-title-group { width:100%; justify-content:flex-start; gap:16px; }
+.storefront-products .catalog-title-group h2 { font-size:clamp(28px,2.8vw,36px); }
 .catalog-more { gap:10px; border-radius:14px; }
 .storefront-products .catalog-title-group .catalog-more { margin:0; flex:none; }
 .notification-control { position:relative; }
