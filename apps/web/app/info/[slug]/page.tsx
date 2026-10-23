@@ -13,15 +13,20 @@ const pages: Record<string, {title: string; body: string}> = {
   privacy: {title: "Конфиденциальность", body: "Документы компании, переписка и исполнение заказа доступны в соответствующих разделах кабинета с проверкой прав. Себестоимость и расчётная прибыль видны только участникам компании-продавца. По вопросам доступа к данным обратитесь в поддержку."},
 };
 
+export const dynamicParams = false;
+export function generateStaticParams() {
+  return Object.keys(pages).map(slug => ({ slug }));
+}
+
 export async function generateMetadata({params}: {params: Promise<{slug: string}>}): Promise<Metadata> {
   const {slug} = await params;
-  const page = pages[slug];
+  const page = Object.hasOwn(pages, slug) ? pages[slug] : undefined;
   return page ? { title: `${page.title} — ПоРукам`, description: page.body } : { title: "Страница не найдена — ПоРукам" };
 }
 
 export default async function InfoPage({params}: {params: Promise<{slug: string}>}) {
-  const {slug} = await params; const page = pages[slug]; if (!page) notFound();
-  const document = legalDocuments[slug];
+  const {slug} = await params; const page = Object.hasOwn(pages, slug) ? pages[slug] : undefined; if (!page) notFound();
+  const document = Object.hasOwn(legalDocuments, slug) ? legalDocuments[slug] : undefined;
   if (document) return <article className="card prose legal-document"><p className="hint">Редакция {document.version} · {document.sections.length} разделов</p><h1>{document.title}</h1><nav className="actions"><a className="btn btn-secondary" href={`/documents/${slug}.html`} download>Скачать документ</a><Link className="btn btn-secondary" href="/support">Вопрос по документу</Link></nav>{document.sections.map(section => <section key={section.title}><h2>{section.title}</h2><p>{section.text}</p></section>)}<section><h2>Правовые основания</h2><ul>{document.sources.map(source => <li key={source.href}><a href={source.href} target="_blank" rel="noreferrer">{source.title}</a></li>)}</ul></section></article>;
   return <article className="card prose"><h1>{page.title}</h1><p>{page.body}</p></article>;
 }

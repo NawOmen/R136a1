@@ -375,7 +375,7 @@ export default function NewNeedPage() {
       if (Number.isFinite(days) && days > 0) {
         const deadline = new Date();
         deadline.setDate(deadline.getDate() + days);
-        setDeadlineDate(deadline.toISOString().slice(0, 10));
+        setDeadlineDate(new Date(deadline.getTime() - deadline.getTimezoneOffset() * 60000).toISOString().slice(0, 10));
       }
     }
     const excluded = new Set(["quantity_units", "budget_rub", "lead_time_days", "delivery_city"]);

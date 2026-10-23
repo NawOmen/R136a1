@@ -223,6 +223,22 @@ test("category guidance adds its required fields without cup-specific defaults",
   await expect(page.getByRole("button", { name: "Добавить недостающие обязательные поля" })).toHaveCount(0);
 });
 
+test("a category cannot keep an incompatible order unit as a valid selection", async ({ page }) => {
+  await prepare(page);
+  await page.getByRole("button", { name: "Заполнить вручную", exact: true }).click();
+  const unit = page.getByRole("combobox", { name: "Характеристика 1: значение", exact: true });
+  await expect(unit).toHaveValue("шт");
+  await page.locator("#category").selectOption("Сырьё и материалы");
+  await page.locator("#subcategory").selectOption("Полимеры");
+  await expect(unit).toHaveValue("");
+  expect(await unit.evaluate((element: HTMLSelectElement) => element.checkValidity())).toBe(false);
+  await expect(unit.locator('option[value="шт"]')).toHaveCount(0);
+  await unit.selectOption("кг");
+  expect(await unit.evaluate((element: HTMLSelectElement) => element.checkValidity())).toBe(true);
+  await page.reload();
+  await expect(unit).toHaveValue("кг");
+});
+
 test("narrow request form keeps file selection inside the viewport", async ({ page }) => {
   await prepare(page);
   await page.setViewportSize({ width: 320, height: 844 });
@@ -268,14 +284,16 @@ test("address entry uses an accessible dialog, provider selection and retry with
 });
 
 test("support chat preserves failed text and notification bell opens full messages", async ({ page }) => {
+  await page.clock.install();
   await page.addInitScript(() => localStorage.setItem("token", "synthetic-chat"));
   const notification = { id:"notice", type:"support_ticket_updated", message:"Ответ поддержки: уточните номер склада для доставки.", is_read:false };
-  let attempt = 0;
+  let attempt = 0, refreshes = 0;
   await page.route("**/api/**", route => {
     const path = new URL(route.request().url()).pathname;
     if (path.endsWith("/auth/me")) return route.fulfill({ json:{ user, companies } });
     if (path.endsWith("/notifications")) return route.fulfill({ json:[notification] });
     if (path.endsWith("/read")) return route.fulfill({ json:{ ...notification, is_read:true } });
+    if (path.endsWith("/support/tickets/mine")) { refreshes++; return route.fulfill({ json:[] }); }
     if (path.endsWith("/support/tickets") && route.request().method() === "POST") {
       expect(route.request().postDataJSON().subject).toBe("Поддержка: Доставка и получение");
       attempt++;
@@ -291,6 +309,10 @@ test("support chat preserves failed text and notification bell opens full messag
   await page.getByRole("button", { name:"Отправить", exact:true }).click();
   await expect(page.locator(".support-chat > [role=alert]")).toContainText("не отправлено");
   await expect(page.getByLabel("Сообщение поддержке", { exact:true })).toHaveValue(/адрес склада/);
+  const previousRefreshes = refreshes;
+  await page.clock.fastForward(15000);
+  await expect.poll(() => refreshes).toBeGreaterThan(previousRefreshes);
+  await expect(page.locator(".support-chat > [role=alert]")).toContainText("не отправлено");
   await page.getByRole("button", { name:"Отправить", exact:true }).click();
   await expect(page.getByRole("log")).toContainText("Помогите уточнить адрес склада");
   await expect(page.getByRole("log")).toContainText("Доставка и получение");
@@ -304,6 +326,22 @@ test("support chat preserves failed text and notification bell opens full messag
   await expect(page.getByRole("button", { name:/Уведомления/ })).toBeFocused();
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
   await page.screenshot({ path:"../../output/playwright/support-mobile.png", fullPage:true });
+});
+
+test.describe("AI delivery dates use the buyer's calendar", () => {
+  test.use({ timezoneId: "Asia/Novosibirsk" });
+  test("early morning does not move the delivery date to the previous day", async ({ page }) => {
+    await page.clock.setFixedTime(new Date("2026-10-23T19:00:00Z")); // 24 October, 02:00 locally
+    await prepare(page);
+    await page.route("**/buyer-agent/runs", route => route.fulfill({ json: {
+      id: "00000000-0000-4000-8000-000000000090", revision: 1, state: "ready_for_review", tool_calls: [],
+      result: { category: "Коробки", can_confirm: true, questions: [], conflicts: [], warnings: [], matches: [],
+        properties: [{ key: "lead_time_days", value: 14 }] },
+    } }));
+    await page.locator("#request_description").fill("Нужны коробки в течение двух недель");
+    await page.getByRole("button", { name: "Заполнить с ИИ", exact: true }).click();
+    await expect(page.locator("#deadline_date")).toHaveValue("07.11.26");
+  });
 });
 
 test("AI fills a single review card with compact decimals and stale confirmation cannot publish", async ({ page }) => {
