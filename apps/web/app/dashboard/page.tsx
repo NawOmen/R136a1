@@ -30,7 +30,6 @@ export default function DashboardPage() {
   const [logoutError, setLogoutError] = useState("");
   const [mode, setMode] = useState<Mode>(null);
   const [companyId, setCompanyId] = useState("");
-  const [unreadCount, setUnreadCount] = useState(0);
   const [nextError, setNextError] = useState(false);
   const [stepRetry, setStepRetry] = useState(0);
   const [nextStep, setNextStep] = useState<{ title: string; description: string; href: string } | null>(null);
@@ -51,12 +50,7 @@ export default function DashboardPage() {
         setCompanyId(selected?.id ?? "");
         const savedMode = window.localStorage.getItem(`porukam:work-mode:${result.user.id}:${selected?.id}`);
         setMode(savedMode === "sell" && selected?.membership?.can_sell ? "sell" : selected?.membership?.can_buy ? "buy" : selected?.membership?.can_sell ? "sell" : null);
-        marketplace
-          .getNotifications(token)
-          .then((list) => setUnreadCount(list.filter((item) => !item.is_read).length))
-          .catch(() => {
-            // счётчик уведомлений не критичен для дашборда
-          });
+
 
       })
       .catch((err: unknown) => {
@@ -122,7 +116,7 @@ export default function DashboardPage() {
   if (!user) return null;
 
   if (user.is_marketplace_admin) {
-    return <div><div className="dashboard-head"><div><h1 className="page-title">Рабочее место администратора</h1><p className="subtitle">Управление компаниями, пользователями и обращениями платформы</p></div><button type="button" className="btn btn-secondary" disabled={loggingOut} onClick={() => void handleLogout()}>{loggingOut ? "Выходим…" : "Выйти"}</button></div>{logoutError && <p className="alert alert-error" role="alert">{logoutError}</p>}<section className="journey-grid"><Link className="journey-card" href="/admin"><span>01</span><b>Заявки компаний</b><small>Проверка, причины решений и история</small></Link><Link className="journey-card" href="/admin#tickets"><span>02</span><b>Обращения пользователей</b><small>Очередь поддержки и ответы</small></Link><Link className="journey-card" href="/notifications"><span>03</span><b>Уведомления</b><small>Системные события администратора</small></Link></section></div>;
+    return <div><div className="dashboard-head"><div><h1 className="page-title">Рабочее место администратора</h1><p className="subtitle">Управление компаниями, пользователями и поддержкой</p></div><button type="button" className="btn btn-secondary" disabled={loggingOut} onClick={() => void handleLogout()}>{loggingOut ? "Выходим…" : "Выйти"}</button></div>{logoutError && <p className="alert alert-error" role="alert">{logoutError}</p>}<section className="journey-grid"><Link className="journey-card" href="/admin"><span>01</span><b>Заявки компаний</b><small>Проверка, причины решений и история</small></Link><Link className="journey-card" href="/admin#tickets"><span>02</span><b>Сообщения в поддержку</b><small>Очередь поддержки и ответы</small></Link><Link className="journey-card" href="/notifications"><span>03</span><b>Уведомления</b><small>Системные события администратора</small></Link></section></div>;
   }
 
   const fullName = [user.last_name, user.first_name, user.middle_name].filter(Boolean).join(" ");
@@ -134,7 +128,6 @@ export default function DashboardPage() {
       {logoutError && <p className="alert alert-error" role="alert">{logoutError}</p>}
       <div className="dashboard-head">
         <div>
-          <span className="eyebrow">Центр управления</span>
           <h1 className="page-title">Личный кабинет</h1>
           <p className="subtitle">
             {fullName} · {user.email} · Статус: {ACCOUNT_STATUS_LABELS[user.account_status]}
@@ -147,9 +140,7 @@ export default function DashboardPage() {
           <Link href="/kpi" className="btn btn-secondary">
             Показатели и доверие
           </Link>
-          <Link href="/notifications" className="btn btn-secondary">
-            Уведомления{unreadCount > 0 ? ` (${unreadCount})` : ""}
-          </Link>
+
           <Link href="/deals" className="btn btn-secondary">Сделки и сообщения</Link>
           {user.is_marketplace_admin && (
             <Link href="/admin" className="btn btn-secondary">

@@ -21,13 +21,13 @@ test("503, reload, role and company switching preserve independent input and sou
   await prepare(page);
   const description = page.locator("#request_description");
   await expect(page.getByText("Выбрать файлы", { exact: true })).toBeVisible();
-  await expect(page.getByText("Файлы не выбраны", { exact: true })).toBeVisible();
+  await expect(page.getByText("Фото, PDF, текст или аудио", { exact: true })).toBeVisible();
   await expect(page.locator("#need_files")).toBeEnabled();
   await page.locator("#need_files").focus();
   await expect(page.locator("#need_files")).toBeFocused();
   await page.getByRole("button", { name: "Заполнить вручную", exact: true }).click();
   await expect(page.getByRole("textbox", { name: "Характеристика 1: название", exact: true })).toHaveValue("Единица заказа");
-  await page.getByText("3. Карточка запроса — проверьте и отправьте", { exact: true }).click();
+  await page.getByRole("button", { name:"Изменить описание", exact:true }).click();
   await description.fill("Нужны столы из дерева, 30 штук, для офиса");
   // A readable label must not rename the persisted API characteristic key.
   await expect.poll(() => page.evaluate(() => Object.values(sessionStorage).some(value => {
@@ -35,19 +35,19 @@ test("503, reload, role and company switching preserve independent input and sou
   }))).toBe(true);
   await page.locator("#need_files").setInputFiles({ name: "синтетическая-спецификация.txt", mimeType: "text/plain", buffer: Buffer.from("Материал: дерево; количество: 30 шт") });
   await expect(page.getByText("Выбрано файлов: 1", { exact: true })).toBeVisible();
-  await page.getByRole("button", { name: "Разобрать материалы", exact: true }).click();
+  await page.getByRole("button", { name: "Заполнить с ИИ", exact: true }).click();
   await expect(page.getByRole("alert").filter({ hasText: "Локальная модель недоступна" })).toBeVisible();
   await expect(description).toHaveValue(/30 штук/);
   await page.reload();
   await expect(description).toHaveValue(/30 штук/);
-  await expect(page.getByText(/Восстановленные или выбранные файлы: 1/)).toBeVisible();
+  await expect(page.getByText(/синтетическая-спецификация.txt/, {exact:true})).toBeVisible();
   // A different company gets a different draft, even in the same account.
   await page.locator("#company_id").selectOption(companies[1].id);
   await expect(description).toHaveValue("");
   await description.fill("Синтетическая заявка второй компании");
   await page.locator("#company_id").selectOption(companies[0].id);
   await expect(description).toHaveValue(/30 штук/);
-  await expect(page.getByText(/Восстановленные или выбранные файлы: 1/)).toBeVisible();
+  await expect(page.getByText(/синтетическая-спецификация.txt/, {exact:true})).toBeVisible();
   await page.waitForLoadState("networkidle");
   await page.goto("/seller");
   await page.waitForLoadState("networkidle");
@@ -55,8 +55,8 @@ test("503, reload, role and company switching preserve independent input and sou
   await expect(description).toHaveValue(/30 штук/);
   // A transport failure has the same preservation behavior as a 503.
   await page.route("**/api/v2/buyer-agent/runs", route => route.abort("internetdisconnected"));
-  await page.getByRole("button", { name: "Разобрать материалы", exact: true }).click();
-  await expect(page.getByRole("button", { name: "Разобрать материалы", exact: true })).toBeEnabled();
+  await page.getByRole("button", { name: "Заполнить с ИИ", exact: true }).click();
+  await expect(page.getByRole("button", { name: "Заполнить с ИИ", exact: true })).toBeEnabled();
   await expect(description).toHaveValue(/30 штук/);
 });
 
@@ -66,7 +66,7 @@ test("microphone denial keeps the local audio-file path available", async ({ pag
   await page.getByRole("button", { name: /Продиктовать запрос/ }).click();
   await expect(page.getByText(/Не удалось получить доступ к микрофону|Запись с микрофона недоступна/)).toBeVisible();
   await page.locator("#need_files").setInputFiles({ name: "синтетическая-запись.wav", mimeType: "audio/wav", buffer: Buffer.from("synthetic-audio") });
-  await expect(page.getByText(/Восстановленные или выбранные файлы: 1/)).toBeVisible();
+  await expect(page.getByText(/синтетическая-запись.wav/, {exact:true})).toBeVisible();
   await page.reload();
   await expect(page.getByText(/синтетическая-запись.wav/)).toBeVisible();
 });
@@ -104,26 +104,17 @@ test("S13: expiry warnings follow document deletion and company scope; failures 
   await expect(page.getByText("Истекающих подтверждений нет.")).toBeVisible();
 });
 
-test("S13: external counters need an explicit separate choice and a different retry key", async ({ page }) => {
+test("need creation stays local and hides processing metadata", async ({ page }) => {
   await prepare(page);
-  const submitted: string[] = [];
-  await page.route("**/buyer-agent/runs", route => {
-    submitted.push(route.request().postData() ?? "");
-    return route.fulfill({ status: 503, json: { detail: "Синтетический отказ" } });
-  });
+  let submitted = "";
+  await page.route("**/buyer-agent/runs", route => { submitted = route.request().postData() ?? ""; return route.fulfill({status:503,json:{detail:"Синтетический отказ"}}); });
   await page.locator("#request_description").fill("Нужно 5000 стаканов в Москву");
-  await page.locator("#analysis_route").selectOption("complex_auto");
-  const consent = page.getByRole("checkbox", { name: /Разрешаю передать внешней модели DeepSeek/ });
-  await expect(consent).not.toBeChecked();
-  await page.getByRole("button", { name: "Разобрать материалы", exact: true }).click();
-  await expect(page.getByRole("button", { name: "Разобрать материалы", exact: true })).toBeEnabled();
-  await consent.check();
-  await page.getByRole("button", { name: "Разобрать материалы", exact: true }).click();
-  await expect.poll(() => submitted.length).toBe(2);
-  expect(submitted[0]).toMatch(/name="external_context_allowed"\r?\n\r?\nfalse/);
-  expect(submitted[1]).toMatch(/name="external_context_allowed"\r?\n\r?\ntrue/);
-  const key = (body: string) => /name="request_key"\r?\n\r?\n([^\r\n]+)/.exec(body)?.[1];
-  expect(key(submitted[0])).not.toBe(key(submitted[1]));
+  await expect(page.locator("#analysis_route")).toHaveCount(0);
+  await expect(page.getByText(/Пробные сценарии|Настройки обработки|Лимит и сохранение/)).toHaveCount(0);
+  await page.getByRole("button",{name:"Заполнить с ИИ",exact:true}).click();
+  await expect.poll(()=>submitted).toContain('name="route"');
+  expect(submitted).toMatch(/name="route"\r?\n\r?\nlocal/);
+  expect(submitted).toMatch(/name="external_context_allowed"\r?\n\r?\nfalse/);
 });
 
 test("clarified unreadable material is omitted by content hash while same-name valid file saves", async ({ page }) => {
@@ -188,12 +179,11 @@ test("clarified unreadable material is omitted by content hash while same-name v
     { name: "source.m4a", mimeType: "text/plain", buffer: Buffer.from("valid synthetic source") },
     { name: "source.m4a", mimeType: "audio/mp4", buffer: bad },
   ]);
-  await page.getByRole("button", { name: "Разобрать материалы", exact: true }).click();
+  await page.getByRole("button", { name: "Заполнить с ИИ", exact: true }).click();
   await page.getByLabel("Часть материалов не прочитана. Продолжить без них?").selectOption("Да, продолжить без них");
-  await page.getByRole("button", { name: "Сохранить ответы", exact: true }).click();
+  await page.getByRole("button", { name: "Продолжить", exact: true }).click();
   await expect(page.getByText(/По вашему решению непрочитанные материалы/)).toBeVisible();
-  const volumeCheck = page.waitForResponse(response => response.url().endsWith("/physical-quantities/preview"));
-  await page.getByRole("button", { name: "Перенести подтверждённые данные в карточку" }).click();
+  await expect(page.getByRole("heading", { name:"Детали закупки", exact:true })).toBeVisible();
   await expect(page.locator("#subcategory")).toHaveValue("Коробки");
   await expect(page.locator("#delivery_address_id")).toHaveValue("00000000-0000-4000-8000-000000000092");
   await page.locator("#deadline_date").fill("20.12.26");
@@ -201,7 +191,6 @@ test("clarified unreadable material is omitted by content hash while same-name v
   await expect.poll(() => page.evaluate(() => Object.entries(sessionStorage)
     .filter(([key]) => key.startsWith("porukam:need-draft:"))
     .map(([, value]) => JSON.parse(value).deadline))).toContain("2026-12-20");
-  await (await volumeCheck).finished();
   await expect(page.getByText("Проверяем точность объёма…", { exact: true })).toHaveCount(0);
   await page.waitForLoadState("networkidle");
   await page.reload();
@@ -227,12 +216,27 @@ test("category guidance adds its required fields without cup-specific defaults",
   await page.getByRole("button", { name: "Заполнить вручную", exact: true }).click();
   await page.locator("#category").selectOption("Товары для бизнеса");
   await page.locator("#subcategory").selectOption("Мебель");
-  await page.getByRole("button", { name: "Добавить недостающие обязательные поля" }).click();
-  const keys = await page.locator('input[placeholder="Характеристика (например, материал)"]').evaluateAll(inputs => inputs.map(input => (input as HTMLInputElement).value));
+  const keys = await page.locator('input[placeholder="Название характеристики"]').evaluateAll(inputs => inputs.map(input => (input as HTMLInputElement).value));
   expect(keys).toContain("Габариты, мм");
   expect(keys).not.toContain("Объём, мл");
   expect(new Set(keys).size).toBe(keys.length);
   await expect(page.getByRole("button", { name: "Добавить недостающие обязательные поля" })).toHaveCount(0);
+});
+
+test("a category cannot keep an incompatible order unit as a valid selection", async ({ page }) => {
+  await prepare(page);
+  await page.getByRole("button", { name: "Заполнить вручную", exact: true }).click();
+  const unit = page.getByRole("combobox", { name: "Характеристика 1: значение", exact: true });
+  await expect(unit).toHaveValue("шт");
+  await page.locator("#category").selectOption("Сырьё и материалы");
+  await page.locator("#subcategory").selectOption("Полимеры");
+  await expect(unit).toHaveValue("");
+  expect(await unit.evaluate((element: HTMLSelectElement) => element.checkValidity())).toBe(false);
+  await expect(unit.locator('option[value="шт"]')).toHaveCount(0);
+  await unit.selectOption("кг");
+  expect(await unit.evaluate((element: HTMLSelectElement) => element.checkValidity())).toBe(true);
+  await page.reload();
+  await expect(unit).toHaveValue("кг");
 });
 
 test("narrow request form keeps file selection inside the viewport", async ({ page }) => {
@@ -243,6 +247,146 @@ test("narrow request form keeps file selection inside the viewport", async ({ pa
   await expect(files).toBeVisible();
   await expect(files).toBeEnabled();
   await files.setInputFiles({ name: "Требования-к-закупке.txt", mimeType: "text/plain", buffer: Buffer.from("Синтетические требования") });
-  await expect(page.getByText(/Восстановленные или выбранные файлы: 1/)).toBeVisible();
+  await expect(page.getByText(/Требования-к-закупке.txt/, {exact:true})).toBeVisible();
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+});
+
+test("address entry uses an accessible dialog, provider selection and retry without browser prompts", async ({ page }) => {
+  await prepare(page);
+  let saves = 0;
+  const selected = { label: "г Новосибирск, ул Складская, д 12", address: "ул Складская, д 12", city: "Новосибирск", region: "Новосибирская область", house: "12" };
+  page.on("dialog", () => { throw new Error("Native browser prompts must not be used for address entry"); });
+  await page.route("**/address-suggestions?*", route => route.fulfill({ json: [selected] }));
+  await page.route("**/addresses", route => {
+    if (route.request().method() !== "POST") return route.fulfill({ json: [] });
+    saves++;
+    if (saves === 1) return route.fulfill({ status:503, json:{ detail:"Временная ошибка" } });
+    expect(route.request().postDataJSON()).toMatchObject({ address:selected.address, city:selected.city, region:selected.region });
+    return route.fulfill({ status:201, json:{ ...selected, id:"new-address", is_default:true } });
+  });
+  await page.setViewportSize({ width:390, height:844 });
+  await page.getByRole("button", { name:"Заполнить вручную", exact:true }).click();
+  await expect(page.locator("#visibility")).toHaveCount(0);
+  await expect(page.getByRole("combobox", { name:"Характеристика 1: значение", exact:true })).toHaveValue("шт");
+  await page.getByRole("button", { name:"+ Добавить адрес", exact:true }).click();
+  await expect(page.getByRole("dialog")).toBeVisible();
+  await page.getByLabel("Поиск адреса", { exact:true }).fill("Новосибирск Складская 12");
+  await page.getByRole("button", { name:selected.label, exact:true }).click();
+  await expect(page.getByLabel("Регион", { exact:true })).toHaveValue(selected.region);
+  await page.getByRole("button", { name:"Сохранить адрес", exact:true }).click();
+  await expect(page.getByRole("dialog").getByRole("alert")).toContainText("Не удалось сохранить");
+  await expect(page.getByLabel("Улица, дом, строение", { exact:true })).toHaveValue(selected.address);
+  await page.getByRole("button", { name:"Сохранить адрес", exact:true }).click();
+  await expect(page.getByRole("dialog")).toHaveCount(0);
+  await expect(page.locator("#delivery_address_id")).toHaveValue("new-address");
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+  await page.screenshot({ path:"../../output/playwright/need-mobile.png", fullPage:true });
+});
+
+test("support chat preserves failed text and notification bell opens full messages", async ({ page }) => {
+  await page.clock.install();
+  await page.addInitScript(() => localStorage.setItem("token", "synthetic-chat"));
+  const notification = { id:"notice", type:"support_ticket_updated", message:"Ответ поддержки: уточните номер склада для доставки.", is_read:false };
+  let attempt = 0, refreshes = 0;
+  await page.route("**/api/**", route => {
+    const path = new URL(route.request().url()).pathname;
+    if (path.endsWith("/auth/me")) return route.fulfill({ json:{ user, companies } });
+    if (path.endsWith("/notifications")) return route.fulfill({ json:[notification] });
+    if (path.endsWith("/read")) return route.fulfill({ json:{ ...notification, is_read:true } });
+    if (path.endsWith("/support/tickets/mine")) { refreshes++; return route.fulfill({ json:[] }); }
+    if (path.endsWith("/support/tickets") && route.request().method() === "POST") {
+      expect(route.request().postDataJSON().subject).toBe("Поддержка: Доставка и получение");
+      attempt++;
+      if (attempt === 1) return route.fulfill({ status:503, json:{ detail:"Недоступно" } });
+      return route.fulfill({ status:201, json:{ id:"message", message:route.request().postDataJSON().message, subject:route.request().postDataJSON().subject, status:"new", company_id:null, admin_response:null, created_at:"2026-10-23T12:00:00Z", updated_at:"2026-10-23T12:00:00Z" } });
+    }
+    return route.fulfill({ json:[] });
+  });
+  await page.setViewportSize({ width:390, height:844 });
+  await page.goto("/support");
+  await page.getByLabel("Тема вопроса", { exact:true }).selectOption("Доставка и получение");
+  await page.getByLabel("Сообщение поддержке", { exact:true }).fill("Помогите уточнить адрес склада для заказа");
+  await page.getByRole("button", { name:"Отправить", exact:true }).click();
+  await expect(page.locator(".support-chat > [role=alert]")).toContainText("не отправлено");
+  await expect(page.getByLabel("Сообщение поддержке", { exact:true })).toHaveValue(/адрес склада/);
+  const previousRefreshes = refreshes;
+  await page.clock.fastForward(15000);
+  await expect.poll(() => refreshes).toBeGreaterThan(previousRefreshes);
+  await expect(page.locator(".support-chat > [role=alert]")).toContainText("не отправлено");
+  await page.getByRole("button", { name:"Отправить", exact:true }).click();
+  await expect(page.getByRole("log")).toContainText("Помогите уточнить адрес склада");
+  await expect(page.getByRole("log")).toContainText("Доставка и получение");
+  await expect(page.getByLabel("Сообщение поддержке", { exact:true })).toHaveValue("");
+  await page.getByRole("button", { name:/Уведомления, новых/ }).click();
+  await page.getByRole("button", { name:notification.message, exact:true }).click();
+  await expect(page.locator(".notification-detail")).toContainText(notification.message);
+  await expect(page.locator(".notification-detail a")).toHaveAttribute("href", "/support");
+  await page.keyboard.press("Escape");
+  await expect(page.locator(".notification-popover")).toHaveCount(0);
+  await expect(page.getByRole("button", { name:/Уведомления/ })).toBeFocused();
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+  await page.screenshot({ path:"../../output/playwright/support-mobile.png", fullPage:true });
+});
+
+test.describe("AI delivery dates use the buyer's calendar", () => {
+  test.use({ timezoneId: "Asia/Novosibirsk" });
+  test("early morning does not move the delivery date to the previous day", async ({ page }) => {
+    await page.clock.setFixedTime(new Date("2026-10-23T19:00:00Z")); // 24 October, 02:00 locally
+    await prepare(page);
+    await page.route("**/buyer-agent/runs", route => route.fulfill({ json: {
+      id: "00000000-0000-4000-8000-000000000090", revision: 1, state: "ready_for_review", tool_calls: [],
+      result: { category: "Коробки", can_confirm: true, questions: [], conflicts: [], warnings: [], matches: [],
+        properties: [{ key: "lead_time_days", value: 14 }] },
+    } }));
+    await page.locator("#request_description").fill("Нужны коробки в течение двух недель");
+    await page.getByRole("button", { name: "Заполнить с ИИ", exact: true }).click();
+    await expect(page.locator("#deadline_date")).toHaveValue("07.11.26");
+  });
+});
+
+test("a new support message notification directs staff to the support queue", async ({ page }) => {
+  await page.addInitScript(() => localStorage.setItem("token", "synthetic-staff"));
+  const notification = { id: "notice", type: "support_ticket_created", message: "Новое сообщение в поддержку: Оплата", is_read: true };
+  await page.route("**/api/**", route => {
+    const path = new URL(route.request().url()).pathname;
+    if (path.endsWith("/auth/me")) return route.fulfill({ json: { user: { ...user, is_marketplace_admin: true }, companies: [] } });
+    if (path.endsWith("/notifications")) return route.fulfill({ json: [notification] });
+    return route.fulfill({ json: [] });
+  });
+  await page.goto("/");
+  await page.getByRole("button", { name: "Уведомления", exact: true }).click();
+  await page.getByRole("button", { name: notification.message, exact: true }).click();
+  await expect(page.locator(".notification-detail a")).toHaveAttribute("href", "/admin#tickets");
+});
+
+test("AI fills a single review card with compact decimals and stale confirmation cannot publish", async ({ page }) => {
+  await prepare(page);
+  let confirmations = 0, creations = 0;
+  const facts = { product_type:"гофрокороб", dimensions_mm:"400×300×300", body_material:"картон", quantity_units:"100.000000000000", budget_rub:"12500.500000000000", lead_time_days:14, delivery_city:"Москва" };
+  const run = { id:"00000000-0000-4000-8000-000000000090", revision:1, state:"ready_for_review", tool_calls:[], result:{ category:"упаковка", summary:"Техническая сводка", can_confirm:true, questions:[],conflicts:[],warnings:[],matches:[],properties:Object.entries(facts).map(([key,value])=>({key,value,label:key,status:"assumed",confidence:.95,sources:[{source_id:"text",excerpt:"Описание покупателя"}]})) } };
+  await page.route("**/api/**", route => {
+    const path = new URL(route.request().url()).pathname;
+    if (path.endsWith("/auth/me")) return route.fulfill({json:{user,companies}});
+    if (path.endsWith("/addresses")) return route.fulfill({json:[{id:"address",city:"Москва",address:"ул. Складская, д. 1",region:"Москва"}]});
+    if (path.endsWith("/buyer-agent/runs")) return route.fulfill({json:run});
+    if (path.endsWith("/confirm")) { confirmations++; return route.fulfill({status:409,json:{detail:"Требования изменились. Повторите анализ."}}); }
+    if (path.endsWith("/physical/needs") && route.request().method()==="POST") creations++;
+    if (path.endsWith("/physical-quantities/preview")) return route.fulfill({json:{conversion:{factor:1}}});
+    return route.fulfill({json:[]});
+  });
+  await page.reload();
+  await page.locator("#request_description").fill("Нужно 100 коробок, доставка в Москву");
+  await page.getByRole("button",{name:"Заполнить с ИИ",exact:true}).click();
+  await expect(page.getByRole("heading",{name:"Детали закупки",exact:true})).toBeVisible();
+  await expect(page.locator("#volume_units")).toHaveValue("100");
+  await expect(page.locator("#budget_rub")).toHaveValue("12500.5");
+  await expect(page.locator("#request_description")).toHaveCount(0);
+  await expect(page.getByText(/Откуда взята характеристика|Уверенность извлечения|Техническая сводка|Журнал обработки/)).toHaveCount(0);
+  expect(confirmations).toBe(0);
+  await page.screenshot({path:"../../output/playwright/need-review.png",fullPage:true});
+  await page.getByRole("button",{name:"Подтвердить и опубликовать",exact:true}).click();
+  await expect(page.locator(".need-workflow [role=alert]")).toContainText("Требования изменились");
+  expect(confirmations).toBe(1);
+  expect(creations).toBe(0);
+  await expect(page.locator("#budget_rub")).toHaveValue("12500.5");
 });

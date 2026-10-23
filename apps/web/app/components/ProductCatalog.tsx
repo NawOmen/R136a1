@@ -48,7 +48,7 @@ export function ProductCatalog({ home = false }: { home?: boolean }) {
   }, []);
   useEffect(() => {
     const syncLocation = () => {
-      const state = readCatalogLocation(window.location.search), checked = validateCatalogFilters(state.filters);
+      const state = readCatalogLocation(home ? "" : window.location.search), checked = validateCatalogFilters(state.filters);
       setQuery(state.query); setCategory(state.category || allCategories); setSort(state.sort);
       setDraft(state.filters); setFilterErrors(checked.errors);
       setFilters(Object.keys(checked.errors).length ? emptyCatalogFilters : checked.filters);
@@ -132,19 +132,19 @@ export function ProductCatalog({ home = false }: { home?: boolean }) {
   return <div className={home ? "marketplace storefront" : "marketplace catalogue-page"}>
     {home ? <section className="storefront-hero" aria-labelledby="storefront-heading">
       <div className="storefront-warehouse" aria-hidden="true" />
-      <div className="storefront-hero__copy"><h1 id="storefront-heading">Всё для вашего бизнеса</h1><p>Готовые товары. Прямой диалог с производителями.</p>
-      <div className="storefront-hero__actions"><LiquidSurface as="div" variant="rail" className="liquid-action liquid-action--outline"><Link href={admin ? "/admin" : "/needs/new"}>{admin ? "Кабинет площадки" : "Разместить потребность"}<Icon name="arrow" size={19} /></Link></LiquidSurface><Link className="storefront-guide" href="/ai-procurement">Как это работает<Icon name="arrow" size={17} /></Link></div></div>
+      <div className="storefront-hero__copy"><h1 id="storefront-heading" className="storefront-title"><span className="storefront-title__base">Всё для вашего бизнеса</span><span className="storefront-title__sheen" aria-hidden="true">Всё для вашего бизнеса</span></h1><p>От задачи до выбора поставщика: ИИ соберёт требования, подберёт производителей и поможет сравнить предложения.</p>
+      <div className="storefront-hero__actions"><LiquidSurface as="div" variant="rail" className="liquid-action liquid-action--outline"><Link href={admin ? "/admin" : "/needs/new"}>{admin ? "Кабинет площадки" : "Закупить с ИИ"}<Icon name="arrow" size={19} /></Link></LiquidSurface><Link className="storefront-guide" href="/ai-procurement">Как это работает<Icon name="arrow" size={17} /></Link></div></div>
     </section> : <div className="marketplace-heading"><h1>Каталог товаров</h1>{!admin && <Link className="btn btn-outline-primary" href="/needs/new">Разместить потребность<Icon name="arrow" size={18} /></Link>}</div>}
-    <div className="marketplace-layout">
-      <aside className="catalog-categories" aria-label="Категории товаров">
+    <div className={home ? "storefront-products" : "marketplace-layout"}>
+      {!home && <aside className="catalog-categories" aria-label="Категории товаров">
         <h2 className="visually-hidden">Категории</h2>
         <nav>{[allCategories, ...categories].map(item => <button type="button" key={item} aria-label={item} className={item === category ? "active" : ""} aria-pressed={item === category} onClick={() => chooseCategory(item)}><Icon name={categoryIcons[item] ?? "grid"} size={29} /><span>{item === "Упаковка и тара" ? "Упаковка" : item}</span></button>)}</nav>
-      </aside>
+      </aside>}
       <section className="catalog-results" aria-label="Предложения производителей">
-        <div className="catalog-heading-row"><div className="catalog-title-group"><h2>Товары производителей</h2>{home && limit < visible.length && <button type="button" className="catalog-all" onClick={() => setLimit(value => value + catalogPageSize)}>Показать ещё<Icon name="arrow" size={14} /></button>}</div>
-          <div className="catalog-controls"><nav className="storefront-mode" aria-label="Для компаний">{admin ? <Link className="active" href="/admin">Администрирование</Link> : <><Link className="active" href="/catalog">Покупатель</Link><Link href={me ? "/seller/requests" : "/login"}>Производитель</Link></>}</nav><label className="catalog-sort"><span className="visually-hidden">Порядок</span><select aria-label="Порядок товаров" title={sort === "popular" ? "По числу закупок с подтверждённой приёмкой за вычетом полных возвратов" : undefined} value={sort} onChange={event => { const value = event.target.value as CatalogSort; setSort(value); setLimit(home ? homePageSize : catalogPageSize); updateLocation({ sort: value }); }}><option value="popular">По популярности</option><option value="name">По названию</option><option value="price-asc">Сначала дешевле</option><option value="price-desc">Сначала дороже</option><option value="lead-time">Быстрее производство</option><option value="moq">Меньше минимальный заказ</option></select></label></div>
+        <div className="catalog-heading-row"><div className="catalog-title-group"><h2>{home ? "Популярные товары" : "Товары производителей"}</h2>{home && <Link className="btn btn-secondary catalog-more" href="/catalog">Показать ещё<Icon name="arrow" size={18} /></Link>}</div>
+          {!home && <div className="catalog-controls"><nav className="storefront-mode" aria-label="Для компаний">{admin ? <Link className="active" href="/admin">Администрирование</Link> : <><Link className="active" href="/catalog">Покупатель</Link><Link href={me ? "/seller/requests" : "/login"}>Производитель</Link></>}</nav><label className="catalog-sort"><span className="visually-hidden">Порядок</span><select aria-label="Порядок товаров" title={sort === "popular" ? "По числу закупок с подтверждённой приёмкой за вычетом полных возвратов" : undefined} value={sort} onChange={event => { const value = event.target.value as CatalogSort; setSort(value); setLimit(home ? homePageSize : catalogPageSize); updateLocation({ sort: value }); }}><option value="popular">По популярности</option><option value="name">По названию</option><option value="price-asc">Сначала дешевле</option><option value="price-desc">Сначала дороже</option><option value="lead-time">Быстрее производство</option><option value="moq">Меньше минимальный заказ</option></select></label></div>}
         </div>
-        <details className="catalog-filters" ref={filtersPanel}>
+        {!home && <details className="catalog-filters" ref={filtersPanel}>
           <summary><Icon name="sliders" size={18} /><span>Фильтры{activeFilters > 0 && <span className="catalog-filter-count">{activeFilters}</span>}</span><Icon name="arrow" className="catalog-filter-chevron" size={16} /></summary>
           <form className="catalog-filter-form" onSubmit={applyFilters} noValidate>
             <div className="catalog-filter-fields">
@@ -157,7 +157,7 @@ export function ProductCatalog({ home = false }: { home?: boolean }) {
             </div>
             <div className="catalog-filter-actions"><label className="catalog-stock-filter"><input type="checkbox" checked={draft.inStock} onChange={event => setDraftField("inStock", event.target.checked)} /><span>Только в наличии</span></label><button className="btn btn-primary" type="submit">Применить фильтры</button><button className="btn btn-secondary" type="button" onClick={resetFilters}>Очистить фильтры</button></div>
           </form>
-        </details>
+        </details>}
         <p className={loading || error ? "catalog-status" : "visually-hidden"} role="status">{loading ? "Загружаем товары…" : error ? "Каталог недоступен" : formatUnits(visible.length, "предложение")}</p>
         {query && <p className="catalog-query">Поиск: «{query}» <button type="button" onClick={() => { setQuery(""); setLimit(home ? homePageSize : catalogPageSize); updateLocation({ query: "" }); }}>Сбросить поиск</button></p>}
         {loading ? <div className="product-grid" aria-busy="true" aria-label="Загрузка предложений">{Array.from({ length: homePageSize }, (_, i) => <div className="product-skeleton" key={i}><span /><i /><i /></div>)}</div>
@@ -168,7 +168,7 @@ export function ProductCatalog({ home = false }: { home?: boolean }) {
     </div>
     {home && !admin && <section className="storefront-request"><div className="storefront-request__symbol" aria-hidden="true"><Icon name="spark" size={31} /></div><h2>Не нашли нужный товар?</h2><LiquidSurface as="div" variant="rail" className="liquid-action liquid-action--primary"><Link href="/needs/new">Создать потребность<Icon name="arrow" size={18} /></Link></LiquidSurface></section>}
     {!home && <nav className="market-utilities" aria-label="Рабочие возможности">
-      {me && <><Link href={admin ? "/admin" : company ? "/dashboard" : "/company/new"}><Icon name="building" />{admin ? "Администрирование" : company ? "Моя компания" : "Создать компанию"}<Icon name="arrow" size={16} /></Link>{!admin && <><Link href="/needs"><Icon name="layers" />Мои потребности<Icon name="arrow" size={16} /></Link><Link href="/notifications"><Icon name="spark" />Уведомления<Icon name="arrow" size={16} /></Link><Link href="/deals"><Icon name="box" />Сделки<Icon name="arrow" size={16} /></Link></>}</>}
+      {me && <><Link href={admin ? "/admin" : company ? "/dashboard" : "/company/new"}><Icon name="building" />{admin ? "Администрирование" : company ? "Моя компания" : "Создать компанию"}<Icon name="arrow" size={16} /></Link>{!admin && <><Link href="/needs"><Icon name="layers" />Мои потребности<Icon name="arrow" size={16} /></Link><Link href="/deals"><Icon name="box" />Сделки<Icon name="arrow" size={16} /></Link></>}</>}
       <Link href="/ai-procurement"><Icon name="link" />Закупки с ИИ<Icon name="arrow" size={16} /></Link><Link href="/knowledge"><Icon name="shield" />Помощь с закупкой<Icon name="arrow" size={16} /></Link>
     </nav>}
   </div>;

@@ -4,8 +4,8 @@ import { russianLabel } from "../lib/presentation";
 import { useEffect, useState } from "react";
 import { russianUnit, formatRub, marketplace, QuantityConversionPreview } from "../lib/marketplace";
 
-export default function PhysicalQuantityReview({ kind, values, approved, onApproval }: {
-  kind: "product" | "need"; values: Record<string, unknown>; approved: boolean; onApproval: (approved: boolean) => void;
+export default function PhysicalQuantityReview({ kind, values, approved, onApproval, compact = false }: {
+  compact?: boolean; kind: "product" | "need"; values: Record<string, unknown>; approved: boolean; onApproval: (approved: boolean) => void;
 }) {
   const [preview, setPreview] = useState<QuantityConversionPreview | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -28,7 +28,7 @@ export default function PhysicalQuantityReview({ kind, values, approved, onAppro
   }, [signature, kind, retry]);
   if (error) return <div role="alert" className="alert alert-error">{error} <button type="button" onClick={() => setRetry((value) => value + 1)}>Повторить расчёт</button></div>;
   if (loading) return <p role="status" className="hint">Проверяем точность объёма…</p>;
-  if (!preview || preview.factor === 1) return <p className="hint">Штуки, рулоны, упаковки и комплекты — целыми числами. Физические объёмы — в том числе дробными, без округления.</p>;
+  if (!preview || preview.factor === 1) return compact ? null : <p className="hint">Штуки, рулоны, упаковки и комплекты — целыми числами. Физические объёмы — в том числе дробными, без округления.</p>;
   const labels: Record<string, string> = { volume_units: "Объём", moq_units: "Минимальный заказ", stock_units: "Остаток" };
   return <div className="field">
     <p className="hint">Точный пересчёт: 1 {russianUnit(preview.input_unit)} = {preview.factor} {russianUnit(preview.stored_unit)}. В заказах и ресурсах будет использоваться {russianUnit(preview.stored_unit)}.</p>

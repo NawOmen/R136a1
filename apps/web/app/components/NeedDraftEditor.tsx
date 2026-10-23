@@ -1,4 +1,5 @@
 "use client";
+import { CharacteristicValue } from "./CharacteristicValue";
 import { DateInput } from "./DateInput";
 
 import { canonicalCharacteristicKey } from "../lib/categoryProfiles";
@@ -74,7 +75,7 @@ export default function NeedDraftEditor({ need, onSaved }: { need: Need; onSaved
       <CharacteristicSuggestions category={category} subcategory={subcategory} keys={rows.map(row => row.key)} onAdd={key => setRows([...rows, {key,value:"",original:""}])} />
       {rows.map((row, index) => <div className="field" key={index}>
         <input aria-label={`Название характеристики ${index + 1}`} required maxLength={120} value={fieldName(row.key)} onChange={e => setRows(rows.map((item, i) => i === index ? { ...item, key: canonicalCharacteristicKey(e.target.value) } : item))} />
-        <input aria-label={`Значение характеристики ${index + 1}`} required value={row.value} readOnly={typeof row.original === "object" && row.original !== null} onChange={e => setRows(rows.map((item, i) => i === index ? { ...item, value: e.target.value } : item))} />
+        {typeof row.original === "object" && row.original !== null ? <input aria-label={`Значение характеристики ${index + 1}`} readOnly value={row.value} /> : <CharacteristicValue category={category} subcategory={subcategory} fieldKey={row.key} value={row.value} label={`Значение характеристики ${index + 1}`} onChange={value => setRows(rows.map((item, i) => i === index ? { ...item, value } : item))} />}
         <button type="button" className="btn btn-secondary btn-sm" onClick={() => setRows(rows.filter((_, i) => i !== index))}>Удалить характеристику</button>
       </div>)}
       <button type="button" className="btn btn-secondary btn-sm" onClick={() => setRows([...rows, { key: "", value: "", original: "" }])}>Добавить характеристику</button>
@@ -83,7 +84,7 @@ export default function NeedDraftEditor({ need, onSaved }: { need: Need; onSaved
       <div className="field"><label htmlFor="edit-deadline">Срок поставки</label><DateInput id="edit-deadline" required value={deadline} onValueChange={e => setDeadline(e)} /></div>
       <div className="field"><label htmlFor="edit-valid">Актуально до</label><DateInput id="edit-valid" required value={validUntil} onValueChange={e => setValidUntil(e)} /></div>
       <div className="field"><label htmlFor="edit-address">Адрес доставки</label><select id="edit-address" value={address} onChange={e => setAddress(e.target.value)}><option value="">Не указан</option>{addresses.map(item => <option key={item.id} value={item.id}>{item.address}</option>)}</select></div>
-      <div className="field"><label htmlFor="edit-visibility">Видимость</label><select id="edit-visibility" value={visibility} onChange={e => setVisibility(e.target.value as Need["visibility"])}><option value="open_anonymized">Открытая (анонимизированная)</option><option value="closed">Закрытая</option>{visibility === "selected_producers" && <option value="selected_producers">Для выбранных производителей</option>}</select></div>
+      <div className="field"><label htmlFor="edit-visibility">Видимость</label><select id="edit-visibility" value={visibility} onChange={e => setVisibility(e.target.value as Need["visibility"])}><option value="open_anonymized">Открытая (анонимизированная)</option>{visibility === "closed" && <option value="closed">Закрытая — сохранённый запрос</option>}{visibility === "selected_producers" && <option value="selected_producers">Для выбранных производителей</option>}</select></div>
       <PhysicalQuantityReview kind="need" values={{ characteristics: Object.fromEntries(rows.filter(row => row.key.trim()).map(row => [row.key.trim(), row.value])), volume_units: quantity }} approved={quantityApproved} onApproval={setQuantityApproved} />
       {impact && <section aria-label="Последствия изменения">
         <h3>Что изменится</h3>

@@ -1,4 +1,5 @@
 "use client";
+import { Icon } from "../../components/Icon";
 import { formatDate } from "../../lib/dates";
 import { russianMessage } from "../../lib/russianMessages";
 import CommercialEstimate from "../../components/CommercialEstimate";
@@ -213,7 +214,7 @@ export default function NeedDetailPage() {
 
   return (
     <div>
-      <div className="company-row">
+      <div className="need-heading">
         <h1 className="page-title">{need.category}</h1>
         {need.subcategory && <p className="hint">Подкатегория: {need.subcategory}</p>}
         <div className="actions">
@@ -228,9 +229,7 @@ export default function NeedDetailPage() {
       {error && <div className="alert alert-error">{error}</div>}
 
       {ownedNeed?.no_match_reason && (
-        <div className="alert alert-warning">
-          <strong>Почему вариант пока не найден:</strong> {ownedNeed?.no_match_reason}
-        </div>
+        <section className="need-match-note"><Icon name="search" size={24} /><div><h2>Подбираем подходящее производство</h2><p>{ownedNeed.no_match_reason}</p><Link href="/catalog">Посмотреть товары в каталоге →</Link></div></section>
       )}
 
       {!isBuyer && !!need.requirement_decisions?.length && <section className="card"><h2>Уточнения покупателя</h2><p>В текущей версии покупатель разрешил противоречия в этих требованиях:</p>{need.requirement_decisions.map(item => <p key={item.field}>{formatCharacteristics({ [item.field]: item.confirmed_value }, need.category_profile)}</p>)}</section>}

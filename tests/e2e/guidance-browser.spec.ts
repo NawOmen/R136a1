@@ -77,4 +77,20 @@ test("the redesigned assistant preserves retry, input, loading protection and sa
   await expect(page.locator(".assistant-answer a")).toHaveCount(2);
   await expect(page.locator('.assistant-answer a[href="/deals"]')).toBeVisible();
   await expect(page.locator('.assistant-answer a[href^="https:"]')).toHaveCount(0);
+  for (const theme of ["light", "dark"]) {
+    await page.evaluate(value => document.documentElement.dataset.theme = value, theme);
+    for (const button of [page.getByRole("button", {name:"Спросить", exact:true}), page.locator('.assistant-answer a[href="/deals"]')]) {
+      for (const hovered of [false, true]) {
+        if (hovered) await button.hover(); else await page.mouse.move(0,0);
+        await page.waitForTimeout(250);
+        const ratio = await button.evaluate(el => {
+          const css=getComputedStyle(el);
+          const lum=(color:string)=>{const c=color.match(/[\d.]+/g)!.slice(0,3).map(Number).map(v=>{v/=255;return v<=.04045?v/12.92:((v+.055)/1.055)**2.4;});return c[0]*.2126+c[1]*.7152+c[2]*.0722;};
+          const a=lum(css.color),b=lum(css.backgroundColor);return (Math.max(a,b)+.05)/(Math.min(a,b)+.05);
+        });
+        expect(ratio).toBeGreaterThanOrEqual(4.5);
+      }
+    }
+  }
+
 });

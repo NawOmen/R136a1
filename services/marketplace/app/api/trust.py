@@ -69,7 +69,7 @@ async def create_support_ticket(
     )
     admin_ids = (await db.execute(text("SELECT id FROM auth.users WHERE is_marketplace_admin = true AND account_status = 'active'"))).scalars().all()
     for admin_id in admin_ids:
-        await notify(db, admin_id, f"Новое обращение поддержки: {ticket.subject}", "support_ticket_created")
+        await notify(db, admin_id, f"Новое сообщение в поддержку: {ticket.subject}", "support_ticket_created")
     await db.commit()
     await db.refresh(ticket)
     return ticket
@@ -112,7 +112,7 @@ async def update_support_ticket_admin(
     response = data.admin_response if "admin_response" in data.model_fields_set else ticket.admin_response
     response = response.strip() if response is not None else None
     if data.status in {"resolved", "closed"} and not response:
-        raise HTTPException(422, "Перед закрытием обращения напишите ответ пользователю.")
+        raise HTTPException(422, "Перед завершением диалога напишите ответ пользователю.")
     if ticket.status == data.status and ticket.admin_response == response:
         return ticket
     previous_status = ticket.status
@@ -130,7 +130,7 @@ async def update_support_ticket_admin(
         explanation=f"Администратор изменил статус обращения: {previous_status} → {data.status}.",
         payload={"from_status": previous_status, "to_status": data.status},
     )
-    await notify(db, ticket.user_id, f"Поддержка обновила обращение «{ticket.subject}»: {dict(new='новое', in_progress='в работе', resolved='решено', closed='закрыто')[data.status]}", "support_ticket_updated")
+    await notify(db, ticket.user_id, f"Поддержка ответила в чате «{ticket.subject}»: {dict(new='новое', in_progress='в работе', resolved='решено', closed='закрыто')[data.status]}", "support_ticket_updated")
     await db.commit()
     await db.refresh(ticket)
     return ticket

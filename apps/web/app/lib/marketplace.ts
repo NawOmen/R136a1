@@ -1633,6 +1633,9 @@ export const marketplace = {
   },
 
   // Уведомления
+  getAddressSuggestions(token: string, companyId: string, query: string): Promise<{ label: string; address: string; city: string; region: string; house: string | null }[]> {
+    return marketplaceFetch(`/api/v1/companies/${companyId}/address-suggestions?query=${encodeURIComponent(query)}`, { token });
+  },
   getNotifications(token: string): Promise<Notification[]> {
     return marketplaceFetch("/api/v1/notifications", { token }).then((body) =>
       unwrapList<Notification>(body, ["notifications", "items"]),

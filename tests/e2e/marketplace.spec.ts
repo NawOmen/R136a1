@@ -343,7 +343,7 @@ test("администратор и редактор: компания, обра
   const adminToken = await page.evaluate(() => localStorage.getItem("token"));
   const adminHeaders = {Authorization: `Bearer ${adminToken}`};
   const suffix = crypto.randomUUID(); const email = `review-${suffix}@demo.ru`; const accountPassword = `Access-${suffix}`;
-  const registered = await page.request.post("http://localhost:8001/api/v2/auth/register", {data: {rules_version:"rules-1",privacy_version:"privacy-1",rules_accepted: true, privacy_acknowledged: true, last_name: "Проверка", first_name: "Редактора", email, password: accountPassword}});
+  const registered = await page.request.post("http://localhost:8001/api/v2/auth/register", {data: {rules_version:"rules-2",privacy_version:"privacy-2",rules_accepted: true, privacy_acknowledged: true, last_name: "Проверка", first_name: "Редактора", email, password: accountPassword}});
   expect(registered.status()).toBe(201);
   const account = await registered.json(); const userHeaders = {Authorization: `Bearer ${account.access_token}`};
   const created = await page.request.post("http://localhost:8001/api/v1/companies", {headers: userHeaders, data: {

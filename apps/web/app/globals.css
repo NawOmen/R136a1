@@ -977,7 +977,7 @@ h2 {
 .workflow-details > summary { font-weight: 600; padding-block: .5rem; }
 
 /* Consistent readable controls in both themes. */
-:root[data-theme="light"] .btn-primary,
+:root[data-theme="light"] .btn-primary { color: var(--on-primary); }
 :root[data-theme="light"] .market-search button,
 :root[data-theme="light"] .market-product__cta,
 :root[data-theme="light"] .market-lanes a.active,

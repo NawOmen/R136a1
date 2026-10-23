@@ -1,13 +1,15 @@
 import uuid
+import httpx
+from ..config import settings
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..database import get_db
 from ..deps import CurrentUser, get_current_user, require_company_admin, require_company_buyer
 from ..models import DeliveryAddress, Need
-from ..schemas import DeliveryAddressIn, DeliveryAddressOut, DeliveryAddressPatch
+from ..schemas import DeliveryAddressIn, DeliveryAddressOut, DeliveryAddressPatch, AddressSuggestionOut
 
 router = APIRouter(prefix="/companies", tags=["addresses"])
 
@@ -103,3 +105,34 @@ async def delete_address(
     await _require_unreferenced_address(db, address_id)
     await db.delete(address)
     await db.commit()
+
+
+@router.get("/{company_id}/address-suggestions", response_model=list[AddressSuggestionOut])
+async def suggest_addresses(
+    company_id: uuid.UUID,
+    query: str = Query(min_length=3, max_length=250),
+    user: CurrentUser = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """v1: только введённый адрес, без файлов и контекста компании."""
+    await require_company_buyer(company_id, user, db)
+    if not settings.dadata_api_key:
+        raise HTTPException(503, "Подсказки адресов не подключены. Введите адрес вручную или проверьте его на карте.")
+    try:
+        async with httpx.AsyncClient(timeout=5) as client:
+            response = await client.post(
+                "https://suggestions.dadata.ru/suggestions/api/4_1/rs/suggest/address",
+                headers={"Authorization": f"Token {settings.dadata_api_key}"},
+                json={"query": query, "count": 5, "locations": [{"country_iso_code": "RU"}], "restrict_value": True},
+            )
+            response.raise_for_status()
+            items = response.json().get("suggestions", [])
+            return [
+                {"label": item["value"], "address": item["value"],
+                 "city": item["data"].get("city") or item["data"].get("settlement") or item["data"].get("region"),
+                 "region": item["data"].get("region_with_type"),
+                 "house": item["data"].get("house")}
+                for item in items if item.get("data", {}).get("country_iso_code") == "RU"
+            ]
+    except (httpx.HTTPError, ValueError, KeyError, TypeError, AttributeError):
+        raise HTTPException(503, "Подсказки временно недоступны. Введите адрес вручную или проверьте его на карте.") from None

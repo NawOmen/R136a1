@@ -1,8 +1,9 @@
 import type { CSSProperties, ReactNode } from "react";
 
-export type IconName = "arrow" | "search" | "box" | "package" | "briefcase" | "layers" | "factory" | "building" | "shield" | "spark" | "check" | "sun" | "moon" | "menu" | "close" | "sliders" | "link" | "truck" | "mic" | "heart" | "grid" | "fabric" | "metal" | "chair" | "bricks" | "mail";
+export type IconName = "bell" | "arrow" | "search" | "box" | "package" | "briefcase" | "layers" | "factory" | "building" | "shield" | "spark" | "check" | "sun" | "moon" | "menu" | "close" | "sliders" | "link" | "truck" | "mic" | "heart" | "grid" | "fabric" | "metal" | "chair" | "bricks" | "mail";
 
 const paths: Record<IconName, ReactNode> = {
+  bell: <><path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9ZM10 21h4" /></>,
   package: <><path d="m12 3 9 4.5v9L12 21l-9-4.5v-9L12 3Z" /><path d="m3 7.5 9 4.5 9-4.5M12 12v9M7.5 5.25l9 4.5" /></>,
   briefcase: <><rect x="3" y="7" width="18" height="14" rx="2" /><path d="M8 7V5a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M3 12l9 3 9-3M12 13v4" /></>,
   heart: <path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.7l-1.1-1.1a5.5 5.5 0 0 0-7.8 7.8L12 21l8.8-8.6a5.5 5.5 0 0 0 0-7.8Z" />,

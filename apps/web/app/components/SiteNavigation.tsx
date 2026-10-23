@@ -48,13 +48,13 @@ export function SiteNavigation() {
     return () => { document.removeEventListener("pointerdown", close); document.removeEventListener("keydown", escape); };
   }, [open]);
   const demandActive = pathname.startsWith("/seller/requests") || pathname.startsWith("/needs");
-  const workLinks = <>{authenticated && !admin && <><ActiveLink href="/coalitions">Коалиции</ActiveLink><ActiveLink href="/deals">Сделки</ActiveLink></>}<ActiveLink href="/ai-procurement">Закупки с ИИ</ActiveLink><ActiveLink href="/knowledge">Помощь</ActiveLink></>;
+  const workLinks = <>{authenticated && !admin && <><ActiveLink href="/coalitions">Коалиции</ActiveLink><ActiveLink href="/deals">Сделки</ActiveLink></>}<Link className="ai-nav-action" href="/needs/new"><Icon name="spark" size={18} />Закупить с ИИ</Link><ActiveLink href="/knowledge">Помощь</ActiveLink></>;
   return <div className="market-navigation">
-    <nav className="market-lanes" aria-label="Раздел рынка"><ActiveLink paths={["/", "/catalog"]} href="/catalog">Товары</ActiveLink>{!admin && <ActiveLink paths={["/seller/requests", "/needs"]} href={demandHref}>Потребности</ActiveLink>}</nav>
+    <nav className="market-lanes" aria-label="Раздел рынка"><ActiveLink paths={["/catalog"]} href="/catalog">Товары</ActiveLink>{!admin && <ActiveLink paths={["/seller/requests", "/needs"]} href={demandHref}>Потребности</ActiveLink>}</nav>
     <form className="market-search" role="search" action={demandActive ? (pathname.startsWith("/needs") ? "/needs" : "/seller/requests") : "/catalog"} method="get"><Icon name="search" size={21} /><input name="q" aria-label="Поиск по маркетплейсу" value={query} onChange={event => setQuery(event.target.value)} placeholder={demandActive ? "Найти потребность" : "Найти товар или категорию"} /><LiquidSurface as="div" variant="rail" className="liquid-action liquid-action--primary search-action"><button type="submit" aria-label="Найти">Найти<Icon name="arrow" size={17} /></button></LiquidSurface></form>
     <div className="market-sections">
 
-      <nav className="site-nav" aria-label="Рабочие разделы"><ActiveLink href="/ai-procurement">ИИ-закупки</ActiveLink><ActiveLink href="/knowledge">Поддержка</ActiveLink></nav>
+      <nav className="site-nav" aria-label="Рабочие разделы"><Link className="ai-nav-action" href="/needs/new"><Icon name="spark" size={18} />ИИ-закупка</Link><ActiveLink href="/knowledge">Поддержка</ActiveLink></nav>
       {!admin && <Link className="header-request" href="/needs/new">Разместить потребность<Icon name="arrow" size={16} /></Link>}
       <div className="mobile-disclosure" ref={disclosure}><button type="button" ref={toggle} className="icon-button" aria-label={open ? "Закрыть навигацию" : "Открыть навигацию"} aria-expanded={open} aria-controls={open ? id : undefined} onClick={() => setOpen(value => !value)}><Icon name={open ? "close" : "menu"} /></button>{open && <nav className="mobile-links" id={id} aria-label="Навигация по сайту" onClick={event => { if ((event.target as HTMLElement).closest("a")) setOpen(false); }}>{workLinks}{!admin && <><ActiveLink href="/needs/new">Разместить потребность</ActiveLink><ActiveLink href="/support">Поддержка</ActiveLink></>}</nav>}</div>
     </div>
