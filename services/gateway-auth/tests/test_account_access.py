@@ -146,10 +146,11 @@ async def test_first_admin_bootstrap_is_local_idempotent_and_cannot_appoint_seco
     import bootstrap_admin
     monkeypatch.setattr(bootstrap_admin, 'SessionLocal', session_factory)
     from app.models import AccountAgreement
+    from app.schemas import RULES_VERSION, PRIVACY_VERSION
     user, _ = await account_fixture(db_session)
     with pytest.raises(ValueError):
         await bootstrap_admin.bootstrap(user.email)
-    db_session.add_all([AccountAgreement(user_id=user.id, document='rules',version='rules-1'),AccountAgreement(user_id=user.id,document='privacy',version='privacy-1')])
+    db_session.add_all([AccountAgreement(user_id=user.id, document='rules',version=RULES_VERSION),AccountAgreement(user_id=user.id,document='privacy',version=PRIVACY_VERSION)])
     await db_session.commit()
     await bootstrap_admin.bootstrap(user.email)
     await bootstrap_admin.bootstrap(user.email)

@@ -502,6 +502,11 @@ test("the catalogue keeps supplier photos first and reveals the remaining produc
   await expect(page.locator(".market-product .product-image-note")).toHaveCount(0);
   await expect(page.locator(".market-product").first().locator(".product-no-photo")).toHaveCount(0);
   await expect(page.getByRole("heading", { name: "Популярные товары", exact:true })).toBeVisible();
+  const titleBox = (await page.getByRole("heading", {name:"Популярные товары",exact:true}).boundingBox())!;
+  const moreBox = (await page.getByRole("link", {name:/Показать ещё/}).boundingBox())!;
+  expect(moreBox.x - titleBox.x - titleBox.width).toBeGreaterThanOrEqual(10);
+  expect(moreBox.x - titleBox.x - titleBox.width).toBeLessThanOrEqual(24);
+
   await expect(page.locator(".catalog-filters")).toHaveCount(0);
   await expect(page.getByRole("combobox", { name: "Порядок товаров" })).toHaveCount(0);
   await page.getByRole("link", { name: /Показать ещё/ }).click();

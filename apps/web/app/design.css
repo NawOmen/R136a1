@@ -517,6 +517,7 @@ html { --page-gutter:clamp(35px,2.73vw,44px); --header-gutter:clamp(32px,2.73vw,
 .storefront-products { margin-top:32px; }
 .storefront-products .catalog-title-group { width:100%; justify-content:flex-start; gap:16px; }
 .catalog-more { gap:10px; border-radius:14px; }
+.storefront-products .catalog-title-group .catalog-more { margin:0; flex:none; }
 .notification-control { position:relative; }
 .notification-trigger { position:relative; }
 .notification-dot { position:absolute; right:6px; top:5px; width:7px; height:7px; background:var(--primary); border-radius:50%; }
