@@ -197,6 +197,10 @@ test("clarified unreadable material is omitted by content hash while same-name v
   await expect(page.locator("#subcategory")).toHaveValue("Коробки");
   await expect(page.locator("#delivery_address_id")).toHaveValue("00000000-0000-4000-8000-000000000092");
   await page.locator("#deadline_date").fill("20.12.26");
+  await expect(page.locator("#deadline_date")).toHaveValue("20.12.26");
+  await expect.poll(() => page.evaluate(() => Object.entries(sessionStorage)
+    .filter(([key]) => key.startsWith("porukam:need-draft:"))
+    .map(([, value]) => JSON.parse(value).deadline))).toContain("2026-12-20");
   await (await volumeCheck).finished();
   await expect(page.getByText("Проверяем точность объёма…", { exact: true })).toHaveCount(0);
   await page.waitForLoadState("networkidle");
