@@ -273,6 +273,9 @@ test("company mode hint follows the checkbox rows and keeps the selected permiss
       expect(geometry.hintTop).toBeGreaterThanOrEqual(geometry.rows[1].bottom);
       expect(Math.abs(geometry.hintX - geometry.rows[0].x)).toBeLessThanOrEqual(1);
       expect(geometry.align).toBe("left");
+      // A fixed-size action can retain its desktop mesh gutter after moving
+      // on resize. The decorative guard band must stay inside the search form.
+      if (width === 320) await page.locator(".search-action").evaluate(host => host.style.setProperty("--glass-gutter", "32px"));
       await expect.poll(() => page.evaluate(() => ({
         viewport: innerWidth,
         overflow: Math.max(0, document.documentElement.scrollWidth - innerWidth),
