@@ -74,14 +74,24 @@ class WhisperUnavailable(RuntimeError):
 
 
 def speech(data, options):
+    import av
+    import numpy as np
     from faster_whisper import WhisperModel
     audio_check(data, options["media_type"])
+    # Pass PCM directly: faster-whisper 1.2's file decoder uses a removed PyAV keyword.
+    resampler = av.AudioResampler(format="s16", layout="mono", rate=16000)
+    frames = []
+    with av.open(io.BytesIO(data)) as container:
+        for frame in container.decode(audio=0):
+            frames.extend(resampler.resample(frame))
+        frames.extend(resampler.resample(None))
+    waveform = np.concatenate([frame.to_ndarray().reshape(-1) for frame in frames]).astype(np.float32) / 32768.0
     try:
         model = WhisperModel(options["model"], device=options["device"], compute_type=options["compute_type"],
                              cpu_threads=2, local_files_only=True)
     except Exception:
         raise WhisperUnavailable() from None
-    segments, _ = model.transcribe(io.BytesIO(data), language="ru", vad_filter=True)
+    segments, _ = model.transcribe(waveform, language="ru", vad_filter=True)
     values, chars = [], 0
     for segment in segments:
         value = f"[[{segment.start:.2f}-{segment.end:.2f} с]] {segment.text.strip()}"
