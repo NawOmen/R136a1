@@ -216,10 +216,29 @@ def markdown(report):
     return '\n'.join(lines) + '\n'
 
 
+def readme_markdown(report):
+    catalogue = report['catalogue']
+    lines = [
+        f"Набор: **{report['case_count']} расчётных сценариев**; реестр: "
+        f"**{catalogue['leaves']} профилей в {catalogue['groups']} разделах**, "
+        f"из них {catalogue['seeded_working_leaves']} с рабочим наполнением.", '',
+        'Примеры по заданным допущениям; эквивалент включает стоимость активного труда, рубли.', '',
+        '| Сценарий | Эффект покупателя | Вклад поставщика |',
+        '|---|---|---|',
+    ]
+    for case in report['cases']:
+        if case['id'] in {'direct', 'corrections', 'unknown', 'below-moq'}:
+            buyer, seller = (case[side]['value_equivalent_rub'] for side in ('buyer', 'seller'))
+            show = lambda value: 'не определено' if value is None else value
+            lines.append(f"| {case['label']} | {show(buyer)} | {show(seller)} |")
+    return '\n'.join(lines) + '\n'
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--input', type=Path, default=DEFAULT_INPUT)
     parser.add_argument('--markdown', action='store_true')
+    parser.add_argument('--readme-markdown', action='store_true', help='Компактный расчётный блок README')
     parser.add_argument('--check-readme', type=Path, help='Проверить расчётный блок единого README')
     args = parser.parse_args()
     try:
@@ -230,8 +249,10 @@ def main():
             if content.count(start) != 1 or content.count(end) != 1:
                 raise ValueError('README должен содержать один расчётный блок')
             actual = content.split(start, 1)[1].split(end, 1)[0]
-            if actual != '\n' + markdown(report):
+            if actual != '\n' + readme_markdown(report):
                 raise ValueError('Расчётный блок README не соответствует исходным данным')
+        elif args.readme_markdown:
+            sys.stdout.write(readme_markdown(report))
         elif args.markdown:
             sys.stdout.write(markdown(report))
         else:
