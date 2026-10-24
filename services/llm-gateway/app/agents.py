@@ -2,6 +2,7 @@ import json
 import re
 import uuid
 from collections import defaultdict
+from decimal import Decimal, InvalidOperation
 from typing import Any
 
 from pydantic import BaseModel, Field
@@ -223,6 +224,35 @@ def build_extraction_prompt(sources: list[SourceDescriptor]) -> str:
     )
 
 
+# Keep whole numeric tokens: 5 must not corroborate 5000 or 5,5. Spaces used
+# as thousands separators are allowed, including those extracted from PDFs.
+EVIDENCE_NUMBER = re.compile(
+    r"(?<![\w.,+−-])[-+−]?(?:\d{1,3}(?:[ \u00a0\u202f]\d{3})+|\d+)"
+    r"(?:[.,]\d+)?(?!\d|[.,]\d)"
+)
+
+
+def numeric_evidence_support(value: FactValue, excerpt: str) -> bool | None:
+    """Check scalar numbers only; text, lists and dimension triples stay intact.
+
+    Number words and unit conversions are not inferred here. Without a literal
+    matching number they cannot give a model-produced scalar confirmed status.
+    """
+    if isinstance(value, (bool, list)):
+        return None
+    raw = re.sub(r"[ \u00a0\u202f]", "", str(value)).replace(",", ".").replace("−", "-")
+    try:
+        number = Decimal(raw)
+    except InvalidOperation:
+        return None
+    if not number.is_finite():
+        return False
+    return any(
+        Decimal(re.sub(r"[ \u00a0\u202f]", "", match.group()).replace(",", ".").replace("−", "-")) == number
+        for match in EVIDENCE_NUMBER.finditer(excerpt)
+    )
+
+
 def merge_facts(
     extraction: RawExtraction,
     sources: list[SourceDescriptor],
@@ -289,9 +319,27 @@ def merge_facts(
                 )
             )
             continue
+        support = [numeric_evidence_support(fact.value, fact.evidence) for fact in facts]
+        # A located quote containing a different number is a concrete mismatch,
+        # even if another source or high model confidence corroborates the value.
+        mismatch = any(
+            item.locator.get("located") and checked is False and EVIDENCE_NUMBER.search(fact.evidence)
+            for fact, item, checked in zip(facts, evidence, support)
+        )
+        if mismatch:
+            properties.append(RequirementProperty(
+                key=key, label=label, confidence=max(fact.confidence for fact in facts),
+                status="needs_clarification", sources=evidence,
+            ))
+            questions.append(ClarificationQuestion(
+                key=key,
+                question=f"Число не соответствует цитате источника. Уточните значение: {label.lower()}.",
+            ))
+            continue
         best = max(facts, key=lambda item: item.confidence)
         confirmed = (best.confidence >= 0.8 or len({fact.source_id for fact in facts}) >= 2) and any(
-            item.locator.get("located") for item in evidence
+            item.locator.get("located") and checked is not False
+            for item, checked in zip(evidence, support)
         )
         properties.append(
             RequirementProperty(

@@ -91,6 +91,40 @@ async def test_empty_placeholder_and_unknown_answers_are_rejected(client, token)
         assert response.status_code == 422, response.text
 
 
+async def test_mismatched_numeric_evidence_blocks_confirmation_until_user_correction(client, token, fake_provider):
+    fake_provider.extraction = RawExtraction(category="бумажные стаканы", facts=[
+        RawFact(key="quantity_units", value=9000, source_id="request_text", confidence=.99, evidence="5000 стаканов"),
+        RawFact(key="lead_time_days", value=10, source_id="request_text", confidence=.99, evidence="10 дней"),
+        RawFact(key="delivery_city", value="Москва", source_id="request_text", confidence=.99, evidence="Москва"),
+    ])
+    created = await client.post("/api/v2/buyer-agent/runs", headers=auth(token),
+        data={"request_text": "Нужно 5000 стаканов, 10 дней, Москва"})
+    assert created.status_code == 201, created.text
+    run = created.json()
+    assert run["state"] == "needs_clarification"
+    assert run["result"]["can_confirm"] is False
+    quantity = next(prop for prop in run["result"]["properties"] if prop["key"] == "quantity_units")
+    assert quantity["status"] == "needs_clarification" and quantity["value"] is None
+    assert quantity["sources"][0]["value"] == 9000
+    assert quantity["sources"][0]["excerpt"] == "5000 стаканов"
+    base = f"/api/v2/agent-runs/{run['id']}"
+    blocked = await client.post(base + "/confirm", headers=auth(token),
+        json={"expected_revision": run["revision"]})
+    assert blocked.status_code == 409
+    clarified = await client.post(base + "/clarify", headers=auth(token),
+        json={"expected_revision": run["revision"], "answers": {"quantity_units": 5000}})
+    assert clarified.status_code == 200, clarified.text
+    corrected = clarified.json()
+    quantity = next(prop for prop in corrected["result"]["properties"] if prop["key"] == "quantity_units")
+    assert quantity["value"] == 5000 and quantity["confirmed_by_user_id"]
+    assert quantity["sources"][0]["value"] == 9000
+    assert corrected["result"]["resolved_conflicts"][-1]["value"] == 5000
+    confirmed = await client.post(base + "/confirm", headers=auth(token),
+        json={"expected_revision": corrected["revision"]})
+    assert confirmed.status_code == 200, confirmed.text
+    assert confirmed.json()["state"] == "confirmed_by_user"
+
+
 @pytest.mark.parametrize('key,first,second', [('material','дерево','сталь'),('purpose','офис','улица'),('quantity_units',5000,6000),('lead_time_days',10,20)])
 async def test_every_critical_conflict_blocks_confirmation(client, token, fake_provider, key, first, second):
     base = [RawFact(key='quantity_units',value=5000,source_id='request_text',confidence=.99,evidence='5000'),
