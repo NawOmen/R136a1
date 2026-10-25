@@ -1,7 +1,8 @@
 {
   "local_llm": {
     "provider": "mlx_lm.server",
-    "model": "porukam-buyer-b2cf30b11110",
+    "model": "porukam-buyer-qwen3.5",
+    "published_artifact_model": "porukam-buyer-b2cf30b11110",
     "api_model": "default_model",
     "base_model": "mlx-community/Qwen3.5-9B-4bit",
     "base_revision": "8b2b98c00a6b4d291155e4890773ca8f769aee53",
@@ -10,7 +11,7 @@
     "last_metric_step": 2160,
     "planned_steps": 2160,
     "full_pass_complete": true,
-    "quality_status": "Проверка412 завершена:404exact; авторскийнабор2/8; автономное применение не принято",
+    "quality_status": "Синтетическая валидация: 404/412 exact; авторский набор: 2/8; автономное применение не принято",
     "build_script": "infra/build_local_model.py",
     "training_report": "docs/research/local-ml-training-report.md"
   },

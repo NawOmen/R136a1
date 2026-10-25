@@ -498,11 +498,12 @@ async def test_start_only_from_queued_requires_resume_for_retries(client, token,
 async def test_cache_key_includes_model_versions_and_hit_returns_them(client, token, db_session, user_id,
                                                                       fake_provider, monkeypatch):
     from app.config import settings
+    monkeypatch.setattr(settings, "local_llm_backend", "mlx")
 
     company_id = await make_company(db_session, user_id)
     text_value = "Нужно 5000 бумажных стаканов в Москву за десять дней"
     first = await make_buyer_run(client, token, company_id, text_value)
-    assert first["model_version"] == settings.ollama_model
+    assert first["model_version"] == settings.trained_model_version
     calls_after_first = len(fake_provider.prompts)
 
     second = await make_buyer_run(client, token, company_id, text_value)
@@ -510,7 +511,7 @@ async def test_cache_key_includes_model_versions_and_hit_returns_them(client, to
     assert any(call["status"] == "cached" for call in second["tool_calls"])
     assert second["model_version"] == first["model_version"]
 
-    monkeypatch.setattr(settings, "ollama_model", "synthetic-model-v2")
+    monkeypatch.setattr(settings, "trained_model_version", "synthetic-model-v2")
     third = await make_buyer_run(client, token, company_id, text_value)
     assert len(fake_provider.prompts) > calls_after_first
     assert not any(call["status"] == "cached" for call in third["tool_calls"])

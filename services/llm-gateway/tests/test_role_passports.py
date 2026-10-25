@@ -42,10 +42,18 @@ async def test_code_implemented_roles_state_no_llm(client):
 
 
 def test_model_manifest_records_selection_criteria():
-    assert {"porukam-buyer-b2cf30b11110", "qwen3.5:9b", "deepseek-v4-pro"} <= set(MODEL_MANIFEST)
+    assert {"porukam-buyer-qwen3.5", "qwen3.5:9b", "deepseek-v4-pro"} <= set(MODEL_MANIFEST)
     for model, record in MODEL_MANIFEST.items():
         for field in ("role", "quality_gate", "latency_budget", "ram_vram", "license", "data_rule"):
             assert record[field], (model, field)
+
+
+def test_trained_runtime_alias_matches_model_lock():
+    repo_root = Path(__file__).resolve().parents[3]
+    model_lock = json.loads((repo_root / "infra" / "models.lock.json").read_text(encoding="utf-8"))
+    configured_model = model_lock["local_llm"]["model"]
+    assert settings.trained_model_version == configured_model
+    assert configured_model in MODEL_MANIFEST
 
 
 @pytest.mark.asyncio
@@ -58,7 +66,8 @@ async def test_run_records_versions_and_test_double_kind(client, token):
     assert response.status_code == 201
     body = response.json()
     assert body["prompt_version"] == PROMPT_VERSION
-    assert body["model_version"] == settings.ollama_model
+    expected_model = settings.trained_model_version if settings.local_llm_backend == "mlx" else settings.ollama_model
+    assert body["model_version"] == expected_model
     assert body["provider_kind"] == "test_double"
 
 
