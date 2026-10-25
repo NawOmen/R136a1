@@ -849,9 +849,9 @@ export function formatUnits(value: number, unit = "шт."): string {
     "мешок": ["мешок", "мешка", "мешков"],
     "пачка": ["пачка", "пачки", "пачек"],
   };
-  const plural = new Intl.PluralRules("ru-RU").select(Math.round(value));
+  const plural = new Intl.PluralRules("ru-RU", { maximumFractionDigits: 2 }).select(value);
   const label = forms[normalized]?.[plural === "one" ? 0 : plural === "few" ? 1 : 2] ?? normalized;
-  return new Intl.NumberFormat("ru-RU", { maximumFractionDigits: 0 }).format(value) + " " + label;
+  return new Intl.NumberFormat("ru-RU", { maximumFractionDigits: 2 }).format(value) + " " + label;
 }
 
 // ---------- Разбор ошибок валидации FastAPI (422) ----------

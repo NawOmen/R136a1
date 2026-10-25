@@ -10,7 +10,8 @@ test("exact subkopeck prices, large quantities and negative money retain their v
   expect(lineAmount("0.005",1)).toBe("0.010000000000");
   expect(displayMoney("2.675")).toBe("2,68 ₽");
   expect(displayMoney("-1000.01")).toBe("−1\u00a0000,01 ₽");
-  expect(displayMoney("150.123456789012",12)).toBe("150,123456789012 ₽");
+  expect(displayMoney("150.123456789012",12)).toBe("150,12 ₽");
+  expect(displayMoney("0.00000000125")).toBe("менее 0,01 ₽");
   expect(()=>scaledMoney("NaN")).toThrow();
   expect(previewLineAmount("",1)).toBeNull();
   expect(previewLineAmount("7","2.5")).toBe("17.500000000000");

@@ -201,6 +201,8 @@ async def seed() -> None:
                     print(f"Карточка «{created.name}» осталась черновиком: {error.detail}")
             await _retire_storefront_food_products(db, seller_company_id, user_id)
         await _seed_production_photo(db, seller_company_id)
+        from seed_assortment import seed_synthetic_price_history
+        await seed_synthetic_price_history(db)
         await db.commit()
 
 

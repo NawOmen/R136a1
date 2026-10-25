@@ -21,7 +21,7 @@ test("stock labels and exact starting prices stay readable in both themes", asyn
   await expect(cards.nth(1).locator(".product-stock")).toHaveText("Нет в наличии");
   await expect(cards.nth(2).locator(".product-stock")).toHaveText("Уточнить наличие");
   await expect(cards.nth(3).locator(".product-stock")).toHaveText("Уточнить наличие");
-  await expect(cards.first().locator(".market-price")).toHaveText("от 38,123456789123 ₽");
+  await expect(cards.first().locator(".market-price")).toHaveText("от 38,12 ₽");
   await expect(cards.first().locator(".product-conditions")).toHaveText("От 100 шт.");
   await expect(cards.first().locator(".product-pricing")).toHaveAttribute("title", /при заказе от 1\s000 шт\./);
   await expect(cards.first().locator(".market-muted")).toHaveText("/ шт.");

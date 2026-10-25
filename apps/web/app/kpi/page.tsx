@@ -1,4 +1,5 @@
 "use client";
+import { displayValue } from "../lib/presentation";
 import { formatDateTime } from "../lib/dates";
 import { russianLabel } from "../lib/presentation";
 import { formatRub } from "../lib/marketplace";
@@ -67,7 +68,7 @@ export default function KpiPage() {
             <h3>Черновики КП</h3>
             <p>Сформировано: {scorecard.offer_drafts_total}</p>
             <p>Отправлено предложений: {scorecard.offer_drafts_used}</p>
-            <p>Конверсия сценария: {scorecard.offer_draft_conversion_pct == null ? "Нет данных" : `${scorecard.offer_draft_conversion_pct} %`}</p>
+            <p>Конверсия сценария: {scorecard.offer_draft_conversion_pct == null ? "Нет данных" : `${displayValue(scorecard.offer_draft_conversion_pct)} %`}</p>
             <p>Открытых допустимых черновиков: {scorecard.offer_drafts_open}; исключено неполных/устаревших: {scorecard.offer_drafts_excluded}</p>
             <p>Отклонено предложений: {scorecard.offer_rejections} из {scorecard.offers_total}</p>
             <p>Сделок из черновиков этой когорты: {scorecard.deals_from_drafts}</p><p>Исходы отправленных КП когорты: выбрано {scorecard.selected_origin_offers}, открыто {scorecard.open_origin_offers}, отклонено {scorecard.rejected_origin_offers}, истекло {scorecard.expired_origin_offers}</p>
@@ -78,7 +79,7 @@ export default function KpiPage() {
             <p>Заблокированных действий: {scorecard.blocked_actions}</p>
             <p>Проверок допуска: {scorecard.admission_checks}</p>
             <p>Остановлено на допуске: {scorecard.admission_blocked}</p>
-            <p>Рекомендации: {scorecard.recommendations_converted} из {scorecard.recommendations_total} ({scorecard.recommendation_conversion_pct == null ? "Нет данных" : `${scorecard.recommendation_conversion_pct} %`})</p>
+            <p>Рекомендации: {scorecard.recommendations_converted} из {scorecard.recommendations_total} ({scorecard.recommendation_conversion_pct == null ? "Нет данных" : `${displayValue(scorecard.recommendation_conversion_pct)} %`})</p>
           </div>
           <div className="card">
             <h3>Модель</h3>
@@ -88,7 +89,7 @@ export default function KpiPage() {
                 <p>Отказов модели: {scorecard.agent_runs_failed}</p>
                 <p>Локальный маршрут: {scorecard.agent_runs_local_route}; внешний: {scorecard.agent_runs_external_route}</p>
                 <p>Смешанный маршрут: {scorecard.agent_runs_mixed_route}; по правилам: {scorecard.agent_runs_rules_route}; не определён: {scorecard.agent_runs_unknown_route}</p>
-                <p>Средняя длительность: {scorecard.agent_average_duration_ms == null ? "Нет данных" : `${scorecard.agent_average_duration_ms} мс`} ({scorecard.agent_timed_runs} из {scorecard.agent_runs_total})</p>
+                <p>Средняя длительность: {scorecard.agent_average_duration_ms == null ? "Нет данных" : `${displayValue(scorecard.agent_average_duration_ms)} мс`} ({scorecard.agent_timed_runs} из {scorecard.agent_runs_total})</p>
                 <p>Модели: {scorecard.agent_model_versions.length ? scorecard.agent_model_versions.join(", ") : "Нет данных"}</p>
                 <p>Версии промптов: {scorecard.agent_prompt_versions.length ? scorecard.agent_prompt_versions.join(", ") : "Нет данных"}</p>
                 <p>Известные оценки затрат: {scorecard.agent_costed_runs ? rub(scorecard.agent_estimated_cost_rub) : "Нет данных"} ({scorecard.agent_costed_runs} из {scorecard.agent_runs_total} запусков)</p>

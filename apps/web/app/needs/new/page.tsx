@@ -298,7 +298,8 @@ export default function NewNeedPage() {
       if (run.result.can_confirm) fillAgentResult(run);
     } catch (err) {
       if (activeScope.current !== scope) return;
-      setError(`${err instanceof MarketplaceError ? russianMessage(err.message) : "Не удалось разобрать материалы."} Текст и введённые поля сохранены в этой вкладке. Заполните карточку ниже вручную или повторите анализ.`);
+      const modelFailed = err instanceof MarketplaceError && (err.status === 503 || /Qwen|JSON/i.test(err.message));
+      setError(modelFailed ? "Модель ИИ не работает. Заполните карточку ниже вручную или повторите анализ." : `${err instanceof Error ? russianMessage(err.message) : "Не удалось разобрать материалы."} Заполните карточку ниже вручную или повторите анализ.`);
     } finally {
       if (activeScope.current === scope) setAnalyzing(false);
     }
@@ -508,7 +509,7 @@ export default function NewNeedPage() {
   }
 
   return <div className="need-create-page need-workflow">
-    <header className="need-workflow__header"><div><p className="eyebrow">Закупка с ИИ</p><h1 className="page-title">Создание потребности</h1><p className="subtitle">{manualExpanded ? "Проверьте детали перед отправкой производителям." : "Опишите задачу или приложите файл — ИИ заполнит детали закупки."}</p></div><Link className="btn btn-secondary btn-sm" href="/needs">Мои потребности</Link></header>
+    <header className="need-workflow__header"><div><h1 className="page-title">Создание потребности</h1><p className="subtitle">{manualExpanded ? "Проверьте детали перед отправкой производителям." : "Опишите задачу или приложите файл — ИИ заполнит детали закупки."}</p></div><Link className="btn btn-secondary btn-sm" href="/needs">Мои потребности</Link></header>
     <ol className="need-steps" aria-label="Этапы закупки"><li aria-current={!manualExpanded ? "step" : undefined}><span>1</span>Описание</li><li aria-current={manualExpanded ? "step" : undefined}><span>2</span>Проверка и публикация</li></ol>
     {error && <div className="alert alert-error" role="alert">{error}</div>}
     {draftNotice && <p className="hint" role="status">{draftNotice.startsWith("Текст и поля восстановлены") ? "Черновик восстановлен" : draftNotice}</p>}

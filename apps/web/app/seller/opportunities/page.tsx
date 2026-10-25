@@ -1,4 +1,5 @@
 "use client";
+import { displayValue } from "../../lib/presentation";
 import { DateInput } from "../../components/DateInput";
 import { russianMessage } from "../../lib/russianMessages";
 import CommercialTermsFields, { emptyCommercialTerms } from "../../components/CommercialTermsFields";
@@ -198,7 +199,7 @@ export default function MarketOpportunitiesPage() {
             <article className="card" key={item.id}>
               <div className="company-row">
                 <h2>{item.category}</h2>
-                <span className="opportunity-score">{item.score}/100</span>
+                <span className="opportunity-score">{displayValue(item.score)}/100</span>
               </div>
               <p>
                 {item.unmet_volume_units === null

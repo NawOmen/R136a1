@@ -15,7 +15,6 @@ import {
   VERIFICATION_STATUS_LABELS,
 } from "../lib/api";
 import { marketplace } from "../lib/marketplace";
-import { OnboardingTour } from "../components/OnboardingTour";
 import { BuyerSavingsPanel } from "../components/BuyerSavingsPanel";
 
 type Mode = "buy" | "sell" | null;
@@ -307,12 +306,11 @@ export default function DashboardPage() {
       </section>
 
       {buyerCompany && <details className="workflow-details"><summary>Экономия на закупках</summary><BuyerSavingsPanel companyId={buyerCompany.id} /></details>}
-      <OnboardingTour canBuy={canBuy} canSell={canSell} mode={mode} scope={`${user.id}:${companyId}:${mode}`} companyId={companyId || undefined} />
 
-      <section className="card">
+      <section className="card my-companies">
         <div className="company-row">
           <h2>Мои компании</h2>
-          <Link href="/company/new" className="btn btn-primary btn-sm">
+          <Link href="/company/new" className="btn btn-primary company-create-action">
             Создать компанию
           </Link>
         </div>

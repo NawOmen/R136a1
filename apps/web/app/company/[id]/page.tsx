@@ -315,10 +315,15 @@ export default function CompanyPage() {
               <input
                 id="inn"
                 type="text"
+                inputMode="numeric"
+                pattern={legalForm === "ООО" ? "[0-9]{10}" : "[0-9]{12}"}
+                maxLength={legalForm === "ООО" ? 10 : 12}
+                aria-describedby="inn-hint"
                 value={inn}
                 onChange={(event) => setInn(event.target.value)}
                 required
               />
+              <p id="inn-hint" className="hint">{legalForm === "ООО" ? "10 цифр для ООО" : "12 цифр для ИП"}</p>
             </div>
             <div className="field">
               <label htmlFor="ogrn">{legalForm === "ООО" ? "ОГРН" : "ОГРНИП"}</label>
