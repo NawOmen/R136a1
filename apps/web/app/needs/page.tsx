@@ -1,4 +1,6 @@
 "use client";
+import { DateInput } from "../components/DateInput";
+import { formatDate } from "../lib/dates";
 
 // Мои потребности (GET /needs/mine): статус, объём, бюджет, срок,
 // переход к деталям. Повтор — новый черновик с новыми датами:
@@ -114,8 +116,7 @@ export default function MyNeedsPage() {
     }
   }
 
-  const normalizedQuery = query.trim().toLocaleLowerCase("ru");
-  const visibleNeeds = needs.filter(need => `${need.category} ${need.subcategory ?? ""} ${NEED_STATUS_LABELS[need.status]}`.toLocaleLowerCase("ru").includes(normalizedQuery));
+  const visibleNeeds = needs.filter(need => `${need.category} ${need.subcategory ?? ""} ${NEED_STATUS_LABELS[need.status]}`.toLocaleLowerCase("ru").includes(query.trim().toLocaleLowerCase("ru")));
 
   if (loading) return <p className="hint">Загрузка...</p>;
 
@@ -128,7 +129,6 @@ export default function MyNeedsPage() {
         </Link>
       </div>
       <p className="subtitle">Потребности, созданные вашими компаниями</p>
-      <label className="catalog-search"><input aria-label="Поиск моих потребностей" placeholder="Категория или статус потребности" value={query} onChange={event => setQuery(event.target.value)} /></label>
 
       {error && (
         <div className="alert alert-error" role="alert">
@@ -145,7 +145,7 @@ export default function MyNeedsPage() {
         </p>
       ) : (
         <ul className="company-list">
-          {visibleNeeds.length === 0 && needs.length > 0 && <li className="hint">По этому запросу потребности не найдены. Измените поиск.</li>}
+          {visibleNeeds.length === 0 && needs.length > 0 && <li className="hint">По вашему запросу потребностей нет. Измените запрос в поиске наверху.</li>}
           {visibleNeeds.map((need) => (
             <li key={need.id} className="company-item repeat-order">
               <Link href={`/needs/${need.id}`} className="company-item">
@@ -153,7 +153,7 @@ export default function MyNeedsPage() {
                   {need.category} · {formatUnits(need.volume_units)}
                 </span>
                 <span className="company-meta">
-                  Бюджет: {formatRub(need.budget_rub)} · Срок: {need.deadline_date}
+                  Бюджет: {formatRub(need.budget_rub)} · Срок: {formatDate(need.deadline_date)}
                 </span>
                 <span className={`badge badge-${need.status}`}>{NEED_STATUS_LABELS[need.status]}</span>
               </Link>
@@ -185,23 +185,21 @@ export default function MyNeedsPage() {
                   ) : null}
                   <div className="field">
                     <label htmlFor={`deadline-${need.id}`}>Новый срок выполнения</label>
-                    <input
+                    <DateInput
                       id={`deadline-${need.id}`}
-                      type="date"
                       value={deadline}
                       disabled={repeating}
-                      onChange={(event) => changeDates(event.target.value)}
+                      onValueChange={(event) => changeDates(event)}
                       required
                     />
                   </div>
                   <div className="field">
                     <label htmlFor={`valid-${need.id}`}>Карточка актуальна до</label>
-                    <input
+                    <DateInput
                       id={`valid-${need.id}`}
-                      type="date"
                       value={validUntil}
                       disabled={repeating}
-                      onChange={(event) => changeDates(event.target.value, true)}
+                      onValueChange={(event) => changeDates(event, true)}
                     />
                   </div>
                   <div className="actions">

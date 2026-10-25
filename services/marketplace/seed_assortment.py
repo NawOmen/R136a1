@@ -6,6 +6,7 @@ Synthetic demo data only: assortment, group pictograms drawn by the team
 import struct
 import uuid
 import zlib
+from pathlib import Path
 from datetime import date, datetime, timedelta, timezone
 from decimal import Decimal
 
@@ -34,6 +35,40 @@ GROUP_COLORS = {
 }
 
 LEGACY_COMPARISON_KEYS = ("box", "bolt", "jacket", "desk", "tile", "cable", "lamp")
+LEGACY_PRODUCT_PHOTO_KEYS = ("box", "jacket", "cable", "drinking_water")
+PRODUCT_PHOTO_KEYS = (
+    "box", "bag", "film", "cardboard_sheet", "steel_plate_2", "fabric",
+    "retail_display", "warehouse_trolley", "tile", "bolt",
+    "jacket", "office_paper_a4", "cleaning_bucket_10", "cable",
+    "office_keyboard", "shipping_cage", "label_50", "laser_part_2",
+    "bigbox", "bag_large", "film_wide", "steel_plate_3", "office_paper_a3",
+    "cleaning_bucket_15", "label_100", "laser_part_3", "canister_5",
+    "polypropylene_granule", "drilling_machine", "retail_counter", "nut", "mix",
+    "desk", "rack", "apron", "office_mouse", "network_switch_8", "shipping_bin",
+    "printed_leaflet_a5", "machined_bushing_20",
+)
+# Size variants can share an authored illustration of the same kind of item.
+# Keep the product-specific object key and caption; never use a group pictogram.
+PRODUCT_PHOTO_SOURCES = {
+    "bigbox": "box", "bag_large": "bag", "film_wide": "film",
+    "steel_plate_3": "steel_plate_2", "office_paper_a3": "office_paper_a4",
+    "cleaning_bucket_15": "cleaning_bucket_10", "label_100": "label_50",
+    "laser_part_3": "laser_part_2",
+}
+RETIRED_STOREFRONT_KEYS = ("drinking_water", "rice_pack")
+COMPARISON_STOREFRONT_KEYS = (
+    "bag", "film", "steel_plate_2", "tile", "office_paper_a4",
+    "office_keyboard", "warehouse_trolley", "shipping_cage",
+)
+COMPARISON_UNAVAILABLE_KEYS = ("steel_plate_2", "office_keyboard", "shipping_cage")
+STOREFRONT_VERSION = "storefront-v1"
+STOREFRONT_ADDITIONAL_KEYS = tuple(key for key in PRODUCT_PHOTO_KEYS if key not in LEGACY_PRODUCT_PHOTO_KEYS)
+
+
+def storefront_product_id(company_id, key):
+    """Keep historical fixture IDs, including retired items; never reuse a draft."""
+    suffix = key if key in LEGACY_PRODUCT_PHOTO_KEYS else f"{STOREFRONT_VERSION}:{key}"
+    return uuid.uuid5(NAMESPACE, f"{company_id}:{suffix}")
 
 
 def comparison_assortment():
@@ -85,6 +120,7 @@ def group_pictogram(family: str, size: int = 96) -> bytes:
 
 
 async def seed_assortment(db):
+    created = []
     for seller_index, title in enumerate(("ООО «Урал Комплект»", "ООО «Регион Поставка»")):
         row = (await db.execute(text(
             "SELECT c.id, m.user_id FROM auth.companies c JOIN auth.company_members m ON m.company_id = c.id "
@@ -120,6 +156,7 @@ async def seed_assortment(db):
                 stock_units=stock // (seller_index + 1), stock_updated_at=datetime.now(timezone.utc),
                 is_published=report.blocking_open == 0)
             db.add(product)
+            created.append(product)
             # Extend scope only for this newly inserted fixture. Existing scope edits
             # and deliberately removed scope entries survive subsequent seed runs.
             details = passport.details or {}
@@ -133,6 +170,75 @@ async def seed_assortment(db):
                     unit_price_rub=product.price_rub, specification_hash=product_specification_hash(product)))
     await seed_product_images(db)
     await seed_seller_stories(db)
+    return created
+
+
+async def seed_storefront_assortment(db, *, seller_name="ООО «Урал Комплект»", keys=None,
+                                    price_factor=Decimal("1"), unavailable_keys=()):
+    """Create the separately versioned public fixtures after the base assortment."""
+    row = (await db.execute(text(
+        "SELECT c.id, m.user_id FROM auth.companies c JOIN auth.company_members m ON m.company_id = c.id "
+        "WHERE c.display_name = :seller_name AND m.can_sell = true AND m.is_admin = true "
+        "ORDER BY m.user_id LIMIT 1"
+    ), {"seller_name": seller_name})).first()
+    if row is None:
+        return []
+    company_id, user_id = row
+    selected_keys = STOREFRONT_ADDITIONAL_KEYS if keys is None else keys
+    created = []
+    for row in ASSORTMENT:
+        key, _family, category, subcategory, name, attributes, price, moq, stock, lead = row
+        if key not in selected_keys:
+            continue
+        product_id = storefront_product_id(company_id, key)
+        if await db.get(Product, product_id) is not None:
+            continue
+        # This separate, versioned fixture does not promote an existing
+        # assortment draft: deliberate unpublication is not distinguishable
+        # from an old unpublished seed entry and must survive every rerun.
+        product = Product(id=product_id, company_id=company_id, created_by_user_id=user_id,
+            external_id=f"synthetic-{STOREFRONT_VERSION}:{key}",
+            sources=[{"label": "Спецификация товара", "reference": f"synthetic_seed:{STOREFRONT_VERSION}:{key}"}],
+            name=name, category=category, subcategory=subcategory, characteristics=dict(attributes),
+            price_rub=Decimal(str(price)) * price_factor, price_tiers=[], moq_units=moq, lead_time_days=lead,
+            stock_units=0 if key in unavailable_keys else stock,
+            stock_updated_at=datetime.now(timezone.utc), is_published=False)
+        db.add(product)
+        created.append(product)
+        await db.flush()
+    await seed_product_photos(db, company_id=company_id, keys=selected_keys)
+    return created
+
+
+async def seed_synthetic_price_history(db):
+    """Six older weekly observations for untouched synthetic assortment only.
+
+    Deterministic IDs mark this as fixture data. Anchor to the original observation,
+    never refresh dates on rerun and never invent history for seller-edited SKUs.
+    """
+    products = (await db.scalars(select(Product).where(Product.is_published.is_(True)))).all()
+    for product in products:
+        row = next((row for row in ASSORTMENT if
+                    product.id in {uuid.uuid5(NAMESPACE, f"{product.company_id}:{row[0]}"), storefront_product_id(product.company_id, row[0])}
+                    and product.name == row[4] and product.category == row[2]
+                    and product.subcategory == row[3] and product.characteristics == row[5]
+                    and product.moq_units == row[7]), None)
+        if row is None or product.price_rub not in {Decimal(str(row[6])), Decimal(str(row[6])) * Decimal("1.04")}:
+            continue
+        observations = (await db.scalars(select(ProductPriceObservation).where(ProductPriceObservation.product_id == product.id))).all()
+        if len(observations) != 1:
+            continue
+        original = observations[0]
+        if original.specification_hash != product_specification_hash(product) or original.unit_price_rub != product.price_rub:
+            continue
+        for weeks, factor in enumerate(("1.01", "1.02", "1.03", "1.05", "1.04", "1.06"), start=1):
+            db.add(ProductPriceObservation(
+                id=uuid.uuid5(NAMESPACE, f"synthetic-price-history-v1:{product.id}:{weeks}"),
+                product_id=product.id, category=product.category,
+                specification_hash=original.specification_hash,
+                unit_price_rub=(product.price_rub * Decimal(factor)).quantize(Decimal("0.01")),
+                observed_at=original.observed_at - timedelta(weeks=weeks)))
+    await db.flush()
 
 
 async def seed_product_images(db):
@@ -142,6 +248,7 @@ async def seed_product_images(db):
     """
     from app.storage import upload_object
 
+    await seed_product_photos(db)
     pictured = set()
     for key, family, _category, _subcategory, _name, _attributes, _price, _moq, _stock, _lead in ASSORTMENT:
         if family in pictured:
@@ -162,6 +269,50 @@ async def seed_product_images(db):
             continue
         db.add(ProductImage(product_id=product.id, file_name=f"Схематическая иллюстрация: {family}.png",
                             file_key=file_key, content_type="image/png", position=0))
+        await db.flush()
+
+
+async def seed_product_photos(db, *, company_id=None, keys=None):
+    """Attach authored product illustrations only to unchanged synthetic SKUs.
+
+    Upgrade our own old pictograms; preserve supplier uploads, edited products,
+    existing image IDs and all commercial data. A storage failure is retryable.
+    """
+    from app.storage import upload_object
+
+    seller_id = company_id if company_id is not None else await _first_seller_id(db)
+    if seller_id == "missing-seller":
+        return
+    selected_keys = PRODUCT_PHOTO_KEYS if keys is None else keys
+    for key, _family, category, subcategory, name, attributes, *_ in ASSORTMENT:
+        if key not in selected_keys:
+            continue
+        product_id = storefront_product_id(seller_id, key)
+        product = await db.get(Product, product_id)
+        if product is None or (product.name, product.category, product.subcategory, product.characteristics) != (name, category, subcategory, attributes):
+            continue
+        images = list((await db.scalars(select(ProductImage).where(
+            ProductImage.product_id == product_id))).all())
+        photo_key = f"products/{product_id}/seed-photo-{key}.webp"
+        if any(image.file_key == photo_key for image in images):
+            continue
+        old_key = f"products/{product_id}/seed-{key}.png"
+        if any(not (image.file_key == old_key and image.file_name.startswith("Схематическая иллюстрация:")) for image in images):
+            continue
+        source = PRODUCT_PHOTO_SOURCES.get(key, key)
+        asset = Path(__file__).parent / "seed_media" / f"{source}.webp"
+        if not asset.is_file():
+            continue
+        try:
+            upload_object(photo_key, asset.read_bytes(), "image/webp")
+        except Exception:
+            continue
+        image = images[0] if images else ProductImage(product_id=product_id, position=0)
+        image.file_name = f"Иллюстрация товара: {name}.webp"
+        image.file_key = photo_key
+        image.content_type = "image/webp"
+        if not images:
+            db.add(image)
         await db.flush()
 
 

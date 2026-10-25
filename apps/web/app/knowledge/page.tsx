@@ -5,6 +5,9 @@ import Link from "next/link";
 import { FormEvent, useState } from "react";
 import { agents } from "../lib/agents";
 import { getToken } from "../lib/api";
+import { Icon } from "../components/Icon";
+import { LiquidSurface } from "../components/LiquidSurface";
+import { HeroObject } from "../components/HeroObject";
 
 const FAQ = [
   ["Можно одновременно покупать и продавать?", "Да. Участник компании включает оба права и переключает рабочий режим без второй регистрации."],
@@ -30,10 +33,30 @@ export default function KnowledgePage() {
     try{
       const result=await agents.askPlatform(token,question);
       setAnswer(result.answer);
-      setLinks((result.links ?? []).filter((link) => ["/needs/new", "/dashboard", "/deals", "/support"].includes(link)));
+      setLinks(Array.from(new Set((result.links?.length ? result.links : ["/support"]).filter((link) => ["/needs/new", "/dashboard", "/deals", "/support"].includes(link)))));
     }catch(e){setError(e instanceof Error?russianMessage(e.message):"Помощник недоступен. Проверьте соединение и повторите.");}
     finally{setBusy(false);}
   }
 
-  return <div><h1>Помощь и база знаний</h1><p className="subtitle">Ответы о работе ПоРукам и локальный ИИ-помощник</p><div className="knowledge-layout"><section aria-label="Частые вопросы">{FAQ.map(([title,body])=><details className="card faq" key={title}><summary>{title}</summary><p>{body}</p></details>)}</section><aside className="card assistant-card"><h2>Спросить помощника</h2><p className="hint">Помощник отвечает только по проверенной справке платформы, показывает источник и не принимает финансовых решений. Не указывайте пароли и персональные данные.</p><form onSubmit={ask}><div className="field"><label htmlFor="assistant-question">Ваш вопрос</label><textarea id="assistant-question" disabled={busy} maxLength={1000} minLength={3} required value={question} onChange={(e)=>setQuestion(e.target.value)}/></div><button className="btn btn-primary" disabled={busy}>{busy?"Думаю…":"Спросить"}</button></form>{error&&<div className="alert alert-error" role="alert">{error} <button type="button" className="btn btn-secondary btn-sm" onClick={()=>setError(null)}>Понятно</button></div>}{answer&&<div className="assistant-answer" aria-live="polite"><p>{answer}</p><p className="hint">Источник: справка платформы ПоРукам. Финансовые решения помощник не принимает.</p>{links.length>0&&<ul>{links.map((link)=><li key={link}><Link href={link}>{({"/needs/new":"Создать потребность","/dashboard":"Компании и права","/deals":"Согласование и исполнение","/support":"Поддержка"} as Record<string,string>)[link]}</Link></li>)}</ul>}</div>}<Link href="/support">Не нашли ответ? Написать в поддержку</Link></aside></div></div>;
+  return <div className="guidance-page help-page">
+    <LiquidSurface as="header" variant="help" className="guidance-hero help-hero">
+      <div className="guidance-hero__copy"><h1>Помощь с закупкой</h1><p className="guidance-lead">Ответы о работе ПоРукам и локальный ИИ-помощник</p>
+      <nav className="help-shortcuts" aria-label="Быстрые действия">
+        <Link className="toggle-motion" href="/needs/new"><Icon name="layers" size={22} /><span>Создать потребность</span><Icon name="arrow" size={19} /></Link>
+        <Link className="toggle-motion" href="/support"><Icon name="link" size={22} /><span>Написать в поддержку</span><Icon name="arrow" size={19} /></Link>
+      </nav></div>
+      <HeroObject kind="help" />
+    </LiquidSurface>
+    <div className="help-layout">
+      <section className="help-questions" aria-labelledby="faq-heading"><h2 id="faq-heading">Частые вопросы</h2><div className="guidance-disclosures">{FAQ.map(([title,body]) => <details className="guidance-disclosure" key={title}><summary><span>{title}</span><Icon name="arrow" size={19} /></summary><div className="guidance-disclosure__body"><p>{body}</p></div></details>)}</div></section>
+      <aside className="help-assistant">
+        <h2><Icon name="spark" size={25} />Спросить помощника</h2>
+        <p className="hint">Отвечает по проверенной справке со ссылкой на источник. Не принимает финансовых решений. Не указывайте пароли и персональные данные.</p>
+        <form onSubmit={ask}><div className="field"><label htmlFor="assistant-question">Ваш вопрос</label><textarea id="assistant-question" disabled={busy} maxLength={1000} minLength={3} required value={question} onChange={(e)=>setQuestion(e.target.value)} placeholder="Например, как согласовать условия сделки?" /></div><button className="btn btn-primary" disabled={busy}>{busy?"Думаю…":"Спросить"}<Icon name="arrow" size={18} /></button></form>
+        {error && <div className="alert alert-error" role="alert">{error} <button type="button" className="btn btn-secondary btn-sm" onClick={()=>setError(null)}>Понятно</button></div>}
+        {answer && <div className="assistant-answer" aria-live="polite"><p>{answer}</p><p className="hint">Источник: справка ПоРукам.</p>{links.length>0 && <div className="assistant-actions">{links.map(link => <Link className="btn btn-primary" key={link} href={link}>{({"/needs/new":"Создать потребность","/dashboard":"Компании и права","/deals":"Согласование и исполнение","/support":"Поддержка"} as Record<string,string>)[link]}<Icon name="arrow" size={18} /></Link>)}</div>}</div>}
+        <Link className="help-support-link" href="/support">Не нашли ответ? Написать в поддержку<Icon name="arrow" size={17} /></Link>
+      </aside>
+    </div>
+  </div>;
 }

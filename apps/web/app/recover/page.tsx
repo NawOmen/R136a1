@@ -1,10 +1,12 @@
 "use client";
 import Link from "next/link";
-import { FormEvent, useRef, useState } from "react";
+import { FormEvent, useEffect, useRef, useState } from "react";
 import { api } from "../lib/api";
 import { russianMessage } from "../lib/russianMessages";
 
 export default function RecoveryPage() {
+  const [ready, setReady] = useState(false);
+  useEffect(() => setReady(true), []);
   const [email, setEmail] = useState(""); const [code, setCode] = useState(""); const [password, setPassword] = useState(""); const [repeat, setRepeat] = useState("");
   const [sent, setSent] = useState(false); const [done, setDone] = useState(false); const [busy, setBusy] = useState(false); const pending = useRef(false);
   const [error, setError] = useState(""); const [notice, setNotice] = useState("");
@@ -20,7 +22,7 @@ export default function RecoveryPage() {
   }
   return <div className="auth-page"><h1 className="page-title">Восстановить доступ</h1>
     {notice && <p className="alert alert-success" role="status">{notice}</p>}{error && <p className="alert alert-error" role="alert">{error}</p>}
-    {!done && <form className="card" onSubmit={submit}><fieldset disabled={busy} style={{border:0, padding:0}}>
+    {!done && <form className="card" onSubmit={submit}><fieldset disabled={!ready || busy} style={{border:0, padding:0, minWidth:0}}>
       {!sent ? <div className="field"><label htmlFor="recovery-email">Почта аккаунта</label><input id="recovery-email" type="email" autoComplete="email" required value={email} onChange={e => setEmail(e.target.value)} /></div> : <>
         <div className="field"><label htmlFor="recovery-code">Код из письма</label><input id="recovery-code" required autoComplete="one-time-code" value={code} onChange={e => setCode(e.target.value)} /></div>
         <div className="field"><label htmlFor="recovery-password">Новый пароль</label><input id="recovery-password" type="password" minLength={12} maxLength={72} autoComplete="new-password" required value={password} onChange={e => setPassword(e.target.value)} /><p className="hint">Не менее 12 символов.</p></div>

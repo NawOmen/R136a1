@@ -1,0 +1,42 @@
+{
+  "prompt": "Use case: product-mockup.\nAsset type: standalone photorealistic Russian B2B catalogue product illustration, authored synthetic visual, not a supplier photograph.\nScene/backdrop: seamless almost-white neutral studio background #f8f8f6, soft diffuse studio light, small soft contact shadow.\nStyle/medium: crisp realistic catalogue product photography, believable proportions and material details.\nComposition/framing: horizontal landscape 3:2 frame, whole single product centered and comfortably inside frame, generous clear margins on every side, no cropping. The object occupies about 65-75 percent of the image. Camera three-quarter view unless the subject specifies flat lay.\nConstraints: no brand, no logo, no labels, no text, no digits, no watermark, no people, no extra props, no collage, no icon, no decorative graphics outside the product. Show exactly the requested product.\nPrimary request: One plain medium-gray cotton apron, nominal body size 80 by 90 cm, universal adult size. Top-down studio flat lay: the apron is carefully spread completely flat, broad rectangular lower fabric body with a gently curved bib, neck strap arranged above and two long waist ties spread neatly to each side, every strap and fabric corner fully visible. Realistic fine cotton weave and neat stitching. Ordinary household/work apron, no protective equipment, no medical or safety features. No person, mannequin, hanger, tools or accessories.",
+  "createdAt": "2026-10-22T05:43:43.284294Z",
+  "schemaVersion": 1,
+  "tool": "image_gen.imagegen",
+  "provider": "builtin",
+  "mode": "built-in generate",
+  "origin": "AI-generated synthetic product illustration; not an actual supplier photograph",
+  "origin_ru": "Авторская синтетическая иллюстрация товара, созданная ИИ; не фотография товара поставщика",
+  "useCase": "product-mockup",
+  "generatorOriginalPath": "/Users/assweg/.codex/generated_images/01a1621e-7389-76c2-98fa-fc450c2c2dff/exec-74739a26-f8a1-42de-8b52-2afaf105fc6b.png",
+  "generatorOriginalSha256": "ea214a3e696daee12926693cbe3256957fd5d6832d941d2ad56b2f0b1f7bebb6",
+  "sourcePath": "/Users/assweg/.codex/generated_images/01a1621e-7389-76c2-98fa-fc450c2c2dff/exec-74739a26-f8a1-42de-8b52-2afaf105fc6b.png",
+  "sourceSha256": "ea214a3e696daee12926693cbe3256957fd5d6832d941d2ad56b2f0b1f7bebb6",
+  "sourceDimensions": [
+    1536,
+    1024
+  ],
+  "deliveryPath": "services/marketplace/seed_media/apron.webp",
+  "deliverySha256": "12f55bb7943ae96f398af3b9b4fab15418b27631da4a4294803c7b05fca757d1",
+  "deliveryDimensions": [
+    768,
+    512
+  ],
+  "deliveryBytes": 8534,
+  "conversion": {
+    "library": "Pillow",
+    "format": "WebP",
+    "quality": 82,
+    "method": 6,
+    "resized": true,
+    "cropped": false,
+    "retouched": false
+  },
+  "verification": {
+    "subject": "manually inspected",
+    "wholeProductVisible": true,
+    "noBrandingOrText": true,
+    "background": "off-white studio",
+    "note": "Full cotton apron with neck strap and both waist ties visible; no person or protective claim."
+  }
+}

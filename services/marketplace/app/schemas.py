@@ -32,6 +32,14 @@ class DeliveryAddressOut(BaseModel):
     is_default: bool
 
 
+class AddressSuggestionOut(BaseModel):
+    label: str
+    address: str
+    city: str | None
+    region: str | None
+    house: str | None
+
+
 class DeliveryAddressIn(BaseModel):
     address: str = Field(min_length=5, max_length=500)
     city: str = Field(min_length=2, max_length=120)
@@ -1061,7 +1069,12 @@ class SupportTicketIn(BaseModel):
     request_key: uuid.UUID | None = None
     company_id: uuid.UUID | None = None
     subject: str = Field(min_length=3, max_length=200)
-    message: str = Field(min_length=10, max_length=5000)
+    message: str = Field(min_length=1, max_length=5000)
+
+    @field_validator("message", mode="before")
+    @classmethod
+    def trim_message(cls, value):
+        return value.strip() if isinstance(value, str) else value
 
 
 class SupportTicketUpdateIn(BaseModel):

@@ -1,0 +1,43 @@
+{
+  "prompt": "Use case: product-mockup.\nAsset type: original synthetic Russian B2B catalogue product illustration, photorealistic.\nPrimary request: One small neat mound of uncolored polypropylene plastic granules. Individual pellets are tiny smooth short cylindrical or oval off-white translucent polymer beads, physically consistent industrial polypropylene resin, some loose pellets around the small mound. No bag or container.\nScene/backdrop: seamless almost-white neutral studio background, subtle soft contact shadow.\nComposition/framing: wide horizontal 3:2 image, one modest mound centered, all pellets within the frame, generous clear margins, no crop. Close studio product view suitable for a catalogue thumbnail.\nStyle/medium: realistic studio catalogue photography, crisp believable plastic texture, soft diffuse lighting.\nConstraints: no actual manufacturer, no trademarks, no logos, no labels, no text, no numbers, no watermark, no people, no tools, no unrelated props, no collage.",
+  "createdAt": "2026-10-22T05:43:11.625640+00:00",
+  "schemaVersion": 1,
+  "tool": "image_gen.imagegen",
+  "provider": "builtin",
+  "mode": "built-in generate",
+  "origin": "AI-generated synthetic product illustration; not an actual supplier photograph",
+  "origin_ru": "Авторская синтетическая иллюстрация товара, созданная ИИ; не фотография товара поставщика",
+  "useCase": "product-mockup",
+  "generatorOriginalPath": "/Users/assweg/.codex/generated_images/01a1621e-2855-7aa0-b1cc-7b71d0db9dd6/exec-34b70227-c602-49e9-b179-b9729cef9a16.png",
+  "generatorOriginalSha256": "70fb924b6d522f82b9bc2533b2e1a129f32e39f22d8664398fd455c5b7142a2c",
+  "sourcePath": "/Users/assweg/.codex/generated_images/01a1621e-2855-7aa0-b1cc-7b71d0db9dd6/exec-34b70227-c602-49e9-b179-b9729cef9a16.png",
+  "sourceSha256": "70fb924b6d522f82b9bc2533b2e1a129f32e39f22d8664398fd455c5b7142a2c",
+  "sourceDimensions": [
+    1536,
+    1024
+  ],
+  "sourceBytes": 1488044,
+  "deliveryPath": "services/marketplace/seed_media/polypropylene_granule.webp",
+  "deliverySha256": "260524352ba0a10d9adaeacfe2eee7a5fe33403eb057bd7eeeab42ddbcf622d4",
+  "deliveryDimensions": [
+    768,
+    512
+  ],
+  "deliveryBytes": 10544,
+  "conversion": {
+    "library": "Pillow 13.0.0 (WebP)",
+    "format": "WebP",
+    "quality": 82,
+    "method": 6,
+    "resized": true,
+    "cropped": false,
+    "retouched": false
+  },
+  "verification": {
+    "subject": "manually inspected",
+    "wholeProductVisible": true,
+    "noBrandingOrText": true,
+    "background": "almost-white neutral studio",
+    "note": "Generated for synthetic catalogue specifications. Whole product visible; image is an illustration rather than evidence of actual supplier stock."
+  }
+}

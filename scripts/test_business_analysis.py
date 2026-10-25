@@ -20,7 +20,7 @@ class BusinessAnalysis(unittest.TestCase):
         self.data = json.loads(analysis.DEFAULT_INPUT.read_text())
 
     def test_readme_check_accepts_only_one_current_generated_block(self):
-        expected = analysis.markdown(analysis.build_report(self.data))
+        expected = analysis.readme_markdown(analysis.build_report(self.data))
         start, end = '<!-- business-model:start -->', '<!-- business-model:end -->'
         valid = start + '\n' + expected + end
         with tempfile.TemporaryDirectory() as directory:
@@ -31,6 +31,18 @@ class BusinessAnalysis(unittest.TestCase):
                     path.write_text(content)
                     with patch('sys.argv', ['business_analysis.py', '--check-readme', str(path)]), redirect_stderr(StringIO()):
                         self.assertEqual(analysis.main(), status)
+
+    def test_compact_readme_keeps_negative_unknown_and_blocked_examples(self):
+        report = analysis.build_report(self.data)
+        compact = analysis.readme_markdown(report)
+        self.assertIn('12 расчётных сценариев', compact)
+        self.assertIn('47 профилей в 12 разделах', compact)
+        self.assertIn('600.00 | 200.00', compact)
+        self.assertIn('-700.00 | -500.00', compact)
+        self.assertIn('Группа не набрана: переход к прямому запросу | не определено', compact)
+        self.assertIn('Неизвестные цена альтернативы, затраты и платежи | не определено', compact)
+        self.assertNotIn('packaging.paper-cups', compact)
+        self.assertIn('packaging.paper-cups', analysis.markdown(report))
 
     def case(self, identifier='direct'):
         return copy.deepcopy(next(c for c in self.data['cases'] if c['id'] == identifier))

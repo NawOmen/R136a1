@@ -1,3 +1,5 @@
+from datetime import date, timedelta
+
 from synthetic_files import PNG, PDF
 
 from conftest import confirmed_quote_terms
@@ -30,7 +32,7 @@ async def test_full_flow(client, db_session):
         json={"name": "Стакан 400 мл PE", "category": "бумажные стаканы", "characteristics": {"volume_ml": 400, "material": "крафт-картон"}, "price_rub": 11.2, "moq_units": 20000, "lead_time_days": 9},
         headers=_auth(seller_token),
     )
-    assert r.status_code == 201
+    assert r.status_code == 201, r.text
     product_id = r.json()["id"]
 
     r = await client.post(f"/api/v1/products/{product_id}/publish", json={"published": True}, headers=_auth(seller_token))
@@ -45,15 +47,15 @@ async def test_full_flow(client, db_session):
         json={"address": "г. Москва, ул. Тестовая, 1", "city": "Москва", "region": "г. Москва", "is_default": True},
         headers=_auth(buyer_token),
     )
-    assert r.status_code == 201
+    assert r.status_code == 201, r.text
     address_id = r.json()["id"]
 
     r = await client.post(
         "/api/v1/needs",
-        json={"company_id": str(buyer_company), "category": "бумажные стаканы", "characteristics": {"volume_ml": 400}, "volume_units": 120000, "budget_rub": 1900000, "deadline_date": "2026-10-30", "delivery_address_id": str(address_id), "visibility": "open_anonymized"},
+        json={"company_id": str(buyer_company), "category": "бумажные стаканы", "characteristics": {"volume_ml": 400}, "volume_units": 120000, "budget_rub": 1900000, "deadline_date": (date.today() + timedelta(days=30)).isoformat(), "delivery_address_id": str(address_id), "visibility": "open_anonymized"},
         headers=_auth(buyer_token),
     )
-    assert r.status_code == 201
+    assert r.status_code == 201, r.text
     need_id = r.json()["id"]
     assert r.json()["status"] == "draft"
 
@@ -68,12 +70,12 @@ async def test_full_flow(client, db_session):
         json={'commercial_terms': confirmed_quote_terms(), "company_id": str(seller_company), "product_id":product_id, "price_rub": 11.0, "available_units": 120000, "lead_time_days": 9, "delivery_cost_rub": 10000},
         headers=_auth(seller_token),
     )
-    assert r.status_code == 201
+    assert r.status_code == 201, r.text
     offer_id = r.json()["id"]
 
     # покупатель выбирает предложение
     r = await client.post(f"/api/v1/offers/{offer_id}/select", headers=_auth(buyer_token), json={"expected_revision": 1, "human_approved": True})
-    assert r.status_code == 201
+    assert r.status_code == 201, r.text
     assert r.json()["status"] == "created"
     assert r.json()["performed_by_user_id"] == str(buyer_user)
     assert r.json()["units"] == 120000
@@ -280,7 +282,24 @@ async def test_demo_seed_separates_buyer_address_and_seller_data(
     from pypdf import PdfReader
     import io
     docs=(await db_session.scalars(select(Document).where(Document.company_id==seller_company))).all()
-    assert len(docs)==2
+    assert len(docs) == 43
+    assert {(document.scope_category, document.scope_subcategory) for document in docs} == {
+        ("Упаковка и тара", "Бумажные стаканы"), ("Упаковка и тара", "Коробки"),
+        ("Товары для бизнеса", "Спецодежда"), ("Электроника", "Компоненты"),
+        ("Продукты питания", "Напитки"),
+        ("Упаковка и тара", "Пакеты"), ("Упаковка и тара", "Плёнка"),
+        ("Сырьё и материалы", "Бумага и картон"), ("Сырьё и материалы", "Металлы"),
+        ("Сырьё и материалы", "Текстиль"), ("Оборудование", "Торговое"),
+        ("Оборудование", "Складское"), ("Строительство", "Отделочные материалы"),
+        ("Строительство", "Крепёж"),
+        ("Товары для бизнеса", "Канцелярия"), ("Товары для бизнеса", "Хозяйственные товары"),
+        ("Электроника", "Компьютерная техника"), ("Транспорт и логистика", "Тара для перевозки"),
+        ("Полиграфия и реклама", "Этикетки"), ("Услуги производства", "Контрактное производство"),
+        ("Упаковка и тара", "Бутылки и канистры"), ("Сырьё и материалы", "Полимеры"),
+        ("Оборудование", "Производственное"), ("Товары для бизнеса", "Мебель"),
+        ("Электроника", "Связь"), ("Полиграфия и реклама", "Печать"),
+        ("Услуги производства", "Обработка"),
+    }
     for document in docs:
         stored=stub_object_storage[document.file_key]
         assert len(PdfReader(io.BytesIO(stored)).pages)==1
@@ -310,7 +329,8 @@ async def test_demo_seed_separates_buyer_address_and_seller_data(
     assert seller_addresses == []
     assert await db_session.get(ProductionProfile, seller_company) is not None
     from app.assortment import ASSORTMENT
-    assert len(products) == 2 + len(ASSORTMENT)
+    # Two legacy cups and thirty-seven separately versioned storefront fixtures.
+    assert len(products) == 2 + len(ASSORTMENT) + 37
     assert len({product.category for product in products}) >= 4
     stub_object_storage.pop(docs[0].file_key)
     await marketplace_seed.seed()

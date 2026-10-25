@@ -31,6 +31,7 @@ class Settings(BaseSettings):
         if len(set(value)) < 16:
             raise ValueError("OPTIMIZER_TOKEN должен быть случайным секретом")
         return value
+    dadata_api_key: str = Field(default="", repr=False)
     optimizer_timeout_seconds: float = 15.0
     minio_secure: bool = False
     cors_origins: str = "http://localhost:3000,http://127.0.0.1:3000"

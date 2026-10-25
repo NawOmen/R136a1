@@ -18,6 +18,7 @@ class Settings(BaseSettings):
         return value
 
     buyer_trial_enabled: bool = True
+    marketplace_base_url: str = "http://marketplace:8002"
 
     jwt_algorithm: Literal["HS256"] = "HS256"
 

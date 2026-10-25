@@ -1,0 +1,41 @@
+{
+  "prompt": "Use case: product-mockup.\nAsset type: standalone synthetic Russian B2B catalogue product illustration, photorealistic.\nPrimary request: One plain disposable350millilitre kraft paper cup, nominal300gramspersquaremetre kraftcardboard withthinwhitePE foodcontactlining. Naturalbrownkraft exterior, smoothwhiteinterior, rolledwhitepaperlip, taperedroundsinglewallbody withbaseabout60mmdiameter, topabout90mmdiameter,heightabout110mm. No lid, no sleeve, no drink, no print. Whole cup upright centered at gentle three-quarter angle, inside visible.\nScene/backdrop: clean seamless off-white studio background #f8f8f6, subtle natural soft contact shadow.\nComposition/framing: square 1:1 image, whole product centered occupying75%of frame, generous margins on ALL four sides, no crop.\nStyle/medium: realistic clean studio catalogue photography, crisp believable materials, soft diffuse lighting.\nConstraints: original synthetic product illustration, no real manufacturer, no trademark, no logos, no text, no numbers, no UI, no watermarks, no people, no unrelated props, no colored filter.",
+  "createdAt": "2026-10-21T15:57:18.710540+00:00",
+  "schemaVersion": 1,
+  "tool": "image_gen.imagegen",
+  "mode": "built-in generate",
+  "origin": "AI-generated synthetic product illustration; not an actual supplier photograph",
+  "origin_ru": "Авторская синтетическая иллюстрация товара, созданная ИИ; не фотография товара поставщика",
+  "useCase": "product-mockup",
+  "generatorOriginalPath": "/Users/assweg/.codex/generated_images/01a15f23-f64f-7981-98bc-11e983869fbb/exec-12e100ff-bc86-4df7-b11c-07cedd876601.png",
+  "generatorOriginalSha256": "edaf4357700e69c343f4892a41586f74aaa314f18b7fe48e0d9d41daa9f1c81b",
+  "sourcePath": "/Users/assweg/.codex/generated_images/01a15f23-f64f-7981-98bc-11e983869fbb/exec-12e100ff-bc86-4df7-b11c-07cedd876601.png",
+  "sourceSha256": "edaf4357700e69c343f4892a41586f74aaa314f18b7fe48e0d9d41daa9f1c81b",
+  "sourceDimensions": [
+    1254,
+    1254
+  ],
+  "deliveryPath": "services/marketplace/seed_media/paper_cup_350.webp",
+  "deliverySha256": "2dc1a70411b99b1d5fbd447b614643e84649891415fc2ed994d103600a8d2524",
+  "deliveryDimensions": [
+    768,
+    768
+  ],
+  "deliveryBytes": 19960,
+  "conversion": {
+    "library": "libwebp cwebp",
+    "format": "WebP",
+    "quality": 86,
+    "method": 6,
+    "resized": true,
+    "cropped": false,
+    "retouched": false
+  },
+  "verification": {
+    "subject": "manually inspected",
+    "wholeProductVisible": true,
+    "noBrandingOrText": true,
+    "background": "off-white studio",
+    "note": "Generated for synthetic catalogue specifications. Whole product visible; image is an illustration rather than evidence of actual supplier stock."
+  }
+}

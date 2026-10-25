@@ -1,4 +1,5 @@
 "use client";
+import { formatDate } from "../lib/dates";
 import { russianMessage } from "../lib/russianMessages";
 import { russianLabel } from "../lib/presentation";
 import CommercialEstimate from "../components/CommercialEstimate";
@@ -126,18 +127,18 @@ export default function CoalitionsPage() {
                     <p>
                       Итого: {formatRub(ownMember.total_cost_rub)} · Эффект относительно альтернативы: {ownMember.benefit_rub === null ? "база сравнения отсутствует" : formatRub(ownMember.benefit_rub)}
                     </p>
-                    <p className="hint">Решение вашей компании: {ownMember.approval_status}</p>
+                    <p className="hint">Решение вашей компании: {russianLabel(ownMember.approval_status, "Требуется решение")}</p>
                     {coalition.group_offer && (
                       <p>
-                        Производство: {coalition.group_offer.production_start ?? "—"} — {coalition.group_offer.production_end ?? "—"} ·
-                        Подтвердить до: {coalition.group_offer.fill_deadline ?? "—"}
+                        Производство: {formatDate(coalition.group_offer.production_start)} — {formatDate(coalition.group_offer.production_end)} ·
+                        Подтвердить до: {formatDate(coalition.group_offer.fill_deadline)}
                       </p>
                     )}
                     {coalition.status === "awaiting_approvals" && ownMember.approval_status === "pending" && (
                       <div className="actions">
                         <CommercialEstimate value={ownMember.commercial_estimate} />
                         <button type="button" className="btn btn-secondary" disabled={workingId===coalition.id} onClick={()=>void loadBaselines(coalition,ownMember.need_id)}>Выбрать подтверждённое КП для сравнения</button>
-                        {baselineChoices[coalition.id] && <div className="field"><label htmlFor={`baseline_${coalition.id}`}>Индивидуальное подтверждённое КП</label><select id={`baseline_${coalition.id}`} value={baselineSelection[coalition.id]||""} onChange={event=>setBaselineSelection(current=>({...current,[coalition.id]:event.target.value}))}><option value="">Без базы экономии</option>{baselineChoices[coalition.id].filter(offer=>offer.commercial_quote?.estimate.complete).map(offer=><option key={offer.id} value={offer.id}>Производитель #{offer.company_id.slice(0,8)} · {formatRub(offer.commercial_quote?.estimate.total_rub)} · {offer.lead_time_days} дн.</option>)}</select><button type="button" className="btn btn-secondary" disabled={workingId===coalition.id} onClick={()=>void chooseBaseline(coalition,ownMember.buyer_company_id!)}>Применить базу сравнения</button><p className="hint">Сопоставимость проверяется по объёму, требованиям, доставке, срокам и налогам. Без подходящего КП экономия не подтверждается.</p></div>}
+                        {baselineChoices[coalition.id] && <div className="field"><label htmlFor={`baseline_${coalition.id}`}>Индивидуальное подтверждённое КП</label><select id={`baseline_${coalition.id}`} value={baselineSelection[coalition.id]||""} onChange={event=>setBaselineSelection(current=>({...current,[coalition.id]:event.target.value}))}><option value="">Без базы экономии</option>{baselineChoices[coalition.id].filter(offer=>offer.commercial_quote?.estimate.complete).map(offer=><option key={offer.id} value={offer.id}>Производитель #{offer.company_id.slice(0,8)} · {formatRub(offer.commercial_quote?.estimate.total_rub)} · {offer.lead_time_days} дн.</option>)}</select><button type="button" className="btn btn-secondary" disabled={workingId===coalition.id} onClick={()=>void chooseBaseline(coalition,ownMember.buyer_company_id!)}>Применить базу сравнения</button><p className="hint">Сравниваются объём, требования, доставка, сроки и налоги. Без сопоставимого КП экономия не подтверждена.</p></div>}
                         <button type="button" className="btn btn-success" disabled={workingId === coalition.id || !ownMember.commercial_estimate?.complete} onClick={() => void decide(coalition, ownMember.buyer_company_id!, "approved")}>Подтвердить свои условия</button>
                         <button type="button" className="btn btn-secondary" disabled={workingId === coalition.id} onClick={() => void decide(coalition, ownMember.buyer_company_id!, "rejected")}>Отказаться</button>
                       </div>
@@ -145,7 +146,7 @@ export default function CoalitionsPage() {
                   </section>
                 )}
                 <p className="hint">
-                  Другие покупатели имеют отдельные бюджеты, контакты и заказы. Сделка не создаётся, пока каждый участник не подтвердит собственные условия.
+                  Бюджеты, контакты и заказы участников раздельны. Сделка создаётся только после согласия каждого на свои условия.
                 </p>
               </article>
             );

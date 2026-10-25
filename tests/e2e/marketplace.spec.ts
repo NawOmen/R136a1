@@ -1,3 +1,4 @@
+import { formatDate } from "../../apps/web/app/lib/dates";
 import { expect, test, type Page } from "@playwright/test";
 
 function password(role: "BUYER" | "SELLER" | "ADMIN"): string {
@@ -117,7 +118,7 @@ test(`${classified ? "Точная классификация через API" : 
     await page.getByLabel("Бюджет, ₽", { exact: false }).fill("5000");
     const deadline = new Date();
     deadline.setUTCDate(deadline.getUTCDate() + 30);
-    await page.getByLabel("Срок выполнения", { exact: false }).fill(deadline.toISOString().slice(0, 10));
+    await page.getByLabel("Срок выполнения", { exact: false }).fill(formatDate(deadline.toISOString().slice(0, 10)));
     const address = page.getByLabel("Адрес доставки", { exact: false });
     await expect(address.locator('option:not([value=""])').first()).toBeAttached();
     await address.selectOption(await address.locator('option:not([value=""])').first().getAttribute("value") as string);
@@ -342,7 +343,7 @@ test("администратор и редактор: компания, обра
   const adminToken = await page.evaluate(() => localStorage.getItem("token"));
   const adminHeaders = {Authorization: `Bearer ${adminToken}`};
   const suffix = crypto.randomUUID(); const email = `review-${suffix}@demo.ru`; const accountPassword = `Access-${suffix}`;
-  const registered = await page.request.post("http://localhost:8001/api/v2/auth/register", {data: {rules_version:"rules-1",privacy_version:"privacy-1",rules_accepted: true, privacy_acknowledged: true, last_name: "Проверка", first_name: "Редактора", email, password: accountPassword}});
+  const registered = await page.request.post("http://localhost:8001/api/v2/auth/register", {data: {rules_version:"rules-2",privacy_version:"privacy-2",rules_accepted: true, privacy_acknowledged: true, last_name: "Проверка", first_name: "Редактора", email, password: accountPassword}});
   expect(registered.status()).toBe(201);
   const account = await registered.json(); const userHeaders = {Authorization: `Bearer ${account.access_token}`};
   const created = await page.request.post("http://localhost:8001/api/v1/companies", {headers: userHeaders, data: {

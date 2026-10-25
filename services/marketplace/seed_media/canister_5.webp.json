@@ -1,0 +1,43 @@
+{
+  "prompt": "Use case: product-mockup.\nAsset type: original synthetic Russian B2B catalogue product illustration, photorealistic.\nPrimary request: One plain semi-translucent natural white high-density polyethylene 5-litre canister for non-food liquids. Compact rectangular jerrycan with a molded carrying handle on top and one closed white screw cap at the upper front corner. Believable slightly milky plastic, subtle seams, clean unbranded utility packaging. Three-quarter view.\nScene/backdrop: seamless almost-white neutral studio background, subtle soft contact shadow.\nComposition/framing: wide horizontal 3:2 image, exactly one canister centered, whole product fully visible with generous margins on every side, no crop.\nStyle/medium: realistic studio catalogue photography, crisp believable materials, soft diffuse lighting.\nConstraints: no actual manufacturer, no trademarks, no logos, no labels, no text, no numbers, no watermark, no people, no liquid pouring, no unrelated props, no collage.",
+  "createdAt": "2026-10-22T05:43:11.500346+00:00",
+  "schemaVersion": 1,
+  "tool": "image_gen.imagegen",
+  "provider": "builtin",
+  "mode": "built-in generate",
+  "origin": "AI-generated synthetic product illustration; not an actual supplier photograph",
+  "origin_ru": "Авторская синтетическая иллюстрация товара, созданная ИИ; не фотография товара поставщика",
+  "useCase": "product-mockup",
+  "generatorOriginalPath": "/Users/assweg/.codex/generated_images/01a1621e-2855-7aa0-b1cc-7b71d0db9dd6/exec-4dd0f39f-359d-4196-8612-1e649dc59a3e.png",
+  "generatorOriginalSha256": "f63e82003c1eeea490f777e48323db79a64c5fa4972c587d168349d5df6e659a",
+  "sourcePath": "/Users/assweg/.codex/generated_images/01a1621e-2855-7aa0-b1cc-7b71d0db9dd6/exec-4dd0f39f-359d-4196-8612-1e649dc59a3e.png",
+  "sourceSha256": "f63e82003c1eeea490f777e48323db79a64c5fa4972c587d168349d5df6e659a",
+  "sourceDimensions": [
+    1536,
+    1024
+  ],
+  "sourceBytes": 1545970,
+  "deliveryPath": "services/marketplace/seed_media/canister_5.webp",
+  "deliverySha256": "1a244ca47a16c0a8fc7a40b7913d8b3f66362da7c1371e5055f8c4d4321c3ab6",
+  "deliveryDimensions": [
+    768,
+    512
+  ],
+  "deliveryBytes": 4084,
+  "conversion": {
+    "library": "Pillow 13.0.0 (WebP)",
+    "format": "WebP",
+    "quality": 82,
+    "method": 6,
+    "resized": true,
+    "cropped": false,
+    "retouched": false
+  },
+  "verification": {
+    "subject": "manually inspected",
+    "wholeProductVisible": true,
+    "noBrandingOrText": true,
+    "background": "almost-white neutral studio",
+    "note": "Generated for synthetic catalogue specifications. Whole product visible; image is an illustration rather than evidence of actual supplier stock."
+  }
+}

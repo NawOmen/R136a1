@@ -1,4 +1,5 @@
 "use client";
+import { DateInput } from "../components/DateInput";
 import { canonicalCharacteristicKey } from "../lib/categoryProfiles";
 import { russianMessage } from "../lib/russianMessages";
 import { russianLabel, fieldName } from "../lib/presentation";
@@ -140,7 +141,7 @@ export default function EditorPage() {
           return <fieldset key={doc.id} disabled={busy}><h3>{doc.name}</h3><p>{doc.company_display_name ?? "Компания"} · {russianLabel(doc.document_type, "Документ")}</p><button type="button" onClick={() => void download(doc)}>Скачать для проверки</button>
             <label htmlFor={`doc-category-${doc.id}`}>Раздел</label><select id={`doc-category-${doc.id}`} value={values.category} onChange={event => update({category:event.target.value,subcategory:""})}><option value="">Выберите раздел</option>{registry.registry.groups.map(group => <option key={group.label}>{group.label}</option>)}</select>
             <label htmlFor={`doc-subcategory-${doc.id}`}>Подкатегория</label><select id={`doc-subcategory-${doc.id}`} value={values.subcategory} onChange={event => update({subcategory:event.target.value})}><option value="">Весь раздел — только при подтверждённой применимости</option>{registry.registry.groups.find(group => group.label===values.category)?.leaves.map(leaf => <option key={leaf.id}>{leaf.label}</option>)}</select>
-            <label>Действителен до<input type="date" value={values.until} onChange={event => update({until:event.target.value})} /></label>
+            <label>Действителен до<DateInput value={values.until} onValueChange={event => update({until:event})} /></label>
             <label htmlFor={`doc-confirms-${doc.id}`}>Подтверждённые характеристики</label><textarea id={`doc-confirms-${doc.id}`} placeholder={"Материал: сталь | латунь\nДлина, мм: 40"} value={values.confirms} onChange={event => update({confirms:event.target.value})} />
             <label htmlFor={`doc-note-${doc.id}`}>Заключение</label><textarea id={`doc-note-${doc.id}`} maxLength={500} value={values.note} onChange={event => update({note:event.target.value})} />
             <button type="button" className="btn btn-primary" onClick={() => void documentDecision(doc,true)}>Применимость проверена — подтвердить</button><button type="button" className="btn btn-secondary" onClick={() => void documentDecision(doc,false)}>{doc.verification_status === "verified" ? "Отозвать с причиной" : "Отклонить с причиной"}</button>

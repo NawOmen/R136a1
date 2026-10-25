@@ -201,7 +201,7 @@ async def test_support_ticket_notifies_admin_and_response_notifies_user(client, 
     ticket_id = r.json()["id"]
     r = await client.get("/api/v1/notifications", headers=_auth(admin_token))
     assert r.status_code == 200
-    assert any("обращение" in n["message"].lower() for n in r.json())
+    assert any(n["type"] == "support_ticket_created" and "Не входит в сделку" in n["message"] for n in r.json())
     r = await client.patch(
         f"/api/v1/admin/support/tickets/{ticket_id}",
         json={"status": "resolved", "admin_response": "Проверили, всё в порядке."},
@@ -209,7 +209,8 @@ async def test_support_ticket_notifies_admin_and_response_notifies_user(client, 
     )
     assert r.status_code == 200
     r = await client.get("/api/v1/notifications", headers=_auth(user_token))
-    assert any("поддержка" in n["message"].lower() for n in r.json())
+    assert r.status_code == 200
+    assert any(n["type"] == "support_ticket_updated" and "Не входит в сделку" in n["message"] for n in r.json())
     r = await client.get("/api/v1/support/tickets/mine", headers=_auth(user_token))
     mine = [t for t in r.json() if t["id"] == ticket_id]
     assert mine and mine[0]["admin_response"] == "Проверили, всё в порядке."

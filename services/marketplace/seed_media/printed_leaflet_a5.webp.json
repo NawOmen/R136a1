@@ -1,0 +1,42 @@
+{
+  "prompt": "Use case: product-mockup.\nAsset type: standalone photorealistic Russian B2B catalogue product illustration, authored synthetic visual, not a supplier photograph.\nScene/backdrop: seamless almost-white neutral studio background #f8f8f6, soft diffuse studio light, small soft contact shadow.\nStyle/medium: crisp realistic catalogue product photography, believable proportions and material details.\nComposition/framing: horizontal landscape 3:2 frame, whole single product centered and comfortably inside frame, generous clear margins on every side, no cropping. The object occupies about 65-75 percent of the image. Camera three-quarter view unless the subject specifies flat lay.\nConstraints: no brand, no logo, no labels, no text, no digits, no watermark, no people, no extra props, no collage, no icon, no decorative graphics outside the product. Show exactly the requested product.\nPrimary request: One small neat stack of rectangular A5 printed flyers made from thin 130 g/m² paper, lying flat on the studio surface in three-quarter top view. A few sheets slightly offset so that the thin paper layers are visible. Color printed abstract geometric artwork only on the top page: clean simple cyan, coral, dark blue and pale yellow geometric shapes. Absolutely NO writing, NO text, NO letters, NO digits, NO logos, NO brands anywhere. This is ordinary printed paper, not a hardback book, not a thick card, not packaging.",
+  "createdAt": "2026-10-22T05:43:43.622869Z",
+  "schemaVersion": 1,
+  "tool": "image_gen.imagegen",
+  "provider": "builtin",
+  "mode": "built-in generate",
+  "origin": "AI-generated synthetic product illustration; not an actual supplier photograph",
+  "origin_ru": "Авторская синтетическая иллюстрация товара, созданная ИИ; не фотография товара поставщика",
+  "useCase": "product-mockup",
+  "generatorOriginalPath": "/Users/assweg/.codex/generated_images/01a1621e-7389-76c2-98fa-fc450c2c2dff/exec-4bda5cd0-2dbf-4a5b-9c03-a30b5f9a9b46.png",
+  "generatorOriginalSha256": "3e0bb34f14f948708e82964cf0311eaa19f64a94e4cfdfa0248c5a46a4707eca",
+  "sourcePath": "/Users/assweg/.codex/generated_images/01a1621e-7389-76c2-98fa-fc450c2c2dff/exec-4bda5cd0-2dbf-4a5b-9c03-a30b5f9a9b46.png",
+  "sourceSha256": "3e0bb34f14f948708e82964cf0311eaa19f64a94e4cfdfa0248c5a46a4707eca",
+  "sourceDimensions": [
+    1536,
+    1024
+  ],
+  "deliveryPath": "services/marketplace/seed_media/printed_leaflet_a5.webp",
+  "deliverySha256": "d8a86728ad189985cade158b739304e197ede0e72fd14ee421ff1b42e133bd76",
+  "deliveryDimensions": [
+    768,
+    512
+  ],
+  "deliveryBytes": 17086,
+  "conversion": {
+    "library": "Pillow",
+    "format": "WebP",
+    "quality": 82,
+    "method": 6,
+    "resized": true,
+    "cropped": false,
+    "retouched": false
+  },
+  "verification": {
+    "subject": "manually inspected",
+    "wholeProductVisible": true,
+    "noBrandingOrText": true,
+    "background": "off-white studio",
+    "note": "Thin stacked printed sheets, colorful abstract geometry, no lettering or numerals."
+  }
+}

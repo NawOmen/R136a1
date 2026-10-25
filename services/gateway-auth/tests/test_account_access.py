@@ -106,7 +106,7 @@ async def test_public_registration_records_both_acknowledgements_and_has_no_lega
     from app.models import AccountAgreement
     from app.config import settings
     monkeypatch.setattr(settings, 'legacy_registration_enabled', False)
-    data = {'rules_version':'rules-1','privacy_version':'privacy-1','first_name':'Проверка','last_name':'Регистрации','email':'new-access@demo.ru','password':'new-access-password'}
+    data = {'rules_version':'rules-2','privacy_version':'privacy-2','first_name':'Проверка','last_name':'Регистрации','email':'new-access@demo.ru','password':'new-access-password'}
     assert (await client.post('/api/v1/auth/register', json=data)).status_code == 410
     assert (await client.post('/api/v2/auth/register', json=data)).status_code == 422
     for key in ('rules_accepted','privacy_acknowledged'):
@@ -116,7 +116,7 @@ async def test_public_registration_records_both_acknowledgements_and_has_no_lega
     registered = await client.post('/api/v2/auth/register', json={**data,'rules_accepted':True,'privacy_acknowledged':True})
     assert registered.status_code == 201, registered.text
     records = (await db_session.scalars(select(AccountAgreement))).all()
-    assert {(r.document,r.version) for r in records} == {('rules','rules-1'),('privacy','privacy-1')}
+    assert {(r.document,r.version) for r in records} == {('rules','rules-2'),('privacy','privacy-2')}
     headers = {'Authorization': f"Bearer {registered.json()['access_token']}"}
     assert (await client.post('/api/v2/auth/logout', headers=headers)).status_code == 204
     assert (await client.get('/api/v1/auth/me', headers=headers)).status_code == 401
@@ -146,10 +146,11 @@ async def test_first_admin_bootstrap_is_local_idempotent_and_cannot_appoint_seco
     import bootstrap_admin
     monkeypatch.setattr(bootstrap_admin, 'SessionLocal', session_factory)
     from app.models import AccountAgreement
+    from app.schemas import RULES_VERSION, PRIVACY_VERSION
     user, _ = await account_fixture(db_session)
     with pytest.raises(ValueError):
         await bootstrap_admin.bootstrap(user.email)
-    db_session.add_all([AccountAgreement(user_id=user.id, document='rules',version='rules-1'),AccountAgreement(user_id=user.id,document='privacy',version='privacy-1')])
+    db_session.add_all([AccountAgreement(user_id=user.id, document='rules',version=RULES_VERSION),AccountAgreement(user_id=user.id,document='privacy',version=PRIVACY_VERSION)])
     await db_session.commit()
     await bootstrap_admin.bootstrap(user.email)
     await bootstrap_admin.bootstrap(user.email)

@@ -1,4 +1,5 @@
 "use client";
+import { formatDateTime } from "../lib/dates";
 
 import { russianMessage } from "../lib/russianMessages";
 import { russianLabel } from "../lib/presentation";
@@ -78,7 +79,7 @@ export default function AdminPage() {
     if (support.status === "fulfilled") setTickets(support.value);
     if (userResult.status === "fulfilled") setUsers(userResult.value.users);
     if (documents.status === "fulfilled") setPendingDocuments(documents.value);
-    const failures = results.flatMap((result, index) => result.status === "rejected" ? [["компании", "обращения", "пользователи", "документы"][index]] : []);
+    const failures = results.flatMap((result, index) => result.status === "rejected" ? [["компании", "сообщения поддержки", "пользователи", "документы"][index]] : []);
     setError(failures.length ? `Не удалось обновить: ${failures.join(", ")}. Показаны ранее загруженные данные. Повторите загрузку.` : null);
   }, []);
 
@@ -115,11 +116,11 @@ export default function AdminPage() {
   async function ticketDecision(ticket: SupportTicket, status: "in_progress" | "resolved") {
     const token = getToken(); if (!token) return;
     const answer = (response[ticket.id] ?? ticket.admin_response ?? "").trim();
-    if (status === "resolved" && !answer) { setActionError("Напишите ответ пользователю перед закрытием обращения."); return; }
+    if (status === "resolved" && !answer) { setActionError("Напишите ответ пользователю перед завершением диалога."); return; }
     await performAction(ticket.id, async () => {
       await marketplace.updateAdminSupportTicket(token, ticket.id, {status, admin_response: answer || undefined});
       await refreshPending(token, statusFilter, search);
-    }, status === "resolved" ? "Ответ сохранён. Обращение решено." : "Обращение взято в работу.");
+    }, status === "resolved" ? "Ответ сохранён. Сообщение обработано." : "Сообщение взято в работу.");
   }
   async function toggleBlocked(item: User) {
     const token = getToken(); if (!token) return;
@@ -273,7 +274,7 @@ export default function AdminPage() {
           <p className="alert alert-error" role="alert">Обнаружено превышение лимита входа за последние 15 минут. Проверьте журнал.</p>}
         <p className="hint">Обновление каждые 30 секунд. Полный журнал хранится на сервере 30 дней.</p>
         {security.slice(0, 10).map(item => <p key={item.correlation_id + item.event}>
-          {new Date(item.created_at).toLocaleString("ru-RU")} — {{
+          {formatDateTime(item.created_at)} — {{
             "auth.rate_limited": "Превышен лимит попыток",
             "auth.login_failed": "Неудачный вход",
             "auth.login_success": "Успешный вход",
@@ -374,7 +375,7 @@ export default function AdminPage() {
                   </div>
                 ))}
               </div>
-              {history[company.id] && <ul className="company-list">{history[company.id].map((event) => <li key={event.id}><span className="company-meta">{new Date(event.created_at).toLocaleString("ru-RU")}: {VERIFICATION_STATUS_LABELS[event.from_status]} → {VERIFICATION_STATUS_LABELS[event.to_status]}{event.reason ? ` · ${event.reason}` : ""}</span></li>)}</ul>}
+              {history[company.id] && <ul className="company-list">{history[company.id].map((event) => <li key={event.id}><span className="company-meta">{formatDateTime(event.created_at)}: {VERIFICATION_STATUS_LABELS[event.from_status]} → {VERIFICATION_STATUS_LABELS[event.to_status]}{event.reason ? ` · ${event.reason}` : ""}</span></li>)}</ul>}
             </li>
           ))}
         </ul>
@@ -470,10 +471,10 @@ export default function AdminPage() {
         )}
       </section>
 
-      <section className="card" style={{ marginTop: 24 }}><h2>Пользователи ({users.length})</h2><div className="admin-user-grid">{users.map((item) => <div className="company-row" key={item.id}><div><b>{item.last_name} {item.first_name}</b><p className="hint mode-hint">{item.email} · {item.is_marketplace_admin ? "Администратор" : item.is_category_editor ? "Редактор категорий" : "Пользователь"}</p></div>{!item.is_marketplace_admin && <div><label>Основание назначения или снятия роли редактора<input maxLength={500} value={editorReasons[item.id] ?? ""} onChange={event=>setEditorReasons(previous=>({...previous,[item.id]:event.target.value}))} /></label><button type="button" className="btn btn-secondary btn-sm" disabled={busyId !== null || (editorReasons[item.id] ?? "").trim().length<3} onClick={() => void changeEditorRole(item)}>{item.is_category_editor ? "Снять роль редактора" : "Назначить редактором"}</button></div>}{!item.is_marketplace_admin && <button className="btn btn-secondary btn-sm" disabled={busyId !== null} onClick={() => void toggleBlocked(item)}>{item.account_status === "blocked" ? "Разблокировать" : "Заблокировать"}</button>}<button type="button" className="btn btn-secondary btn-sm" disabled={busyId !== null} onClick={() => {const token=getToken(); if(token) void performAction(item.id, async () => {const records = await api.getUserAgreements(token,item.id); setAgreements(current => ({...current, [item.id]: records}));}, "Подтверждения пользователя загружены.");}}>Принятые правила</button>{agreements[item.id] && <p>{agreements[item.id].length ? agreements[item.id].map(row => `${row.document === "rules" ? "Правила работы" : "Условия обработки данных"}: ${new Date(row.accepted_at).toLocaleString("ru-RU")} (${row.version})`).join("; ") : "Подтверждения не сохранены."}</p>}</div>)}</div></section>
+      <section className="card" style={{ marginTop: 24 }}><h2>Пользователи ({users.length})</h2><div className="admin-user-grid">{users.map((item) => <div className="company-row" key={item.id}><div><b>{item.last_name} {item.first_name}</b><p className="hint mode-hint">{item.email} · {item.is_marketplace_admin ? "Администратор" : item.is_category_editor ? "Редактор категорий" : "Пользователь"}</p></div>{!item.is_marketplace_admin && <div><label>Основание назначения или снятия роли редактора<input maxLength={500} value={editorReasons[item.id] ?? ""} onChange={event=>setEditorReasons(previous=>({...previous,[item.id]:event.target.value}))} /></label><button type="button" className="btn btn-secondary btn-sm" disabled={busyId !== null || (editorReasons[item.id] ?? "").trim().length<3} onClick={() => void changeEditorRole(item)}>{item.is_category_editor ? "Снять роль редактора" : "Назначить редактором"}</button></div>}{!item.is_marketplace_admin && <button className="btn btn-secondary btn-sm" disabled={busyId !== null} onClick={() => void toggleBlocked(item)}>{item.account_status === "blocked" ? "Разблокировать" : "Заблокировать"}</button>}<button type="button" className="btn btn-secondary btn-sm" disabled={busyId !== null} onClick={() => {const token=getToken(); if(token) void performAction(item.id, async () => {const records = await api.getUserAgreements(token,item.id); setAgreements(current => ({...current, [item.id]: records}));}, "Подтверждения пользователя загружены.");}}>Принятые правила</button>{agreements[item.id] && <p>{agreements[item.id].length ? agreements[item.id].map(row => `${row.document === "rules" ? "Правила работы" : "Условия обработки данных"}: ${formatDateTime(row.accepted_at)} (${row.version})`).join("; ") : "Подтверждения не сохранены."}</p>}</div>)}</div></section>
 
-      <h2 id="tickets" style={{ marginTop: 32 }}>Обращения пользователей ({tickets.length})</h2>
-      {tickets.length === 0 ? <p className="hint">Обращений нет.</p> : <ul className="company-list">{tickets.map((ticket) => <li className="card" key={ticket.id}><div className="company-row"><strong>{ticket.subject}</strong><span className="badge">{russianLabel(ticket.status, "Статус уточняется")}</span></div><p>{ticket.message}</p><div className="field"><label htmlFor={`response-${ticket.id}`}>Ответ</label><textarea id={`response-${ticket.id}`} value={response[ticket.id] ?? ticket.admin_response ?? ""} onChange={(event) => setResponse((current) => ({ ...current, [ticket.id]: event.target.value }))} /></div><div className="actions"><button className="btn btn-secondary btn-sm" disabled={busyId !== null || ticket.status === "in_progress" || ticket.status === "resolved"} onClick={() => void ticketDecision(ticket, "in_progress")}>Взять в работу</button><button className="btn btn-success btn-sm" disabled={busyId !== null || ticket.status === "resolved"} onClick={() => void ticketDecision(ticket, "resolved")}>Отправить ответ и закрыть</button></div></li>)}</ul>}
+      <h2 id="tickets" style={{ marginTop: 32 }}>Сообщения в поддержку ({tickets.length})</h2>
+      {tickets.length === 0 ? <p className="hint">Новых сообщений нет.</p> : <ul className="company-list">{tickets.map((ticket) => <li className="card" key={ticket.id}><div className="company-row"><strong>{ticket.subject}</strong><span className="badge">{russianLabel(ticket.status, "Статус уточняется")}</span></div><p>{ticket.message}</p><div className="field"><label htmlFor={`response-${ticket.id}`}>Ответ</label><textarea id={`response-${ticket.id}`} value={response[ticket.id] ?? ticket.admin_response ?? ""} onChange={(event) => setResponse((current) => ({ ...current, [ticket.id]: event.target.value }))} /></div><div className="actions"><button className="btn btn-secondary btn-sm" disabled={busyId !== null || ticket.status === "in_progress" || ticket.status === "resolved"} onClick={() => void ticketDecision(ticket, "in_progress")}>Взять в работу</button><button className="btn btn-success btn-sm" disabled={busyId !== null || ticket.status === "resolved"} onClick={() => void ticketDecision(ticket, "resolved")}>Отправить ответ</button></div></li>)}</ul>}
     </div>
   );
 }

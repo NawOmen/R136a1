@@ -27,11 +27,13 @@ export function previewLineAmount(price: Money, units: Money): string | null {
 }
 export function displayMoney(value: Money | null | undefined, precision = 2): string {
   if (value == null) return '—';
+  precision = Math.max(0, Math.min(2, Math.trunc(precision) || 0));
   try {
     const raw = scaledMoney(value);
     const positive = raw < BigInt(0) ? -raw : raw;
     const quantum = BigInt(10) ** BigInt(12 - precision);
     const rounded = ((positive + quantum / BigInt(2)) / quantum) * quantum;
+    if (precision === 2 && positive > BigInt(0) && rounded === BigInt(0)) return raw < BigInt(0) ? 'больше −0,01 ₽' : 'менее 0,01 ₽';
     const whole = (rounded / SCALE).toString().replace(/\B(?=(\d{3})+(?!\d))/g, '\u00a0');
     const fraction = (rounded % SCALE).toString().padStart(12, '0').slice(0, precision).replace(/0+$/, '');
     return `${raw < BigInt(0) ? '−' : ''}${whole}${fraction ? ',' + fraction : ''} ₽`;

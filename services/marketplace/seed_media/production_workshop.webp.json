@@ -1,0 +1,40 @@
+{
+  "schemaVersion": 1,
+  "createdAt": "2026-10-22T06:00:38.382914+00:00",
+  "prompt": "Use case: product-mockup. Asset type: production facility image for a fictional synthetic Russian B2B company. Create a photorealistic wide 3:2 editorial photograph-style view of an entirely fictional, tidy small paper packaging and paper cup production workshop. Practical modern cup-forming and compact printing equipment, a few kraft paper rolls and plain stacks of unbranded paper cups, clean light industrial interior, soft daylight mixed with neutral overhead lighting. No people. Balanced perspective, believable machines and materials, ample breathing room, no cropping of main equipment. No specific real factory, no brands, no signage, no readable text, no logos, no certificates, no watermarks, no flags. This is an AI-generated synthetic visualization, not evidence of an actual company's facility. Natural restrained colors, high quality, not a glossy futuristic showroom.",
+  "tool": "image_gen.imagegen",
+  "provider": "builtin",
+  "mode": "built-in generate",
+  "useCase": "product-mockup",
+  "origin": "AI-generated synthetic production visualization; not a photograph or evidence of an actual supplier facility",
+  "origin_ru": "Синтетическое изображение вымышленного производства; не подтверждение реального цеха компании",
+  "generatorOriginalPath": "/Users/assweg/.codex/generated_images/01a158c6-c65c-7621-88d7-787284171be0/exec-31205cfe-8fa9-4eb8-9ec7-f5e12aa09fb4.png",
+  "generatorOriginalSha256": "a0ffa449db89d8d175a52101e93302e313bb5ed49b47f747bf9043c35d8ec339",
+  "sourcePath": "/Users/assweg/.codex/generated_images/01a158c6-c65c-7621-88d7-787284171be0/exec-31205cfe-8fa9-4eb8-9ec7-f5e12aa09fb4.png",
+  "sourceSha256": "a0ffa449db89d8d175a52101e93302e313bb5ed49b47f747bf9043c35d8ec339",
+  "sourceDimensions": [
+    1536,
+    1024
+  ],
+  "deliveryPath": "services/marketplace/seed_media/production_workshop.webp",
+  "deliverySha256": "6e10dfcbddab3d404209b1bcd261312f695c3d559caf588450f20e2fff791479",
+  "deliveryDimensions": [
+    1280,
+    853
+  ],
+  "deliveryBytes": 110684,
+  "conversion": {
+    "library": "Pillow",
+    "format": "WebP",
+    "quality": 82,
+    "method": 6,
+    "resized": true,
+    "cropped": false,
+    "retouched": false
+  },
+  "verification": {
+    "subject": "manually inspected",
+    "noBrandingOrText": true,
+    "note": "Fictional paper packaging workshop. Central equipment visible; foreground rolls and stacks naturally touch frame edges. Not certification or proof of a real production site."
+  }
+}

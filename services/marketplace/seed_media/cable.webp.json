@@ -1,0 +1,41 @@
+{
+  "prompt": "Use case: product-mockup.\nAsset type: standalone Russian B2B catalogue product illustration, photorealistic.\nPrimary request: One compact neatly wound coil of black jacketed three-core copper cable, nominal specification 3 × 2.5 mm² and length 100 m. The coil consists of many smooth round black cable loops, secured discreetly without branded packaging. A short cable end extends from the coil in the foreground: black outer jacket is stripped back briefly, showing exactly THREE insulated conductors in brown, blue and yellow-green, each with a small copper tip. Keep the three conductors clearly countable and structurally realistic.\nScene/backdrop: clean seamless off-white studio background, #f8f8f6, subtle natural soft contact shadow.\nComposition/framing: square 1:1 image, 1024 × 1024 if available. Whole single coil and short exposed end centered in three-quarter view, occupy about 75% of the frame, fully visible with clear margins.\nStyle/medium: realistic clean studio catalogue photography, believable matte black rubber/plastic jacket and copper details, soft diffuse lighting.\nConstraints: authored synthetic product illustration, no real manufacturer or trademark. No other products, branded packaging, labels, text, numbers, voltage claims, logos, UI, watermarks, people, colored filter or crop.",
+  "createdAt": "2026-10-17T07:49:49.848Z",
+  "schemaVersion": 1,
+  "tool": "image_gen.imagegen",
+  "mode": "built-in generate",
+  "origin": "AI-generated synthetic product illustration; not an actual supplier photograph",
+  "origin_ru": "Авторская синтетическая иллюстрация товара, созданная ИИ; не фотография товара поставщика",
+  "useCase": "product-mockup",
+  "generatorOriginalPath": "/home/houz/.codex/generated_images/01a148d3-8514-7671-b1f0-24c7126bc16e/exec-3aa5e6a4-3b87-4b4b-9726-cd1320c80f7a.png",
+  "generatorOriginalSha256": "d75d5963cf13c8b3c4b91517d79c2ca41b1fc02e82845874d76e024662789727",
+  "sourcePath": "output/playwright/clear-glass/source/cable.png",
+  "sourceSha256": "2dac8c1359036862c54ff54aef2fbb0a41e75d384181be1f3a275054616f9377",
+  "sourceDimensions": [
+    1254,
+    1254
+  ],
+  "deliveryPath": "services/marketplace/seed_media/cable.webp",
+  "deliverySha256": "70f2d94b250138d0c1ca16746ecb70c488d1e38d6b977920660a6d09139e46cd",
+  "deliveryDimensions": [
+    1254,
+    1254
+  ],
+  "deliveryBytes": 78414,
+  "conversion": {
+    "library": "Pillow",
+    "format": "WebP",
+    "quality": 88,
+    "method": 6,
+    "resized": false,
+    "cropped": false,
+    "retouched": false
+  },
+  "verification": {
+    "subject": "manually inspected",
+    "wholeProductVisible": true,
+    "noBrandingOrText": true,
+    "background": "off-white studio",
+    "note": "Full native dimensions preserved. Object framing is close with the full object visible."
+  }
+}

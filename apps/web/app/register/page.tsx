@@ -18,8 +18,10 @@ export default function RegisterPage() {
   const [phone, setPhone] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [ready, setReady] = useState(false);
 
   useEffect(() => {
+    setReady(true);
     if (getToken()) router.replace("/dashboard");
   }, [router]);
 
@@ -30,7 +32,7 @@ export default function RegisterPage() {
     setSubmitting(true);
     try {
       const payload: RegisterInput = {
-        rules_version: "rules-1", privacy_version: "privacy-1",
+        rules_version: "rules-2", privacy_version: "privacy-2",
         rules_accepted: true, privacy_acknowledged: true,
         last_name: lastName.trim(),
         first_name: firstName.trim(),
@@ -63,6 +65,7 @@ export default function RegisterPage() {
       {error && <div className="alert alert-error">{error}</div>}
 
       <form className="card" onSubmit={handleSubmit}>
+        <fieldset className="auth-fields" disabled={!ready || submitting}>
         <div className="field">
           <label htmlFor="last_name">Фамилия<span className="req">*</span></label>
           <input
@@ -129,13 +132,16 @@ export default function RegisterPage() {
             autoComplete="tel"
           />
         </div>
-        <label><input type="checkbox" required checked={rulesAccepted} onChange={event => setRulesAccepted(event.target.checked)} /> Принимаю <Link href="/info/legal" target="_blank" rel="noopener">правила работы</Link></label>
-        <label><input type="checkbox" required checked={privacyAcknowledged} onChange={event => setPrivacyAcknowledged(event.target.checked)} /> Ознакомлен с <Link href="/info/privacy" target="_blank" rel="noopener">условиями обработки данных</Link></label>
+        <ul className="registration-consents">
+          <li><label><input type="checkbox" required checked={rulesAccepted} onChange={event => setRulesAccepted(event.target.checked)} /><span>Принимаю <Link href="/info/legal" target="_blank" rel="noopener">правила работы</Link></span></label></li>
+          <li><label><input type="checkbox" required checked={privacyAcknowledged} onChange={event => setPrivacyAcknowledged(event.target.checked)} /><span>Ознакомлен с <Link href="/info/privacy" target="_blank" rel="noopener">условиями обработки данных</Link></span></label></li>
+        </ul>
         <div className="actions">
           <button type="submit" className="btn btn-primary" disabled={submitting}>
             {submitting ? "Регистрируем..." : "Зарегистрироваться"}
           </button>
         </div>
+        </fieldset>
       </form>
 
       <p className="hint">

@@ -1,4 +1,6 @@
 "use client";
+import { CharacteristicValue } from "./CharacteristicValue";
+import { DateInput } from "./DateInput";
 
 import { canonicalCharacteristicKey } from "../lib/categoryProfiles";
 import { russianMessage } from "../lib/russianMessages";
@@ -63,6 +65,11 @@ export default function NeedDraftEditor({ need, onSaved }: { need: Need; onSaved
     } catch (reason) { setError(reason instanceof Error ? russianMessage(reason.message) : "Не удалось сохранить черновик."); }
     finally { setSaving(false); }
   }
+  const showChange = (key: string, value: unknown) => {
+    if (key !== "delivery_address_id") return displayValue(value);
+    const address = addresses.find(item => item.id === value);
+    return address ? `${address.city}, ${address.address}` : "Адрес недоступен";
+  };
   if (!editing) return <button type="button" className="btn btn-secondary" onClick={() => setEditing(true)}>{need.status === "draft" ? "Изменить черновик" : "Изменить спецификацию"}</button>;
   return <form onSubmit={save} className="form-grid">
     <p className="hint">Изменения сохраняются новой версией этой потребности. Вложения сохранятся. Версия: {need.revision}.</p>
@@ -73,20 +80,20 @@ export default function NeedDraftEditor({ need, onSaved }: { need: Need; onSaved
       <CharacteristicSuggestions category={category} subcategory={subcategory} keys={rows.map(row => row.key)} onAdd={key => setRows([...rows, {key,value:"",original:""}])} />
       {rows.map((row, index) => <div className="field" key={index}>
         <input aria-label={`Название характеристики ${index + 1}`} required maxLength={120} value={fieldName(row.key)} onChange={e => setRows(rows.map((item, i) => i === index ? { ...item, key: canonicalCharacteristicKey(e.target.value) } : item))} />
-        <input aria-label={`Значение характеристики ${index + 1}`} required value={row.value} readOnly={typeof row.original === "object" && row.original !== null} onChange={e => setRows(rows.map((item, i) => i === index ? { ...item, value: e.target.value } : item))} />
+        {typeof row.original === "object" && row.original !== null ? <input aria-label={`Значение характеристики ${index + 1}`} readOnly value={row.value} /> : <CharacteristicValue category={category} subcategory={subcategory} fieldKey={row.key} value={row.value} label={`Значение характеристики ${index + 1}`} onChange={value => setRows(rows.map((item, i) => i === index ? { ...item, value } : item))} />}
         <button type="button" className="btn btn-secondary btn-sm" onClick={() => setRows(rows.filter((_, i) => i !== index))}>Удалить характеристику</button>
       </div>)}
       <button type="button" className="btn btn-secondary btn-sm" onClick={() => setRows([...rows, { key: "", value: "", original: "" }])}>Добавить характеристику</button>
       <div className="field"><label htmlFor="edit-quantity">Количество единиц</label><input id="edit-quantity" required type="number" min="0.000001" step="any" value={quantity} onChange={e => setQuantity(e.target.value)} /></div>
       <div className="field"><label htmlFor="edit-budget">Бюджет, ₽</label><input id="edit-budget" type="number" min="0.01" step="0.01" value={budget} onChange={e => setBudget(e.target.value)} /></div>
-      <div className="field"><label htmlFor="edit-deadline">Срок поставки</label><input id="edit-deadline" type="date" required value={deadline} onChange={e => setDeadline(e.target.value)} /></div>
-      <div className="field"><label htmlFor="edit-valid">Актуально до</label><input id="edit-valid" type="date" required value={validUntil} onChange={e => setValidUntil(e.target.value)} /></div>
+      <div className="field"><label htmlFor="edit-deadline">Срок поставки</label><DateInput id="edit-deadline" required value={deadline} onValueChange={e => setDeadline(e)} /></div>
+      <div className="field"><label htmlFor="edit-valid">Актуально до</label><DateInput id="edit-valid" required value={validUntil} onValueChange={e => setValidUntil(e)} /></div>
       <div className="field"><label htmlFor="edit-address">Адрес доставки</label><select id="edit-address" value={address} onChange={e => setAddress(e.target.value)}><option value="">Не указан</option>{addresses.map(item => <option key={item.id} value={item.id}>{item.address}</option>)}</select></div>
-      <div className="field"><label htmlFor="edit-visibility">Видимость</label><select id="edit-visibility" value={visibility} onChange={e => setVisibility(e.target.value as Need["visibility"])}><option value="open_anonymized">Открытая (анонимизированная)</option><option value="closed">Закрытая</option>{visibility === "selected_producers" && <option value="selected_producers">Для выбранных производителей</option>}</select></div>
+      <div className="field"><label htmlFor="edit-visibility">Видимость</label><select id="edit-visibility" value={visibility} onChange={e => setVisibility(e.target.value as Need["visibility"])}><option value="open_anonymized">Открытая (анонимизированная)</option>{visibility === "closed" && <option value="closed">Закрытая — сохранённый запрос</option>}{visibility === "selected_producers" && <option value="selected_producers">Для выбранных производителей</option>}</select></div>
       <PhysicalQuantityReview kind="need" values={{ characteristics: Object.fromEntries(rows.filter(row => row.key.trim()).map(row => [row.key.trim(), row.value])), volume_units: quantity }} approved={quantityApproved} onApproval={setQuantityApproved} />
       {impact && <section aria-label="Последствия изменения">
         <h3>Что изменится</h3>
-        {Object.entries(impact.changes).map(([key, diff]) => <p key={key}>{({ category: "Категория", subcategory: "Подкатегория", characteristics: "Характеристики", volume_units: "Количество", budget_rub: "Бюджет", deadline_date: "Срок поставки", valid_until: "Актуальность", delivery_address_id: "Адрес доставки", evidence: "Подтверждение требований" } as Record<string, string>)[key] ?? russianLabel(key)}: {displayValue(diff.before)} → {displayValue(diff.after)}</p>)}
+        {Object.entries(impact.changes).map(([key, diff]) => <p key={key}>{({ category: "Категория", subcategory: "Подкатегория", characteristics: "Характеристики", volume_units: "Количество", budget_rub: "Бюджет", deadline_date: "Срок поставки", valid_until: "Актуальность", delivery_address_id: "Адрес доставки", evidence: "Подтверждение требований" } as Record<string, string>)[key] ?? russianLabel(key)}: {showChange(key, diff.before)} → {showChange(key, diff.after)}</p>)}
         <p>Потребуют пересчёта: КП — {impact.affected.offers.length}; черновики КП — {impact.affected.offer_drafts.length}; группы — {impact.affected.coalitions.length}; ресурсные планы — {impact.affected.resource_plans.length}; варианты подбора — {impact.affected.optimization_variants.length}. Участники получат уведомления, прежние условия сохранятся в истории.</p>
         {impact.requires_confirmation && <label><input type="checkbox" checked={impactApproved} onChange={event => setImpactApproved(event.target.checked)} />Подтверждаю новые требования и отмену прежних предварительных согласий</label>}
       </section>}

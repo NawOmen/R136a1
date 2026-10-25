@@ -1,4 +1,6 @@
 "use client";
+import { Icon } from "../../components/Icon";
+import { formatDate } from "../../lib/dates";
 import { russianMessage } from "../../lib/russianMessages";
 import CommercialEstimate from "../../components/CommercialEstimate";
 
@@ -16,6 +18,7 @@ import { getToken } from "../../lib/api";
 import {
   ApiError,
   Deal,
+  DeliveryAddress,
   DEAL_STATUS_LABELS,
   formatCharacteristics,
   formatRub,
@@ -50,6 +53,24 @@ export default function NeedDetailPage() {
   const [optimizing, setOptimizing] = useState(false);
   const [variants, setVariants] = useState<OptimizationVariant[]>([]);
   const [preparingResilience, setPreparingResilience] = useState<string | null>(null);
+  const [addresses, setAddresses] = useState<DeliveryAddress[]>([]);
+  const [addressError, setAddressError] = useState(false);
+  const [addressRetry, setAddressRetry] = useState(0);
+  const [addressLoading, setAddressLoading] = useState(true);
+  const ownedNeed = need && "company_id" in need ? need : null;
+  const buyerCompany = me.companies.find((company) => company.id === ownedNeed?.company_id);
+  const isBuyer = buyerCompany?.membership?.can_buy === true;
+
+  useEffect(() => {
+    const token = getToken();
+    let active = true;
+    setAddresses([]); setAddressError(false); setAddressLoading(true);
+    if (token && isBuyer && ownedNeed) void marketplace.getAddresses(token, ownedNeed.company_id)
+      .then(items => { if (active) setAddresses(items); })
+      .catch(() => { if (active) setAddressError(true); })
+      .finally(() => { if (active) setAddressLoading(false); });
+    return () => { active = false; };
+  }, [ownedNeed?.company_id, isBuyer, addressRetry]);
 
   useEffect(() => {
     const token = getToken();
@@ -206,13 +227,11 @@ export default function NeedDetailPage() {
     );
   }
 
-  const ownedNeed = "company_id" in need ? need : null;
-  const buyerCompany = me.companies.find((company) => company.id === ownedNeed?.company_id);
-  const isBuyer = buyerCompany?.membership?.can_buy === true;
+  const deliveryAddress = addresses.find(item => item.id === ownedNeed?.delivery_address_id);
 
   return (
     <div>
-      <div className="company-row">
+      <div className="need-heading">
         <h1 className="page-title">{need.category}</h1>
         {need.subcategory && <p className="hint">Подкатегория: {need.subcategory}</p>}
         <div className="actions">
@@ -226,16 +245,24 @@ export default function NeedDetailPage() {
 
       {error && <div className="alert alert-error">{error}</div>}
 
+      <section className="card need-summary" aria-label="Основное о закупке">
+        <dl className="need-summary__facts">
+          <div><dt>Количество</dt><dd>{formatUnits(need.volume_units, itemUnit(need.characteristics))}</dd></div>
+          <div><dt>Бюджет</dt><dd>{ownedNeed ? formatRub(ownedNeed.budget_rub) : "Доступен покупателю"}</dd></div>
+          <div><dt>Получить до</dt><dd>{formatDate(need.deadline_date)}</dd></div>
+          <div><dt>Актуальна до</dt><dd>{formatDate(need.valid_until)}</dd></div>
+        </dl>
+        {isBuyer && ownedNeed && <p className="need-summary__address"><strong>Доставка: </strong>{deliveryAddress ? `${deliveryAddress.city}, ${deliveryAddress.address}` : addressLoading ? "Загружаем адрес…" : addressError ? "Не удалось загрузить адрес." : ownedNeed.delivery_address_id ? "Адрес не найден в адресах компании." : "Адрес не указан."}{addressError && <button type="button" className="btn btn-secondary btn-sm" onClick={() => setAddressRetry(value => value + 1)}>Повторить</button>}</p>}
+      </section>
+
       {ownedNeed?.no_match_reason && (
-        <div className="alert alert-warning">
-          <strong>Почему вариант пока не найден:</strong> {ownedNeed?.no_match_reason}
-        </div>
+        <section className="need-match-note"><Icon name="search" size={24} /><div><h2>Подбираем подходящее производство</h2><p>{ownedNeed.no_match_reason}</p><Link href="/catalog">Посмотреть товары в каталоге →</Link></div></section>
       )}
 
       {!isBuyer && !!need.requirement_decisions?.length && <section className="card"><h2>Уточнения покупателя</h2><p>В текущей версии покупатель разрешил противоречия в этих требованиях:</p>{need.requirement_decisions.map(item => <p key={item.field}>{formatCharacteristics({ [item.field]: item.confirmed_value }, need.category_profile)}</p>)}</section>}
-      {isBuyer && ownedNeed && <NeedRequirements key={`${need.id}:${need.revision}`} need={ownedNeed} />}
+      {isBuyer && ownedNeed && <details className="card need-disclosure"><summary>Требования, источники и история</summary><NeedRequirements key={`${need.id}:${need.revision}`} need={ownedNeed} addresses={addresses} /></details>}
       {isBuyer && ownedNeed && buyerCompany?.membership?.is_admin && ["open_for_offers", "waiting_for_match", "coalition_candidate", "awaiting_approvals"].includes(need.status) && (
-        <section className="card"><NeedDraftEditor key={`${need.id}:${need.revision}`} need={ownedNeed} onSaved={async value => { setNeed(value); const token = getToken(); if (token) setOffers(await marketplace.getOffers(token, value.id)); }} /></section>
+        <details className="card need-disclosure"><summary>Изменить требования</summary><NeedDraftEditor key={`${need.id}:${need.revision}`} need={ownedNeed} onSaved={async value => { setNeed(value); const token = getToken(); if (token) setOffers(await marketplace.getOffers(token, value.id)); }} /></details>
       )}
       {isBuyer && ownedNeed && need.status === "draft" && (
         <section className="card">
@@ -274,36 +301,12 @@ export default function NeedDetailPage() {
         </section>
       )}
 
-      <section className="card">
-        <h2>Параметры</h2>
+      <details className="card need-disclosure">
+        <summary>Характеристики и файлы{ownedNeed?.files.length ? ` (${ownedNeed.files.length})` : ""}</summary>
         <dl className="company-details">
           <div>
             <dt>Характеристики</dt>
             <dd>{formatCharacteristics(need.characteristics, need.category_profile)}</dd>
-          </div>
-          <div>
-            <dt>Объём</dt>
-            <dd>{formatUnits(need.volume_units, itemUnit(need.characteristics))}</dd>
-          </div>
-          <div>
-            <dt>Бюджет</dt>
-            <dd>{ownedNeed ? formatRub(ownedNeed.budget_rub) : "Доступен покупателю"}</dd>
-          </div>
-          <div>
-            <dt>Срок выполнения</dt>
-            <dd>{need.deadline_date}</dd>
-          </div>
-          <div>
-            <dt>Карточка актуальна до</dt>
-            <dd>{need.valid_until ?? "—"}</dd>
-          </div>
-          <div>
-            <dt>Видимость</dt>
-            <dd>{NEED_VISIBILITY_LABELS[need.visibility]}</dd>
-          </div>
-          <div>
-            <dt>Статус</dt>
-            <dd>{NEED_STATUS_LABELS[need.status]}</dd>
           </div>
         </dl>
 
@@ -316,7 +319,7 @@ export default function NeedDetailPage() {
               <li key={file.id} className="company-item">
                 <span>
                   <span className="company-item__name">{file.file_name}</span>
-                  <span className="company-meta">{file.content_type}</span>
+                  <span className="company-meta">Прикреплённый файл</span>
                 </span>
                 <button
                   type="button"
@@ -330,7 +333,7 @@ export default function NeedDetailPage() {
             ))}
           </ul>
         )}
-      </section>
+      </details>
 
       <section className="card">
         <div className="company-row">
@@ -360,7 +363,7 @@ export default function NeedDetailPage() {
                     <div className="company-meta">
                       КП {offer.id} · Цена: {formatRub(offer.price_rub, 12)} · Объём: {formatUnits(offer.available_units, itemUnit(need.characteristics))} ·
                       минимальный заказ: {formatUnits(offer.moq_units, itemUnit(need.characteristics))} · Логистика: {formatRub(offer.delivery_cost_rub)} ·
-                      Срок: {offer.lead_time_days} дн. · Действует до: {offer.valid_until ?? "не ограничено"}
+                      Срок: {offer.lead_time_days} дн. · Действует до: {formatDate(offer.valid_until, "не ограничено")}
                     </div>
                   </div>
                   <span className={`badge badge-${offer.status}`}>
@@ -391,9 +394,9 @@ export default function NeedDetailPage() {
 
       {variants.length > 0 && (
         <section className="card">
-          <h2>Варианты оптимизатора</h2>
+          <h2>Варианты закупки</h2>
           <p className="hint mode-hint">
-            Расчёт выполнен обычным кодом и OR-Tools. LLM не выбирает распределение.
+            Объём распределяется программным расчётом, без решений ИИ.
           </p>
           <div className="market-grid">
             {variants.map((variant) => (

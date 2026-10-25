@@ -1,0 +1,41 @@
+{
+  "prompt": "Use case: product-mockup.\nAsset type: standalone synthetic Russian B2B catalogue product illustration, photorealistic.\nPrimary request: One freestanding rectangular retail display cabinet, nominal1200mm wide500mmdeep1800mmtall, slim powder-coated pale gray metal frame, clear glass sides and front, four transparent horizontal shelves, simple closed lower base. Empty cabinet, no goods inside, no lights or electronics claimed, clean utilitarian commercial fixture. Whole cabinet visible in three-quarter view.\nScene/backdrop: clean seamless off-white studio background #f8f8f6, subtle natural soft contact shadow.\nComposition/framing: square 1:1 image, whole product centered occupying75%of frame, generous margins, no crop.\nStyle/medium: realistic clean studio catalogue photography, crisp believable materials, soft diffuse lighting.\nConstraints: original synthetic product illustration, no real manufacturer, no trademark, no logos, no text, no numbers, no UI, no watermarks, no people, no unrelated props, no colored filter.",
+  "createdAt": "2026-10-21T15:57:17.663207+00:00",
+  "schemaVersion": 1,
+  "tool": "image_gen.imagegen",
+  "mode": "built-in generate",
+  "origin": "AI-generated synthetic product illustration; not an actual supplier photograph",
+  "origin_ru": "Авторская синтетическая иллюстрация товара, созданная ИИ; не фотография товара поставщика",
+  "useCase": "product-mockup",
+  "generatorOriginalPath": "/Users/assweg/.codex/generated_images/01a15f23-f64f-7981-98bc-11e983869fbb/exec-4c610ab4-8ed5-40e9-87b8-0feed6a576f9.png",
+  "generatorOriginalSha256": "d94980b239ce85d39bee43541fa36bef05ff553d21f4ff3b2572431383b1bfc0",
+  "sourcePath": "/Users/assweg/.codex/generated_images/01a15f23-f64f-7981-98bc-11e983869fbb/exec-4c610ab4-8ed5-40e9-87b8-0feed6a576f9.png",
+  "sourceSha256": "d94980b239ce85d39bee43541fa36bef05ff553d21f4ff3b2572431383b1bfc0",
+  "sourceDimensions": [
+    1254,
+    1254
+  ],
+  "deliveryPath": "services/marketplace/seed_media/retail_display.webp",
+  "deliverySha256": "6a7890950a0970fe8e40066b411e1143c6bfdebdb8287114c03656d1cbae445e",
+  "deliveryDimensions": [
+    768,
+    768
+  ],
+  "deliveryBytes": 15246,
+  "conversion": {
+    "library": "libwebp cwebp",
+    "format": "WebP",
+    "quality": 86,
+    "method": 6,
+    "resized": true,
+    "cropped": false,
+    "retouched": false
+  },
+  "verification": {
+    "subject": "manually inspected",
+    "wholeProductVisible": true,
+    "noBrandingOrText": true,
+    "background": "off-white studio",
+    "note": "Generated for synthetic catalogue specifications. Whole product visible; image is an illustration rather than evidence of actual supplier stock."
+  }
+}

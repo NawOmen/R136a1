@@ -91,7 +91,7 @@ a:hover {
 
 .site-header {
   background: color-mix(in srgb, var(--surface) 86%, transparent);
-  backdrop-filter: saturate(180%) blur(8px);
+  -webkit-backdrop-filter: saturate(180%) blur(8px); backdrop-filter: saturate(180%) blur(8px);
   border-bottom: 1px solid var(--border);
   position: sticky;
   top: 0;
@@ -111,7 +111,7 @@ a:hover {
   letter-spacing: -0.01em;
   color: var(--text);
 }
-.site-header__logo:hover { text-decoration: none; color: transparent; background: linear-gradient(90deg,#2563eb,#8b5cf6,#06b6d4); background-clip: text; filter: drop-shadow(0 0 9px rgba(99,102,241,.35)); }
+.site-header__logo:hover { text-decoration: none; }
 
 .site-header__logo::before {
   content: "◆";
@@ -797,7 +797,7 @@ h2 {
 .site-header {
   background: color-mix(in srgb, var(--bg) 94%, transparent);
   border-bottom-color: var(--border);
-  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px); backdrop-filter: blur(18px);
 }
 
 .site-header__inner {
@@ -890,8 +890,6 @@ h2 {
 .market-product { min-width: 0; display: flex; flex-direction: column; overflow: hidden; border: 1px solid var(--border); border-radius: var(--radius); background: var(--surface); color: var(--text); transition: transform .18s ease, border-color .18s ease, box-shadow .18s ease; }
 .market-product:hover { transform: translateY(-3px); border-color: color-mix(in srgb, var(--primary) 58%, var(--border)); box-shadow: var(--shadow-md); text-decoration: none; }
 .market-product__visual { position: relative; display: grid; place-items: center; aspect-ratio: 1.25; overflow: hidden; background: radial-gradient(circle at 50% 30%, #e8dfc6 0, #b9b092 42%, #6f715f 100%); color: #1b2025; }
-.market-product:nth-child(3n+2) .market-product__visual { background: radial-gradient(circle at 50% 30%, #d9e3df 0, #8fa39a 50%, #53625b 100%); }
-.market-product:nth-child(3n+3) .market-product__visual { background: radial-gradient(circle at 50% 30%, #e4dce8 0, #9a8fa2 50%, #5e5663 100%); }
 .market-product__visual > span:not(.product-photo-placeholder) { font-size: clamp(64px, 8vw, 116px); font-weight: 900; opacity: .48; }
 .market-product__visual img { width: 100%; height: 100%; object-fit: cover; transition: transform .35s ease; }
 .market-product:hover .market-product__visual img { transform: scale(1.035); }
@@ -974,16 +972,12 @@ h2 {
   *, *::before, *::after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; scroll-behavior: auto !important; }
 }
 
-/* Compact guidance uses the existing typography and colours. */
-.workflow-guide { margin-bottom: 1.25rem; padding: .75rem 1rem; border-left: 3px solid var(--color-primary, #297f76); }
-.workflow-guide p { margin: 0 0 .25rem; font-size: .95rem; }
-.workflow-guide summary, .workflow-details > summary { cursor: pointer; }
-.workflow-guide ol { margin-bottom: 0; padding-left: 1.25rem; }
+.workflow-details > summary { cursor: pointer; }
 .workflow-details { margin-block: 1rem; }
 .workflow-details > summary { font-weight: 600; padding-block: .5rem; }
 
 /* Consistent readable controls in both themes. */
-:root[data-theme="light"] .btn-primary,
+:root[data-theme="light"] .btn-primary { color: var(--on-primary); }
 :root[data-theme="light"] .market-search button,
 :root[data-theme="light"] .market-product__cta,
 :root[data-theme="light"] .market-lanes a.active,
@@ -995,9 +989,6 @@ h2 {
 .catalog-search input { min-width: 0; width: 100%; }
 .product-photo-placeholder { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; padding: 20px; width: 100%; height: 100%; text-align: center; background: var(--surface-raised); color: var(--text-muted); }
 .product-photo-placeholder > span { font-size: 13px; font-weight: 600; }
-.workflow-guide { border-left-color: var(--primary); padding-block: .5rem; }
-.workflow-guide summary { color: var(--text-muted); font-size: 14px; }
-.workflow-guide[open] p { margin-top: .75rem; }
 @media (hover: none) {
   .market-product:hover, .journey-card:hover, .product-card:hover { transform: none; }
   .market-product:hover .market-product__visual img { transform: none; }

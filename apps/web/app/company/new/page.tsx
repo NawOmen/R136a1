@@ -64,13 +64,11 @@ export default function NewCompanyPage() {
     <div className="auth-page">
       <h1 className="page-title">Создание компании</h1>
       <p className="subtitle">Заполните реквизиты компании</p>
-      <p className="hint" style={{ marginTop: -14, marginBottom: 16 }}>
-        Обязательные поля отмечены <span className="req">*</span>.
-      </p>
 
       {error && <div className="alert alert-error">{error}</div>}
 
       <form className="card" onSubmit={handleSubmit}>
+        <p className="hint form-required-note">Обязательные поля отмечены <span className="req">*</span>.</p>
         <div className="field">
           <label htmlFor="full_name">Полное название<span className="req">*</span></label>
           <input
@@ -107,10 +105,15 @@ export default function NewCompanyPage() {
           <input
             id="inn"
             type="text"
+            inputMode="numeric"
+            pattern={legalForm === "ООО" ? "[0-9]{10}" : "[0-9]{12}"}
+            maxLength={legalForm === "ООО" ? 10 : 12}
+            aria-describedby="inn-hint"
             value={inn}
             onChange={(event) => setInn(event.target.value)}
             required
           />
+          <p id="inn-hint" className="hint">{legalForm === "ООО" ? "10 цифр для ООО" : "12 цифр для ИП"}</p>
         </div>
         <div className="field">
           <label htmlFor="ogrn">
@@ -146,25 +149,28 @@ export default function NewCompanyPage() {
           />
         </div>
 
-        <label className="checkbox">
-          <input
-            type="checkbox"
-            checked={canBuy}
-            onChange={(event) => setCanBuy(event.target.checked)}
-          />
-          Покупаю
-        </label>
-        <label className="checkbox">
-          <input
-            type="checkbox"
-            checked={canSell}
-            onChange={(event) => setCanSell(event.target.checked)}
-          />
-          Продаю
-        </label>
-        {!canBuy && !canSell && (
-          <p className="hint mode-hint">Выберите хотя бы один режим: «Покупаю» или «Продаю».</p>
-        )}
+        <fieldset className="company-mode-group" aria-describedby={!canBuy && !canSell ? "company-mode-hint" : undefined}>
+          <legend className="visually-hidden">Режимы работы компании</legend>
+          <label className="checkbox">
+            <input
+              type="checkbox"
+              checked={canBuy}
+              onChange={(event) => setCanBuy(event.target.checked)}
+            />
+            Покупаю
+          </label>
+          <label className="checkbox">
+            <input
+              type="checkbox"
+              checked={canSell}
+              onChange={(event) => setCanSell(event.target.checked)}
+            />
+            Продаю
+          </label>
+          {!canBuy && !canSell && (
+            <p className="hint mode-hint" id="company-mode-hint">Выберите хотя бы один режим: «Покупаю» или «Продаю».</p>
+          )}
+        </fieldset>
 
         <div className="actions">
           <button type="submit" className="btn btn-primary" disabled={submitting || (!canBuy && !canSell)}>

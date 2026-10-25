@@ -84,6 +84,17 @@ export interface SellerExplanation {
   used_route: string;
 }
 
+export interface PriceForecast {
+  contract_version: "price-forecast-1";
+  status: "ready" | "insufficient_data" | "stale_data" | "unstable_data";
+  observations: number;
+  history_from: string | null;
+  history_to: string | null;
+  points: { date: string; price_rub: string }[];
+  ai_status: "not_requested" | "completed" | "unavailable";
+  notes: string[];
+}
+
 async function agentFetch(token: string, input: RequestInfo | URL, init?: RequestInit): Promise<Response> {
   const response = await russianFetch(input, init);
   if (response.status === 401) handleUnauthorized(token);
@@ -105,6 +116,16 @@ async function readResponse(response: Response): Promise<AgentRun> {
 }
 
 export const agents = {
+  async priceForecast(token: string, productId: string): Promise<PriceForecast> {
+    const response = await agentFetch(token, `${agentsBaseUrl()}/api/v1/price-forecasts`, {
+      method: "POST", headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" }, body: JSON.stringify({ product_id: productId }),
+    });
+    if (!response.ok) {
+      const body = await response.json().catch(() => ({}));
+      throw new ApiError(russianMessage(body.detail, "Не удалось построить прогноз. Повторите попытку."), response.status);
+    }
+    return response.json();
+  },
   getRun(token: string, runId: string): Promise<AgentRun> {
     return agentFetch(token, `${agentsBaseUrl()}/api/v2/agent-runs/${runId}`, { headers: { Authorization: `Bearer ${token}` } }).then(readResponse);
   },

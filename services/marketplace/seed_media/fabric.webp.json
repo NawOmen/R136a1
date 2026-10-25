@@ -1,0 +1,41 @@
+{
+  "prompt": "Use case: product-mockup. Asset: original product catalogue photograph for a Russian B2B marketplace. One wide roll of plain medium-gray workwear fabric, blend 65% polyester and 35% cotton, 150 cm wide, sold as a 50 m roll. Photograph the roll diagonally in a three-quarter view with a short length softly unrolled in front, clear woven textile texture and natural fold, entire object inside frame. Clean off-white seamless studio background, soft diffused daylight and subtle grounded shadow, neutral true-to-material colour. Landscape 3:2 composition, object occupies most of frame with modest clear margins. No people, no branding, no labels, no text, no watermark. Photorealistic studio product photography, no decorative props.",
+  "createdAt": "2026-10-22T00:20:25.199706+00:00",
+  "schemaVersion": 1,
+  "tool": "image_gen.imagegen",
+  "mode": "built-in generate",
+  "origin": "AI-generated synthetic product illustration; not an actual supplier photograph",
+  "origin_ru": "Авторская синтетическая иллюстрация товара, созданная ИИ; не фотография товара поставщика",
+  "useCase": "product-mockup",
+  "generatorOriginalPath": "/Users/assweg/.codex/generated_images/01a158c6-c65c-7621-88d7-787284171be0/exec-4c72ec22-79ea-40dd-ae3d-1ad778a4fd23.png",
+  "generatorOriginalSha256": "5e81785cc73d6b015b09fa41a31ffd0b720912844602c90849bc71d56383429c",
+  "sourcePath": "/Users/assweg/.codex/generated_images/01a158c6-c65c-7621-88d7-787284171be0/exec-4c72ec22-79ea-40dd-ae3d-1ad778a4fd23.png",
+  "sourceSha256": "5e81785cc73d6b015b09fa41a31ffd0b720912844602c90849bc71d56383429c",
+  "sourceDimensions": [
+    1536,
+    1024
+  ],
+  "deliveryPath": "services/marketplace/seed_media/fabric.webp",
+  "deliverySha256": "c885ba4b7d3b320e5af4d224c49ace2d7bd7b55502091c3084ecd8d043bd8abe",
+  "deliveryDimensions": [
+    768,
+    512
+  ],
+  "deliveryBytes": 61744,
+  "conversion": {
+    "library": "libwebp cwebp",
+    "format": "WebP",
+    "quality": 86,
+    "method": 6,
+    "resized": true,
+    "cropped": false,
+    "retouched": false
+  },
+  "verification": {
+    "subject": "manually inspected",
+    "wholeProductVisible": false,
+    "noBrandingOrText": true,
+    "background": "off-white studio",
+    "note": "Inspected generated roll, woven texture, neutral studio lighting and absence of branding. Loose fabric reaches the image edge; this representative illustration does not verify supplier stock or physical dimensions."
+  }
+}

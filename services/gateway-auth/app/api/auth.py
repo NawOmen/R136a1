@@ -38,7 +38,7 @@ async def register_account(data: RegisterIn, request: Request, db: AsyncSession,
     await throttle(db, request, str(data.email), "register")
     existing = await db.execute(select(User).where(User.email == data.email))
     if existing.scalar_one_or_none() is not None:
-        raise HTTPException(status.HTTP_409_CONFLICT, detail="Email уже занят")
+        raise HTTPException(status.HTTP_409_CONFLICT, detail="Эта электронная почта уже используется")
 
     user = User(
         last_name=data.last_name,
@@ -54,7 +54,7 @@ async def register_account(data: RegisterIn, request: Request, db: AsyncSession,
         await db.flush()
     except IntegrityError:
         await db.rollback()
-        raise HTTPException(409, "Email уже занят")
+        raise HTTPException(409, "Эта электронная почта уже используется")
     if acknowledged:
         db.add_all([AccountAgreement(user_id=user.id, document="rules", version=RULES_VERSION),
                     AccountAgreement(user_id=user.id, document="privacy", version=PRIVACY_VERSION)])

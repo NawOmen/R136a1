@@ -1,0 +1,41 @@
+{
+  "prompt": "Use case: product-mockup.\nAsset type: standalone synthetic Russian B2B catalogue product illustration, photorealistic.\nPrimary request: One roll of blank white matte self-adhesive rectangular paper labels, each50×30mm, neatly wound on a small plain brown cardboard core. Roll resting in three-quarter view with a short length of backing tape curving forward to clearly show two clean blank rounded-corner rectangular labels. No writing, barcode, logo or print.\nScene/backdrop: clean seamless off-white studio background #f8f8f6, subtle natural soft contact shadow.\nComposition/framing: square 1:1 image, whole product centered occupying75%of frame, generous margins on ALL four sides, no crop.\nStyle/medium: realistic clean studio catalogue photography, crisp believable materials, soft diffuse lighting.\nConstraints: original synthetic product illustration, no real manufacturer, no trademark, no logos, no text, no numbers, no UI, no watermarks, no people, no unrelated props, no colored filter.",
+  "createdAt": "2026-10-21T15:57:18.519284+00:00",
+  "schemaVersion": 1,
+  "tool": "image_gen.imagegen",
+  "mode": "built-in generate",
+  "origin": "AI-generated synthetic product illustration; not an actual supplier photograph",
+  "origin_ru": "Авторская синтетическая иллюстрация товара, созданная ИИ; не фотография товара поставщика",
+  "useCase": "product-mockup",
+  "generatorOriginalPath": "/Users/assweg/.codex/generated_images/01a15f23-f64f-7981-98bc-11e983869fbb/exec-2780e9dc-b9db-4d04-b34a-8b86d7a619e0.png",
+  "generatorOriginalSha256": "3af0e1512a9d55a560895ed458c6258acaaf596438b88a6f7c298673815a769a",
+  "sourcePath": "/Users/assweg/.codex/generated_images/01a15f23-f64f-7981-98bc-11e983869fbb/exec-2780e9dc-b9db-4d04-b34a-8b86d7a619e0.png",
+  "sourceSha256": "3af0e1512a9d55a560895ed458c6258acaaf596438b88a6f7c298673815a769a",
+  "sourceDimensions": [
+    1254,
+    1254
+  ],
+  "deliveryPath": "services/marketplace/seed_media/label_50.webp",
+  "deliverySha256": "58f8be8cb2de85bc894c9948ffe3d3161cce7e10571eb887bd1455086ca4359a",
+  "deliveryDimensions": [
+    768,
+    768
+  ],
+  "deliveryBytes": 14326,
+  "conversion": {
+    "library": "libwebp cwebp",
+    "format": "WebP",
+    "quality": 86,
+    "method": 6,
+    "resized": true,
+    "cropped": false,
+    "retouched": false
+  },
+  "verification": {
+    "subject": "manually inspected",
+    "wholeProductVisible": true,
+    "noBrandingOrText": true,
+    "background": "off-white studio",
+    "note": "Generated for synthetic catalogue specifications. Whole product visible; image is an illustration rather than evidence of actual supplier stock."
+  }
+}
