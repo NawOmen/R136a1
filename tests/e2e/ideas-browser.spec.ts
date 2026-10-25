@@ -48,7 +48,7 @@ test("footer disclosure closes on navigation, outside click and Escape", async (
 test("legal copy keeps documents and omits internal revision identifiers", async ({ page }) => {
   await prepare(page);
   for (const slug of ["legal", "privacy"]) {
-    await page.goto(`/info/${slug}`);
+    await page.goto(`/info/${slug}`, { waitUntil: "networkidle" });
     await expect(page.locator("main")).not.toContainText(/Редакция|rules-2|privacy-2/);
     await expect(page.getByRole("link", { name: "Скачать документ" })).toBeVisible();
   }

@@ -35,7 +35,7 @@ test("catalogue images, exact prices, sorting, touch controls and both themes re
   const errors = await prepare(page);
   await page.goto("/");
   await expect(page.locator(".market-product")).toHaveCount(4);
-  await expect(page.locator(".market-price").first()).toContainText("38,123456789123");
+  await expect(page.locator(".market-price").first()).toContainText("38,12 ₽");
   const photos = page.locator(".market-product img");
   await expect(photos).toHaveCount(4);
   await expect.poll(() => photos.evaluateAll(images => images.every(image => (image as HTMLImageElement).complete && (image as HTMLImageElement).naturalWidth > 0))).toBe(true);
