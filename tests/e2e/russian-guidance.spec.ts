@@ -117,6 +117,7 @@ test("seller opens anonymized need without owner fields or buyer actions", async
   });
   await page.goto(`/needs/${feed.id}`);
   await expect(page.getByRole("heading", { name: feed.category, exact: true })).toBeVisible();
+  await page.getByText("Характеристики и файлы", { exact:true }).click();
   await expect(page.getByText("Вложения доступны только компании-покупателю.", { exact: true })).toBeVisible();
   await expect(page.getByRole("heading", { name: "Ваши предложения (0)" })).toBeVisible();
   await expect(page.getByRole("button", { name: "Скачать", exact: true })).toHaveCount(0);

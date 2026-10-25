@@ -45,7 +45,7 @@ async def test_clean_seed_publishes_admitted_cups_and_preserves_rerun(client, db
     products = (await db_session.scalars(select(Product).where(Product.company_id == company))).all()
     assert len(products) == 2 + len(ASSORTMENT) + len(STOREFRONT_ADDITIONAL_KEYS)
     assert sum(product.is_published for product in products) == 42
-    assert len((await db_session.scalars(select(ProductPriceObservation))).all()) == 42
+    assert len((await db_session.scalars(select(ProductPriceObservation))).all()) == 282
     events = (await db_session.scalars(select(TrustAuditEvent).where(
         TrustAuditEvent.event_type == "product_published_with_admission"))).all()
     assert len(events) == 42
@@ -62,7 +62,7 @@ async def test_clean_seed_publishes_admitted_cups_and_preserves_rerun(client, db
     await db_session.refresh(cups[0])
     assert cups[0].price_rub == Decimal("12.34") and cups[0].stock_units == 7
     assert len((await db_session.scalars(select(Product))).all()) == 2 + len(ASSORTMENT) + len(STOREFRONT_ADDITIONAL_KEYS)
-    assert len((await db_session.scalars(select(ProductPriceObservation))).all()) == 42
+    assert len((await db_session.scalars(select(ProductPriceObservation))).all()) == 282
 
 
 @pytest.mark.parametrize("comparison_verified", [True, False])

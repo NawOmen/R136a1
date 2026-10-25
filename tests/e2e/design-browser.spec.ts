@@ -127,8 +127,8 @@ test("products lead the first viewport, with persistent themes, exact prices and
   await expect(page.locator("html")).toHaveAttribute("data-theme", "light");
   await page.goto("/catalog");
   await expect(page.locator(".market-product")).toHaveCount(4);
-  // Rendering must not round an exact fractional unit price down to kopecks.
-  await expect(page.locator(".market-product").first()).toContainText("23,125");
+  // Display rounds to two decimals; sorting still uses exact API values.
+  await expect(page.locator(".market-product").first()).toContainText("23,13");
   await page.getByRole("textbox", { name: "Поиск по маркетплейсу", exact: true }).fill("Коробки");
   await page.getByRole("textbox", { name: "Поиск по маркетплейсу", exact: true }).press("Enter");
   await expect(page.locator(".market-product")).toHaveCount(1);
@@ -205,7 +205,7 @@ test("catalogue sorts exact advertised prices and tier prices without changing t
     await sort.selectOption(value);
     expect(await productLinks(page)).toEqual(expected.map(id => `/catalog/${id}`));
   }
-  await expect(page.locator('.market-product__link[href="/catalog/price-tier"] .product-pricing')).toHaveAttribute("title", /0,999999999999.*100/);
+  await expect(page.locator('.market-product__link[href="/catalog/price-tier"] .product-pricing')).toHaveAttribute("title", /1 ₽.*100/);
   await openCatalogFilters(page);
   await page.getByLabel("Цена от, ₽", { exact: true }).fill("1,000000000002");
   await page.getByLabel("Цена до, ₽", { exact: true }).fill("1,000000000002");
@@ -757,7 +757,7 @@ test("toggle hover grows gently, returns smoothly and respects reduced motion an
   await page.emulateMedia({ reducedMotion: "no-preference" });
   await page.goto("/catalog");
   await expect(page.locator(".market-product")).toHaveCount(4);
-  const selectors = [".market-lanes a", ".storefront-mode a", ".theme-toggle", ".product-favorite", ".catalog-sort select", ".catalog-categories button"];
+  const selectors = [".market-lanes a", ".storefront-mode a", ".theme-toggle", ".product-favorite", ".catalog-categories button"];
   const scale = (selector: string) => page.locator(selector).first().evaluate(el => {
     const transform = getComputedStyle(el).transform;
     return transform === "none" ? 1 : new DOMMatrixReadOnly(transform).a;

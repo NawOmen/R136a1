@@ -1,4 +1,5 @@
 "use client";
+import { displayValue } from "../../lib/presentation";
 import { DateInput } from "../../components/DateInput";
 import { russianMessage } from "../../lib/russianMessages";
 import CommercialTermsFields, { emptyCommercialTerms } from "../../components/CommercialTermsFields";
@@ -198,7 +199,7 @@ export default function MarketOpportunitiesPage() {
             <article className="card" key={item.id}>
               <div className="company-row">
                 <h2>{item.category}</h2>
-                <span className="opportunity-score">{item.score}/100</span>
+                <span className="opportunity-score">{displayValue(item.score)}/100</span>
               </div>
               <p>
                 {item.unmet_volume_units === null
@@ -241,7 +242,7 @@ export default function MarketOpportunitiesPage() {
             Черновик создан без цены и публикации. Заполните условия и подтвердите их вручную.
           </p>
           <div className="form-grid">
-            <div className="field"><label>Цена за единицу, ₽</label><input type="number" step="any" min="0.000000000001" required value={unitPrice} onChange={(e) => setUnitPrice(e.target.value)} /></div>
+            <div className="field"><label>Цена за единицу, ₽</label><input type="number" step="0.01" min="0.01" required value={unitPrice} onChange={(e) => setUnitPrice(e.target.value)} /></div>
             <div className="field"><label>Подтверждённая мощность, {russianUnit(draftCoalition.unit)}</label><input type="number" min="1" required value={capacity} onChange={(e) => setCapacity(e.target.value)} /></div>
             <div className="field"><label>Окончание набора</label><DateInput required value={fillDeadline} onValueChange={(e) => setFillDeadline(e)} /></div>
             <div className="field"><label>Начало производства</label><DateInput required value={productionStart} onValueChange={(e) => setProductionStart(e)} /></div>

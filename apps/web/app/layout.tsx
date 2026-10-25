@@ -10,6 +10,7 @@ import { SiteNavigation } from "./components/SiteNavigation";
 import { LiquidAtmosphere } from "./components/LiquidAtmosphere";
 import { PageSurface } from "./components/PageSurface";
 import { Icon } from "./components/Icon";
+import { FooterMore } from "./components/FooterMore";
 
 const manrope = localFont({ src: "./fonts/Manrope-variable.ttf", display: "swap", variable: "--font-manrope", weight: "200 800" });
 
@@ -44,7 +45,7 @@ export default function RootLayout({ children }: Readonly<{ children: ReactNode 
             <Link className="site-header__logo" href="/"><img src="/icon.png" alt="" width="42" height="32" /><span>ПоРукам</span></Link>
             <nav className="footer-links" aria-label="Информация"><Link href="/info/contacts">Контакты</Link><Link href="/support">Поддержка</Link><Link href="/info/guide">Как начать</Link><Link href="/info/legal">Правила работы</Link></nav>
             <Link className="footer-contact" href="/support"><Icon name="mail" size={18} />Связаться с нами</Link>
-            <details className="footer-more"><summary>Ещё</summary><nav><Link href="/catalog">Каталог товаров</Link><Link href="/seller/requests">Потребности бизнеса</Link><Link href="/ai-procurement">Закупки с ИИ</Link><Link href="/knowledge">Помощь с закупкой</Link><Link href="/info/about">О платформе</Link><Link href="/info/regulations">Регламенты</Link><Link href="/info/privacy">Конфиденциальность</Link><Link href="/info/news">Новости</Link></nav></details>
+            <FooterMore />
             <span className="footer-copyright">© ПоРукам</span>
           </div>
         </footer>

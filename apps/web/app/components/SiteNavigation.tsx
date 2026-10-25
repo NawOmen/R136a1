@@ -6,6 +6,7 @@ import { useEffect, useId, useRef, useState } from "react";
 import { usePathname } from "next/navigation";
 import { api, AUTH_CHANGED_EVENT, getToken, WORKSPACE_CHANGED_EVENT } from "../lib/api";
 import { Icon } from "./Icon";
+import { SearchInput } from "./SearchInput";
 import { LiquidSurface } from "./LiquidSurface";
 
 export function SiteNavigation() {
@@ -51,7 +52,7 @@ export function SiteNavigation() {
   const workLinks = <>{authenticated && !admin && <><ActiveLink href="/coalitions">Коалиции</ActiveLink><ActiveLink href="/deals">Сделки</ActiveLink></>}<Link className="ai-nav-action" href="/needs/new"><Icon name="spark" size={18} />Закупить с ИИ</Link><ActiveLink href="/knowledge">Помощь</ActiveLink></>;
   return <div className="market-navigation">
     <nav className="market-lanes" aria-label="Раздел рынка"><ActiveLink paths={["/catalog"]} href="/catalog">Товары</ActiveLink>{!admin && <ActiveLink paths={["/seller/requests", "/needs"]} href={demandHref}>Потребности</ActiveLink>}</nav>
-    <form className="market-search" role="search" action={demandActive ? (pathname.startsWith("/needs") ? "/needs" : "/seller/requests") : "/catalog"} method="get"><Icon name="search" size={21} /><input name="q" aria-label="Поиск по маркетплейсу" value={query} onChange={event => setQuery(event.target.value)} placeholder={demandActive ? "Найти потребность" : "Найти товар или категорию"} /><LiquidSurface as="div" variant="rail" className="liquid-action liquid-action--primary search-action"><button type="submit" aria-label="Найти">Найти<Icon name="arrow" size={17} /></button></LiquidSurface></form>
+    <form className="market-search" role="search" action={demandActive ? (pathname.startsWith("/needs") ? "/needs" : "/seller/requests") : "/catalog"} method="get"><Icon name="search" size={21} /><SearchInput demand={demandActive} value={query} onChange={setQuery} /><LiquidSurface as="div" variant="rail" className="liquid-action liquid-action--primary search-action"><button type="submit" aria-label="Найти">Найти<Icon name="arrow" size={17} /></button></LiquidSurface></form>
     <div className="market-sections">
 
       <nav className="site-nav" aria-label="Рабочие разделы"><Link className="ai-nav-action" href="/needs/new"><Icon name="spark" size={18} />ИИ-закупка</Link><ActiveLink href="/knowledge">Поддержка</ActiveLink></nav>

@@ -210,6 +210,37 @@ async def seed_storefront_assortment(db, *, seller_name="ООО «Урал Ко�
     return created
 
 
+async def seed_synthetic_price_history(db):
+    """Six older weekly observations for untouched synthetic assortment only.
+
+    Deterministic IDs mark this as fixture data. Anchor to the original observation,
+    never refresh dates on rerun and never invent history for seller-edited SKUs.
+    """
+    products = (await db.scalars(select(Product).where(Product.is_published.is_(True)))).all()
+    for product in products:
+        row = next((row for row in ASSORTMENT if
+                    product.id in {uuid.uuid5(NAMESPACE, f"{product.company_id}:{row[0]}"), storefront_product_id(product.company_id, row[0])}
+                    and product.name == row[4] and product.category == row[2]
+                    and product.subcategory == row[3] and product.characteristics == row[5]
+                    and product.moq_units == row[7]), None)
+        if row is None or product.price_rub not in {Decimal(str(row[6])), Decimal(str(row[6])) * Decimal("1.04")}:
+            continue
+        observations = (await db.scalars(select(ProductPriceObservation).where(ProductPriceObservation.product_id == product.id))).all()
+        if len(observations) != 1:
+            continue
+        original = observations[0]
+        if original.specification_hash != product_specification_hash(product) or original.unit_price_rub != product.price_rub:
+            continue
+        for weeks, factor in enumerate(("1.01", "1.02", "1.03", "1.05", "1.04", "1.06"), start=1):
+            db.add(ProductPriceObservation(
+                id=uuid.uuid5(NAMESPACE, f"synthetic-price-history-v1:{product.id}:{weeks}"),
+                product_id=product.id, category=product.category,
+                specification_hash=original.specification_hash,
+                unit_price_rub=(product.price_rub * Decimal(factor)).quantize(Decimal("0.01")),
+                observed_at=original.observed_at - timedelta(weeks=weeks)))
+    await db.flush()
+
+
 async def seed_product_images(db):
     """По одной схематической иллюстрации на группу первому товару продавца №1.
 

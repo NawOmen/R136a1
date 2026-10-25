@@ -390,7 +390,7 @@ export default function SellerProductsPage() {
               id="product_price"
               type="number"
               min="0"
-              step="any"
+              step="0.01"
               value={price}
               onChange={(event) => setPrice(event.target.value)}
               placeholder="Например, 11.2"
@@ -401,9 +401,9 @@ export default function SellerProductsPage() {
             <label>Цены по объёму <span className="opt">необязательно, до 10 ступеней</span></label>
             {tiers.map((tier, index) => (
               <div className="char-row" key={index}>
-                <input type="number" min="0.000001" step="any" value={tier.min_units} aria-label="Объём ступени"
+                <input type="number" min="0.01" step="0.01" value={tier.min_units} aria-label="Объём ступени"
                   onChange={(event) => setTiers((current) => current.map((item, i) => i === index ? {...item, min_units: Number(event.target.value)} : item))} />
-                <input type="number" min="0.000000000001" step="any" value={tier.unit_price_rub} aria-label="Цена ступени"
+                <input type="number" min="0.01" step="0.01" value={tier.unit_price_rub} aria-label="Цена ступени"
                   onChange={(event) => setTiers((current) => current.map((item, i) => i === index ? {...item, unit_price_rub: String(event.target.value)} : item))} />
                 <span className="company-meta">{formatRub(previewLineAmount(tier.unit_price_rub, tier.min_units))} за партию</span>
                 <button type="button" className="btn btn-secondary btn-sm" onClick={() => setTiers((current) => current.filter((_, i) => i !== index))}>Удалить</button>
@@ -443,8 +443,8 @@ export default function SellerProductsPage() {
             <input
               id="product_moq"
               type="number"
-              step="any"
-              min="0.000001"
+              step="0.01"
+              min="0.01"
               value={moq}
               onChange={(event) => setMoq(event.target.value)}
               placeholder="Например, 20000"
@@ -473,7 +473,7 @@ export default function SellerProductsPage() {
             <input
               id="product_stock"
               type="number"
-              step="any"
+              step="0.01"
               min="0"
               value={stock}
               onChange={(event) => setStock(event.target.value)}

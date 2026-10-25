@@ -349,7 +349,7 @@ export default function SellerRequestsPage() {
                       id={`offer_price_${need.id}`}
                       type="number"
                       min="0"
-                      step="any"
+                      step="0.01"
                       value={price}
                       onChange={(event) => setPrice(event.target.value)}
                       placeholder="Например, 11.2"

@@ -1,3 +1,4 @@
+import { displayMoney } from "./money";
 import { registryCharacteristicLabel } from "./categoryProfiles";
 import { formatDate, formatDateTime } from "./dates";
 import { russianUnit } from "./units";
@@ -33,10 +34,12 @@ export function russianLabel(key: string, fallback = "Дополнительно
 /** Data such as names, model versions, materials and original excerpts are not translated. */
 export function displayValue(value: unknown): string {
   if (value == null || value === "") return "Не указано";
+  if (typeof value === "number") return Number.isFinite(value) ? new Intl.NumberFormat("ru-RU", { maximumFractionDigits: 2 }).format(value) : "Не указано";
   if (typeof value === "boolean") return value ? "Да" : "Нет";
   if (Array.isArray(value)) return value.map(displayValue).join("; ");
   if (typeof value === "object") return Object.entries(value).map(([key, item], index) => `${russianLabel(key, `Дополнительное поле № ${index + 1}`)}: ${["unit", "normalized_unit", "original_unit", "input_unit", "stored_unit", "from_unit", "to_unit"].includes(key) && typeof item === "string" ? russianUnit(item) : displayValue(item)}`).join("; ");
   if (typeof value === "string") {
+    if (/^-?\d+[.,]\d+$/.test(value)) return displayMoney(value).replace(/ ₽$/, "");
     if (/^\d{4}-\d{2}-\d{2}$/.test(value)) return formatDate(value, "Дата не указана");
     if (/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/.test(value)) return formatDateTime(value, "Дата не указана");
     return labels[value] ?? value;

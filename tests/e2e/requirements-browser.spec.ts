@@ -36,7 +36,7 @@ test("503, reload, role and company switching preserve independent input and sou
   await page.locator("#need_files").setInputFiles({ name: "синтетическая-спецификация.txt", mimeType: "text/plain", buffer: Buffer.from("Материал: дерево; количество: 30 шт") });
   await expect(page.getByText("Выбрано файлов: 1", { exact: true })).toBeVisible();
   await page.getByRole("button", { name: "Заполнить с ИИ", exact: true }).click();
-  await expect(page.getByRole("alert").filter({ hasText: "Локальная модель недоступна" })).toBeVisible();
+  await expect(page.getByRole("alert").filter({ hasText: "Модель ИИ не работает" })).toBeVisible();
   await expect(description).toHaveValue(/30 штук/);
   await page.reload();
   await expect(description).toHaveValue(/30 штук/);

@@ -65,6 +65,11 @@ export default function NeedDraftEditor({ need, onSaved }: { need: Need; onSaved
     } catch (reason) { setError(reason instanceof Error ? russianMessage(reason.message) : "Не удалось сохранить черновик."); }
     finally { setSaving(false); }
   }
+  const showChange = (key: string, value: unknown) => {
+    if (key !== "delivery_address_id") return displayValue(value);
+    const address = addresses.find(item => item.id === value);
+    return address ? `${address.city}, ${address.address}` : "Адрес недоступен";
+  };
   if (!editing) return <button type="button" className="btn btn-secondary" onClick={() => setEditing(true)}>{need.status === "draft" ? "Изменить черновик" : "Изменить спецификацию"}</button>;
   return <form onSubmit={save} className="form-grid">
     <p className="hint">Изменения сохраняются новой версией этой потребности. Вложения сохранятся. Версия: {need.revision}.</p>
@@ -79,7 +84,7 @@ export default function NeedDraftEditor({ need, onSaved }: { need: Need; onSaved
         <button type="button" className="btn btn-secondary btn-sm" onClick={() => setRows(rows.filter((_, i) => i !== index))}>Удалить характеристику</button>
       </div>)}
       <button type="button" className="btn btn-secondary btn-sm" onClick={() => setRows([...rows, { key: "", value: "", original: "" }])}>Добавить характеристику</button>
-      <div className="field"><label htmlFor="edit-quantity">Количество единиц</label><input id="edit-quantity" required type="number" min="0.000001" step="any" value={quantity} onChange={e => setQuantity(e.target.value)} /></div>
+      <div className="field"><label htmlFor="edit-quantity">Количество единиц</label><input id="edit-quantity" required type="number" min="0.01" step="0.01" value={quantity} onChange={e => setQuantity(e.target.value)} /></div>
       <div className="field"><label htmlFor="edit-budget">Бюджет, ₽</label><input id="edit-budget" type="number" min="0.01" step="0.01" value={budget} onChange={e => setBudget(e.target.value)} /></div>
       <div className="field"><label htmlFor="edit-deadline">Срок поставки</label><DateInput id="edit-deadline" required value={deadline} onValueChange={e => setDeadline(e)} /></div>
       <div className="field"><label htmlFor="edit-valid">Актуально до</label><DateInput id="edit-valid" required value={validUntil} onValueChange={e => setValidUntil(e)} /></div>
@@ -88,7 +93,7 @@ export default function NeedDraftEditor({ need, onSaved }: { need: Need; onSaved
       <PhysicalQuantityReview kind="need" values={{ characteristics: Object.fromEntries(rows.filter(row => row.key.trim()).map(row => [row.key.trim(), row.value])), volume_units: quantity }} approved={quantityApproved} onApproval={setQuantityApproved} />
       {impact && <section aria-label="Последствия изменения">
         <h3>Что изменится</h3>
-        {Object.entries(impact.changes).map(([key, diff]) => <p key={key}>{({ category: "Категория", subcategory: "Подкатегория", characteristics: "Характеристики", volume_units: "Количество", budget_rub: "Бюджет", deadline_date: "Срок поставки", valid_until: "Актуальность", delivery_address_id: "Адрес доставки", evidence: "Подтверждение требований" } as Record<string, string>)[key] ?? russianLabel(key)}: {displayValue(diff.before)} → {displayValue(diff.after)}</p>)}
+        {Object.entries(impact.changes).map(([key, diff]) => <p key={key}>{({ category: "Категория", subcategory: "Подкатегория", characteristics: "Характеристики", volume_units: "Количество", budget_rub: "Бюджет", deadline_date: "Срок поставки", valid_until: "Актуальность", delivery_address_id: "Адрес доставки", evidence: "Подтверждение требований" } as Record<string, string>)[key] ?? russianLabel(key)}: {showChange(key, diff.before)} → {showChange(key, diff.after)}</p>)}
         <p>Потребуют пересчёта: КП — {impact.affected.offers.length}; черновики КП — {impact.affected.offer_drafts.length}; группы — {impact.affected.coalitions.length}; ресурсные планы — {impact.affected.resource_plans.length}; варианты подбора — {impact.affected.optimization_variants.length}. Участники получат уведомления, прежние условия сохранятся в истории.</p>
         {impact.requires_confirmation && <label><input type="checkbox" checked={impactApproved} onChange={event => setImpactApproved(event.target.checked)} />Подтверждаю новые требования и отмену прежних предварительных согласий</label>}
       </section>}

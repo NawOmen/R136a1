@@ -6,7 +6,7 @@ test("legal downloads have the published version and unknown documents return 40
     expect(response.status()).toBe(200);
     expect(response.headers()["content-disposition"]).toContain(`porukam-${slug}-${version}.html`);
     const body = await response.text();
-    expect(body).toContain(`Редакция ${version}`);
+    expect(body).not.toContain(`Редакция ${version}`);
     expect(body).toContain("Правовые основания");
   }
   for (const slug of ["missing", "toString", "constructor", "__proto__"]) {

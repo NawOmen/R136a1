@@ -48,10 +48,10 @@ test("saved technical labels remain tied to their captured profile", async () =>
 });
 
 
-test("exact base-unit prices remain visible below one kopeck", async () => {
+test("base-unit prices use two decimals without presenting subkopeck amounts as zero", async () => {
   const { formatRub } = await import("../../apps/web/app/lib/marketplace");
-  expect(formatRub(0.000125, 12)).toBe("0,000125 ₽");
-  expect(formatRub(1.123456789012, 12)).toBe("1,123456789012 ₽");
+  expect(formatRub(0.000125, 12)).toBe("менее 0,01 ₽");
+  expect(formatRub(1.123456789012, 12)).toBe("1,12 ₽");
   expect(formatRub(125.256)).toBe("125,26 ₽");
 });
 
