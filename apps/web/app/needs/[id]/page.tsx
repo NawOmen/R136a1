@@ -12,6 +12,8 @@ import Link from "next/link";
 import ProfileRevisionPanel from "../../components/ProfileRevisionPanel";
 import NeedDraftEditor from "../../components/NeedDraftEditor";
 import NeedRequirements from "../../components/NeedRequirements";
+import SupplierBoard from "../../components/SupplierBoard";
+import OrderExport from "../../components/OrderExport";
 import { useParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import { getToken } from "../../lib/api";
@@ -240,6 +242,7 @@ export default function NeedDetailPage() {
           <Link href="/needs" className="btn btn-secondary btn-sm">
             Мои потребности
           </Link>
+          {isBuyer && ownedNeed && <OrderExport id={need.id} companyId={ownedNeed.company_id} specification />}
         </div>
       </div>
 
@@ -261,6 +264,7 @@ export default function NeedDetailPage() {
 
       {!isBuyer && !!need.requirement_decisions?.length && <section className="card"><h2>Уточнения покупателя</h2><p>В текущей версии покупатель разрешил противоречия в этих требованиях:</p>{need.requirement_decisions.map(item => <p key={item.field}>{formatCharacteristics({ [item.field]: item.confirmed_value }, need.category_profile)}</p>)}</section>}
       {isBuyer && ownedNeed && <details className="card need-disclosure"><summary>Требования, источники и история</summary><NeedRequirements key={`${need.id}:${need.revision}`} need={ownedNeed} addresses={addresses} /></details>}
+      {isBuyer && ownedNeed && <SupplierBoard key={`${need.id}:${ownedNeed.company_id}`} needId={need.id} companyId={ownedNeed.company_id} needRevision={need.revision} canManage={buyerCompany?.membership?.is_admin === true} />}
       {isBuyer && ownedNeed && buyerCompany?.membership?.is_admin && ["open_for_offers", "waiting_for_match", "coalition_candidate", "awaiting_approvals"].includes(need.status) && (
         <details className="card need-disclosure"><summary>Изменить требования</summary><NeedDraftEditor key={`${need.id}:${need.revision}`} need={ownedNeed} onSaved={async value => { setNeed(value); const token = getToken(); if (token) setOffers(await marketplace.getOffers(token, value.id)); }} /></details>
       )}

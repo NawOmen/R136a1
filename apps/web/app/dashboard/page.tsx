@@ -273,6 +273,12 @@ export default function DashboardPage() {
               </Link>
             </li>
             <li>
+              <Link href="/seller/inquiries" className="company-item">
+                <span className="company-item__name">Переписка с покупателями</span>
+                <span className="company-meta">Запросы вашей компании и помощь ИИ с ответами</span>
+              </Link>
+            </li>
+            <li>
               <Link href="/seller/requests" className="company-item">
                 <span className="company-item__name">Подходящие запросы</span>
                 <span className="company-meta">Открытые потребности покупателей</span>

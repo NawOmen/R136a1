@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import type { ReactNode } from "react";
 import "./globals.css";
 import "./design.css";
+import "./supplier-workflow.css";
 import localFont from "next/font/local";
 import Link from "next/link";
 import { AccountDrawer } from "./components/AccountDrawer";

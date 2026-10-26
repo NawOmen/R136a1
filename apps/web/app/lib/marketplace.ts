@@ -902,7 +902,7 @@ function describeValidationError(item: ValidationErrorItem): string { return val
 
 type RequestOptions = RequestInit & { token?: string | null };
 
-async function marketplaceFetch<T>(path: string, options: RequestOptions = {}): Promise<T> {
+export async function marketplaceFetch<T>(path: string, options: RequestOptions = {}): Promise<T> {
   const { token, ...init } = options;
   const headers = new Headers(init.headers);
   headers.set("Accept", "application/json");
@@ -935,7 +935,7 @@ async function marketplaceFetch<T>(path: string, options: RequestOptions = {}): 
   return (await response.json()) as T;
 }
 
-async function marketplaceFetchBlob(path: string, token: string): Promise<Blob> {
+export async function marketplaceFetchBlob(path: string, token: string): Promise<Blob> {
   const response = await russianFetch(`${marketplaceBaseUrl()}${path.replace("/api/v1", "/api/v3").replace("/api/v2", "/api/v3/physical")}`, {
     headers: { Authorization: `Bearer ${token}` },
   });
