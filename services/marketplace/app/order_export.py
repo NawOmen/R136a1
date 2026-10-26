@@ -3,22 +3,34 @@ import csv
 import io
 import json
 import re
+import unicodedata
 import xml.etree.ElementTree as ET
 from decimal import Decimal
 
 from fastapi import HTTPException
 from .category_units import order_unit
 from .money import amount, decimal
+from .report_labels import label
 
 NAMESPACE = "urn:1C.ru:commerceml_2"
 ET.register_namespace("", NAMESPACE)
+
+
+def csv_cell(value):
+    value = str(value)
+    start = 0
+    while start < len(value) and (value[start].isspace() or unicodedata.category(value[start]) in {"Cc", "Cf"}):
+        start += 1
+    if value[start:].startswith(("=", "+", "-", "@")) or (value and unicodedata.category(value[0]) in {"Cc", "Cf"}):
+        return "'" + value
+    return value
 
 
 def csv_bytes(rows):
     stream = io.StringIO(newline="")
     writer = csv.writer(stream, delimiter=";", lineterminator="\r\n")
     for row in rows:
-        writer.writerow([("'" + str(v)) if str(v).lstrip().startswith(("=", "+", "-", "@")) or str(v).startswith(("\t", "\r", "\n")) else str(v) for v in row])
+        writer.writerow([csv_cell(value) for value in row])
     return stream.getvalue().encode("utf-8-sig")
 
 
@@ -108,10 +120,10 @@ def commerceml(deal, buyer, seller):
             _element(tax, "Наименование", "НДС")
             _element(tax, "УчтеноВСумме", "true")
             _element(tax, "Сумма", format(amount(row["vat"]), "f"))
-            _element(tax, "Ставка", row["vat_rate"])
+            _element(tax, "Ставка", format(decimal(row["vat_rate"]), "f"))
     requisites = _element(doc, "ЗначенияРеквизитов")
-    for key, value in [("Статус заказа", deal.status), ("Проведен", "false"), ("Контракт экспорта", "porukam-1c-1"), ("Срок поставки", snapshot["need"]["deadline_date"]),
-                       ("Адрес доставки", json.dumps(snapshot["need"].get("delivery_address"), ensure_ascii=False)), ("Налоговая база", snapshot["estimate"]["terms"]["tax_basis"])]:
+    for key, value in [("Статус заказа", label(deal.status)), ("Проведен", "false"), ("Контракт экспорта", "porukam-1c-1"), ("Срок поставки", snapshot["need"]["deadline_date"]),
+                       ("Адрес доставки", json.dumps(snapshot["need"].get("delivery_address"), ensure_ascii=False)), ("Налоговая база", label(snapshot["estimate"]["terms"]["tax_basis"]))]:
         item = _element(requisites, "ЗначениеРеквизита")
         _element(item, "Наименование", key)
         _element(item, "Значение", value)
@@ -121,9 +133,11 @@ def commerceml(deal, buyer, seller):
 
 def order_csv(deal, buyer, seller):
     snapshot, rows = order_rows(deal)
-    header = ["Заказ", "Дата", "Покупатель", "ИНН покупателя", "Поставщик", "ИНН поставщика", "Номенклатура", "Количество", "Единица", "Цена", "Сумма", "Валюта", "Срок поставки", "Налоговая база", "Ид номенклатуры", "Характеристики"]
+    header = ["Заказ", "Дата", "Покупатель", "ИНН покупателя", "Поставщик", "ИНН поставщика", "Номенклатура", "Количество", "Единица", "Цена", "Сумма", "Валюта", "Срок поставки", "Налоговая база", "Ид номенклатуры", "Характеристики", "Ставка НДС, %", "НДС в сумме, ₽"]
     return csv_bytes([header] + [[str(deal.id), deal.created_at.strftime("%d.%m.%y"), buyer["full_name"], buyer["inn"], seller["full_name"], seller["inn"],
-        r["name"], r["quantity"], r["unit"], format(r["price"], "f"), format(r["amount"], "f"), "RUB", date_label(snapshot["need"]["deadline_date"]), r["tax_basis"], r["id"], json.dumps(snapshot["need"]["characteristics"], ensure_ascii=False)] for r in rows])
+        r["name"], r["quantity"], r["unit"], format(r["price"], "f"), format(r["amount"], "f"), "RUB", date_label(snapshot["need"]["deadline_date"]), label(r["tax_basis"]), r["id"], json.dumps(snapshot["need"]["characteristics"], ensure_ascii=False),
+        format(decimal(r["vat_rate"]), "f") if r["tax_basis"] == "includes_vat" and r["vat_rate"] is not None else "",
+        format(amount(r["vat"]), "f") if r["tax_basis"] == "includes_vat" and r["vat"] is not None else ""] for r in rows])
 
 
 def date_label(value):

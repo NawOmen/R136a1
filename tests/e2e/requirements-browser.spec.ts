@@ -266,7 +266,8 @@ test("address entry uses an accessible dialog, provider selection and retry with
   });
   await page.setViewportSize({ width:390, height:844 });
   await page.getByRole("button", { name:"Заполнить вручную", exact:true }).click();
-  await expect(page.locator("#visibility")).toHaveCount(0);
+  await expect(page.getByText("Настройки видимости", {exact:true})).toBeVisible();
+  await expect(page.locator("#visibility")).toBeHidden();
   await expect(page.getByRole("combobox", { name:"Характеристика 1: значение", exact:true })).toHaveValue("шт");
   await page.getByRole("button", { name:"+ Добавить адрес", exact:true }).click();
   await expect(page.getByRole("dialog")).toBeVisible();
@@ -389,4 +390,27 @@ test("AI fills a single review card with compact decimals and stale confirmation
   expect(confirmations).toBe(1);
   expect(creations).toBe(0);
   await expect(page.locator("#budget_rub")).toHaveValue("12500.5");
+});
+
+
+test("closed visibility is selectable and persists without exposing an unfinished selected-producers mode", async ({ page }, testInfo) => {
+  await prepare(page);
+  await page.getByRole("button", { name:"Заполнить вручную", exact:true }).click();
+  await page.getByText("Настройки видимости", {exact:true}).click();
+  const select = page.getByLabel("Кто увидит потребность", {exact:true});
+  await expect(select).toHaveValue("open_anonymized");
+  await expect(select.locator('option[value="selected_producers"]')).toHaveCount(0);
+  await select.selectOption("closed");
+  await expect(page.getByRole("button", {name:"Сохранить закрытую потребность",exact:true})).toBeVisible();
+  await expect(page.getByText("Потребность скрыта из общего подбора.", {exact:false})).toBeVisible();
+  await expect.poll(() => page.evaluate(() => Object.values(sessionStorage).some(value => {
+    try { return JSON.parse(value).visibility === "closed"; } catch { return false; }
+  }))).toBe(true);
+  await page.reload();
+  await page.getByText("Настройки видимости", {exact:true}).click();
+  await expect(select).toHaveValue("closed");
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(true);
+  await page.locator(".need-review").screenshot({path:`output/procurement-qa/visibility-${testInfo.project.name}.png`,style:".site-header,.skip-link{visibility:hidden!important}"});
+  await page.getByRole("button", {name:"Открыть подбор производителям",exact:true}).click();
+  await expect(select).toHaveValue("open_anonymized");
 });

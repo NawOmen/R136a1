@@ -1,3 +1,4 @@
+import json
 import uuid
 from typing import Literal
 from fastapi import APIRouter, Depends, HTTPException
@@ -30,7 +31,6 @@ async def export_order(deal_id: uuid.UUID, company_id: uuid.UUID, format: Litera
 
 @router.get("/needs/{need_id}/specification.csv")
 async def export_specification(need_id: uuid.UUID, company_id: uuid.UUID, user: CurrentUser = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
-    import json
     need = await buyer_need(db, need_id, company_id, user)
     rows = [["Категория", "Подкатегория", "Количество", "Единица", "Срок поставки", "Характеристики", "Версия"],
             [need.category, need.subcategory or "", need.volume_units, order_unit(need.characteristics), need.deadline_date.strftime("%d.%m.%y"), json.dumps(need.characteristics, ensure_ascii=False), need.revision]]

@@ -55,3 +55,51 @@ def test_csv_formula_protection_and_multiline_quoting():
     row=next(csv.reader(io.StringIO(data.decode('utf-8-sig')),delimiter=';'))
     assert all(s.startswith("'") for s in row[:3])
     assert row[3]=='Обычный; текст\nвторая строка'
+
+
+@pytest.mark.parametrize("rate", ["20", "0", "5.5"])
+def test_normalized_vat_is_plain_decimal_in_xml_and_csv(rate):
+    from app.commercial import estimate
+    deal, companies = example()
+    deal.status = "fulfilled"
+    deal.commercial_snapshot["estimate"] = estimate(
+        units=100, unit_price="7", delivery="100",
+        terms={"delivery_method": "separate", "delivery_conditions": "Тестовый адрес", "tax_basis": "includes_vat", "vat_rate_pct": rate},
+        buyer=deal.buyer_company_id, seller=deal.seller_company_id, source={"type": "test"})
+    ns = {"c": NAMESPACE}
+    root = ET.fromstring(commerceml(deal, *companies))
+    assert root.findall(".//c:Налог/c:Ставка", ns)
+    assert all(node.text == rate for node in root.findall(".//c:Налог/c:Ставка", ns))
+    requisites = {item.findtext("c:Наименование", namespaces=ns): item.findtext("c:Значение", namespaces=ns)
+                  for item in root.findall("c:Документ/c:ЗначенияРеквизитов/c:ЗначениеРеквизита", ns)}
+    assert requisites["Статус заказа"] == "Исполнен"
+    assert requisites["Налоговая база"] == "Включая НДС"
+    rows = list(csv.DictReader(io.StringIO(order_csv(deal, *companies).decode("utf-8-sig")), delimiter=";"))
+    assert all(row["Ставка НДС, %"] == rate and row["Налоговая база"] == "Включая НДС" for row in rows)
+    expected = [line for line in deal.commercial_snapshot["estimate"]["lines"] if line["code"] in {"goods", "delivery"}]
+    assert [Decimal(row["НДС в сумме, ₽"]) for row in rows] == [Decimal(line["included_vat_rub"]) for line in expected]
+
+
+def test_exact_csv_fallback_preserves_vat_and_no_vat_stays_empty():
+    from app.commercial import estimate
+    deal, companies = example("0.123456789123", 1000)
+    deal.commercial_snapshot["estimate"] = estimate(
+        units=1000, unit_price="0.123456789123", delivery="100",
+        terms={"delivery_method": "separate", "delivery_conditions": "Тестовый адрес", "tax_basis": "includes_vat", "vat_rate_pct": "20"},
+        buyer=deal.buyer_company_id, seller=deal.seller_company_id, source={"type": "test"})
+    with pytest.raises(HTTPException):
+        commerceml(deal, *companies)
+    rows = list(csv.DictReader(io.StringIO(order_csv(deal, *companies).decode("utf-8-sig")), delimiter=";"))
+    assert rows[0]["Цена"] == "0.123456789123"
+    assert rows[0]["Ставка НДС, %"] == "20"
+    assert Decimal(rows[0]["НДС в сумме, ₽"]) == Decimal(deal.commercial_snapshot["estimate"]["lines"][0]["included_vat_rub"])
+    plain, companies = example()
+    rows = list(csv.DictReader(io.StringIO(order_csv(plain, *companies).decode("utf-8-sig")), delimiter=";"))
+    assert all(row["Налоговая база"] == "Без НДС" and row["Ставка НДС, %"] == "" and row["НДС в сумме, ₽"] == "" for row in rows)
+
+
+@pytest.mark.parametrize("prefix", ["\v", "\f", "\x00", "\x1f", "\u200b", "\ufeff", " \u202e\t", "\u00a0"])
+def test_csv_formula_protection_covers_control_and_unicode_prefixes(prefix):
+    text = prefix + "=1+1"
+    row = next(csv.reader(io.StringIO(csv_bytes([[text]]).decode("utf-8-sig")), delimiter=";"))
+    assert row == ["'" + text]

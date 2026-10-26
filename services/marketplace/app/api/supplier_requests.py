@@ -252,8 +252,12 @@ async def send_message(request_id: uuid.UUID, data: MessageIn, user: CurrentUser
     message = SupplierRequestMessage(request_id=row.id, author_company_id=data.company_id, author_user_id=user.id, request_key=data.request_key, message=data.message)
     db.add(message)
     recipient = row.seller_company_id if data.company_id == row.buyer_company_id else row.buyer_company_id
-    permission = "can_sell" if recipient == row.seller_company_id else "can_buy"
-    recipients = (await db.scalars(text(f"SELECT DISTINCT user_id FROM auth.company_members WHERE company_id=:id AND {permission}=true"), {"id": recipient})).all()
+    recipient_query = (
+        text("SELECT DISTINCT user_id FROM auth.company_members WHERE company_id=:id AND can_sell=true")
+        if recipient == row.seller_company_id else
+        text("SELECT DISTINCT user_id FROM auth.company_members WHERE company_id=:id AND can_buy=true")
+    )
+    recipients = (await db.scalars(recipient_query, {"id": recipient})).all()
     for user_id in recipients:
         if user_id != user.id:
             await notify(db, user_id, f"Новое сообщение по запросу КП: {row.specification['category']}. Откройте переписку с {'покупателем' if recipient == row.seller_company_id else 'поставщиком'}.")

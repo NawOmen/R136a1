@@ -81,6 +81,7 @@ export default function SupplierConversation({ row, companyId, canManage, onChan
   }
   return <section className="supplier-workspace" aria-label="Работа с поставщиком" aria-busy={busy}>
     <header className="supplier-workspace__heading"><div><h3>{buyer ? row.seller_name : row.buyer_name}</h3><p className="hint">{row.specification.category} · {formatUnits(row.specification.quantity, row.specification.unit)} · до {formatDate(row.specification.deadline_date)}</p></div><button type="button" className="btn btn-secondary btn-sm" disabled={busy} onClick={() => void perform(async () => { await Promise.all([reload(), onChanged()]); setNotice("Переписка обновлена."); })}>Обновить</button></header>
+    {!buyer && <p className="hint">Доска ответов и заметки покупателя приватны. Согласованные условия — в КП и заказе.</p>}
     {error && <p className="alert alert-error" role="alert">{error}</p>}
     {notice && <p className="hint" role="status">{notice}</p>}
     <div className={`supplier-workspace__columns${buyer && row.status !== "draft" ? "" : " supplier-workspace__columns--single"}`}>

@@ -110,7 +110,7 @@ async def test_order_export_checks_parties_and_uses_frozen_terms(client,workspac
     offer=Offer(need_id=need.id,company_id=w['seller'],price_rub=Decimal(price),available_units=100,lead_time_days=5,delivery_cost_rub=100,moq_units=1)
     db_session.add(offer);await db_session.flush()
     total=amount(Decimal(price)*100)+100
-    value=estimate(units=100,unit_price=price,delivery=100,terms={'delivery_method':'separate','delivery_conditions':'Тестовый адрес','tax_basis':'no_vat'},buyer=w['buyer'],seller=w['seller'],source={'type':'offer','id':str(offer.id),'revision':1})
+    value=estimate(units=100,unit_price=price,delivery=100,terms={'delivery_method':'separate','delivery_conditions':'Тестовый адрес','tax_basis':'includes_vat','vat_rate_pct':'20'},buyer=w['buyer'],seller=w['seller'],source={'type':'offer','id':str(offer.id),'revision':1})
     deal=Deal(offer_id=offer.id,need_id=need.id,buyer_company_id=w['buyer'],seller_company_id=w['seller'],units=100,total_price_rub=total,unit_price_rub=Decimal(price),commercial_snapshot=frozen_snapshot(estimate_value=value,need=need,offer=offer))
     db_session.add(deal);await db_session.commit()
     path=f'/api/v3/deals/{deal.id}/export-1c'
@@ -121,7 +121,11 @@ async def test_order_export_checks_parties_and_uses_frozen_terms(client,workspac
         again=await client.get(f'{path}?company_id={w["seller"]}',headers=w['headers'][1])
         assert again.content==first.content and b'700.00' in again.content
         assert first.headers['x-export-contract']=='porukam-1c-1'
+        assert '<Ставка>20</Ставка>' in first.text and '2E+1' not in first.text
     else:
         precise=await client.get(f'{path}?company_id={w["buyer"]}&format=csv',headers=w['headers'][0])
         assert precise.status_code==200 and price in precise.content.decode('utf-8-sig')
+        import csv, io
+        records=list(csv.DictReader(io.StringIO(precise.content.decode('utf-8-sig')),delimiter=';'))
+        assert records[0]['Ставка НДС, %']=='20' and records[0]['НДС в сумме, ₽']
     assert (await client.get(f'{path}?company_id={w["other"]}',headers=w['headers'][2])).status_code==404
