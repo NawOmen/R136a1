@@ -292,6 +292,8 @@ export default function NeedDetailPage() {
         </section>
       )}
 
+      {isBuyer && need.status === "matched" && !deal && <section className="card"><h2>Предложение выбрано</h2><p className="hint">Продолжите согласование получения и исполнение в заказах.</p><Link href="/deals" prefetch={false} className="btn btn-primary">Перейти к заказам</Link></section>}
+
       {deal && (
         <section className="card">
           <div className="company-row">
@@ -302,6 +304,7 @@ export default function NeedDetailPage() {
             Объём: {formatUnits(deal.units, itemUnit(need?.characteristics))} · Сумма: {formatRub(deal.total_price_rub)}
           </p>
           <CommercialEstimate value={deal.commercial_snapshot?.estimate} />
+          <Link href={`/deals?deal=${deal.id}`} prefetch={false} className="btn btn-primary">Открыть заказ</Link>
         </section>
       )}
 

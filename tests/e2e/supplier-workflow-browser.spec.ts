@@ -120,3 +120,17 @@ test('desktop board drag moves a supplier card smoothly',async({page,isMobile})=
   await page.locator('.supplier-card').dragTo(page.getByRole('region',{name:'Получен ответ',exact:true}));
   await expect(page.getByRole('region',{name:'Получен ответ',exact:true}).locator('.supplier-card')).toHaveCount(1);
 });
+
+
+test('matched need keeps the next step to orders after reload', async ({page}, testInfo) => {
+  await prepare(page);
+  await page.route(url => url.pathname.startsWith("/api/") && url.pathname.endsWith(`/needs/${needId}`), route => route.fulfill({json:{...need,status:'matched'}}));
+  await page.goto(`/needs/${needId}`);
+  await expect(page.getByRole('heading',{name:'Предложение выбрано',exact:true})).toBeVisible();
+  await expect(page.getByRole('link',{name:'Перейти к заказам',exact:true})).toHaveAttribute('href','/deals');
+  // Complete initial navigation/prefetch before testing persistence across reload.
+  await page.waitForLoadState('networkidle');
+  if (['desktop-chromium','iphone-webkit'].includes(testInfo.project.name)) await page.locator('section.card').filter({has:page.getByRole('heading',{name:'Предложение выбрано',exact:true})}).screenshot({path:`output/procurement-qa/final-next-step-${testInfo.project.name}.png`,style:'.site-header,.skip-link{visibility:hidden!important}'});
+  await page.reload();
+  await expect(page.getByRole('link',{name:'Перейти к заказам',exact:true})).toBeVisible();
+});

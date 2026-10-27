@@ -1,3 +1,4 @@
+import { canonicalCharacteristicKey } from "../../apps/web/app/lib/categoryProfiles";
 import { formatDate } from "../../apps/web/app/lib/dates";
 import { expect, test, type Page } from "@playwright/test";
 
@@ -19,11 +20,37 @@ async function login(page: Page, role: "BUYER" | "SELLER" | "ADMIN") {
   await page.getByLabel("Пароль", { exact: false }).fill(password(role));
   await page.getByRole("button", { name: "Войти", exact: true }).click();
   await expect(page).toHaveURL(/\/dashboard/);
+  if (role !== "ADMIN") {
+    const token = await page.evaluate(() => localStorage.getItem("token"));
+    const response = await page.request.get("http://localhost:8001/api/v1/auth/me", {headers:{Authorization:`Bearer ${token}`}});
+    expect(response.ok()).toBeTruthy();
+    const companies = (await response.json()).companies;
+    expect(companies.length).toBeGreaterThan(0);
+    expect(companies.every((company:{inn:string}) => company.inn.startsWith("000")), "Только синтетические компании; рабочие данные не изменять").toBe(true);
+  }
 }
 
 // Две независимые сессии и настоящий backend: предложение не является продажей;
 // приёмка после отгрузки меняет количество, а себестоимость доступна только продавцу.
 const boltSpecification = { unit: "шт", thread: "М8", material: "сталь", product_kind: "болт", diameter_mm: 8, standard: "синтетическая спецификация Б-01", length_mm: 40, strength_class: "8.8" };
+
+
+async function fillBoltFields(page: Page) {
+  for (const [key, value] of Object.entries(boltSpecification)) {
+    let index = (await page.locator('.need-property input[aria-label$=": название"]').evaluateAll(inputs => inputs.map(input => (input as HTMLInputElement).value))).findIndex(name => canonicalCharacteristicKey(name) === key);
+    if (index < 0) {
+      await page.getByRole("button", {name:"+ Добавить характеристику",exact:true}).click();
+      const picker = page.getByLabel("Добавить характеристику категории", {exact:true});
+      if (await picker.locator(`option[value="${key}"]`).count()) await picker.selectOption(key);
+      else await page.getByRole("button", {name:"Своё поле",exact:true}).click();
+      index = await page.locator('.need-property').count() - 1;
+      await page.getByLabel(`Характеристика ${index+1}: название`, {exact:true}).fill(key);
+    }
+    const field = page.getByLabel(new RegExp(`^Характеристика ${index+1}: значение`));
+    if (await field.evaluate(element => element.tagName === "SELECT")) await field.selectOption(String(value));
+    else await field.fill(String(value));
+  }
+}
 
 // A real, blank one-page PDF; only synthetic fixture data is uploaded.
 function syntheticSpecificationPdf() {
@@ -76,10 +103,12 @@ async function recordFulfillment(page: Page, action: string, button: string, val
   await expect(page.getByText("Действие записано. Количества и история обновлены.", {exact: true})).toBeVisible();
 }
 
-for (const classified of [false, true]) {
-test(`${classified ? "Точная классификация через API" : "Категория и подкатегория из формы"}: заказ → отгрузка → приёмка → прибыль`, async ({ page, browser }) => {
-  test.setTimeout(180_000);
-  const sellerContext = await browser.newContext({ baseURL: process.env.BASE_URL || "http://localhost:3000" });
+for (const mode of ["manual", "classified", "live-ai"] as const) {
+const classified = mode === "classified";
+test(`${mode === "live-ai" ? "Живая локальная модель" : classified ? "Точная классификация через API" : "Категория и подкатегория из формы"}: заказ → отгрузка → приёмка → прибыль`, async ({ page, browser }) => {
+  test.skip(mode === "live-ai" && process.env.RUN_LIVE_CORE_FLOW !== "1", "Для живой модели нужен RUN_LIVE_CORE_FLOW=1 и отдельный синтетический стенд");
+  test.setTimeout(mode === "live-ai" ? 600_000 : 180_000);
+  const sellerContext = await browser.newContext({ baseURL: process.env.BASE_URL || "http://localhost:3000", recordVideo: mode === "live-ai" ? {dir: test.info().outputPath("seller-video")} : undefined });
   const seller = await sellerContext.newPage();
   try {
     await login(page, "BUYER");
@@ -96,7 +125,7 @@ test(`${classified ? "Точная классификация через API" : 
       const addresses = await addressResponse.json();
       const deadline = new Date(); deadline.setUTCDate(deadline.getUTCDate() + 30);
       const created = await page.request.post("http://localhost:8002/api/v1/needs", { headers, data: {
-        company_id: company.id, category: "Крепёж", characteristics: boltSpecification,
+        company_id: company.id, category: "Строительство", subcategory: "Крепёж", characteristics: boltSpecification,
         volume_units: 200, budget_rub: 5000, deadline_date: deadline.toISOString().slice(0, 10),
         delivery_address_id: (Array.isArray(addresses) ? addresses : addresses.items)[0].id, visibility: "open_anonymized",
       } });
@@ -106,23 +135,39 @@ test(`${classified ? "Точная классификация через API" : 
       needUrl = new URL(`/needs/${need.id}`, page.url()).toString();
     } else {
     await page.goto("/needs/new");
-    await page.getByRole("button", { name: "Заполнить вручную", exact: true }).click();
-    await page.locator("#category").selectOption("Строительство");
-    await page.getByLabel("Подкатегория", { exact: false }).selectOption("Крепёж");
-    for (const [index, [key, value]] of Object.entries(boltSpecification).entries()) {
-      if (index >= 2) await page.getByRole("button", { name: "+ Добавить характеристику", exact: true }).click();
-      await page.getByLabel(`Характеристика ${index + 1}: название`, { exact: true }).fill(key);
-      await page.getByLabel(`Характеристика ${index + 1}: значение`, { exact: true }).fill(String(value));
+    const deadline = new Date(); deadline.setDate(deadline.getDate() + 30);
+    const day = `${deadline.getFullYear()}-${String(deadline.getMonth()+1).padStart(2,"0")}-${String(deadline.getDate()).padStart(2,"0")}`;
+    if (mode === "live-ai") {
+      await page.getByLabel("Что требуется купить", {exact:true}).fill(`Нужно купить 200 болтов М8×40, класс прочности 8.8, материал сталь, диаметр 8 мм, длина 40 мм. Стандарт: синтетическая спецификация Б-01. Единица заказа: шт. Бюджет 5000 рублей. Получить до ${formatDate(day)}. Категория Строительство, Крепёж.`);
+      const analysis = page.waitForResponse(response => response.request().method() === "POST" && /\/buyer-agent\/runs$/.test(new URL(response.url()).pathname), {timeout:240_000});
+      await page.getByRole("button", {name:"Заполнить с ИИ",exact:true}).click();
+      const response = await analysis;
+      expect(response.status(), "Живой Gateway должен успешно разобрать запрос; ручной fallback не является прохождением").toBe(201);
+      const run = await response.json();
+      expect(run.used_route).toBe("local_qwen");
+      expect(run.result.can_confirm, "Проверьте вопросы и качество локального извлечения; тест не подменяет ответ модели").toBe(true);
+      expect(run.result.conflicts).toEqual([]);
+      const extracted = Object.fromEntries(run.result.properties.map((property: {key:string;value:unknown}) => [property.key,property.value]));
+      expect(Number(extracted.quantity ?? extracted.volume_units)).toBe(200);
+      await expect(page.getByRole("heading", {name:"Детали закупки",exact:true})).toBeVisible();
+      await expect(page.locator("#volume_units")).toHaveValue("200");
+      await expect(page.locator("#budget_rub")).toHaveValue("5000");
+      await expect(page.locator("#category")).toHaveValue("Строительство");
+      await expect(page.locator("#subcategory")).toHaveValue("Крепёж");
+    } else {
+      await page.getByRole("button", { name: "Заполнить вручную", exact: true }).click();
+      await page.locator("#category").selectOption("Строительство");
+      await page.getByLabel("Вид товара", {exact:true}).selectOption("Крепёж");
     }
-    await page.getByLabel("Количество единиц заказа", { exact: false }).fill("200");
-    await page.getByLabel("Бюджет, ₽", { exact: false }).fill("5000");
-    const deadline = new Date();
-    deadline.setUTCDate(deadline.getUTCDate() + 30);
-    await page.getByLabel("Срок выполнения", { exact: false }).fill(formatDate(deadline.toISOString().slice(0, 10)));
+    // Buyer review is explicit and applies to the extracted or manually entered specification.
+    await fillBoltFields(page);
+    await page.getByLabel("Количество", { exact: true }).fill("200");
+    await page.getByLabel("Бюджет, ₽", { exact: true }).fill("5000");
+    await page.getByLabel("Получить до", { exact: true }).fill(formatDate(day));
     const address = page.getByLabel("Адрес доставки", { exact: false });
     await expect(address.locator('option:not([value=""])').first()).toBeAttached();
     await address.selectOption(await address.locator('option:not([value=""])').first().getAttribute("value") as string);
-    await page.getByRole("button", { name: "Создать и опубликовать", exact: true }).click();
+    await page.getByRole("button", { name: "Подтвердить и опубликовать", exact: true }).click();
     await expect(page).toHaveURL(/\/needs\/[0-9a-f-]+/);
     needUrl = page.url();
     }
@@ -170,6 +215,7 @@ test(`${classified ? "Точная классификация через API" : 
     const selectionResponse = await selected;
     expect(selectionResponse.status(), await selectionResponse.text()).toBe(201);
     const dealId = (await selectionResponse.json()).id;
+    await expect(page.getByRole("link",{name:"Открыть заказ",exact:true})).toHaveAttribute("href",`/deals?deal=${dealId}`);
     await expect(page.getByRole("heading", { name: "Сделка заключена", exact: true })).toBeVisible();
 
     await seller.goto("/deals");
@@ -283,7 +329,7 @@ test("продавец без права покупки не создаёт по
   await login(page, "SELLER");
   await page.goto("/needs/new");
   await expect(page.getByText('У вас нет компании с правом «Покупаю». Создайте компанию и включите режим покупки.', { exact: true })).toBeVisible();
-  await expect(page.getByRole("button", { name: "Создать и опубликовать", exact: true })).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "Подтвердить и опубликовать", exact: true })).toHaveCount(0);
 });
 
 test("карточки каталога, производителя и своей компании", async ({ page }) => {
