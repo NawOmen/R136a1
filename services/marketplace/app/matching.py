@@ -99,6 +99,26 @@ def _need_parts(need: Need) -> tuple[dict, dict, dict, dict]:
     return common, hard, flexible, individual
 
 
+def additional_matching_keys(need: Need) -> list[str]:
+    """Explain custom constraints without silently weakening their matching."""
+    from .category_characteristics import characteristic_profile
+    fields = (getattr(need, "category_profile", None) or {}).get("fields")
+    if fields is None:
+        profile = characteristic_profile(need.category, need.subcategory)
+        if profile is None:
+            return []
+        fields = profile["fields"]
+    return sorted(set(_need_parts(need)[0]) - set(fields) - {"unit", "category_profile_version"})
+
+
+def need_matching_warnings(need: Need) -> list[str]:
+    if not additional_matching_keys(need):
+        return []
+    return ["Дополнительные характеристики вне профиля категории обязательны при подборе. "
+            "Если паспорт производителя их не подтверждает, он не увидит запрос. "
+            "Проверьте характеристики и удалите ненужные через изменение требований."]
+
+
 def _tokens(value: str) -> set[str]:
     return {item for item in re.findall(r"[а-яёa-z0-9]+", value.lower()) if len(item) > 2}
 

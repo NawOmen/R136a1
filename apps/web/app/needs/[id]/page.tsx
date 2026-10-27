@@ -262,9 +262,10 @@ export default function NeedDetailPage() {
         <section className="need-match-note"><Icon name="search" size={24} /><div><h2>Подбираем подходящее производство</h2><p>{ownedNeed.no_match_reason}</p><Link href="/catalog">Посмотреть товары в каталоге →</Link></div></section>
       )}
 
+      {ownedNeed?.matching_warnings?.map(warning => <p className="alert alert-warning" role="status" key={warning}>{warning}</p>)}
+
       {!isBuyer && !!need.requirement_decisions?.length && <section className="card"><h2>Уточнения покупателя</h2><p>В текущей версии покупатель разрешил противоречия в этих требованиях:</p>{need.requirement_decisions.map(item => <p key={item.field}>{formatCharacteristics({ [item.field]: item.confirmed_value }, need.category_profile)}</p>)}</section>}
       {isBuyer && ownedNeed && <details className="card need-disclosure"><summary>Требования, источники и история</summary><NeedRequirements key={`${need.id}:${need.revision}`} need={ownedNeed} addresses={addresses} /></details>}
-      {isBuyer && ownedNeed && <SupplierBoard key={`${need.id}:${ownedNeed.company_id}`} needId={need.id} companyId={ownedNeed.company_id} needRevision={need.revision} canManage={buyerCompany?.membership?.is_admin === true} />}
       {isBuyer && ownedNeed && buyerCompany?.membership?.is_admin && ["open_for_offers", "waiting_for_match", "coalition_candidate", "awaiting_approvals"].includes(need.status) && (
         <details className="card need-disclosure"><summary>Изменить требования</summary><NeedDraftEditor key={`${need.id}:${need.revision}`} need={ownedNeed} onSaved={async value => { setNeed(value); const token = getToken(); if (token) setOffers(await marketplace.getOffers(token, value.id)); }} /></details>
       )}
@@ -398,6 +399,8 @@ export default function NeedDetailPage() {
           </ul>
         )}
       </section>
+
+      {isBuyer && ownedNeed && <SupplierBoard key={`${need.id}:${ownedNeed.company_id}`} needId={need.id} companyId={ownedNeed.company_id} needRevision={need.revision} canManage={buyerCompany?.membership?.is_admin === true} />}
 
       {variants.length > 0 && (
         <section className="card">

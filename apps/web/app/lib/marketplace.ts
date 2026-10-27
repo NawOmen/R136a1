@@ -291,6 +291,7 @@ export interface Need {
   status: NeedStatus;
   valid_until: string | null;
   no_match_reason: string | null;
+  matching_warnings?: string[];
   confirmed_at: string | null;
   files: NeedFile[];
 }

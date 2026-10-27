@@ -649,6 +649,7 @@ class NeedOut(BaseModel):
     status: str
     valid_until: date | None
     no_match_reason: str | None
+    matching_warnings: list[str] = Field(default_factory=list)
     confirmed_at: datetime | None
     files: list[NeedFileOut] = Field(default_factory=list)
 

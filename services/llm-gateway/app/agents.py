@@ -47,6 +47,8 @@ lead_time_days, delivery_city, mandatory_requirements.
 Не подменяй количество единицей и не выводи единицу из названия изделия:
 «200 болтов» подтверждает количество, но «шт» требует явного указания или ответа человека.
 Не превращай дату доставки в число дней без известной даты отсчёта.
+Для крепежа класс прочности сохраняй как strength_class, не grade.
+Дата доставки — delivery_date, организационное поле, не характеристика изделия.
 Для материала и покрытия
 сохраняй совместимые ключи body_material и inner_coating; остальные — из справочника.
 Для бумажных стаканов: volume_ml, print, top_diameter_mm, bottom_diameter_mm, height_mm.
@@ -70,6 +72,7 @@ LABELS = {
     "product_type": "Тип изделия",
     "material_grade": "Марка материала",
     "complexity": "Сложность и операции",
+    "strength_class": "Класс прочности",
     "diameter_mm": "Диаметр, мм",
     "length_mm": "Длина, мм",
     "packaging": "Упаковка",
@@ -92,6 +95,7 @@ ALIASES = {
     "бюджет": "budget_rub",
     "срок": "lead_time_days",
     "город": "delivery_city",
+    "класс_прочности": "strength_class",
 }
 
 PLACEHOLDER_VALUES = {
@@ -295,10 +299,13 @@ def unit_evidence_support(value: FactValue, excerpt: str) -> bool:
     )
 
 
-def normalize_quantity_keys(extraction: RawExtraction) -> RawExtraction:
+def normalize_fact_keys(extraction: RawExtraction) -> RawExtraction:
     facts = []
+    fasteners = canonical_category(extraction.category).casefold().replace("ё", "е") == "крепеж"
     for fact in extraction.facts:
         key = _canonical_key(fact.key)
+        if fasteners and key in {"grade", "класс"}:
+            key = "strength_class"
         value = fact.value
         # Repair the observed model error unit=5000 without inventing a unit.
         # The existing numeric evidence check still verifies the original quote.
@@ -319,7 +326,7 @@ def merge_facts(
     sources: list[SourceDescriptor],
     warnings: list[str],
 ) -> tuple[list[RequirementProperty], list[RequirementConflict], list[ClarificationQuestion]]:
-    extraction = normalize_quantity_keys(normalize_dimensions(extraction, sources))
+    extraction = normalize_fact_keys(normalize_dimensions(extraction, sources))
     source_map = {source.id: source for source in sources}
     grouped: dict[str, list] = defaultdict(list)
     for fact in extraction.facts:

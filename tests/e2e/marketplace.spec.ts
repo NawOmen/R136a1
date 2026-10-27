@@ -104,6 +104,20 @@ async function recordFulfillment(page: Page, action: string, button: string, val
   await expect(page.getByText("Действие записано. Количества и история обновлены.", {exact: true})).toBeVisible();
 }
 
+async function checkSyntheticStock(seller: Page) {
+  const token = await seller.evaluate(() => localStorage.getItem("token"));
+  const headers = { Authorization: `Bearer ${token}` };
+  const me = await seller.request.get("http://localhost:8001/api/v1/auth/me", { headers });
+  expect(me.ok()).toBeTruthy();
+  const company = (await me.json()).companies[0];
+  const response = await seller.request.get(`http://localhost:8002/api/v1/companies/${company.id}/products`, { headers });
+  expect(response.ok()).toBeTruthy();
+  const body = await response.json();
+  const product = (Array.isArray(body) ? body : body.items).find((item: {name:string}) => item.name === "Болт М8×40, класс 8.8");
+  expect(product, "Для маршрута нужен синтетический болт из seed-каталога").toBeTruthy();
+  expect(product.stock_units, "Каждый прогон расходует 200 шт. Подготовьте остаток на отдельном стенде; повторный seed его не восстанавливает.").toBeGreaterThanOrEqual(200);
+}
+
 for (const mode of ["manual", "classified", "live-ai"] as const) {
 const classified = mode === "classified";
 test(`${mode === "live-ai" ? "Живая локальная модель" : classified ? "Точная классификация через API" : "Категория и подкатегория из формы"}: заказ → отгрузка → приёмка → прибыль`, async ({ page, browser }) => {
@@ -112,6 +126,8 @@ test(`${mode === "live-ai" ? "Живая локальная модель" : clas
   const sellerContext = await browser.newContext({ baseURL: process.env.BASE_URL || "http://localhost:3000", recordVideo: mode === "live-ai" ? {dir: test.info().outputPath("seller-video")} : undefined });
   const seller = await sellerContext.newPage();
   try {
+    await login(seller, "SELLER");
+    await checkSyntheticStock(seller);
     await login(page, "BUYER");
     await expect(page.getByRole("heading", { name: "Личный кабинет", exact: true })).toBeVisible();
     let needUrl: string;
@@ -176,7 +192,6 @@ test(`${mode === "live-ai" ? "Живая локальная модель" : clas
     }
     const needId = new URL(needUrl).pathname.split("/").at(-1)!;
 
-    await login(seller, "SELLER");
     await reviewSyntheticBoltSpecification(seller);
     if (classified) {
       // КП готовится API-fixture: отдельный тест проверяет полноту ленты продавца.
@@ -193,8 +208,28 @@ test(`${mode === "live-ai" ? "Живая локальная модель" : clas
         commercial_terms: {delivery_method: "separate", tax_basis: "no_vat", vat_rate_pct: null, delivery_conditions: "Синтетический адрес получателя, Россия", expenses: []},
       } })).status()).toBe(201);
     } else {
+    const sellerToken = await seller.evaluate(() => localStorage.getItem("token"));
+    const headers = { Authorization: `Bearer ${sellerToken}` };
+    const me = await seller.request.get("http://localhost:8001/api/v1/auth/me", { headers });
+    expect(me.ok()).toBeTruthy();
+    const company = (await me.json()).companies[0];
+    const feed = await seller.request.get(`http://localhost:8002/api/v3/needs?seller_company_id=${company.id}`, { headers });
+    expect(feed.ok()).toBeTruthy();
+    const feedBody = await feed.json();
+    const visible = (Array.isArray(feedBody) ? feedBody : feedBody.items).some((need: {id:string}) => need.id === needId);
+    if (!visible) {
+      const buyerToken = await page.evaluate(() => localStorage.getItem("token"));
+      const diagnostic = await page.request.get(`http://localhost:8002/api/v3/needs/${needId}`, {headers:{Authorization:`Bearer ${buyerToken}`}});
+      const need = diagnostic.ok() ? await diagnostic.json() : {};
+      await test.info().attach("Причина отсутствия в ленте", {contentType:"application/json", body:JSON.stringify({
+        need_id:needId, status:need.status, characteristics:need.characteristics, no_match_reason:need.no_match_reason,
+        matching_warnings:need.matching_warnings,
+      },null,2)});
+    }
+    expect(visible, "Опубликованная потребность должна быть в ленте продавца. См. характеристики и причину подбора в приложении к отчёту.").toBe(true);
     await seller.goto("/seller/requests");
     const card = seller.locator(`li.demand-card[data-need-id="${needId}"]`);
+    await expect(card, "Продавец должен видеть карточку опубликованной потребности").toBeVisible();
     await card.getByRole("button", { name: "Предложить условия", exact: true }).click();
     await seller.locator(`#offer_price_${needId}`).fill("12");
     await seller.locator(`#offer_resource_${needId}`).selectOption("stock");

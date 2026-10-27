@@ -445,3 +445,45 @@ test("live walkthrough records explicit buyer clarifications without claiming mo
   await expect(page.locator("#volume_units")).toHaveValue("200");
   await page.screenshot({path:test.info().outputPath("clarifications.png"),fullPage:true});
 });
+
+
+test("AI field aliases and organisational dates cannot silently change seller matching", async ({ page }) => {
+  await prepare(page);
+  const facts = [
+    ["unit","шт"], ["grade","8.8"], ["класс прочности","8.8"], ["strength_class","8.8"],
+    ["thread","М8"], ["body_material","сталь"], ["standard","синтетическая спецификация Б-01"],
+    ["length_mm","40"], ["diameter_mm","8"], ["product_type","болт"],
+    ["delivery_date","26.11.26"], ["особое требование","согласовать образец"],
+    ["quantity_units",200], ["budget_rub",5000], ["lead_time_days",30], ["delivery_city","Москва"],
+  ];
+  const run = {id:"00000000-0000-4000-8000-000000000096",revision:1,state:"ready_for_review",used_route:"local_qwen",tool_calls:[],
+    result:{category:"Крепёж",summary:"Проверьте требования",can_confirm:true,questions:[],conflicts:[],warnings:[],matches:[],
+      properties:facts.map(([key,value])=>({key,value,label:key,status:"confirmed",confidence:.99,sources:[]}))}};
+  let submitted: {characteristics:Record<string,string>} | null = null;
+  await page.route("**/api/**", route => {
+    const path = new URL(route.request().url()).pathname;
+    if (path.endsWith("/auth/me")) return route.fulfill({json:{user,companies}});
+    if (path.endsWith("/addresses")) return route.fulfill({json:[{id:"address",city:"Москва",address:"Синтетический адрес, 1",region:"Москва"}]});
+    if (path.endsWith("/buyer-agent/runs")) return route.fulfill({status:201,json:run});
+    if (path.endsWith("/confirm")) return route.fulfill({json:{...run,revision:2,state:"confirmed_by_user"}});
+    if (path.endsWith("/physical/needs") && route.request().method()==="POST") {
+      submitted = route.request().postDataJSON();
+      return route.fulfill({status:409,json:{detail:"Синтетическая остановка после проверки запроса"}});
+    }
+    if (path.endsWith("/physical-quantities/preview")) return route.fulfill({json:{conversion:{factor:1}}});
+    return route.fulfill({json:[]});
+  });
+  await page.reload(); await expect(page.locator("#company_id")).toHaveValue(companies[0].id);
+  await page.locator("#request_description").fill("Нужно 200 болтов, класс прочности 8.8, особое требование: согласовать образец");
+  await page.getByRole("button",{name:"Заполнить с ИИ",exact:true}).click();
+  await expect(page.getByRole("heading",{name:"Детали закупки",exact:true})).toBeVisible();
+  await expect(page.getByRole("status").filter({hasText:"Дополнительные характеристики:"})).toContainText("обязательны при подборе");
+  await page.getByRole("button",{name:"Подтвердить и опубликовать",exact:true}).click();
+  await expect.poll(()=>submitted).not.toBeNull();
+  const characteristics = submitted!.characteristics;
+  expect(characteristics).toEqual({unit:"шт",strength_class:"8.8",thread:"М8",material:"сталь",standard:"синтетическая спецификация Б-01",
+    length_mm:"40",diameter_mm:"8",product_kind:"болт","особое требование":"согласовать образец"});
+  expect(characteristics).not.toHaveProperty("grade");
+  expect(characteristics).not.toHaveProperty("delivery_date");
+  await page.screenshot({path:test.info().outputPath("reviewed-ai-fields.png"),fullPage:true});
+});

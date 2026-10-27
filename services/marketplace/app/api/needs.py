@@ -25,7 +25,7 @@ from ..deps import (
 )
 from ..models import CapabilityPassport, DeliveryAddress, Need, NeedFile, Product
 from ..matching import ACTIVE_NEED_STATUSES, need_is_current, order_unit, run_market_rematch
-from ..matching import _need_parts, _passport_matches
+from ..matching import _need_parts, _passport_matches, need_matching_warnings
 from ..experience import notify_market_watchers
 from ..schemas import NeedFeedOut, NeedFileOut, NeedIn, NeedOut, NeedEditIn
 from ..file_safety import canonical_media_type, validate_upload
@@ -73,6 +73,7 @@ def _need_out(need: Need, files: list[NeedFile] | None = None) -> NeedOut:
         status=need.status,
         valid_until=need.valid_until,
         no_match_reason=need.no_match_reason,
+        matching_warnings=need_matching_warnings(need),
         confirmed_at=need.confirmed_at,
         files=[NeedFileOut.model_validate(f) for f in (files or [])],
     )

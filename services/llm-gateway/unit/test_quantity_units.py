@@ -69,3 +69,25 @@ def test_all_registry_units_have_a_supported_canonical_spelling():
     for category in REGISTRY["categories"]:
         for unit in category["units"]:
             assert unit_value(unit) == unit
+
+
+@pytest.mark.parametrize("key", ["grade", "класс прочности", "класс", "strength_class"])
+def test_fastener_strength_aliases_share_one_key_and_preserve_evidence(key):
+    props, conflicts, _ = merge(key, "8.8", "Класс прочности 8.8")
+    assert props["strength_class"].value == "8.8"
+    assert props["strength_class"].status == "confirmed"
+    assert props["strength_class"].sources[0].excerpt == "Класс прочности 8.8"
+    assert not conflicts
+    if key != "strength_class": assert key not in props
+
+
+def test_grade_of_other_categories_remains_material_grade():
+    props, _, _ = merge("grade", "А500С", "Марка А500С", category="Металлы")
+    assert props["grade"].value == "А500С" and "strength_class" not in props
+
+
+def test_strength_aliases_do_not_hide_contradictory_values():
+    other = RawFact(key="strength_class", value="10.9", source_id="text", confidence=.99, evidence="8.8 или 10.9")
+    props, conflicts, _ = merge("grade", "8.8", "8.8 или 10.9", extra=[other])
+    assert props["strength_class"].value is None
+    assert next(conflict for conflict in conflicts if conflict.key == "strength_class").values == ["8.8", "10.9"]
