@@ -51,6 +51,9 @@ async def test_local_gateway_is_read_only_and_rechecks_context(monkeypatch,mode)
         async def structured(self,system,prompt,schema):
             models.append(schema)
             assert 'недоверенные' in system
+            if schema.__name__ == 'DraftText':
+                assert 'дд.мм.гг' in system
+                assert json.loads(prompt)['context']['specification']['deadline_date'] == '10.11.26'
             if mode=='unavailable':raise ModelUnavailable('off')
             if mode=='stale':version[0]=2
             if schema is QuoteProposal:
@@ -81,3 +84,14 @@ async def test_seller_cannot_generate_buyer_rfq(monkeypatch):
     async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app),base_url='http://test') as client:
         response=await client.post('/api/v1/procurement-assistant/draft',json={'company_id':str(COMPANY),'request_id':str(REQUEST),'expected_revision':1,'mode':'rfq'})
     assert response.status_code==403
+
+
+@pytest.mark.parametrize('text,expected', [
+    ('Получить до 26.11.2026 и отгрузить 2026-11-25.', 'Получить до 26.11.26 и отгрузить 25.11.26.'),
+    ('Дата 29.02.2028, следующая 01.03.2028', 'Дата 29.02.28, следующая 01.03.28'),
+    ('КП-2026-11-25, 31.02.2026, ГОСТ 123.45.2026 и цена 2026.11', 'КП-2026-11-25, 31.02.2026, ГОСТ 123.45.2026 и цена 2026.11'),
+    ('Уже короткая дата 26.11.26', 'Уже короткая дата 26.11.26'),
+])
+def test_generated_draft_dates_are_short_without_changing_identifiers_or_invalid_dates(text, expected):
+    from app.procurement_assistant import draft_dates
+    assert draft_dates(text) == expected

@@ -2,7 +2,7 @@ import { completeLiveClarifications } from "./live-core-clarifications";
 import { expect, test, Page } from "@playwright/test";
 const user = { id: "00000000-0000-4000-8000-000000000001", first_name: "Тест", last_name: "Покупатель", account_status: "active" };
 const companies = ["Первая", "Вторая"].map((name, index) => ({ id: `00000000-0000-4000-8000-00000000001${index}`, display_name: name, full_name: name, country: "RU", legal_form: "ООО", verification_status: "verified", membership: { can_buy: true, can_sell: true, is_admin: true } }));
-async function prepare(page: Page) {
+async function prepare(page: Page, configure?: () => Promise<void>) {
   page.on("pageerror", error => { throw error; });
   await page.addInitScript(() => localStorage.setItem("token", "synthetic-browser-test"));
   await page.route("**/api/**", route => {
@@ -13,6 +13,7 @@ async function prepare(page: Page) {
     if (path.endsWith("/buyer-agent/runs")) return route.fulfill({ status: 503, json: { detail: "Локальная модель недоступна" } });
     return route.fulfill({ json: [] });
   });
+  await configure?.();
   await page.goto("/needs/new");
   await expect(page.locator("#company_id")).toHaveValue(companies[0].id);
   await page.waitForLoadState("networkidle");
@@ -448,7 +449,6 @@ test("live walkthrough records explicit buyer clarifications without claiming mo
 
 
 test("AI field aliases and organisational dates cannot silently change seller matching", async ({ page }) => {
-  await prepare(page);
   const facts = [
     ["unit","шт"], ["grade","8.8"], ["класс прочности","8.8"], ["strength_class","8.8"],
     ["thread","М8"], ["body_material","сталь"], ["standard","синтетическая спецификация Б-01"],
@@ -460,6 +460,7 @@ test("AI field aliases and organisational dates cannot silently change seller ma
     result:{category:"Крепёж",summary:"Проверьте требования",can_confirm:true,questions:[],conflicts:[],warnings:[],matches:[],
       properties:facts.map(([key,value])=>({key,value,label:key,status:"confirmed",confidence:.99,sources:[]}))}};
   let submitted: {characteristics:Record<string,string>} | null = null;
+  await prepare(page, async () => {
   await page.route("**/api/**", route => {
     const path = new URL(route.request().url()).pathname;
     if (path.endsWith("/auth/me")) return route.fulfill({json:{user,companies}});
@@ -470,14 +471,18 @@ test("AI field aliases and organisational dates cannot silently change seller ma
       submitted = route.request().postDataJSON();
       return route.fulfill({status:409,json:{detail:"Синтетическая остановка после проверки запроса"}});
     }
-    if (path.endsWith("/physical-quantities/preview")) return route.fulfill({json:{conversion:{factor:1}}});
+    if (path.endsWith("/physical-quantities/preview")) {
+      const request = route.request().postDataJSON();
+      expect(request.values.category).toBe("Строительство"); expect(request.values.subcategory).toBe("Крепёж");
+      return route.fulfill({json:{conversion:{factor:1},matching_warnings:["Дополнительные характеристики вне профиля категории обязательны при подборе."]}});
+    }
     return route.fulfill({json:[]});
   });
-  await page.reload(); await expect(page.locator("#company_id")).toHaveValue(companies[0].id);
+  });
   await page.locator("#request_description").fill("Нужно 200 болтов, класс прочности 8.8, особое требование: согласовать образец");
   await page.getByRole("button",{name:"Заполнить с ИИ",exact:true}).click();
   await expect(page.getByRole("heading",{name:"Детали закупки",exact:true})).toBeVisible();
-  await expect(page.getByRole("status").filter({hasText:"Дополнительные характеристики:"})).toContainText("обязательны при подборе");
+  await expect(page.getByRole("status").filter({hasText:"Дополнительные характеристики вне профиля категории"})).toContainText("обязательны при подборе");
   await page.getByRole("button",{name:"Подтвердить и опубликовать",exact:true}).click();
   await expect.poll(()=>submitted).not.toBeNull();
   const characteristics = submitted!.characteristics;

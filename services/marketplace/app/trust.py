@@ -114,7 +114,7 @@ async def record_human_approval(
     source_refs: list[dict] | None = None,
 ) -> HumanApprovalRecord:
     if decision not in {"approved", "rejected"}:
-        raise ValueError("Решение Human Approval Guard должно быть явным")
+        raise ValueError("Решение контроля человеком должно быть явным")
     approval = HumanApprovalRecord(
         action=action,
         entity_type=entity_type,

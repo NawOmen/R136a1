@@ -155,3 +155,21 @@ async def test_reviewed_ai_specification_reaches_seller_feed_and_custom_constrai
     visible = {need["id"] for need in feed.json()}
     assert ids[0] in visible
     assert not visible.intersection(ids[1:])
+
+
+async def test_matching_preview_and_saved_need_use_the_same_common_and_hard_rules(client, db_session):
+    buyer_user = await make_user(db_session)
+    buyer = await make_company(db_session, buyer_user, can_buy=True, can_sell=False)
+    headers = auth(make_token(buyer_user))
+    for key, value, warned in [("food_contact",True,True), ("mandatory_requirements",["согласовать образец"],True),
+                               ("свой параметр","значение",True), ("material","сталь",False),
+                               ("print","логотип",False), ("volume_tolerance",5,False)]:
+        values = {"category":"Строительство","subcategory":"Крепёж","characteristics":{"unit":"шт",key:value},"volume_units":200}
+        preview = await client.post('/api/v2/physical-quantities/preview',json={"kind":"need","values":{
+            **values,"category_profile":{"fields":{key:{"label":"Клиентское определение"}}}}})
+        assert preview.status_code == 200, preview.text
+        created = await client.post('/api/v3/needs',headers=headers,json={**values,"company_id":str(buyer),
+            "deadline_date":(date.today()+timedelta(days=30)).isoformat(),"budget_rub":5000})
+        assert created.status_code == 201, created.text
+        assert preview.json()["matching_warnings"] == created.json()["matching_warnings"]
+        assert bool(created.json()["matching_warnings"]) is warned

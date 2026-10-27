@@ -728,7 +728,7 @@ async def select_offer(
         actor_user_id=user.id,
         actor_company_id=need.company_id,
         source_refs=[{"type": "need", "id": str(need.id)}, {"type": "offer", "id": str(offer.id)}],
-        explanation="Сделка создана из выбранного действующего предложения после Human Approval.",
+        explanation="Сделка создана из выбранного действующего предложения после подтверждения человеком.",
         payload={**approval_payload, "gmv_rub": total_price},
     )
     await run_market_rematch(db, "offer_selected", offer.id, {"need_id": str(need.id)})

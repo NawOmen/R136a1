@@ -820,7 +820,7 @@ export function characteristicLabel(key: string, profile?: CategoryProfileSnapsh
       return field.label;
     }
   }
-  return registryCharacteristicLabel(key) ?? CHARACTERISTIC_LABELS[key] ?? key;
+  return registryCharacteristicLabel(key) ?? CHARACTERISTIC_LABELS[key] ?? (/[а-яё]/i.test(key) ? key : "Дополнительный параметр");
 }
 
 export function formatCharacteristics(characteristics: Record<string, unknown>, profile?: CategoryProfileSnapshot | null): string {
@@ -1053,7 +1053,7 @@ export const marketplace = {
     return marketplaceFetch(`/api/v1/editor/categories/${publish ? "publish" : "preview"}`, { token, method: "POST", body: JSON.stringify(input) });
   },
   downloadEditorDocument(token: string, id: string): Promise<Blob> { return marketplaceFetchBlob(`/api/v1/editor/documents/${id}/download`, token); },
-  previewPhysicalQuantity(kind: "product" | "need", values: Record<string, unknown>): Promise<{ normalized: Record<string, unknown>; conversion: QuantityConversionPreview }> {
+  previewPhysicalQuantity(kind: "product" | "need", values: Record<string, unknown>): Promise<{ normalized: Record<string, unknown>; conversion: QuantityConversionPreview; matching_warnings?: string[] }> {
     return marketplaceFetch("/api/v2/physical-quantities/preview", { method: "POST", body: JSON.stringify({ kind, values }) });
   },
   getProfileRevision(token: string, kind: "products" | "needs", id: string): Promise<ProfileRevisionPreview> {

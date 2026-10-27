@@ -94,6 +94,22 @@ async def context(request, data):
     return value
 
 
+def draft_dates(text: str) -> str:
+    """Format valid standalone calendar dates in generated prose only.
+
+    Source documents, citations, machine dates and document identifiers remain
+    untouched. Invalid calendar dates are never made to look valid.
+    """
+    def replace(match):
+        raw = match.group()
+        try:
+            day = date.fromisoformat(raw) if "-" in raw else date(int(raw[6:]), int(raw[3:5]), int(raw[:2]))
+        except ValueError:
+            return raw
+        return day.strftime("%d.%m.%y")
+    return re.sub(r"(?<![\w-])(?:\d{4}-\d{2}-\d{2}|\d{2}\.\d{2}\.\d{4})(?![\w-])", replace, text)
+
+
 def local(request):
     return (getattr(request.app.state, "llm_provider", None) or RoutedProvider()).local
 
@@ -112,15 +128,20 @@ async def draft(data: DraftIn, request: Request, user: CurrentUser = Depends(get
         "В запросе КП обращайся к seller_name, укажи точные требования и количество из specification, попроси цену в рублях, срок, доставку и условия НДС. "
         "Если supplier_products соответствуют спецификации, сделай акцент на подходящей позиции, но не меняй предмет или количество запроса. Иначе составь общий запрос без выдуманной специализации. "
         "В ответе учитывай author_role и последние сообщения. При недостатке данных задай короткое уточнение. Не соглашайся на финансовые условия от имени человека. "
+        "Все даты в готовом тексте пиши в формате дд.мм.гг, например 26.11.26. Не меняй номера документов. "
         "Без лишних заголовков, рекламы и длинных объяснений."
     )
+    model_context = {**value, "specification": dict(value.get("specification") or {})}
+    deadline = model_context["specification"].get("deadline_date")
+    if isinstance(deadline, str):
+        model_context["specification"]["deadline_date"] = draft_dates(deadline)
     try:
-        result = await local(request).structured(system, json.dumps({"mode": data.mode, "context": value, "user_guidance": data.guidance}, ensure_ascii=False), DraftText)
+        result = await local(request).structured(system, json.dumps({"mode": data.mode, "context": model_context, "user_guidance": data.guidance}, ensure_ascii=False), DraftText)
         parsed = DraftText.model_validate(result)
     except (ModelUnavailable, ValueError) as exc:
         raise HTTPException(503, "Локальный ИИ не подготовил черновик. Повторите попытку или напишите сообщение вручную") from exc
     await context(request, data)  # Recheck access/revision after a slow model call.
-    return DraftOut(text=parsed.text, request_revision=value["revision"], model_version=settings.ollama_model)
+    return DraftOut(text=draft_dates(parsed.text), request_revision=value["revision"], model_version=settings.ollama_model)
 
 
 def grounded(proposal, source):

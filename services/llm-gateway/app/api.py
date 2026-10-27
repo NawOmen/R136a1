@@ -745,7 +745,7 @@ async def explain_seller_match(
         )
     ).mappings().first()
     if passport is None:
-        raise HTTPException(status.HTTP_409_CONFLICT, detail="Сначала заполните Capability Passport")
+        raise HTTPException(status.HTTP_409_CONFLICT, detail="Сначала заполните паспорт возможностей")
     corpus = str(dict(passport)).lower()
     eligible = any(
         token in corpus
@@ -755,7 +755,7 @@ async def explain_seller_match(
     reasons = (
         ["Категория пересекается с подтверждёнными возможностями производства"]
         if eligible
-        else ["В Capability Passport не найдено явного совпадения категории"]
+        else ["В паспорте возможностей не найдено явного совпадения категории"]
     )
     run = AgentRun(user_id=user.id, company_id=data.company_id, agent_type="seller_agent",
                    state="running", requested_route="local", input_summary="Объяснение совместимости")

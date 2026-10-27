@@ -14,10 +14,14 @@ function password(role: "BUYER" | "SELLER" | "ADMIN"): string {
   return value;
 }
 
+function accountEmail(role: "BUYER" | "SELLER" | "ADMIN"): string {
+  return process.env[`E2E_${role}_EMAIL`] || ({BUYER:"demo@demo.ru",SELLER:"seller@demo.ru",ADMIN:"admin@demo.ru"})[role];
+}
+
 async function login(page: Page, role: "BUYER" | "SELLER" | "ADMIN") {
   page.setDefaultTimeout(15_000);
   await page.goto("/login");
-  await page.getByLabel("Электронная почта", { exact: false }).fill(role === "BUYER" ? "demo@demo.ru" : role === "SELLER" ? "seller@demo.ru" : "admin@demo.ru");
+  await page.getByLabel("Электронная почта", { exact: false }).fill(accountEmail(role));
   await page.getByLabel("Пароль", { exact: false }).fill(password(role));
   await page.getByRole("button", { name: "Войти", exact: true }).click();
   await expect(page).toHaveURL(/\/dashboard/);
@@ -78,7 +82,7 @@ async function reviewSyntheticBoltSpecification(page: Page) {
   } });
   expect(uploaded.status(), await uploaded.text()).toBe(201);
   const document = await uploaded.json();
-  const editor = await page.request.post("http://localhost:8001/api/v1/auth/login", {data: {email: "admin@demo.ru", password: password("ADMIN")}});
+  const editor = await page.request.post("http://localhost:8001/api/v1/auth/login", {data: {email: accountEmail("ADMIN"), password: password("ADMIN")}});
   expect(editor.ok()).toBeTruthy();
   const deadline = new Date(); deadline.setUTCDate(deadline.getUTCDate() + 60);
   const reviewed = await page.request.post(`http://localhost:8002/api/v1/documents/${document.id}/verification`, {

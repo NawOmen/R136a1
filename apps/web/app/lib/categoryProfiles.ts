@@ -91,13 +91,3 @@ export function canonicalCharacteristicKey(value: string, category = "", subcate
   if (wanted === "product_type" && categoryProfile(category, subcategory)?.fields.includes("product_kind")) return "product_kind";
   return Object.entries(fields).find(([name, field]) => [name, field.label, ...field.aliases].some(alias => normalize(alias) === wanted))?.[0] ?? value;
 }
-
-
-/** Custom requirements stay strict; make their effect visible before publishing. */
-export function additionalMatchingKeys(rows: { key: string }[], category: string, subcategory: string): string[] {
-  const profile = categoryProfile(category, subcategory);
-  if (!profile) return [];
-  const separateRules = new Set(["print", "logo", "packaging", "food_contact", "tr_ts_005_2011", "mandatory_requirements", "allowed_analogues", "volume_tolerance", "deadline_tolerance_days"]);
-  return [...new Set(rows.map(row => canonicalCharacteristicKey(row.key, category, subcategory))
-    .filter(key => key.trim() && !profile.fields.includes(key) && !separateRules.has(key)))];
-}

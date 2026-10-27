@@ -7,7 +7,7 @@ from conftest import grant_capacity,grant_category_capability
 а обязательства невозможны без подтверждённых доказательств.
 """
 
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta, timezone
 
 from sqlalchemy import text
 
@@ -557,7 +557,10 @@ async def test_catalog_rechecks_expired_and_revoked_documents(client, db_session
     response = await client.post(f"/api/v1/products/{product_id}/publish", json={"published": True}, headers=_auth(token))
     assert response.status_code == 200, response.text
     assert product_id in [item["id"] for item in (await client.get("/api/v1/products")).json()]
-    await db_session.execute(text("UPDATE marketplace.documents SET valid_until = CURRENT_DATE - 1 WHERE company_id = :cid"), {"cid": company})
+    # Admission evaluates the business date in UTC; CURRENT_DATE depends on the
+    # database timezone and can still be today during local early morning.
+    today_utc = datetime.now(timezone.utc).date()
+    await db_session.execute(text("UPDATE marketplace.documents SET valid_until = :expires WHERE company_id = :cid"), {"cid": company, "expires": today_utc - timedelta(days=1)})
     await db_session.commit()
     assert product_id not in [item["id"] for item in (await client.get("/api/v1/products")).json()]
     # Seller can still see and repair the listing; expiry does not erase it.
