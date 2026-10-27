@@ -1,6 +1,7 @@
 import uuid
 import httpx
 from ..config import settings
+from ..address_limits import reserve_address_request
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy import select
@@ -118,6 +119,7 @@ async def suggest_addresses(
     await require_company_buyer(company_id, user, db)
     if not settings.dadata_api_key:
         raise HTTPException(503, "Подсказки адресов не подключены. Введите адрес вручную или проверьте его на карте.")
+    await reserve_address_request(db, company_id)
     try:
         async with httpx.AsyncClient(timeout=5) as client:
             response = await client.post(

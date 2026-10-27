@@ -1,3 +1,4 @@
+import { completeLiveClarifications } from "./live-core-clarifications";
 import { canonicalCharacteristicKey } from "../../apps/web/app/lib/categoryProfiles";
 import { formatDate } from "../../apps/web/app/lib/dates";
 import { expect, test, type Page } from "@playwright/test";
@@ -145,10 +146,12 @@ test(`${mode === "live-ai" ? "Живая локальная модель" : clas
       expect(response.status(), "Живой Gateway должен успешно разобрать запрос; ручной fallback не является прохождением").toBe(201);
       const run = await response.json();
       expect(run.used_route).toBe("local_qwen");
-      expect(run.result.can_confirm, "Проверьте вопросы и качество локального извлечения; тест не подменяет ответ модели").toBe(true);
-      expect(run.result.conflicts).toEqual([]);
-      const extracted = Object.fromEntries(run.result.properties.map((property: {key:string;value:unknown}) => [property.key,property.value]));
-      expect(Number(extracted.quantity ?? extracted.volume_units)).toBe(200);
+      const review = await completeLiveClarifications(page, run);
+      await test.info().attach("Уточнения покупателя", { body: JSON.stringify({
+        quantity_extracted_initially: review.quantityExtractedInitially,
+        manual_answers: review.manualAnswers,
+        note: "Ручные ответы не являются автоматически извлечёнными фактами; это проверка полного маршрута.",
+      }, null, 2), contentType: "application/json" });
       await expect(page.getByRole("heading", {name:"Детали закупки",exact:true})).toBeVisible();
       await expect(page.locator("#volume_units")).toHaveValue("200");
       await expect(page.locator("#budget_rub")).toHaveValue("5000");

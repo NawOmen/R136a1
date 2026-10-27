@@ -50,7 +50,7 @@ test("catalogue images, exact prices, sorting, touch controls and both themes re
   const favorite = page.locator(".product-favorite").first();
   if (isMobile) await favorite.tap(); else await favorite.click();
   await expect(favorite).toHaveAttribute("aria-pressed", "true");
-  await expect(page.getByRole("heading", { name: "Популярные товары", exact: true })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Товары производителей", exact: true })).toBeVisible();
   await expect(page.getByRole("combobox", { name: "Порядок товаров" })).toHaveCount(0);
   await expect(page.getByRole("button", { name: "Электроника", exact: true })).toHaveCount(0);
   await page.getByRole("link", { name: "Показать ещё", exact: true }).click();

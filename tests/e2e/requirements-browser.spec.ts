@@ -1,3 +1,4 @@
+import { completeLiveClarifications } from "./live-core-clarifications";
 import { expect, test, Page } from "@playwright/test";
 const user = { id: "00000000-0000-4000-8000-000000000001", first_name: "Тест", last_name: "Покупатель", account_status: "active" };
 const companies = ["Первая", "Вторая"].map((name, index) => ({ id: `00000000-0000-4000-8000-00000000001${index}`, display_name: name, full_name: name, country: "RU", legal_form: "ООО", verification_status: "verified", membership: { can_buy: true, can_sell: true, is_admin: true } }));
@@ -413,4 +414,34 @@ test("closed visibility is selectable and persists without exposing an unfinishe
   await page.locator(".need-review").screenshot({path:`output/procurement-qa/visibility-${testInfo.project.name}.png`,style:".site-header,.skip-link{visibility:hidden!important}"});
   await page.getByRole("button", {name:"Открыть подбор производителям",exact:true}).click();
   await expect(select).toHaveValue("open_anonymized");
+});
+
+
+test("live walkthrough records explicit buyer clarifications without claiming model extraction", async ({ page }) => {
+  await prepare(page);
+  let run = { id:"00000000-0000-4000-8000-000000000095", used_route:"local_qwen", revision:1,
+    state:"needs_clarification", tool_calls:[], result:{ category:"Крепёж", summary:"Нужно уточнить условия", can_confirm:false,
+      conflicts:[], warnings:[], matches:[],
+      properties:[{key:"quantity_units", value:null as number|null, status:"needs_clarification", label:"Количество", confidence:0, sources:[]}],
+      questions:[{key:"quantity_units", question:"Укажите количество", options:[] as string[]},
+        {key:"delivery_city", question:"Укажите город", options:[] as string[]}] } };
+  const initial = structuredClone(run);
+  const submitted: unknown[] = [];
+  await page.route("**/buyer-agent/runs", route => route.fulfill({status:201,json:run}));
+  await page.route("**/agent-runs/*/clarify", route => {
+    const data = route.request().postDataJSON(); submitted.push(data.answers);
+    if (run.revision === 1) {
+      run = {...run, revision:2, result:{...run.result, properties:[{...run.result.properties[0],value:200,status:"confirmed"}],
+        questions:[{key:"lead_time_days", question:"Укажите срок",options:[]}]} };
+    } else run = {...run,revision:3,state:"ready_for_review",result:{...run.result,can_confirm:true,questions:[]}};
+    return route.fulfill({json:run});
+  });
+  await page.locator("#request_description").fill("Нужно купить 200 болтов М8×40");
+  await page.getByRole("button",{name:"Заполнить с ИИ",exact:true}).click();
+  const result = await completeLiveClarifications(page, initial);
+  expect(result.quantityExtractedInitially).toBe(false);
+  expect(result.manualAnswers).toEqual([{key:"quantity_units",value:"200"},{key:"delivery_city",value:"Москва"},{key:"lead_time_days",value:"30"}]);
+  expect(submitted).toEqual([{quantity_units:"200",delivery_city:"Москва"},{lead_time_days:"30"}]);
+  await expect(page.locator("#volume_units")).toHaveValue("200");
+  await page.screenshot({path:test.info().outputPath("clarifications.png"),fullPage:true});
 });

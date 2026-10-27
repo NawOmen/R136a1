@@ -103,3 +103,25 @@ def test_csv_formula_protection_covers_control_and_unicode_prefixes(prefix):
     text = prefix + "=1+1"
     row = next(csv.reader(io.StringIO(csv_bytes([[text]]).decode("utf-8-sig")), delimiter=";"))
     assert row == ["'" + text]
+
+
+@pytest.mark.parametrize("address", [None, {}])
+def test_absent_delivery_address_is_not_exported_as_json_null(address):
+    deal, companies = example()
+    deal.commercial_snapshot["need"]["delivery_address"] = address
+    root = ET.fromstring(commerceml(deal, *companies))
+    ns = {"c": NAMESPACE}
+    requisites = {item.findtext("c:Наименование", namespaces=ns): item.findtext("c:Значение", namespaces=ns)
+                  for item in root.findall("c:Документ/c:ЗначенияРеквизитов/c:ЗначениеРеквизита", ns)}
+    assert requisites["Адрес доставки"] == "Не указан"
+
+
+def test_old_vat_snapshot_without_rate_does_not_crash_or_invent_a_rate():
+    deal, companies = example()
+    row = deal.commercial_snapshot["estimate"]["lines"][0]
+    row.update(tax_basis="includes_vat", included_vat_rub="116.67")
+    root = ET.fromstring(commerceml(deal, *companies))
+    assert not root.findall(".//c:Налог", {"c": NAMESPACE})
+    records = list(csv.DictReader(io.StringIO(order_csv(deal, *companies).decode("utf-8-sig")), delimiter=";"))
+    assert records[0]["Ставка НДС, %"] == ""
+    assert records[0]["НДС в сумме, ₽"] == "116.67"

@@ -115,7 +115,7 @@ def commerceml(deal, buyer, seller):
         _element(node, "ЦенаЗаЕдиницу", format(amount(row["price"]), "f"))
         _element(node, "Количество", row["quantity"])
         _element(node, "Сумма", format(row["amount"], "f"))
-        if row["tax_basis"] == "includes_vat" and row["vat"] is not None:
+        if row["tax_basis"] == "includes_vat" and row["vat"] is not None and row["vat_rate"] is not None:
             tax = _element(_element(node, "Налоги"), "Налог")
             _element(tax, "Наименование", "НДС")
             _element(tax, "УчтеноВСумме", "true")
@@ -123,7 +123,7 @@ def commerceml(deal, buyer, seller):
             _element(tax, "Ставка", format(decimal(row["vat_rate"]), "f"))
     requisites = _element(doc, "ЗначенияРеквизитов")
     for key, value in [("Статус заказа", label(deal.status)), ("Проведен", "false"), ("Контракт экспорта", "porukam-1c-1"), ("Срок поставки", snapshot["need"]["deadline_date"]),
-                       ("Адрес доставки", json.dumps(snapshot["need"].get("delivery_address"), ensure_ascii=False)), ("Налоговая база", label(snapshot["estimate"]["terms"]["tax_basis"]))]:
+                       ("Адрес доставки", json.dumps(snapshot["need"]["delivery_address"], ensure_ascii=False) if snapshot["need"].get("delivery_address") else "Не указан"), ("Налоговая база", label(snapshot["estimate"]["terms"]["tax_basis"]))]:
         item = _element(requisites, "ЗначениеРеквизита")
         _element(item, "Наименование", key)
         _element(item, "Значение", value)

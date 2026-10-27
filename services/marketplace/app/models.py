@@ -2,7 +2,7 @@ import uuid
 from decimal import Decimal
 from datetime import date, datetime
 
-from sqlalchemy import Boolean, CheckConstraint, Date, DateTime, Float, ForeignKey, Integer, String, Text, UniqueConstraint, Index, func, text
+from sqlalchemy import BigInteger, Boolean, CheckConstraint, Date, DateTime, Float, ForeignKey, Integer, String, Text, UniqueConstraint, Index, func, text
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -1023,3 +1023,11 @@ class AgentQualityEvaluation(Base):
     reference_hash: Mapped[str] = mapped_column(String(64), nullable=False)
     assessment: Mapped[dict] = mapped_column(ExactJSONB(), nullable=False)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now())
+
+
+class AddressSuggestionLimit(Base):
+    __tablename__ = "address_suggestion_limits"
+    __table_args__ = {"schema": SCHEMA}
+    company_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True)
+    bucket: Mapped[int] = mapped_column(BigInteger, primary_key=True)
+    attempts: Mapped[int] = mapped_column(Integer, nullable=False)
