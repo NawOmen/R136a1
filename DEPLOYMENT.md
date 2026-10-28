@@ -105,6 +105,8 @@ OLLAMA_DOCKER_BASE_URL=http://host.docker.internal:11434
 LOCAL_LLM_BACKEND=mlx
 MLX_BASE_URL=http://host.docker.internal:8080
 TRAINED_MODEL_VERSION=porukam-buyer-qwen3.5
+# Без нативного MLX-сервера задайте LOCAL_LLM_BACKEND=ollama: тогда текст
+# разбирает qwen3.5:9b, а Ollama остаётся единственным локальным движком.
 OLLAMA_MODEL=qwen3.5:9b
 OLLAMA_VISION_MODEL=qwen3.5:9b
 LLM_CONTEXT_TOKENS=8192
