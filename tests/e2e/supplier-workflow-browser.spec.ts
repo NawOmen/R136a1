@@ -37,7 +37,7 @@ async function prepare(page: Page, options: {empty?:boolean; draftFailure?:boole
     else if(path.endsWith("/files"))json=files;
     else if(path.endsWith("/draft")){
       if(options.draftFailure)return route.fulfill({status:503,json:{detail:"Локальный ИИ недоступен. Напишите вручную или повторите попытку."}});
-      json={text:draftText,request_revision:row.revision};
+      json={text:draftText,request_revision:row.revision,warnings:["ИИ подготовил ответ без коммерческих обязательств."]};
     }
     else if(path.endsWith("/extract-reply")){
       if(options.extractionFailure)return route.fulfill({status:503,json:{detail:"Файл сохранён. Разбор недоступен, укажите цену и срок вручную."}});
@@ -94,6 +94,7 @@ test('failed extraction preserves uploaded file and manual quote entry',async({p
 test('seller can draft and send a reply and cannot see private buyer quote fields',async({page})=>{
   const state=await prepare(page);await page.goto('/seller/inquiries');const workspace=page.getByRole('region',{name:'Работа с поставщиком'});
   await workspace.getByRole('button',{name:'Помочь с ответом'}).click();await expect(workspace.getByLabel('Ваше сообщение')).toHaveValue(draftText);
+  await expect(workspace.getByText('ИИ подготовил ответ без коммерческих обязательств.',{exact:true})).toBeVisible();
   await workspace.getByRole('button',{name:'Отправить покупателю',exact:true}).click();await expect(workspace.getByText('Сообщение отправлено.',{exact:true})).toBeVisible();expect(state.sends[0].company_id).toBe(sellerId);
   await expect(workspace.getByLabel('Цена из ответа, ₽')).toHaveCount(0);await expect(workspace.getByLabel('Файл ответа поставщика')).toHaveCount(0);
 });

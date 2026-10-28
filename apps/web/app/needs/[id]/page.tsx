@@ -274,7 +274,7 @@ export default function NeedDetailPage() {
           <h2>Черновик потребности</h2>
           {ownedNeed && buyerCompany?.membership?.is_admin && <NeedDraftEditor key={`${need.id}:${need.revision}`} need={ownedNeed} onSaved={setNeed} />}
           {ownedNeed && buyerCompany?.membership?.is_admin && <ProfileRevisionPanel kind="needs" id={need.id} revision={need.revision} draft={need.status === "draft"} onAdopted={async () => { const token = getToken(); if (token) setNeed(await marketplace.getNeed(token, need.id)); }} />}
-          {buyerCompany?.verification_status === "verified" ? (
+          {buyerCompany?.membership?.is_admin && (
             <div className="actions">
               <button
                 type="button"
@@ -285,10 +285,6 @@ export default function NeedDetailPage() {
                 {publishing ? "Публикуем..." : "Опубликовать"}
               </button>
             </div>
-          ) : (
-            <p className="hint mode-hint">
-              Черновик сохранён. Публикация станет доступна после проверки компании.
-            </p>
           )}
         </section>
       )}
@@ -400,6 +396,7 @@ export default function NeedDetailPage() {
         )}
       </section>
 
+      {isBuyer && ownedNeed && <p className="hint">Адресные запросы — для переписки и сравнения ответов. Чтобы оформить сделку, выберите КП в разделе «Предложения» выше.</p>}
       {isBuyer && ownedNeed && <SupplierBoard key={`${need.id}:${ownedNeed.company_id}`} needId={need.id} companyId={ownedNeed.company_id} needRevision={need.revision} canManage={buyerCompany?.membership?.is_admin === true} />}
 
       {variants.length > 0 && (

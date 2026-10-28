@@ -446,6 +446,12 @@ async def analyze_buyer_request(
             AgentSource.run_id == run.id, AgentSource.active.is_(False), AgentSource.extracted_text == ""
         ))).all()
         result.unreadable_sources = [{"source_id": item.source_id, "name": item.name, "content_hash": item.content_hash} for item in unreadable]
+        if unreadable:
+            if len(result.questions) < 3:
+                result.questions.append(ClarificationQuestion(key="unreadable_materials",
+                    question="Часть материалов не прочитана. Продолжить без них?", options=["Да, продолжить без них"]))
+            result.can_confirm = False
+            result.summary = buyer_summary(result.matches, True)
         run.result = result.model_dump(mode="json")
         run.initial_result = result.model_dump(mode="json")
         run.duration_ms = round((perf_counter() - started_at) * 1000)

@@ -46,7 +46,7 @@ export const supplierWorkflow = {
   files: (token: string, id: string, companyId: string) => marketplaceFetch<SupplierFile[]>(`${path(id)}/files?company_id=${companyId}`, { token }),
   upload: (token: string, id: string, companyId: string, file: File) => { const body = new FormData(); body.append("file", file); return marketplaceFetch<SupplierFile>(`${path(id)}/files?company_id=${companyId}`, { token, method: "POST", body }); },
   download: (token: string, id: string, companyId: string, fileId: string) => marketplaceFetchBlob(`${path(id)}/files/${fileId}?company_id=${companyId}`, token),
-  draft: (token: string, row: SupplierRequest, companyId: string, mode: "rfq" | "reply", guidance: string) => assist<{ text: string; request_revision: number }>(token, "draft", { company_id: companyId, request_id: row.id, expected_revision: row.revision, mode, guidance }),
+  draft: (token: string, row: SupplierRequest, companyId: string, mode: "rfq" | "reply", guidance: string) => assist<{ text: string; request_revision: number; warnings?: string[] }>(token, "draft", { company_id: companyId, request_id: row.id, expected_revision: row.revision, mode, guidance }),
   extract: (token: string, row: SupplierRequest, companyId: string, fileId: string) => assist<QuoteProposal>(token, "extract-reply", { company_id: companyId, request_id: row.id, expected_revision: row.revision, file_id: fileId }),
 };
 

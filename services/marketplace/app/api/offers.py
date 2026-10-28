@@ -19,7 +19,7 @@ from ..deps import (
     require_company_admin,
     require_company_buyer,
     require_company_seller,
-    require_verified_company,
+    require_verified_seller,
 )
 from ..models import CapacityEntry, CapabilityPassport, Deal, Need, Offer, OfferDraft, Product
 from ..matching import ACTIVE_NEED_STATUSES, need_is_current, offer_unit_price, order_unit, run_market_rematch
@@ -192,7 +192,7 @@ async def prepare_offer_draft(
     if need is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, detail="Потребность не найдена")
     await require_company_seller(data.company_id, user, db)
-    await require_verified_company(data.company_id, user, db)
+    await require_verified_seller(data.company_id, user, db)
     if need.company_id == data.company_id:
         raise HTTPException(
             status.HTTP_409_CONFLICT,
@@ -276,7 +276,7 @@ async def preview_offer_send(
     if need is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, detail="Потребность не найдена")
     await require_company_seller(data.company_id, user, db)
-    await require_verified_company(data.company_id, user, db)
+    await require_verified_seller(data.company_id, user, db)
     if need.company_id == data.company_id:
         raise HTTPException(status.HTTP_403_FORBIDDEN, detail="Нельзя отправить предложение на потребность своей компании")
     if need.visibility != "open_anonymized":
@@ -369,7 +369,7 @@ async def create_offer(
         )
 
     await require_company_seller(data.company_id, user, db)
-    await require_verified_company(data.company_id, user, db)
+    await require_verified_seller(data.company_id, user, db)
     if data.moq_units > data.available_units:
         raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, detail="MOQ превышает доступный объём")
     if data.valid_until is not None and data.valid_until < date.today():
@@ -577,7 +577,6 @@ async def select_offer(
 
     await require_company_buyer(need.company_id, user, db)
     await require_company_admin(need.company_id, user, db)
-    await require_verified_company(need.company_id, user, db)
     await db.refresh(offer, with_for_update=True)
     if data is None:
         raise HTTPException(428, "Обновите предложение и подтвердите показанную версию условий")
@@ -714,7 +713,7 @@ async def select_offer(
         entity_id=deal.id,
         actor_user_id=user.id,
         actor_company_id=need.company_id,
-        permission="company_admin+buyer+verified",
+        permission="company_admin+buyer",
         decision="approved",
         payload=approval_payload,
         source_refs=[{"type": "need", "id": str(need.id)}, {"type": "offer", "id": str(offer.id)}],

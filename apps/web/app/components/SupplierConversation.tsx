@@ -12,7 +12,7 @@ export default function SupplierConversation({ row, companyId, canManage, onChan
   const buyer = companyId === row.buyer_company_id;
   const [messages, setMessages] = useState<SupplierMessage[]>([]), [files, setFiles] = useState<SupplierFile[]>([]);
   const [loading, setLoading] = useState(true), [busy, setBusy] = useState(false), [error, setError] = useState(""), [notice, setNotice] = useState("");
-  const [message, setMessage] = useState(""), [aiDraft, setAiDraft] = useState(false);
+  const [message, setMessage] = useState(""), [aiDraft, setAiDraft] = useState(false), [aiWarnings, setAiWarnings] = useState<string[]>([]);
   const [price, setPrice] = useState(row.quoted_price_rub == null ? "" : String(row.quoted_price_rub)), [basis, setBasis] = useState<PriceBasis>(row.price_basis);
   const [days, setDays] = useState(row.lead_time_days == null ? "" : String(row.lead_time_days)), [delivery, setDelivery] = useState(row.delivery_date ?? ""), [note, setNote] = useState(row.note);
   const [proposal, setProposal] = useState<QuoteProposal | null>(null);
@@ -57,7 +57,7 @@ export default function SupplierConversation({ row, companyId, canManage, onChan
   function draft() {
     void perform(async token => {
       const result = await api.draft(token, row, companyId, buyer && row.status === "draft" ? "rfq" : "reply", message.slice(0, 1500));
-      if (mounted.current) { setMessage(result.text); setAiDraft(true); setNotice("Черновик готов. Проверьте текст перед отправкой."); }
+      if (mounted.current) { setMessage(result.text); setAiDraft(true); setAiWarnings(result.warnings ?? []); setNotice("Черновик готов. Проверьте текст перед отправкой."); }
     });
   }
   function upload(file: File) {
@@ -89,6 +89,7 @@ export default function SupplierConversation({ row, companyId, canManage, onChan
         {loading ? <p role="status">Загружаем переписку…</p> : !messages.length ? <p className="hint">{row.status === "draft" ? "Запрос увидит только выбранный поставщик после отправки." : "Сообщений на платформе пока нет."}</p> : <ol className="supplier-messages">{messages.map(m => <li key={m.id} className={m.author_company_id === companyId ? "supplier-message supplier-message--own" : "supplier-message"}><div><b>{m.author_company_id === row.buyer_company_id ? row.buyer_name : row.seller_name}</b><time dateTime={m.created_at}>{formatDateTime(m.created_at)}</time></div><p>{m.message}</p></li>)}</ol>}
         <form onSubmit={send} className="supplier-composer"><label htmlFor={`supplier-message-${id}`}>{row.status === "draft" ? "Запрос коммерческого предложения" : "Ваше сообщение"}</label><textarea id={`supplier-message-${id}`} value={message} required maxLength={6000} rows={5} disabled={busy} onChange={e => { setMessage(e.target.value); setAiDraft(false); }} placeholder="Напишите сообщение или поручите черновик ИИ" />
           {aiDraft && <p className="hint">Черновик ИИ. Проверьте факты, цену и срок.</p>}
+          {aiDraft && aiWarnings.map(warning => <p className="alert alert-warning" key={warning}>{warning}</p>)}
           <div className="actions"><button type="button" className="btn btn-secondary" disabled={busy || loading} onClick={draft}>{busy ? "Обрабатываем…" : row.status === "draft" && buyer ? "Подготовить запрос с ИИ" : "Помочь с ответом"}</button><button type="submit" className="btn btn-primary" disabled={busy || loading || !message.trim() || (row.status === "draft" && !canManage)}>{buyer ? "Отправить поставщику" : "Отправить покупателю"}</button><button type="button" className="btn btn-secondary btn-sm" disabled={busy || !message.trim()} onClick={() => void perform(async () => { if (!navigator.clipboard) throw new Error("Выделите текст и скопируйте его вручную."); await navigator.clipboard.writeText(message); setNotice("Текст скопирован для почты или мессенджера."); })}>Скопировать</button></div>
           {buyer && row.status === "draft" && canManage && <button type="button" className="supplier-external-send" disabled={busy} onClick={() => void perform(async token => { await api.update(token, id, updateValues(row, "sent")); await onChanged(); setNotice("Отправка вне платформы отмечена на доске."); })}>Я отправил запрос вне платформы</button>}
         </form>

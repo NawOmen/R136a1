@@ -21,7 +21,6 @@ from ..deps import (
     require_company_admin,
     require_company_buyer,
     require_company_seller,
-    require_verified_company,
 )
 from ..models import CapabilityPassport, DeliveryAddress, Need, NeedFile, Product
 from ..matching import ACTIVE_NEED_STATUSES, need_is_current, order_unit, run_market_rematch
@@ -339,7 +338,6 @@ async def publish_need(
         raise HTTPException(status.HTTP_404_NOT_FOUND, detail="Потребность не найдена")
     await require_company_buyer(need.company_id, user, db)
     await require_company_admin(need.company_id, user, db)
-    await require_verified_company(need.company_id, user, db)
     await require_current_evidence(db, need)
     if not need_is_current(need):
         raise HTTPException(409, "Срок потребности истёк. Создайте новый черновик с актуальными условиями")

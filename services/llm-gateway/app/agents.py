@@ -3,6 +3,7 @@ import re
 import uuid
 from collections import defaultdict
 from decimal import Decimal, InvalidOperation
+from datetime import date
 from typing import Any
 
 from pydantic import BaseModel, Field
@@ -48,7 +49,9 @@ lead_time_days, delivery_city, mandatory_requirements.
 «200 болтов» подтверждает количество, но «шт» требует явного указания или ответа человека.
 Не превращай дату доставки в число дней без известной даты отсчёта.
 Для крепежа класс прочности сохраняй как strength_class, не grade.
-Дата доставки — delivery_date, организационное поле, не характеристика изделия.
+Дата доставки — delivery_date в ISO, организационное поле, не характеристика изделия.
+Числовые сокращения нормализуй: «5 тысяч штук» = quantity_units=5000,
+«бюджет 60 тыс. рублей» = budget_rub=60000. Цитату сохраняй дословно.
 Для материала и покрытия
 сохраняй совместимые ключи body_material и inner_coating; остальные — из справочника.
 Для бумажных стаканов: volume_ml, print, top_diameter_mm, bottom_diameter_mm, height_mm.
@@ -67,6 +70,7 @@ LABELS = {
     "quantity_units": "Количество, шт.",
     "budget_rub": "Бюджет, ₽",
     "lead_time_days": "Срок, дней",
+    "delivery_date": "Дата поставки",
     "delivery_city": "Город доставки",
     "mandatory_requirements": "Обязательные требования",
     "product_type": "Тип изделия",
@@ -247,25 +251,88 @@ EVIDENCE_NUMBER = re.compile(
 )
 
 
-def numeric_evidence_support(value: FactValue, excerpt: str) -> bool | None:
-    """Check scalar numbers only; text, lists and dimension triples stay intact.
+SCALE = re.compile(r"\s*(тыс(?:яч[аиу]?)?\.?|млн\.?|миллион(?:а|ов)?)\b\.?", re.I)
 
-    Number words and unit conversions are not inferred here. Without a literal
-    matching number they cannot give a model-produced scalar confirmed status.
-    """
+
+def evidence_numbers(excerpt: str, *, scaled=False):
+    for match in EVIDENCE_NUMBER.finditer(excerpt):
+        number = Decimal(re.sub(r"[ \u00a0\u202f]", "", match.group()).replace(",", ".").replace("−", "-"))
+        suffix = SCALE.match(excerpt, match.end()) if scaled else None
+        if suffix:
+            number *= 1000 if suffix[1].lower().startswith("тыс") else 1_000_000
+        yield number
+
+
+def numeric_evidence_support(value: FactValue, excerpt: str, *, scaled=False) -> bool | None:
     if isinstance(value, (bool, list)):
         return None
-    raw = re.sub(r"[ \u00a0\u202f]", "", str(value)).replace(",", ".").replace("−", "-")
     try:
-        number = Decimal(raw)
+        number = Decimal(re.sub(r"[ \u00a0\u202f]", "", str(value)).replace(",", ".").replace("−", "-"))
     except InvalidOperation:
         return None
-    if not number.is_finite():
-        return False
-    return any(
-        Decimal(re.sub(r"[ \u00a0\u202f]", "", match.group()).replace(",", ".").replace("−", "-")) == number
-        for match in EVIDENCE_NUMBER.finditer(excerpt)
+    return number.is_finite() and number in evidence_numbers(excerpt, scaled=scaled)
+
+
+def calendar_value(value) -> str | None:
+    if not isinstance(value, str):
+        return None
+    try:
+        if re.fullmatch(r"\d{4}-\d{2}-\d{2}", value):
+            return date.fromisoformat(value).isoformat()
+        match = re.fullmatch(r"(\d{2})\.(\d{2})\.(\d{2}|\d{4})", value)
+        if match:
+            year = int(match[3]) + (2000 if len(match[3]) == 2 else 0)
+            return date(year, int(match[2]), int(match[1])).isoformat()
+    except ValueError:
+        pass
+    return None
+
+
+def date_evidence_support(value, excerpt):
+    return calendar_value(value) is not None and any(
+        calendar_value(m.group()) == value
+        for m in re.finditer(r"(?<![\w.-])(?:\d{4}-\d{2}-\d{2}|\d{2}\.\d{2}\.(?:\d{4}|\d{2}))(?![\w-]|\.\d)", excerpt)
     )
+
+
+def normalize_business_numbers(extraction, sources):
+    """Only explicit numeric multipliers with a budget/quantity context.
+
+    Original source text and citations are retained. No guessed values, unit
+    conversions or arithmetic on commercial terms are performed.
+    """
+    facts = []
+    for fact in extraction.facts:
+        key = _canonical_key(fact.key)
+        value = fact.value
+        if key in {"budget_rub", "quantity_units"} and isinstance(value, str):
+            pattern = r"\s*(\d+(?:[.,]\d+)?)\s*(тыс(?:яч[аиу]?)?\.?|млн\.?|миллион(?:а|ов)?)\s*(?:руб(?:лей|ля)?\.?|₽|шт\.?|штук|штуки)?\s*"
+            m = re.fullmatch(pattern, value, re.I)
+            if m:
+                amount = Decimal(m[1].replace(",", ".")) * (1000 if m[2].lower().startswith("тыс") else 1_000_000)
+                value = format(amount, "f")
+        if key in {"delivery_date", "deadline_date"}:
+            key = "delivery_date"
+            value = calendar_value(value) or value
+        facts.append(fact.model_copy(update={"key": key, "value": value}))
+    # Recover fields the model omitted, but only from explicit unambiguous
+    # number+multiplier phrases; separate sources still enter conflict detection.
+    pattern = re.compile(r"(?<![\w.,+−-])(?P<number>\d+(?:[.,]\d+)?)\s*(?P<scale>тыс(?:яч[аиу]?)?\.?|млн\.?|миллион(?:а|ов)?)\s*(?P<unit>руб(?:лей|ля)?\.?|₽|шт\.?|штук|штуки)(?!\w)", re.I)
+    from .schemas import RawFact
+    existing = {(f.source_id, f.key) for f in facts}
+    for source in sources:
+        for m in pattern.finditer(source.text):
+            currency = m['unit'].lower().startswith('руб') or m['unit'] == '₽'
+            if currency and not re.search(r"бюджет\s*(?:до\s*)?[:—-]?\s*$", source.text[max(0,m.start()-30):m.start()], re.I):
+                continue
+            if not currency and re.search(r'(?:от|до|не менее|не более)\s*$', source.text[max(0,m.start()-30):m.start()], re.I):
+                continue
+            key = 'budget_rub' if currency else 'quantity_units'
+            if (source.id, key) in existing:
+                continue
+            amount = Decimal(m['number'].replace(',', '.')) * (1000 if m['scale'].lower().startswith('тыс') else 1_000_000)
+            facts.append(RawFact(key=key, value=format(amount, 'f'), source_id=source.id, confidence=.99, evidence=m.group()))
+    return extraction.model_copy(update={"facts": facts})
 
 
 # Vocabulary only: no quantity conversion and no inference from a product noun.
@@ -326,7 +393,7 @@ def merge_facts(
     sources: list[SourceDescriptor],
     warnings: list[str],
 ) -> tuple[list[RequirementProperty], list[RequirementConflict], list[ClarificationQuestion]]:
-    extraction = normalize_fact_keys(normalize_dimensions(extraction, sources))
+    extraction = normalize_business_numbers(normalize_fact_keys(normalize_dimensions(extraction, sources)), sources)
     source_map = {source.id: source for source in sources}
     grouped: dict[str, list] = defaultdict(list)
     for fact in extraction.facts:
@@ -398,11 +465,12 @@ def merge_facts(
             )
             continue
         support = [unit_evidence_support(fact.value, fact.evidence) if key == "unit"
-                   else numeric_evidence_support(fact.value, fact.evidence) for fact in facts]
+                   else date_evidence_support(fact.value, fact.evidence) if key == "delivery_date"
+                   else numeric_evidence_support(fact.value, fact.evidence, scaled=key in {"quantity_units", "budget_rub"}) for fact in facts]
         # A located quote containing a different number is a concrete mismatch,
         # even if another source or high model confidence corroborates the value.
         mismatch = any(
-            key != "unit" and item.locator.get("located") and checked is False and EVIDENCE_NUMBER.search(fact.evidence)
+            key != "unit" and item.locator.get("located") and checked is False and (key == "delivery_date" or EVIDENCE_NUMBER.search(fact.evidence))
             for fact, item, checked in zip(facts, evidence, support)
         )
         if mismatch:
@@ -433,6 +501,8 @@ def merge_facts(
 
     present = set(grouped)
     for key in REQUIRED_KEYS:
+        if key == "lead_time_days" and any(p.key == "delivery_date" and p.status == "confirmed" for p in properties):
+            continue
         if key not in present:
             label = LABELS[key]
             properties.append(
@@ -449,14 +519,6 @@ def merge_facts(
                     question=f"Укажите обязательное значение: {label.lower()}.",
                 )
             )
-    if warnings and len(questions) < 3:
-        questions.append(
-            ClarificationQuestion(
-                key="unreadable_materials",
-                question="Часть материалов не прочитана. Продолжить без них?",
-                options=["Да, продолжить без них"],
-            )
-        )
     return properties, conflicts, questions[:3]
 
 

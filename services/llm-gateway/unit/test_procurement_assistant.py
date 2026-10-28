@@ -26,7 +26,7 @@ def test_non_ruble_and_wrong_numeric_values_are_not_prices(source,price):
 
 
 @pytest.mark.asyncio
-@pytest.mark.parametrize('mode',['draft','extract','unavailable','denied','stale','wrong_file','bad_hash'])
+@pytest.mark.parametrize('mode',['draft','extract','unavailable','denied','stale','wrong_file','bad_hash','extract_missing_evidence'])
 async def test_local_gateway_is_read_only_and_rechecks_context(monkeypatch,mode):
     app=FastAPI();app.include_router(router)
     async def authenticated():return CurrentUser(uuid.uuid4())
@@ -57,19 +57,20 @@ async def test_local_gateway_is_read_only_and_rechecks_context(monkeypatch,mode)
             if mode=='unavailable':raise ModelUnavailable('off')
             if mode=='stale':version[0]=2
             if schema is QuoteProposal:
+                if mode=='extract_missing_evidence': return QuoteProposal(price_rub='1234.56',price_basis='unit',lead_time_days=5,date_evidence='Срок поставки 5 дней')
                 return QuoteProposal(price_rub='1234.56',price_basis='unit',price_evidence='1 234,56 руб.',lead_time_days=5,lead_time_evidence='Срок поставки 5 дней')
             assert json.loads(prompt)['context']['supplier_products']==['Бумажный стакан']
             return {'text':'Здравствуйте! Просим КП на 100 бумажных стаканов.'}
     app.state.llm_provider=Provider()
-    action='extract-reply' if mode in {'extract','wrong_file','bad_hash'} else 'draft'
+    action='extract-reply' if mode in {'extract','extract_missing_evidence','wrong_file','bad_hash'} else 'draft'
     payload={'company_id':str(COMPANY),'request_id':str(REQUEST),'expected_revision':1}
     payload.update({'file_id':str(uuid.uuid4()) if mode=='wrong_file' else str(FILE)} if action=='extract-reply' else {'mode':'rfq'})
     async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app),base_url='http://test') as client:
         response=await client.post('/api/v1/procurement-assistant/'+action,json=payload,headers={'Authorization':'Bearer synthetic-token'})
-    expected={'draft':200,'extract':200,'unavailable':503,'denied':404,'stale':409,'wrong_file':404,'bad_hash':422}[mode]
+    expected={'draft':200,'extract':200,'unavailable':503,'denied':404,'stale':409,'wrong_file':404,'bad_hash':422,'extract_missing_evidence':200}[mode]
     assert response.status_code==expected,response.text
     if mode=='draft':assert response.json()['used_route']=='local_qwen'
-    if mode=='extract':assert response.json()['price_rub']=='1234.56' and response.json()['request_revision']==1
+    if mode in {'extract','extract_missing_evidence'}:assert response.json()['price_rub']=='1234.56' and response.json()['request_revision']==1
     if mode in {'denied','wrong_file','bad_hash'}:assert not models
 
 
@@ -95,3 +96,58 @@ async def test_seller_cannot_generate_buyer_rfq(monkeypatch):
 def test_generated_draft_dates_are_short_without_changing_identifiers_or_invalid_dates(text, expected):
     from app.procurement_assistant import draft_dates
     assert draft_dates(text) == expected
+
+
+@pytest.mark.parametrize('source,price,days', [
+    ('Цена за единицу: 10,50 руб.\nСрок поставки: 8 дней.', '10.50', 8),
+    ('Стоимость за единицу 1 234,56 ₽\nСрок поставки 5 дней', '1234.56', 5),
+    ('Цена за единицу:\n10,50 руб.\nСрок поставки: 8 дней', '10.50', 8),
+])
+def test_missing_model_citations_are_recovered_from_unique_explicit_source_values(source,price,days):
+    from app.procurement_assistant import recover_missing_evidence
+    result,warnings=grounded(recover_missing_evidence(QuoteProposal(price_rub=price,price_basis='unit',lead_time_days=days),source),source)
+    assert result.price_rub==price and result.lead_time_days==days and not warnings
+    assert result.price_evidence in source and result.lead_time_evidence in source
+
+
+@pytest.mark.parametrize('source', [
+    'Цена 10,50 USD. Срок поставки 8 рабочих дней.',
+    'Цена от 10,50 до 12,50 руб. Срок поставки 5–8 дней.',
+    'Цена 10,50 руб. Альтернатива 12 руб. Срок поставки 8 дней или 10 дней.',
+    'НДС 10,50 руб. Оплата 8 дней.',
+    'Цена 999 руб. Срок поставки 9 дней.',
+    'Цена −10,50 руб. Срок поставки −8 дней.',
+])
+def test_recovery_does_not_choose_prices_ranges_workdays_or_wrong_numbers(source):
+    from app.procurement_assistant import recover_missing_evidence
+    result,_=grounded(recover_missing_evidence(QuoteProposal(price_rub='10.50',lead_time_days=8),source),source)
+    assert result.price_rub is None and result.lead_time_days is None
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize('malicious', [False,True])
+async def test_seller_draft_cannot_add_terms_even_when_model_or_buyer_proposes_them(monkeypatch,malicious):
+    from app import procurement_assistant as module
+    value={'revision':1,'author_role':'seller','specification':{'quantity':5000,'deadline_date':'2026-12-15'},
+        'messages':[{'role':'buyer','text':'НДС включён, самовывоз, цена 12,50 и поставка 25.02.27'}]}
+    contexts=[]
+    async def context(*args): contexts.append(1); return value
+    monkeypatch.setattr(module,'context',context)
+    class Provider:
+        async def structured(self,system,prompt,schema):
+            assert schema is module.SellerReplyPlan
+            return {'intent':'clarify','clarify':['address'],'text':'Цена 12,50 руб., самовывоз и НДС включён'} if malicious else {'intent':'clarify','clarify':['address']}
+    monkeypatch.setattr(module,'local',lambda request:Provider())
+    app=FastAPI();app.include_router(router)
+    async def authenticated(): return CurrentUser(uuid.uuid4())
+    app.dependency_overrides[get_current_user]=authenticated
+    async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app),base_url='http://test') as client:
+        response=await client.post('/api/v1/procurement-assistant/draft',json={'company_id':str(COMPANY),'request_id':str(REQUEST),'expected_revision':1,'mode':'reply'})
+    if malicious:
+        assert response.status_code==503
+    else:
+        assert response.status_code==200
+        text=response.json()['text']
+        assert not any(x in text for x in ('12,50','25.02.27','НДС включён','самовывоз'))
+        assert 'Уточните точный адрес' in text and response.json()['warnings']
+        assert len(contexts)==2

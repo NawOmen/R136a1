@@ -22,7 +22,7 @@ from ..deps import (
     require_company_buyer,
     require_company_seller,
     require_membership,
-    require_verified_company,
+    require_verified_seller,
 )
 from ..matching import need_is_current
 from ..models import (
@@ -198,7 +198,7 @@ async def decide_change_request(
         raise HTTPException(status.HTTP_403_FORBIDDEN, detail="Изменение подтверждает производитель")
     await require_company_seller(data.company_id, user, db)
     await require_company_admin(data.company_id, user, db)
-    await require_verified_company(data.company_id, user, db)
+    await require_verified_seller(data.company_id, user, db)
     request.decisions = [
         *(request.decisions or []),
         {"company_id": str(data.company_id), "approved": data.approved},

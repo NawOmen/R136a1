@@ -1,4 +1,5 @@
 "use client";
+import { formatDate, parseDateInput } from "../../lib/dates";
 import { AddressDialog } from "../../components/AddressDialog";
 import { CharacteristicValue } from "../../components/CharacteristicValue";
 import { categoryProfile } from "../../lib/categoryProfiles";
@@ -372,7 +373,10 @@ export default function NewNeedPage() {
     }
     if (values.has("quantity_units")) setVolumeUnits(editableFact(values.get("quantity_units")!));
     if (values.has("budget_rub")) setBudgetRub(editableFact(values.get("budget_rub")!));
-    if (values.has("lead_time_days")) {
+    const rawDate = String(values.get("delivery_date") ?? values.get("deadline_date") ?? "");
+    const exactDate = /^\d{4}-\d{2}-\d{2}$/.test(rawDate) && formatDate(rawDate, "") ? rawDate : parseDateInput(rawDate);
+    if (exactDate) setDeadlineDate(exactDate);
+    else if (values.has("lead_time_days")) {
       const days = Number(values.get("lead_time_days"));
       if (Number.isFinite(days) && days > 0) {
         const deadline = new Date();
@@ -467,7 +471,7 @@ export default function NewNeedPage() {
         progress = { ...progress, uploaded: [...progress.uploaded, signature] };
         setSavedNeed(progress);
       }
-      if (company.verification_status === "verified" && need.status === "draft") {
+      if (need.status === "draft") {
         await marketplace.publishNeed(token, need.id);
       }
       await draftFiles(draftKey, null).catch(() => {});
@@ -526,7 +530,6 @@ export default function NewNeedPage() {
     <form className="card need-create-form" onSubmit={handleSubmit} aria-busy={analyzing || submitting || !draftReady}>
       <fieldset className="form-fieldset" disabled={!draftReady || submitting}>
         {available.length > 1 ? <div className="field need-company"><label htmlFor="company_id">Компания</label><select id="company_id" value={companyId} disabled={analyzing || recording || transcribing} onChange={event => { setCompanyId(event.target.value); setAgentRun(null); setAnswers({}); }}>{available.map(item => <option key={item.id} value={item.id}>{item.display_name}</option>)}</select></div> : <p className="need-company-name"><Icon name="building" size={17} />{company?.display_name}</p>}
-        {company?.verification_status !== "verified" && <p className="hint">До проверки компании закупка сохранится черновиком.</p>}
         {!manualExpanded && <section className="need-brief" aria-labelledby="materials-heading">
           <h2 id="materials-heading">Что нужно купить?</h2>
           <div className="field"><label className="visually-hidden" htmlFor="request_description">Что требуется купить</label><textarea id="request_description" disabled={analyzing} maxLength={20000} rows={5} value={requestDescription} onChange={event => { analysisGeneration.current += 1; setRequestDescription(event.target.value); setAgentRun(null); setAnswers({}); }} placeholder="Например: 5 000 бумажных стаканов по 350 мл с нашим логотипом. Доставка в Новосибирск до 15 ноября, бюджет 60 000 ₽." /></div>
@@ -550,7 +553,7 @@ export default function NewNeedPage() {
           <details className="need-disclosure"><summary>Настройки видимости</summary><div className="field"><label htmlFor="visibility">Кто увидит потребность</label><select id="visibility" value={visibility} onChange={event => setVisibility(event.target.value as NeedVisibility)}><option value="open_anonymized">{NEED_VISIBILITY_LABELS.open_anonymized}</option><option value="closed">{NEED_VISIBILITY_LABELS.closed}</option>{visibility === "selected_producers" && <option value="selected_producers">Для выбранных производителей — сохранённый режим</option>}</select><p className="hint">Закрытая потребность не участвует в общем подборе. Адресный запрос КП отправляется отдельно.</p></div></details>
           {visibility!=="open_anonymized" && <p className="alert alert-warning">Потребность скрыта из общего подбора. <button type="button" className="btn btn-secondary btn-sm" onClick={()=>setVisibility("open_anonymized")}>Открыть подбор производителям</button></p>}
           <PhysicalQuantityReview kind="need" values={{category, subcategory, characteristics:Object.fromEntries(rows.filter(row=>row.key.trim()).map(row=>[row.key.trim(),row.value])),volume_units:volumeUnits}} approved={quantityApproved} onApproval={setQuantityApproved} compact />
-          <footer className="need-review__footer"><p className="hint">{visibility === "open_anonymized" ? "Производители увидят требования без реквизитов компании." : "Потребность сохранится вне общего подбора производителей."}</p><div className="actions"><button type="submit" className="btn btn-primary" disabled={submitting || !company}>{submitting ? "Отправляем…" : company?.verification_status==="verified" ? visibility === "open_anonymized" ? "Подтвердить и опубликовать" : "Сохранить закрытую потребность" : "Сохранить черновик"}<Icon name="arrow" size={18} /></button><Link href="/needs" className="btn btn-secondary">Отмена</Link></div></footer>
+          <footer className="need-review__footer"><p className="hint">{visibility === "open_anonymized" ? "Производители увидят требования без реквизитов компании." : "Потребность сохранится вне общего подбора производителей."}</p><div className="actions"><button type="submit" className="btn btn-primary" disabled={submitting || !company}>{submitting ? "Отправляем…" : visibility === "open_anonymized" ? "Подтвердить и опубликовать" : "Сохранить закрытую потребность"}<Icon name="arrow" size={18} /></button><Link href="/needs" className="btn btn-secondary">Отмена</Link></div></footer>
         </section>}
       </fieldset>
     </form>

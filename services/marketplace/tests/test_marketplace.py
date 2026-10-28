@@ -85,7 +85,7 @@ async def test_full_flow(client, db_session):
     assert r.json()["status"] == "matched"
 
 
-async def test_unverified_company_can_create_draft_but_cannot_publish(client, db_session):
+async def test_unverified_buyer_can_create_and_publish(client, db_session):
     user = await make_user(db_session)
     company = await make_company(db_session, user, can_buy=True, can_sell=False, verified=False)
     r = await client.post(
@@ -99,7 +99,8 @@ async def test_unverified_company_can_create_draft_but_cannot_publish(client, db
     publish = await client.post(
         f"/api/v1/needs/{r.json()['id']}/publish", headers=_auth(make_token(user))
     )
-    assert publish.status_code == 403
+    assert publish.status_code == 200, publish.text
+    assert publish.json()["status"] in {"waiting_for_match", "open_for_offers", "coalition_candidate"}
 
 
 async def test_unverified_company_cannot_publish_product(client, db_session):

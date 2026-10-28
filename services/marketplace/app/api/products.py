@@ -17,7 +17,7 @@ from ..deps import (
     get_current_user,
     require_company_admin,
     require_company_seller,
-    require_verified_company,
+    require_verified_seller,
 )
 from ..experience import notify_market_watchers, validate_characteristics
 from ..models import Deal, DealExecutionEvent, Offer, Product, ProductImage, ProductPriceObservation
@@ -343,7 +343,7 @@ async def publish_product(
     await db.refresh(product)
     admission = None
     if data.published:
-        await require_verified_company(product.company_id, user, db)
+        await require_verified_seller(product.company_id, user, db)
         from ..category_admission import match_profile
         profile = match_profile(product.category, product.subcategory, product.characteristics)
         if profile is not None and not profile.supported:
