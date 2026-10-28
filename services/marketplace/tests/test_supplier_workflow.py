@@ -129,3 +129,42 @@ async def test_order_export_checks_parties_and_uses_frozen_terms(client,workspac
         records=list(csv.DictReader(io.StringIO(precise.content.decode('utf-8-sig')),delimiter=';'))
         assert records[0]['Ставка НДС, %']=='20' and records[0]['НДС в сумме, ₽']
     assert (await client.get(f'{path}?company_id={w["other"]}',headers=w['headers'][2])).status_code==404
+
+
+async def test_seller_context_terms_require_owned_matching_published_admitted_product(client, workspace, db_session):
+    from conftest import grant_packaging_documents
+    from app.models import Document
+    w = workspace
+    await mark_sent(client, w)
+    path = f'/api/v3/supplier-requests/{w["row"]["id"]}/context'
+    product = await db_session.scalar(select(Product).where(Product.company_id == w['seller']))
+    product.characteristics = {**product.characteristics, 'volume_ml': 400}
+    product.price_rub = Decimal('7.123456789123')
+    await grant_packaging_documents(db_session, w['seller'], confirms={'material': ['бумага']})
+    await db_session.commit()
+    async def seller_terms():
+        response = await client.get(path, params={'company_id': str(w['seller'])}, headers=w['headers'][1])
+        assert response.status_code == 200, response.text
+        return response.json()['catalog_terms']
+    terms = await seller_terms()
+    assert len(terms) == 1 and terms[0]['price_rub'] == '7.123456789123'
+    assert terms[0]['moq_units'] == 10 and terms[0]['lead_time_days'] == 5
+    product.price_rub = Decimal('0.000000000001')
+    await db_session.commit()
+    assert (await seller_terms())[0]['price_rub'] == '0.000000000001'
+    assert set(terms[0]) == {'product_id', 'name', 'price_rub', 'moq_units', 'lead_time_days', 'unit'}
+    buyer = await client.get(path, params={'company_id': str(w['buyer'])}, headers=w['headers'][0])
+    assert buyer.json()['catalog_terms'] == []
+    product.characteristics = {**product.characteristics, 'material': 'пластик'}
+    await db_session.commit()
+    assert await seller_terms() == []
+    product.characteristics = {**product.characteristics, 'material': 'бумага'}
+    product.is_published = False
+    await db_session.commit()
+    assert await seller_terms() == []
+    product.is_published = True
+    await db_session.commit()
+    for doc in (await db_session.scalars(select(Document).where(Document.company_id == w['seller']))).all():
+        doc.valid_until = date.today() - timedelta(days=1)
+    await db_session.commit()
+    assert await seller_terms() == []  # No cached positive admission after expiry.

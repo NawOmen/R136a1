@@ -36,7 +36,7 @@ class BusinessAnalysis(unittest.TestCase):
         report = analysis.build_report(self.data)
         compact = analysis.readme_markdown(report)
         self.assertIn('12 расчётных сценариев', compact)
-        self.assertIn('47 профилей в 12 разделах', compact)
+        self.assertIn('47 профилей в 12 группах категорий', compact)
         self.assertIn('600.00 | 200.00', compact)
         self.assertIn('-700.00 | -500.00', compact)
         self.assertIn('Группа не набрана: переход к прямому запросу | не определено', compact)

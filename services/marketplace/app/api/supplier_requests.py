@@ -4,6 +4,7 @@ import hashlib
 import uuid
 from datetime import date, datetime, timezone
 from typing import Literal
+from types import SimpleNamespace
 from urllib.parse import quote
 
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
@@ -274,10 +275,23 @@ async def context(request_id: uuid.UUID, company_id: uuid.UUID, user: CurrentUse
     row = await party(db, request_id, company_id, user)
     catalog = (await db.scalars(select(Product).where(Product.company_id == row.seller_company_id, Product.is_published.is_(True)).order_by(Product.name).limit(100))).all()
     relevant = [p for p in catalog if p.category == row.specification["category"] and (not row.specification.get("subcategory") or p.subcategory == row.specification["subcategory"])]
+    # Only an owning seller receives draft terms. Category/name similarity is
+    # insufficient: compare the complete shared specification and current admission.
+    catalog_terms = []
+    if company_id == row.seller_company_id:
+        from ..admission import publicly_available_products
+        from ..category_compatibility import compare_specifications
+        requested = SimpleNamespace(category=row.specification["category"], subcategory=row.specification.get("subcategory"),
+            characteristics=row.specification.get("characteristics") or {}, volume_units=row.specification["quantity"])
+        matching = [p for p in catalog if compare_specifications(p, requested).matches]
+        for product in (await publicly_available_products(db, matching))[:3]:
+            catalog_terms.append({"product_id": str(product.id), "name": product.name, "price_rub": format(product.price_rub, "f"),
+                "moq_units": product.moq_units, "lead_time_days": product.lead_time_days, "unit": order_unit(product.characteristics)})
     recent = (await db.scalars(select(SupplierRequestMessage).where(SupplierRequestMessage.request_id == row.id).order_by(SupplierRequestMessage.created_at.desc(), SupplierRequestMessage.id.desc()).limit(20))).all()
     return {"contract_version": "supplier-workflow-1", "request_id": row.id, "revision": row.revision,
         "buyer_name": row.buyer_name, "seller_name": row.seller_name, "author_role": "buyer" if company_id == row.buyer_company_id else "seller",
         "specification": row.specification, "supplier_products": [p.name for p in (relevant or catalog)[:10]], "specialized": bool(relevant),
+        "catalog_terms": catalog_terms,
         "messages": [{"role": "buyer" if m.author_company_id == row.buyer_company_id else "seller", "text": m.message} for m in reversed(recent)]}
 
 

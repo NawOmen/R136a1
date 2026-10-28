@@ -62,6 +62,20 @@ class CategoryRegistryTests(unittest.TestCase):
             with self.subTest(mutation=mutation), self.assertRaises(ValueError):
                 registry.validate_registry(data)
 
+    def test_targeted_metadata_is_detached_and_uses_the_active_registry(self):
+        original = registry.characteristic_fields(["material"])
+        self.assertEqual(set(original), {"material"})
+        changed = registry.registry_snapshot()
+        changed["characteristic_fields"]["material"]["label"] = "Материал после проверки"
+        changed["groups"][0]["label"] = "Новая категория"
+        with registry.registry_context(changed):
+            fields = registry.characteristic_fields(["material"])
+            self.assertEqual(fields["material"]["label"], "Материал после проверки")
+            self.assertEqual(registry.parent_category_label(changed["groups"][0]["id"]), "Новая категория")
+            fields["material"]["aliases"].clear()
+            self.assertTrue(registry.characteristic_fields(["material"])["material"]["aliases"])
+        self.assertEqual(registry.characteristic_fields(["material"]), original)
+
     def test_generated_web_snapshot_contains_same_ids_and_order(self):
         self.assertEqual(generator.TARGET.read_text(encoding="utf-8"), generator.expected_snapshot())
         snapshot = json.loads(generator.expected_snapshot())

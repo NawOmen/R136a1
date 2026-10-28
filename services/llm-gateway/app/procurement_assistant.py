@@ -57,6 +57,40 @@ class SellerReplyPlan(BaseModel):
     clarify: list[Literal["specification", "address", "documents"]] = Field(default_factory=list, max_length=3)
 
 
+class CatalogReplyTerms(BaseModel):
+    """Read-only Marketplace data, excluded from the model's output schema."""
+    product_id: uuid.UUID
+    name: str = Field(min_length=1, max_length=500)
+    price_rub: str = Field(pattern=r"^\d{1,12}(?:\.\d{1,12})?$")
+    moq_units: int = Field(ge=1)
+    lead_time_days: int = Field(ge=0, le=3650)
+    unit: str = Field(min_length=1, max_length=30)
+
+
+def seller_reply_text(plan: SellerReplyPlan, value: dict) -> tuple[str, list[str]]:
+    text = "Здравствуйте! Получили ваш запрос."
+    terms = []
+    for raw in value.get("catalog_terms") or []:
+        try:
+            item = CatalogReplyTerms.model_validate(raw)
+        except ValueError:
+            continue  # An incomplete/older backend cannot supply invented defaults.
+        price = format(Decimal(item.price_rub), "f").replace(".", ",")
+        terms.append(f'«{item.name}»: цена от {price} ₽/{item.unit}, минимальная партия {item.moq_units} {item.unit}, срок по карточке — {item.lead_time_days} дн.')
+        if len(terms) == 3:
+            break
+    if terms:
+        text += " Справочно, данные каталога (проверьте перед отправкой): " + " ".join(terms)
+    text += " Цену для вашего объёма, наличие, срок, доставку и условия НДС нужно согласовать отдельно."
+    questions = {"specification": "Уточните характеристики и требования к товару.",
+        "address": "Уточните точный адрес доставки.", "documents": "Какие документы должны сопровождать поставку?"}
+    if plan.intent == "clarify":
+        text += " " + " ".join(questions[key] for key in dict.fromkeys(plan.clarify))
+    warning = ("Справочные цена, минимальная партия и срок взяты из ваших опубликованных товаров. Это не КП: проверьте данные и подтвердите условия самостоятельно."
+        if terms else "ИИ подготовил ответ без коммерческих обязательств. Цену, наличие, срок, доставку и НДС укажите и подтвердите самостоятельно.")
+    return text, [warning]
+
+
 class ExtractIn(Input):
     file_id: uuid.UUID
 
@@ -139,7 +173,8 @@ async def draft(data: DraftIn, request: Request, user: CurrentUser = Depends(get
         "Все даты в готовом тексте пиши в формате дд.мм.гг, например 26.11.26. Не меняй номера документов. "
         "Без лишних заголовков, рекламы и длинных объяснений."
     )
-    model_context = {**value, "specification": dict(value.get("specification") or {})}
+    model_context = {key: item for key, item in value.items() if key != "catalog_terms"}
+    model_context["specification"] = dict(value.get("specification") or {})
     deadline = model_context["specification"].get("deadline_date")
     if isinstance(deadline, str):
         model_context["specification"]["deadline_date"] = draft_dates(deadline)
@@ -157,19 +192,15 @@ async def draft(data: DraftIn, request: Request, user: CurrentUser = Depends(get
                 "Не возвращай свободный текст, числа, даты, цену, наличие, доставку, НДС или обещания. "
                 "Пример: {\"intent\":\"clarify\",\"clarify\":[\"address\"]}.",
                 json.dumps({"context": model_context, "user_guidance": data.guidance}, ensure_ascii=False), SellerReplyPlan))
-            questions = {"specification": "Уточните характеристики и требования к товару.",
-                "address": "Уточните точный адрес доставки.", "documents": "Какие документы должны сопровождать поставку?"}
-            text = "Здравствуйте! Получили ваш запрос. Цену, наличие, срок, доставку и условия НДС нужно согласовать отдельно."
-            if plan.intent == "clarify":
-                text += " " + " ".join(questions[key] for key in dict.fromkeys(plan.clarify))
-            warnings = ["ИИ подготовил ответ без коммерческих обязательств. Цену, наличие, срок, доставку и НДС укажите и подтвердите самостоятельно."]
         else:
             parsed = DraftText.model_validate(await local(request).structured(system,
                 json.dumps({"mode": data.mode, "context": model_context, "user_guidance": data.guidance}, ensure_ascii=False), DraftText))
             text, warnings = draft_dates(parsed.text), []
     except (ModelUnavailable, ValueError) as exc:
         raise HTTPException(503, "Локальный ИИ не подготовил черновик. Повторите попытку или напишите сообщение вручную") from exc
-    await context(request, data)  # Recheck access/revision after a slow model call.
+    current = await context(request, data)  # Recheck access/revision and fetch fresh catalog terms.
+    if seller_reply:
+        text, warnings = seller_reply_text(plan, current)
     return DraftOut(text=text, warnings=warnings, request_revision=value["revision"], model_version=settings.ollama_model)
 
 

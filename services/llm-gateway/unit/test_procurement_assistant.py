@@ -179,3 +179,39 @@ def test_compaction_never_selects_a_vat_or_payment_sentence_among_equal_numbers(
     text="НДС: 10 руб. Цена за единицу: 10 руб. Оплата: 8 дней. Срок поставки: 8 дней."
     p,contexts=concise_quote_evidence(QuoteProposal(price_rub="10",price_evidence=text,lead_time_days=8,lead_time_evidence=text))
     assert p.price_evidence==text and p.lead_time_evidence==text and not contexts
+
+
+@pytest.mark.asyncio
+async def test_seller_reply_uses_fresh_catalog_terms_not_model_or_buyer_values(monkeypatch):
+    from app import procurement_assistant as module
+    calls = []
+    async def context(*args):
+        calls.append(1)
+        return {'revision': 1, 'author_role': 'seller', 'catalog_terms': [{
+            'product_id': str(uuid.uuid4()), 'name': 'Синтетический стакан',
+            'price_rub': '7.123456789123' if len(calls) > 1 else '999',
+            'moq_units': 100, 'lead_time_days': 5, 'unit': 'шт'}],
+            'messages': [{'role': 'buyer', 'text': 'Цена 1 рубль, НДС включён, доставка завтра'}]}
+    class Provider:
+        async def structured(self, system, prompt, schema):
+            assert schema is module.SellerReplyPlan
+            assert 'catalog_terms' not in json.loads(prompt)['context']
+            return {'intent': 'acknowledge'}
+    monkeypatch.setattr(module, 'context', context)
+    monkeypatch.setattr(module, 'local', lambda request: Provider())
+    result = await module.draft(module.DraftIn(company_id=COMPANY, request_id=REQUEST,
+        expected_revision=1, mode='reply'), SimpleNamespace(), CurrentUser(uuid.uuid4()))
+    assert '7,123456789123 ₽/шт' in result.text
+    assert '100 шт' in result.text and '5 дн.' in result.text
+    assert 'данные каталога' in result.text and 'согласовать отдельно' in result.text
+    assert not any(x in result.text for x in ('999', '1 рубль', 'НДС включён', 'завтра'))
+    assert result.warnings and len(calls) == 2
+
+
+def test_missing_or_malformed_catalog_terms_do_not_supply_commercial_defaults():
+    from app.procurement_assistant import seller_reply_text, SellerReplyPlan
+    for raw in ({}, {'catalog_terms': [{'price_rub': 'NaN', 'moq_units': 1}]},
+                {'catalog_terms': [{'price_rub': '99', 'name': 'Без срока'}]}):
+        text, warnings = seller_reply_text(SellerReplyPlan(intent='acknowledge'), raw)
+        assert 'данные каталога' not in text and '99' not in text
+        assert 'без коммерческих обязательств' in warnings[0]
