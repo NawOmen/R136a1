@@ -205,7 +205,8 @@ MLX-сервером на Apple Silicon (`LOCAL_LLM_BACKEND=mlx`). Без так
 Изображения распознаёт vision-модель через Ollama, аудио — Whisper `small`/`int8` внутри
 Gateway. Версии и контрольные суммы: [models.lock.json](infra/models.lock.json); точные
 команды запуска — [docs/ml-trained-deployment.md](docs/ml-trained-deployment.md).
-[Методика, результаты и ограничения обучения](#agent-quality).
+Размышления модели отключены по умолчанию (`MLX_ENABLE_THINKING=false`): на извлечении
+фактов они не меняют ответ, но тратят время. [Методика, результаты и ограничения обучения](#agent-quality).
 
 | Подключение | Состояние |
 |---|---|
