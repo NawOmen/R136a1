@@ -84,7 +84,7 @@ class StaleCapacityProfileTests(IsolatedAsyncioTestCase):
                             production_start=date.today()+timedelta(days=2), production_end=date.today()+timedelta(days=3),
                             non_fill_rule='close_without_obligations', participant_terms=[{'need_id':need.id},{'need_id':uuid.uuid4()}])
                         action = lambda: market.publish_group_offer(group.id, data, user, db)
-                for name in ('require_company_buyer','require_company_seller','require_company_admin','require_verified_company'):
+                for name in ('require_company_buyer','require_company_seller','require_company_admin','require_verified_seller'):
                     if hasattr(module,name): stack.enter_context(patch.object(module,name,AsyncMock()))
                 # Keep require_company_admission real: dropping the frozen snapshot must fail this regression.
                 with self.assertRaises(HTTPException) as rejected:

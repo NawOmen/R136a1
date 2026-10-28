@@ -493,3 +493,31 @@ async def test_two_member_edits_serialize_before_need_and_audit_locks(client, db
             if not task.done():
                 task.cancel()
         await asyncio.gather(*tasks, return_exceptions=True)
+
+
+@pytest.mark.parametrize("raw_key,key,observed,reviewed,origin", [
+    ("body_material","material","сталь","сталь","agent"),
+    ("body_material","material","сталь","дерево","manual_override"),
+    ("product_type","product_kind","болт","болт","agent"),
+])
+async def test_catalogue_alias_normalization_preserves_citations_and_human_corrections(client, db_session, spec, gateway_contract, raw_key, key, observed, reviewed, origin):
+    import json
+    _, uid, cid, _, headers, payload, *_ = spec
+    run = uuid.uuid4()
+    source = {"source_id":"text", "excerpt":f"Материал сталь, вид изделия болт", "value":observed,
+              "source_name":"Синтетическое ТЗ", "source_kind":"text", "confidence":1}
+    result = {"can_confirm":True,"conflicts":[],"questions":[],"properties":[
+        {"key":raw_key,"value":observed,"status":"confirmed","sources":[source]}]}
+    has_type = await db_session.scalar(text("SELECT EXISTS(SELECT 1 FROM information_schema.columns WHERE table_schema='agents' AND table_name='agent_runs' AND column_name='agent_type')"))
+    query = text("INSERT INTO agents.agent_runs (id,revision,state,result,user_id,company_id,agent_type,requested_route,input_summary) VALUES (:id,1,'confirmed_by_user',CAST(:result AS JSONB),:uid,:cid,'buyer_investigator','local','')" if has_type else
+        "INSERT INTO agents.agent_runs (id,revision,state,result,user_id,company_id) VALUES (:id,1,'confirmed_by_user',CAST(:result AS JSONB),:uid,:cid)")
+    await db_session.execute(query, {"id":run,"uid":uid,"cid":cid,"result":json.dumps(result)})
+    await db_session.commit()
+    response = await client.post("/api/v3/needs",headers=headers,json={**payload,
+        "category":"Строительство","subcategory":"Крепёж","characteristics":{"unit":"шт",key:reviewed},
+        "agent_run_id":str(run),"agent_run_revision":1})
+    assert response.status_code == 201, response.text
+    field = response.json()["requirements_evidence"]["fields"][key]
+    assert field["origin"] == origin
+    if origin == "agent": assert field["sources"] == [source]
+    else: assert field["previous_evidence"]["value"] == observed

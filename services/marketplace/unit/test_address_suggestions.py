@@ -42,9 +42,13 @@ async def test_only_russian_suggestions_and_typed_query_are_forwarded(monkeypatc
             {"value": "г Москва, ул Лесная, д 1", "data": {"country_iso_code": "RU", "city": "Москва", "region_with_type": "г Москва", "house": "1"}},
             {"value": "Иностранный адрес", "data": {"country_iso_code": "XX"}},
         ]})
+    quota = AsyncMock()
+    monkeypatch.setattr(addresses, "reserve_address_request", quota)
     original = httpx.AsyncClient
     monkeypatch.setattr(addresses.httpx, "AsyncClient", lambda **kwargs: original(transport=httpx.MockTransport(handle), **kwargs))
-    items = await addresses.suggest_addresses(uuid.uuid4(), "Москва Лесная 1", CurrentUser(uuid.uuid4()), object())
+    company_id, db = uuid.uuid4(), object()
+    items = await addresses.suggest_addresses(company_id, "Москва Лесная 1", CurrentUser(uuid.uuid4()), db)
+    quota.assert_awaited_once_with(db, company_id)
     assert len(items) == 1
     assert items[0]["city"] == "Москва"
     assert items[0]["house"] == "1"

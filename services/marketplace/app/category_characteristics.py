@@ -1,10 +1,10 @@
 """Technical value validation; no compliance decisions or unit conversion."""
 from decimal import Decimal, InvalidOperation
 
-from .category_registry import registry_snapshot, resolve_category, normalize_label
+from .category_registry import characteristic_fields, resolve_category, normalize_label
 from .category_units import validate_unit
 
-_FIELDS = registry_snapshot()["characteristic_fields"]
+_FIELDS = characteristic_fields()
 
 
 def _number(value, field: dict) -> Decimal:
@@ -61,10 +61,10 @@ def validate_profile_values(
     category: str, subcategory: str | None, characteristics: dict,
     *, require_product_fields: bool = False,
 ) -> list[str]:
-    _FIELDS = registry_snapshot()["characteristic_fields"]
     profile = characteristic_profile(category, subcategory)
     if profile is None:
         return []  # Legacy/free classifications need their own migration policy.
+    _FIELDS = characteristic_fields(profile["fields"])
     errors = validate_unit(category, subcategory, characteristics)
     normalized = {normalize_label(str(key)): value for key, value in characteristics.items()}
     mandatory = set(profile["required_for_product"])

@@ -17,7 +17,7 @@ from dataclasses import dataclass, field
 from datetime import date, datetime, timezone
 
 from .category_tree import CATALOG_TREE
-from .category_registry import resolve_category,registry_snapshot
+from .category_registry import resolve_category, characteristic_fields, parent_category_label
 from .experience import validate_characteristics
 from .models import Document
 
@@ -402,8 +402,7 @@ def canonical_scope(category: str | None, subcategory: str | None) -> tuple[str,
     """
     leaf = resolve_category(category, subcategory)
     if leaf:
-        from .category_registry import registry_snapshot
-        parent = next(group['label'] for group in registry_snapshot()['groups'] if group['id'] == leaf['parent_id'])
+        parent = parent_category_label(leaf['parent_id'])
         return normalize(parent), normalize(leaf['label'])
     norm_category = normalize(category)
     norm_subcategory = normalize(subcategory)
@@ -426,8 +425,7 @@ def catalog_scope(category: str | None, subcategory: str | None) -> tuple[str, s
 
 def characteristic_value(characteristics: dict | None, attribute: str) -> str | None:
     normalized = {normalize(str(key)): value for key, value in (characteristics or {}).items()}
-    from .category_registry import registry_snapshot
-    field = registry_snapshot()["characteristic_fields"].get(attribute,{})
+    field = characteristic_fields([attribute]).get(attribute, {})
     for alias in {*CHARACTERISTIC_ALIASES.get(attribute,(attribute,)),*field.get("aliases",[])}:
         value = normalized.get(normalize(alias))
         if value not in (None, ""):
@@ -507,7 +505,7 @@ def _coverage_state(
             for document in documents
             for value in (document.confirms or {}).get(attribute, [])
         ]
-        label = ATTRIBUTE_LABELS.get(attribute, registry_snapshot()["characteristic_fields"].get(attribute,{}).get("label",attribute))
+        label = ATTRIBUTE_LABELS.get(attribute, characteristic_fields([attribute]).get(attribute, {}).get("label",attribute))
         if not confirmed:
             # Проверяющий не сопоставил документ с характеристикой изделия:
             # считать требование закрытым нельзя.

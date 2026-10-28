@@ -35,7 +35,7 @@ def permission_patches(stack, module):
         stack.enter_context(patch.object(module, '_lock_coalition_needs', AsyncMock()))
     if module is resilience:
         stack.enter_context(patch.object(module, '_lock_plan_need', AsyncMock()))
-    for name in ('require_company_buyer', 'require_company_admin', 'require_verified_company', 'reserve'):
+    for name in ('require_company_buyer', 'require_company_admin', 'require_verified_seller', 'reserve'):
         stack.enter_context(patch.object(module, name, AsyncMock()))
 
 

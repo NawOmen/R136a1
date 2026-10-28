@@ -120,3 +120,25 @@ async def test_popularity_does_not_bypass_publication_or_company_admission(clien
     await db_session.execute(text("UPDATE auth.companies SET verification_status='rejected' WHERE id=:id"), {"id":sc})
     await db_session.commit()
     assert (await client.get("/api/v1/products?sort=popular")).json() == []
+
+
+async def test_catalogue_query_count_does_not_grow_per_product(client, db_session, catalogue, engine):
+    from sqlalchemy import event
+    products, _, seller = catalogue
+    for index in range(47):
+        db_session.add(Product(company_id=seller, name=f"Синтетический стакан {index}", category=products[0].category,
+            characteristics=dict(products[0].characteristics), price_rub=10, moq_units=1,
+            lead_time_days=2, is_published=True))
+    await db_session.commit()
+    queries = []
+    def count(conn, cursor, statement, parameters, context, executemany):
+        if statement.lstrip().upper().startswith('SELECT'): queries.append(statement)
+    event.listen(engine.sync_engine, 'before_cursor_execute', count)
+    try:
+        response = await client.get('/api/v3/products?sort=popular')
+    finally:
+        event.remove(engine.sync_engine, 'before_cursor_execute', count)
+    assert response.status_code == 200, response.text
+    assert len(response.json()) == 50
+    print(f"catalogue_select_queries={len(queries)}")
+    assert len(queries) <= 6  # Constant query budget for 50 products, including current admission.

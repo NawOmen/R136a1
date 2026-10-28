@@ -84,8 +84,17 @@ async def evidence_snapshot(db, data, user, *, lock=True):
     result = row["result"]
     if result.get("conflicts") or result.get("questions") or not result.get("can_confirm"):
         raise HTTPException(409, "Сначала разрешите конфликты требований")
+    from .category_compatibility import canonical_key
+    from .category_characteristics import characteristic_profile
+    profile = characteristic_profile(data.category, data.subcategory)
     for prop in result.get("properties", []):
         key = prop["key"]
+        if key not in fields:
+            # The form normalizes catalogue aliases, not source values. Keep
+            # their real citations instead of relabelling a copied fact manual.
+            key = canonical_key(key)
+            if key == "product_type" and profile and "product_kind" in profile["fields"]:
+                key = "product_kind"
         if prop.get("status") == "needs_clarification":
             raise HTTPException(409, "Есть неподтверждённые требования")
         if key not in fields:

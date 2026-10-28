@@ -16,7 +16,7 @@ from ..deps import (
     require_company_admin,
     require_company_buyer,
     require_company_seller,
-    require_verified_company,
+    require_verified_seller,
 )
 from ..matching import ACTIVE_NEED_STATUSES, _need_parts, need_is_current, order_unit, run_market_rematch
 from ..models import (
@@ -244,7 +244,7 @@ async def publish_group_offer(
         raise HTTPException(status.HTTP_404_NOT_FOUND, detail="Черновик группового предложения не найден")
     await require_company_seller(group_offer.company_id, user, db)
     await require_company_admin(group_offer.company_id, user, db)
-    await require_verified_company(group_offer.company_id, user, db)
+    await require_verified_seller(group_offer.company_id, user, db)
     # Match the consent path: needs, coalition, then resource locks. Refresh
     # identity-map objects after waiting, before checking statuses or volumes.
     member_needs = await _lock_coalition_needs(db, group_offer.coalition_id)
@@ -551,7 +551,6 @@ async def decide_coalition(
         raise HTTPException(status.HTTP_403_FORBIDDEN, detail="Компания не является участником коалиции")
     await require_company_buyer(data.company_id, user, db)
     await require_company_admin(data.company_id, user, db)
-    await require_verified_company(data.company_id, user, db)
     decision_hash = payload_hash({"decision": data.decision,
                                   "expected_revision": data.expected_revision}) if data.request_key else None
     # A committed decision survives the state/TTL changes it caused. Recheck
@@ -597,7 +596,7 @@ async def decide_coalition(
         entity_id=coalition.id,
         actor_user_id=user.id,
         actor_company_id=data.company_id,
-        permission="company_admin+buyer+verified",
+        permission="company_admin+buyer",
         decision=data.decision,
         payload={
             "coalition_id": str(coalition.id),
@@ -647,8 +646,8 @@ async def decide_coalition(
     elif all(item.approval_status == "approved" for item in members):
         if group_offer.seller_approval_status != "approved":
             raise HTTPException(status.HTTP_409_CONFLICT, detail="Производитель ещё не подтвердил условия")
-        # Последняя фиксация проверяет допуск всех сторон заново: отзыв
-        # проверки у продавца или любого покупателя блокирует обязательства.
+        # Проверка продавца повторяется перед созданием обязательств.
+        # Для покупателей верификация компании не требуется.
         producer = (await db.execute(
             text("SELECT verification_status FROM auth.companies WHERE id = :id"),
             {"id": coalition.producer_company_id},
@@ -656,17 +655,13 @@ async def decide_coalition(
         if producer != "verified":
             raise HTTPException(status.HTTP_409_CONFLICT,
                                 detail="Допуск производителя отозван. Обязательства не созданы")
-        buyer_states = (
-            await db.execute(
-                text("SELECT id, verification_status FROM auth.companies WHERE id = ANY(:ids)"),
-                {"ids": [item.buyer_company_id for item in members]},
-            )
-        ).all()
-        buyer_verified = {row[0]: row[1] for row in buyer_states}
-        for item in members:
-            if buyer_verified.get(item.buyer_company_id) != "verified":
-                raise HTTPException(status.HTTP_409_CONFLICT,
-                                    detail="Допуск покупателя отозван. Обязательства не созданы")
+        buyer_rows = (await db.execute(text(
+            "SELECT c.id FROM auth.companies c WHERE c.id = ANY(:ids) AND c.country = 'RU' "
+            "AND EXISTS (SELECT 1 FROM auth.company_members m WHERE m.company_id=c.id AND m.can_buy=true)"
+        ), {"ids": [item.buyer_company_id for item in members]})).all()
+        buyers = {row[0] for row in buyer_rows}
+        if any(item.buyer_company_id not in buyers for item in members):
+            raise HTTPException(409, "Компания участника недоступна для закупок. Обязательства не созданы")
         for current_need in member_needs.values():
             await require_current_evidence(db, current_need)
         # Обязательства создаются сейчас: допуск производителя проверяется заново,

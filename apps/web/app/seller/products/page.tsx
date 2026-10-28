@@ -354,7 +354,7 @@ export default function SellerProductsPage() {
                   placeholder="Характеристика (например, материал)"
                   aria-label={`Характеристика ${index + 1}: название`}
                   value={fieldName(row.key)}
-                  onChange={(event) => updateRow(index, { key: canonicalCharacteristicKey(event.target.value) })}
+                  onChange={(event) => updateRow(index, { key: canonicalCharacteristicKey(event.target.value, category, subcategory) })}
                 />
                 <input
                   type="text"

@@ -140,6 +140,16 @@ def registry_snapshot() -> dict:
     return deepcopy(_registry())
 
 
+def characteristic_fields(keys=None) -> dict:
+    """Detached field definitions from the active registry, without copying all profiles."""
+    fields = _registry()["characteristic_fields"]
+    return deepcopy(fields if keys is None else {key: fields[key] for key in keys if key in fields})
+
+
+def parent_category_label(parent_id: str) -> str | None:
+    return next((group["label"] for group in _registry()["groups"] if group["id"] == parent_id), None)
+
+
 def catalogue_tree() -> dict[str, list[str]]:
     return {group["label"]: [leaf["label"] for leaf in group["leaves"]] for group in _registry()["groups"]}
 

@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "registry_version": "catalog-4",
+  "registry_version": "catalog-5",
   "tree": {
     "Упаковка и тара": [
       "Бумажные стаканы",
@@ -377,6 +377,58 @@
       ],
       "unit": "мм",
       "positive": true
+    },
+    "package_kg": {
+      "label": "Масса упаковки, кг",
+      "type": "text",
+      "aliases": []
+    },
+    "package_m": {
+      "label": "Длина в упаковке, м",
+      "type": "text",
+      "aliases": []
+    },
+    "batch": {
+      "label": "Партия",
+      "type": "text",
+      "aliases": []
+    },
+    "package_m2": {
+      "label": "Площадь в упаковке, м²",
+      "type": "text",
+      "aliases": []
+    },
+    "food_contact": {
+      "label": "Контакт с пищевыми продуктами",
+      "type": "text",
+      "aliases": []
+    },
+    "cross_section_mm2": {
+      "label": "Сечение, мм²",
+      "type": "text",
+      "aliases": []
+    },
+    "shelf_load_kg": {
+      "label": "Нагрузка на полку, кг",
+      "type": "text",
+      "aliases": []
+    },
+    "ports": {
+      "label": "Разъёмы",
+      "type": "text",
+      "aliases": []
+    },
+    "assembly": {
+      "label": "Сборка",
+      "type": "text",
+      "aliases": []
+    },
+    "strength_class": {
+      "label": "Класс прочности",
+      "type": "text",
+      "aliases": [
+        "класс прочности"
+      ]
     }
   },
   "technical_profiles": {

@@ -163,10 +163,12 @@ async def test_next_step_ordering(client, db_session):
     user = await make_user(db_session)
     pending_company = await make_company(db_session, user, can_buy=True, can_sell=False, verified=False)
     r = await client.get("/api/v1/next-step", headers=_auth(make_token(user)))
-    assert r.json()["href"] == f"/company/{pending_company}"
+    assert r.json()["href"] == "/needs/new"
     buyer = await make_user(db_session)
     await make_company(db_session, buyer, can_buy=True, can_sell=False, verified=True)
     r = await client.get("/api/v1/next-step", headers=_auth(make_token(buyer)))
+    assert r.json()["href"] == "/needs/new"
+    r = await client.get("/api/v1/next-step?company_id=" + str(pending_company) + "&mode=buy", headers=_auth(make_token(user)))
     assert r.json()["href"] == "/needs/new"
     seller = await make_user(db_session)
     await make_company(db_session, seller, can_buy=False, can_sell=True, verified=True)

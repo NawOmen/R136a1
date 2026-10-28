@@ -18,7 +18,7 @@ from ..deps import (
     require_company_admin,
     require_company_buyer,
     require_company_seller,
-    require_verified_company,
+    require_verified_seller,
 )
 from ..matching import _need_parts, _passport_matches, offer_unit_price, order_unit, ACTIVE_NEED_STATUSES
 from ..models import (
@@ -323,8 +323,8 @@ async def _validate_activation(db, plan, scenario, *, automatic):
     need = await db.get(Need, plan.need_id)
     await require_current_evidence(db, need)
     buyer = await get_company(db, plan.buyer_company_id)
-    if not buyer or buyer["verification_status"] != "verified":
-        raise HTTPException(409, "Компания покупателя больше не допущена к новым обязательствам")
+    if not buyer:
+        raise HTTPException(409, "Компания покупателя не найдена")
     if need.status not in {*ACTIVE_NEED_STATUSES, "matched"} or need.deadline_date < date.today():
         raise HTTPException(409, "Потребность закрыта или срок поставки истёк")
     result = scenario.result
@@ -599,7 +599,6 @@ async def create_resilience_plan(
         raise HTTPException(status.HTTP_404_NOT_FOUND, detail="Потребность не найдена")
     await require_company_buyer(need.company_id, user, db)
     await require_company_admin(need.company_id, user, db)
-    await require_verified_company(need.company_id, user, db)
     await require_current_evidence(db, need)
     existing = (
         await db.execute(select(ResiliencePlan).where(ResiliencePlan.need_id == need.id, ResiliencePlan.status != "stale"))
@@ -794,7 +793,6 @@ async def confirm_resilience_plan(
         raise HTTPException(status.HTTP_404_NOT_FOUND, detail="План устойчивости не найден")
     await require_company_buyer(plan.buyer_company_id, user, db)
     await require_company_admin(plan.buyer_company_id, user, db)
-    await require_verified_company(plan.buyer_company_id, user, db)
     if plan.status != "ready_for_confirmation":
         raise HTTPException(
             status.HTTP_409_CONFLICT,
@@ -908,7 +906,7 @@ async def confirm_resilience_plan(
         entity_id=plan.id,
         actor_user_id=user.id,
         actor_company_id=plan.buyer_company_id,
-        permission="company_admin+buyer+verified",
+        permission="company_admin+buyer",
         decision="approved",
         payload={
             "baseline_variant_id": str(plan.baseline_variant_id),
@@ -1014,7 +1012,7 @@ async def decide_reserve_commitment(
         raise HTTPException(status.HTTP_404_NOT_FOUND, detail="Приглашение в резерв не найдено")
     await require_company_seller(data.company_id, user, db)
     await require_company_admin(data.company_id, user, db)
-    await require_verified_company(data.company_id, user, db)
+    await require_verified_seller(data.company_id, user, db)
     await _lock_plan_need(db, commitment.plan_id)
     plan = (
         await db.execute(
@@ -1195,7 +1193,6 @@ async def simulate_failure(
         raise HTTPException(status.HTTP_404_NOT_FOUND, detail="План устойчивости не найден")
     await require_company_buyer(plan.buyer_company_id, user, db)
     await require_company_admin(plan.buyer_company_id, user, db)
-    await require_verified_company(plan.buyer_company_id, user, db)
     if plan.status == "stale":
         raise HTTPException(409, "Спецификация изменилась. Нужен новый ресурсный план")
     primary_ids = {item["company_id"] for item in (plan.current_allocations or plan.baseline_allocations) if item.get("role") != "executed"}
@@ -1253,7 +1250,7 @@ async def report_producer_failure(
         raise HTTPException(status.HTTP_404_NOT_FOUND, detail="План устойчивости не найден")
     await require_company_seller(data.company_id, user, db)
     await require_company_admin(data.company_id, user, db)
-    await require_verified_company(data.company_id, user, db)
+    await require_verified_seller(data.company_id, user, db)
     if plan.status == "stale":
         raise HTTPException(409, "Спецификация изменилась. Нужен новый ресурсный план")
     primary_ids = {item["company_id"] for item in (plan.current_allocations or plan.baseline_allocations) if item.get("role") != "executed"}
@@ -1365,7 +1362,6 @@ async def approve_recovery(
         raise HTTPException(status.HTTP_404_NOT_FOUND, detail="Предложение восстановления не найдено")
     await require_company_buyer(plan.buyer_company_id, user, db)
     await require_company_admin(plan.buyer_company_id, user, db)
-    await require_verified_company(plan.buyer_company_id, user, db)
     if scenario.status == "activated":
         return await _plan_out(db, plan)
     if scenario.status != "proposed" or set(scenario.failed_company_ids) != set(plan.failed_company_ids):
@@ -1374,7 +1370,6 @@ async def approve_recovery(
         raise HTTPException(409, "Конфигурация замены изменилась. Обновите её перед подтверждением")
     await require_company_buyer(plan.buyer_company_id, user, db)
     await require_company_admin(plan.buyer_company_id, user, db)
-    await require_verified_company(plan.buyer_company_id, user, db)
     if plan.confirmed_at is None:
         raise HTTPException(409, "Сначала согласуйте актуальную полную смету плана")
     await _lock_plan_resources(db, plan)
@@ -1429,7 +1424,7 @@ async def approve_recovery(
         entity_id=scenario.id,
         actor_user_id=user.id,
         actor_company_id=plan.buyer_company_id,
-        permission="company_admin+buyer+verified",
+        permission="company_admin+buyer",
         decision="approved",
         payload={
             "plan_id": str(plan.id),

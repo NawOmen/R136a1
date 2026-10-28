@@ -103,5 +103,11 @@ app.include_router(fulfillment.router, prefix="/api/v3")
 from .api import quality_evidence
 app.include_router(quality_evidence.router, prefix="/api/v3")
 
+from .api import supplier_requests
+app.include_router(supplier_requests.router, prefix="/api/v3")
+
+from .api import order_export
+app.include_router(order_export.router, prefix="/api/v3")
+
 from .denials import BusinessDenied, handle_denial
 app.add_exception_handler(BusinessDenied, handle_denial)

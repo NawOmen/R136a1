@@ -28,7 +28,7 @@ def body(response, status=200):
 async def test_working_leaf_order_report_repeat_and_denials(client, db_session, row):
     seller = await make_user(db_session); buyer = await make_user(db_session)
     sc = await make_company(db_session, seller, can_buy=False)
-    bc = await make_company(db_session, buyer, can_sell=False)
+    bc = await make_company(db_session, buyer, can_sell=False, verified=False)
     sh = {'Authorization': 'Bearer ' + make_token(seller)}
     bh = {'Authorization': 'Bearer ' + make_token(buyer)}
     spec = {'category': row[2], 'subcategory': row[3], 'characteristics': row[5]}

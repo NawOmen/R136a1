@@ -291,6 +291,7 @@ export interface Need {
   status: NeedStatus;
   valid_until: string | null;
   no_match_reason: string | null;
+  matching_warnings?: string[];
   confirmed_at: string | null;
   files: NeedFile[];
 }
@@ -819,7 +820,7 @@ export function characteristicLabel(key: string, profile?: CategoryProfileSnapsh
       return field.label;
     }
   }
-  return registryCharacteristicLabel(key) ?? CHARACTERISTIC_LABELS[key] ?? key;
+  return registryCharacteristicLabel(key) ?? CHARACTERISTIC_LABELS[key] ?? (/[а-яё]/i.test(key) ? key : "Дополнительный параметр");
 }
 
 export function formatCharacteristics(characteristics: Record<string, unknown>, profile?: CategoryProfileSnapshot | null): string {
@@ -902,7 +903,7 @@ function describeValidationError(item: ValidationErrorItem): string { return val
 
 type RequestOptions = RequestInit & { token?: string | null };
 
-async function marketplaceFetch<T>(path: string, options: RequestOptions = {}): Promise<T> {
+export async function marketplaceFetch<T>(path: string, options: RequestOptions = {}): Promise<T> {
   const { token, ...init } = options;
   const headers = new Headers(init.headers);
   headers.set("Accept", "application/json");
@@ -935,7 +936,7 @@ async function marketplaceFetch<T>(path: string, options: RequestOptions = {}): 
   return (await response.json()) as T;
 }
 
-async function marketplaceFetchBlob(path: string, token: string): Promise<Blob> {
+export async function marketplaceFetchBlob(path: string, token: string): Promise<Blob> {
   const response = await russianFetch(`${marketplaceBaseUrl()}${path.replace("/api/v1", "/api/v3").replace("/api/v2", "/api/v3/physical")}`, {
     headers: { Authorization: `Bearer ${token}` },
   });
@@ -1052,7 +1053,7 @@ export const marketplace = {
     return marketplaceFetch(`/api/v1/editor/categories/${publish ? "publish" : "preview"}`, { token, method: "POST", body: JSON.stringify(input) });
   },
   downloadEditorDocument(token: string, id: string): Promise<Blob> { return marketplaceFetchBlob(`/api/v1/editor/documents/${id}/download`, token); },
-  previewPhysicalQuantity(kind: "product" | "need", values: Record<string, unknown>): Promise<{ normalized: Record<string, unknown>; conversion: QuantityConversionPreview }> {
+  previewPhysicalQuantity(kind: "product" | "need", values: Record<string, unknown>): Promise<{ normalized: Record<string, unknown>; conversion: QuantityConversionPreview; matching_warnings?: string[] }> {
     return marketplaceFetch("/api/v2/physical-quantities/preview", { method: "POST", body: JSON.stringify({ kind, values }) });
   },
   getProfileRevision(token: string, kind: "products" | "needs", id: string): Promise<ProfileRevisionPreview> {

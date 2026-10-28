@@ -78,15 +78,15 @@ async def require_membership(company_id: uuid.UUID, user: CurrentUser, db: Async
     return membership
 
 
-async def require_verified_company(company_id: uuid.UUID, user: CurrentUser, db: AsyncSession) -> dict:
-    await require_membership(company_id, user, db)
+async def require_verified_seller(company_id: uuid.UUID, user: CurrentUser, db: AsyncSession) -> dict:
+    await require_company_seller(company_id, user, db)
     company = await get_company(db, company_id)
     if company is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, detail="Компания не найдена")
     if company["verification_status"] != "verified":
         raise HTTPException(
             status.HTTP_403_FORBIDDEN,
-            detail="Компания не проверена: публикация и сделки запрещены",
+            detail="Для продаж требуется проверка компании",
         )
     return company
 
