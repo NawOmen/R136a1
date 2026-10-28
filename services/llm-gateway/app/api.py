@@ -137,7 +137,9 @@ async def _run_out(db: AsyncSession, run: AgentRun) -> AgentRunOut:
 async def health() -> HealthOut:
     return HealthOut(
         status="ok",
-        local_model=settings.ollama_model,
+        local_backend=settings.local_llm_backend,
+        local_model=_local_model_version(),
+        vision_model=settings.ollama_vision_model,
         external_enabled=bool(settings.deepseek_api_key),
     )
 

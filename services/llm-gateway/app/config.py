@@ -23,7 +23,10 @@ class Settings(BaseSettings):
     jwt_algorithm: Literal["HS256"] = "HS256"
 
     ollama_base_url: str = "http://host.docker.internal:11434"
-    local_llm_backend: Literal["mlx", "ollama"] = "mlx"
+    # По умолчанию Ollama: обычный `docker compose up` должен работать без
+    # нативного MLX-сервера. Обученная модель включается явно:
+    # LOCAL_LLM_BACKEND=mlx (см. docs/ml-trained-deployment.md).
+    local_llm_backend: Literal["mlx", "ollama"] = "ollama"
     mlx_base_url: str = "http://host.docker.internal:8080"
     trained_model_version: str = "porukam-buyer-qwen3.5"
     mlx_timeout_seconds: float = 180.0

@@ -174,7 +174,9 @@ class SellerExplainOut(BaseModel):
 
 class HealthOut(BaseModel):
     status: str
+    local_backend: Literal["mlx", "ollama"] = "ollama"
     local_model: str
+    vision_model: str = ""
     external_enabled: bool
 
 
