@@ -137,3 +137,19 @@ async def test_confirmed_category_ranks_before_requirement_only_candidate():
                     completed_order_types=[], materials=["сталь"])
     matches = await search_capabilities(FakeDB([fallback, direct]), "металлические детали", [prop("body_material", "сталь")])
     assert [match.company_id for match in matches] == [direct["company_id"], fallback["company_id"]]
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("category", ["Другая продукция", "Другое", "other.other-products"])
+async def test_generic_category_and_material_never_invent_manufacturers(category):
+    db = FakeDB(suppliers())
+    assert await search_capabilities(db, category, [prop("body_material", "бумага"), prop("product_type", "упаковка")]) == []
+    assert not db.calls
+
+
+@pytest.mark.asyncio
+async def test_other_category_can_search_after_a_specific_object_is_confirmed():
+    db = FakeDB(suppliers())
+    matches = await search_capabilities(db, "Другая продукция", [prop("product_type", "металлические детали")])
+    assert len(matches) == 1
+    assert matches[0].details["material_grades"] == "Сталь 45, алюминий АМг6"

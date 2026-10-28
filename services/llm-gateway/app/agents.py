@@ -419,6 +419,9 @@ def merge_facts(
                 confidence=fact.confidence,
                 excerpt=fact.evidence,
                 original_value=fact.evidence or fact.value,
+                normalization=("model_city_name" if key == "delivery_city" and isinstance(fact.value, str)
+                    and fact.evidence and fact.evidence in source_map[fact.source_id].text
+                    and not re.search(r"(?<!\w)" + re.escape(fact.value.strip()) + r"(?!\w)", fact.evidence, re.I) else None),
                 original_unit=fact.original_unit if fact.original_unit and fact.original_unit in source_map[fact.source_id].text else None,
                 normalized_unit=(fact.original_unit.strip().lower() if fact.original_unit and fact.original_unit in source_map[fact.source_id].text else None),
                 content_hash=source_map[fact.source_id].content_hash,
@@ -543,6 +546,15 @@ async def search_capabilities(
     properties: list[RequirementProperty],
     excluded_company_id: uuid.UUID | None = None,
 ) -> list[CapabilityMatch]:
+    broad = category.strip().casefold() in {"другая продукция", "другое", "прочее", "other", "other.other-products"}
+    specific_object = next((str(p.value) for p in properties
+        if p.key == "product_type" and p.status == "confirmed" and isinstance(p.value, str)), "")
+    generic_words = {"другая", "продукция", "другое", "прочее", "товар", "товары", "упаковка", "изделие", "изделия", "материал", "оборудование"}
+    object_tokens = {t for t in re.findall(r"[а-яёa-z0-9]+", specific_object.casefold()) if len(t) > 3 and t not in generic_words}
+    if broad and not object_tokens:
+        # A generic category/material is not evidence of a production match.
+        # The buyer can clarify the object or use the manual product route.
+        return []
     rows = (
         await db.execute(
             text(
@@ -557,7 +569,7 @@ async def search_capabilities(
         )
     ).mappings().all()
     category_tokens = {
-        token for token in re.findall(r"[а-яёa-z0-9]+", category.lower()) if len(token) > 3
+        token for token in re.findall(r"[а-яёa-z0-9]+", (specific_object if broad else category).lower()) if len(token) > 3
     }
     required_text = " ".join(
         str(prop.value)

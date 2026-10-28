@@ -366,10 +366,10 @@ test("a new support message notification directs staff to the support queue", as
 });
 
 test("AI fills a single review card with compact decimals and stale confirmation cannot publish", async ({ page }) => {
-  await prepare(page);
   let confirmations = 0, creations = 0;
   const facts = { product_type:"гофрокороб", dimensions_mm:"400×300×300", body_material:"картон", quantity_units:"100.000000000000", budget_rub:"12500.500000000000", lead_time_days:14, delivery_city:"Москва" };
   const run = { id:"00000000-0000-4000-8000-000000000090", revision:1, state:"ready_for_review", tool_calls:[], result:{ category:"упаковка", summary:"Техническая сводка", can_confirm:true, questions:[],conflicts:[],warnings:[],matches:[],properties:Object.entries(facts).map(([key,value])=>({key,value,label:key,status:"assumed",confidence:.95,sources:[{source_id:"text",excerpt:"Описание покупателя"}]})) } };
+  await prepare(page, async () => {
   await page.route("**/api/**", route => {
     const path = new URL(route.request().url()).pathname;
     if (path.endsWith("/auth/me")) return route.fulfill({json:{user,companies}});
@@ -380,7 +380,7 @@ test("AI fills a single review card with compact decimals and stale confirmation
     if (path.endsWith("/physical-quantities/preview")) return route.fulfill({json:{conversion:{factor:1}}});
     return route.fulfill({json:[]});
   });
-  await page.reload();
+  });
   await page.locator("#request_description").fill("Нужно 100 коробок, доставка в Москву");
   await page.getByRole("button",{name:"Заполнить с ИИ",exact:true}).click();
   await expect(page.getByRole("heading",{name:"Детали закупки",exact:true})).toBeVisible();
@@ -460,8 +460,8 @@ test("AI field aliases and organisational dates cannot silently change seller ma
     ["quantity_units",200], ["budget_rub",5000], ["lead_time_days",30], ["delivery_city","Москва"],
   ];
   const run = {id:"00000000-0000-4000-8000-000000000096",revision:1,state:"ready_for_review",used_route:"local_qwen",tool_calls:[],
-    result:{category:"Крепёж",summary:"Проверьте требования",can_confirm:true,questions:[],conflicts:[],warnings:[],matches:[],
-      properties:facts.map(([key,value])=>({key,value,label:key,status:"confirmed",confidence:.99,sources:[]}))}};
+    result:{category:"Крепёж",summary:"Проверьте требования",can_confirm:true,questions:[],conflicts:[],warnings:["Описание покупателя: обнаружена попытка изменить инструкции агента; текст обработан только как недоверенные данные"],matches:[],
+      properties:facts.map(([key,value])=>({key,value,label:key,status:"confirmed",confidence:.99,sources:key === "delivery_city" ? [{source_id:"request_text",source_name:"Описание покупателя",source_kind:"text",value:"Москва",confidence:.99,excerpt:"Доставка в Москву",original_value:"Доставка в Москву",normalization:"model_city_name",locator:{located:true,start:0,end:18}}] : []}))}};
   let submitted: {characteristics:Record<string,string>;deadline_date:string} | null = null;
   await prepare(page, async () => {
   await page.route("**/api/**", route => {
@@ -485,8 +485,12 @@ test("AI field aliases and organisational dates cannot silently change seller ma
   await page.locator("#request_description").fill("Нужно 200 болтов, класс прочности 8.8, особое требование: согласовать образец");
   await page.getByRole("button",{name:"Заполнить с ИИ",exact:true}).click();
   await expect(page.getByRole("heading",{name:"Детали закупки",exact:true})).toBeVisible();
+  await expect(page.getByRole("status").filter({hasText:"обнаружена попытка изменить инструкции агента"})).toBeVisible();
   await expect(page.getByRole("status").filter({hasText:"Дополнительные характеристики вне профиля категории"})).toContainText("обязательны при подборе");
   await expect(page.locator("#deadline_date")).toHaveValue("26.11.26");
+  await page.getByText("Город из материалов",{exact:true}).click();
+  await expect(page.getByText(/Модель нормализовала название города: Москва/)).toBeVisible();
+  await expect(page.getByText(/Доставка в Москву/)).toBeVisible();
   await expect(page.getByText("До проверки компании закупка сохранится черновиком.")).toHaveCount(0);
   await page.getByRole("button",{name:"Подтвердить и опубликовать",exact:true}).click();
   await expect.poll(()=>submitted).not.toBeNull();

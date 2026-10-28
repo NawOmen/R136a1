@@ -125,7 +125,7 @@ test('desktop board drag moves a supplier card smoothly',async({page,isMobile})=
 
 test('matched need keeps the next step to orders after reload', async ({page}, testInfo) => {
   await prepare(page);
-  await page.route(url => url.pathname.startsWith("/api/") && url.pathname.endsWith(`/needs/${needId}`), route => route.fulfill({json:{...need,status:'matched'}}));
+  await page.route(url => url.pathname.includes("/api/") && url.pathname.endsWith(`/needs/${needId}`), route => route.fulfill({json:{...need,status:'matched'}}));
   await page.goto(`/needs/${needId}`);
   await expect(page.getByRole('heading',{name:'Предложение выбрано',exact:true})).toBeVisible();
   await expect(page.getByRole('link',{name:'Перейти к заказам',exact:true})).toHaveAttribute('href','/deals');
@@ -134,4 +134,25 @@ test('matched need keeps the next step to orders after reload', async ({page}, t
   if (['desktop-chromium','iphone-webkit'].includes(testInfo.project.name)) await page.locator('section.card').filter({has:page.getByRole('heading',{name:'Предложение выбрано',exact:true})}).screenshot({path:`output/procurement-qa/final-next-step-${testInfo.project.name}.png`,style:'.site-header,.skip-link{visibility:hidden!important}'});
   await page.reload();
   await expect(page.getByRole('link',{name:'Перейти к заказам',exact:true})).toBeVisible();
+});
+
+
+test('reply citations stay short and reveal original context on demand',async({page})=>{
+  await prepare(page);
+  const context='Ответ поставщика. Цена за единицу: 10,50 руб. Срок поставки: 8 дней. Упаковка согласуется отдельно.';
+  await page.route('**/api/v1/procurement-assistant/extract-reply',route=>route.fulfill({json:{
+    price_rub:'10.50',price_basis:'unit',price_evidence:'Цена за единицу: 10,50 руб.',
+    lead_time_days:8,lead_time_evidence:'Срок поставки: 8 дней.',delivery_date:null,date_evidence:'',
+    request_revision:1,file_id:fileId,content_hash:'synthetic-hash',warnings:['Проверьте значения по исходному файлу.'],
+    evidence_contexts:{price_evidence:context},
+  }}));
+  const workspace=await openCard(page);
+  await workspace.getByLabel('Файл ответа поставщика').setInputFiles({name:'Ответ.txt',mimeType:'text/plain',buffer:Buffer.from(context)});
+  await expect(workspace.getByText('Цена за единицу: 10,50 руб.',{exact:true})).toBeVisible();
+  await expect(workspace.getByText(context,{exact:true})).not.toBeVisible();
+  await workspace.getByText('Больше контекста: цена',{exact:true}).click();
+  await expect(workspace.getByText(context,{exact:true})).toBeVisible();
+  await expect(workspace.getByLabel('Цена из ответа, ₽')).toHaveValue('10.50');
+  expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
+  if(['desktop-chromium','iphone-webkit'].includes(test.info().project.name)) await workspace.screenshot({path:test.info().outputPath('compact-quote.png'),style:'.site-header,.skip-link{visibility:hidden!important}'});
 });

@@ -79,6 +79,7 @@ class QuoteOut(QuoteProposal):
     content_hash: str
     model_version: str
     warnings: list[str]
+    evidence_contexts: dict[str, str] = Field(default_factory=dict)
 
 
 async def marketplace_get(request, path, company_id, *, binary=False):
@@ -215,6 +216,50 @@ def recover_missing_evidence(proposal: QuoteProposal, source: str) -> QuotePropo
     return proposal
 
 
+def concise_quote_evidence(proposal: QuoteProposal) -> tuple[QuoteProposal, dict[str, str]]:
+    """Short display citations after grounding; retain the exact wider context.
+
+    Do not shrink the text used by the safety/ambiguity checks. Every returned
+    citation and context remains a literal slice of the uploaded source.
+    """
+    contexts = {}
+    fields = (("price_evidence", proposal.price_rub), ("lead_time_evidence", proposal.lead_time_days), ("date_evidence", proposal.delivery_date))
+    for key, value in fields:
+        full = getattr(proposal, key)
+        if value is None or not full:
+            continue
+        if key == "price_evidence":
+            candidates = list(re.finditer(r"(?<![\w.,+−-])(?:\d{1,3}(?:[ \u00a0\u202f]\d{3})+|\d+)(?:[.,]\d+)?\s*(?:руб(?:лей|ля)?\.?|₽|RUB)(?!\w)", full, re.I))
+            def equal_amount(match):
+                number = re.match(r"[\d \u00a0\u202f]+(?:[.,]\d+)?", match.group()).group().strip()
+                return Decimal(re.sub(r"[ \u00a0\u202f]", "", number).replace(",", ".")) == Decimal(value)
+            anchors = [m for m in candidates if equal_amount(m)]
+            match = anchors[0] if len(anchors) == 1 else None
+        elif key == "lead_time_evidence":
+            anchors = list(re.finditer(rf"(?<![\w.,+−-]){value}\s*(?:дней|дня|день|дн\.?)(?!\w)", full, re.I))
+            match = anchors[0] if len(anchors) == 1 else None
+        else:
+            labels = (value.isoformat(), value.strftime("%d.%m.%Y"), value.strftime("%d.%m.%y"))
+            anchors = list(re.finditer(r"(?<![\w.-])(?:" + "|".join(re.escape(label) for label in labels) + r")(?![\w-]|\.\d)", full))
+            match = anchors[0] if len(anchors) == 1 else None
+        if match is None:
+            continue
+        boundaries = list(re.finditer(r"[!?;]+|\.(?!\d)(?=\s+[А-ЯЁA-Z]|\s*$)|\n+", full))
+        start = max((m.end() for m in boundaries if m.end() <= match.start()), default=0)
+        end = next((m.end() for m in boundaries if m.end() >= match.end()), len(full))
+        # A PDF may place «Цена за единицу:» on the previous line. Keep the
+        # label with the number; its meaning must not disappear from the quote.
+        if start and full[:start].rstrip().endswith(":"):
+            start = full.rfind("\n", 0, max(0, start-1)) + 1
+        if end-start > 160:
+            start, end = max(start, match.start()-60), min(end, match.end()+60)
+        excerpt = full[start:end].strip()
+        if excerpt != full:
+            contexts[key] = full
+            setattr(proposal, key, excerpt)
+    return proposal, contexts
+
+
 def grounded(proposal, source):
     """An excerpt is required for each suggested value; guesses become unknown."""
     warnings = []
@@ -279,9 +324,11 @@ async def extract_reply(data: ExtractIn, request: Request, user: CurrentUser = D
             "Если есть разные цены, ступени, альтернативы или противоречия, не выбирай произвольно: оставь соответствующее поле null. Не принимай НДС или предоплату за цену товара.",
             source, QuoteProposal)
         proposal, warnings = grounded(recover_missing_evidence(QuoteProposal.model_validate(result), source), source)
+        proposal, evidence_contexts = concise_quote_evidence(proposal)
     except (ModelUnavailable, ValueError, UnreadableMaterial, TimeoutError) as exc:
         raise HTTPException(503, "Не удалось разобрать ответ локальным ИИ. Файл сохранён, цену и срок можно ввести вручную") from exc
     await context(request, data)
     return QuoteOut(**proposal.model_dump(), request_revision=value["revision"], file_id=data.file_id,
         content_hash=metadata["content_hash"], model_version=settings.ollama_model,
+        evidence_contexts=evidence_contexts,
         warnings=["Проверьте значения по исходному файлу. Они сохранятся только после вашего подтверждения."] + warnings)

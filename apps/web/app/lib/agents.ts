@@ -17,6 +17,7 @@ export interface EvidenceItem {
   active?: boolean;
   content_hash?: string;
   original_value?: FactValue;
+  normalization?: "model_city_name" | null;
   locator?: { located?: boolean; start?: number; end?: number; page?: number; seconds?: string[]; representation?: string };
 }
 

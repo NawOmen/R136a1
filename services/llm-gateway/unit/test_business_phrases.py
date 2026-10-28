@@ -63,3 +63,15 @@ def test_security_warning_without_files_never_invents_unreadable_materials():
 def test_omitted_quantity_range_is_not_chosen_as_an_exact_order():
     props,_,_=merge('Нужно от 5 до 10 тысяч штук')
     assert props['quantity_units'].value is None
+
+
+@pytest.mark.parametrize("value,quote,normalized", [
+    ("Москва", "доставка в Москву", "model_city_name"),
+    ("Новосибирск", "получение в Новосибирске", "model_city_name"),
+    ("Москва", "Доставка: Москва", None),
+])
+def test_city_normalization_is_explicit_and_the_original_quote_stays_verbatim(value,quote,normalized):
+    props,_,_=merge(quote,[dict(key="delivery_city",value=value,evidence=quote)])
+    item=props["delivery_city"].sources[0]
+    assert item.normalization==normalized and item.original_value==quote
+    assert item.excerpt==quote and item.value==value and item.locator["located"]

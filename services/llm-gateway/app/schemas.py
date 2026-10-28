@@ -38,6 +38,7 @@ class EvidenceItem(BaseModel):
     confidence: float = Field(ge=0, le=1)
     excerpt: str = ""
     original_value: FactValue | None = None
+    normalization: Literal["model_city_name"] | None = None
     original_unit: str | None = None
     normalized_unit: str | None = None
     locator: dict[str, Any] = Field(default_factory=dict)

@@ -151,3 +151,31 @@ async def test_seller_draft_cannot_add_terms_even_when_model_or_buyer_proposes_t
         assert not any(x in text for x in ('12,50','25.02.27','НДС включён','самовывоз'))
         assert 'Уточните точный адрес' in text and response.json()['warnings']
         assert len(contexts)==2
+
+
+def test_compact_quotes_keep_numbers_decimals_and_full_context_after_grounding():
+    from app.procurement_assistant import recover_missing_evidence, concise_quote_evidence
+    text="Ответ на запрос. Цена за единицу: 10,50 руб. Срок поставки: 8 дней. Доставка 10.11.2026. Приложение доступно отдельно."
+    parsed,warnings=grounded(recover_missing_evidence(QuoteProposal(price_rub="10.50",price_basis="unit",lead_time_days=8),text),text)
+    assert not warnings
+    short,contexts=concise_quote_evidence(parsed)
+    assert short.price_evidence=="Цена за единицу: 10,50 руб."
+    assert short.lead_time_evidence=="Срок поставки: 8 дней."
+    assert short.price_evidence in text and short.lead_time_evidence in text
+    assert all(value in text for value in contexts.values())
+    assert short.price_evidence in contexts["price_evidence"]
+    assert grounded(short,text)[1]==[]
+
+
+def test_compact_pdf_quote_keeps_the_price_label_from_previous_line():
+    from app.procurement_assistant import concise_quote_evidence
+    text="Общие условия\nЦена за единицу:\n10,50 руб.\nСрок: 8 дней."
+    p,_=concise_quote_evidence(QuoteProposal(price_rub="10.50",price_basis="unit",price_evidence=text))
+    assert p.price_evidence=="Цена за единицу:\n10,50 руб."
+
+
+def test_compaction_never_selects_a_vat_or_payment_sentence_among_equal_numbers():
+    from app.procurement_assistant import concise_quote_evidence
+    text="НДС: 10 руб. Цена за единицу: 10 руб. Оплата: 8 дней. Срок поставки: 8 дней."
+    p,contexts=concise_quote_evidence(QuoteProposal(price_rub="10",price_evidence=text,lead_time_days=8,lead_time_evidence=text))
+    assert p.price_evidence==text and p.lead_time_evidence==text and not contexts

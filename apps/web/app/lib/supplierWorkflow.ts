@@ -19,6 +19,7 @@ export interface QuoteProposal {
   price_rub: string | null; price_basis: PriceBasis; price_evidence: string;
   lead_time_days: number | null; lead_time_evidence: string; delivery_date: string | null; date_evidence: string;
   request_revision: number; file_id: string; content_hash: string; warnings: string[];
+  evidence_contexts?: Partial<Record<"price_evidence" | "lead_time_evidence" | "date_evidence", string>>;
 }
 export interface SupplierUpdate {
   company_id: string; expected_revision: number; status: SupplierStatus; quoted_price_rub: Money | null;
