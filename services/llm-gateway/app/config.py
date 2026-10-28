@@ -31,6 +31,9 @@ class Settings(BaseSettings):
     trained_model_version: str = "porukam-buyer-qwen3.5"
     mlx_timeout_seconds: float = 180.0
     mlx_max_tokens: int = Field(default=640, ge=1, le=2048)
+    # Размышления обученной модели отключены по умолчанию: на извлечении фактов
+    # они дают тот же JSON, но тратят токены и время. Включать только для замеров.
+    mlx_enable_thinking: bool = False
 
     # Основная модель — обученный локальный кандидат; изображения распознаёт отдельная vision-модель.
     ollama_model: str = "qwen3.5:9b"

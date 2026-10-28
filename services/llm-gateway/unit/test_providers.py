@@ -163,3 +163,86 @@ async def test_trained_text_keeps_vision_separate(monkeypatch):
     await TrainedMLXProvider().vision_text('synthetic', 'p')
     assert RecordingClient.payloads[0]['model'] == settings.ollama_vision_model
     assert 'images' in RecordingClient.payloads[0]['messages'][0]
+
+
+@pytest.mark.asyncio
+async def test_trained_mlx_disables_thinking_by_default(monkeypatch):
+    from app.providers import TrainedMLXProvider
+    class MLXResponse(FakeResponse):
+        def json(self):
+            return {"choices": [{"message": {"content": '{"category":"Крепёж","facts":[]}'}}]}
+    class Client(RecordingClient):
+        async def post(self, url, json):
+            self.payloads.append(json)
+            return MLXResponse("ok")
+    Client.payloads = []
+    monkeypatch.setattr("app.providers.httpx.AsyncClient", Client)
+    monkeypatch.setattr(settings, "mlx_enable_thinking", False)
+    monkeypatch.setattr("app.providers._MLX_ACCEPTS_TEMPLATE_KWARGS", True)
+    await TrainedMLXProvider().structured("s", "p", RawExtraction)
+    payload = Client.payloads[0]
+    assert payload["chat_template_kwargs"] == {"enable_thinking": False}
+    assert payload["messages"][0]["content"].rstrip().endswith("/no_think")
+    assert payload["max_tokens"] == settings.mlx_max_tokens
+
+
+@pytest.mark.asyncio
+async def test_trained_mlx_can_enable_thinking_explicitly(monkeypatch):
+    from app.providers import TrainedMLXProvider
+    class MLXResponse(FakeResponse):
+        def json(self):
+            return {"choices": [{"message": {"content": '{"category":"Крепёж","facts":[]}'}}]}
+    class Client(RecordingClient):
+        async def post(self, url, json):
+            self.payloads.append(json)
+            return MLXResponse("ok")
+    Client.payloads = []
+    monkeypatch.setattr("app.providers.httpx.AsyncClient", Client)
+    monkeypatch.setattr(settings, "mlx_enable_thinking", True)
+    await TrainedMLXProvider().structured("s", "p", RawExtraction)
+    payload = Client.payloads[0]
+    assert "chat_template_kwargs" not in payload
+    assert "/no_think" not in payload["messages"][0]["content"]
+
+
+@pytest.mark.asyncio
+async def test_trained_mlx_retries_without_template_kwargs_on_old_server(monkeypatch):
+    import httpx
+    from app.providers import TrainedMLXProvider
+    class Ok(FakeResponse):
+        def json(self):
+            return {"choices": [{"message": {"content": '{"category":"Крепёж","facts":[]}'}}]}
+    class StrictResponse(FakeResponse):
+        status_code = 422
+        def raise_for_status(self):
+            request = httpx.Request("POST", "http://mlx/v1/chat/completions")
+            raise httpx.HTTPStatusError("unknown field", request=request, response=self)
+    class Client(RecordingClient):
+        async def post(self, url, json):
+            # Копия: провайдер удаляет chat_template_kwargs из того же словаря при повторе.
+            self.payloads.append(dict(json))
+            return StrictResponse("no") if "chat_template_kwargs" in json else Ok("ok")
+    Client.payloads = []
+    monkeypatch.setattr("app.providers.httpx.AsyncClient", Client)
+    monkeypatch.setattr(settings, "mlx_enable_thinking", False)
+    monkeypatch.setattr("app.providers._MLX_ACCEPTS_TEMPLATE_KWARGS", True)
+    result = await TrainedMLXProvider().structured("s", "p", RawExtraction)
+    assert result.category == "Крепёж"
+    assert len(Client.payloads) == 2
+    assert "chat_template_kwargs" in Client.payloads[0] and "chat_template_kwargs" not in Client.payloads[1]
+    assert "/no_think" in Client.payloads[1]["messages"][0]["content"]
+
+
+@pytest.mark.asyncio
+async def test_tagged_reasoning_block_is_stripped_before_json(monkeypatch):
+    from app.providers import TrainedMLXProvider
+    class MLXResponse(FakeResponse):
+        def json(self):
+            return {"choices": [{"message": {"content": '<think>долго рассуждал</think>{"category":"Крепёж","facts":[]}'}}]}
+    class Client(RecordingClient):
+        async def post(self, url, json):
+            return MLXResponse("ok")
+    monkeypatch.setattr("app.providers.httpx.AsyncClient", Client)
+    monkeypatch.setattr(settings, "mlx_enable_thinking", True)
+    result = await TrainedMLXProvider().structured("s", "p", RawExtraction)
+    assert result.category == "Крепёж"
