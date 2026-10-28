@@ -446,6 +446,12 @@ async def analyze_buyer_request(
             AgentSource.run_id == run.id, AgentSource.active.is_(False), AgentSource.extracted_text == ""
         ))).all()
         result.unreadable_sources = [{"source_id": item.source_id, "name": item.name, "content_hash": item.content_hash} for item in unreadable]
+        if unreadable:
+            if len(result.questions) < 3:
+                result.questions.append(ClarificationQuestion(key="unreadable_materials",
+                    question="Часть материалов не прочитана. Продолжить без них?", options=["Да, продолжить без них"]))
+            result.can_confirm = False
+            result.summary = buyer_summary(result.matches, True)
         run.result = result.model_dump(mode="json")
         run.initial_result = result.model_dump(mode="json")
         run.duration_ms = round((perf_counter() - started_at) * 1000)
@@ -745,7 +751,7 @@ async def explain_seller_match(
         )
     ).mappings().first()
     if passport is None:
-        raise HTTPException(status.HTTP_409_CONFLICT, detail="Сначала заполните Capability Passport")
+        raise HTTPException(status.HTTP_409_CONFLICT, detail="Сначала заполните паспорт возможностей")
     corpus = str(dict(passport)).lower()
     eligible = any(
         token in corpus
@@ -755,7 +761,7 @@ async def explain_seller_match(
     reasons = (
         ["Категория пересекается с подтверждёнными возможностями производства"]
         if eligible
-        else ["В Capability Passport не найдено явного совпадения категории"]
+        else ["В паспорте возможностей не найдено явного совпадения категории"]
     )
     run = AgentRun(user_id=user.id, company_id=data.company_id, agent_type="seller_agent",
                    state="running", requested_route="local", input_summary="Объяснение совместимости")

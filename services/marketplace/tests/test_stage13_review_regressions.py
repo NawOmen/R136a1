@@ -84,6 +84,10 @@ async def test_expiry_is_detected_without_user_get_and_does_not_spam(client, db_
     await db_session.commit()
     events = (await db_session.execute(text("SELECT event_type FROM marketplace.trust_audit_events WHERE entity_id=:id AND event_type IN ('document_expiring','document_expired')"), {"id": document_id})).scalars().all()
     assert sorted(events) == ['document_expired','document_expiring']
+    notices = (await db_session.execute(text("SELECT explanation FROM marketplace.trust_audit_events WHERE entity_id=:id AND event_type IN ('document_expiring','document_expired')"), {"id":document_id})).scalars().all()
+    expiry = date.today() + timedelta(days=2)
+    assert all(expiry.strftime('%d.%m.%y') in notice and expiry.isoformat() not in notice for notice in notices)
+
 
 
 async def test_parallel_verification_has_one_decision(client, db_session):

@@ -126,3 +126,50 @@ def test_web_and_backend_category_tree_contract():
     for group in registry_snapshot()["groups"]:
         for leaf in group["leaves"]:
             assert snapshot["leaf_ids"][group["label"]][leaf["label"]] == leaf["id"]
+
+
+async def test_reviewed_ai_specification_reaches_seller_feed_and_custom_constraints_stay_strict(client, db_session):
+    """Regression for the exact extra keys seen in the live Qwen walkthrough."""
+    seller_user = await make_user(db_session)
+    seller = await make_company(db_session, seller_user, can_buy=False, can_sell=True)
+    buyer_user = await make_user(db_session)
+    buyer = await make_company(db_session, buyer_user, can_buy=True, can_sell=False)
+    attributes = {"unit":"шт", "thread":"М8", "material":"сталь", "standard":"синтетическая спецификация Б-01",
+                  "length_mm":"40", "diameter_mm":"8", "product_kind":"болт", "strength_class":"8.8"}
+    await grant_category_capability(db_session, seller, "construction.fasteners", attributes, min_units=200, max_units=12000)
+    ids = []
+    for extra in ({}, {"grade":"8.8"}, {"delivery_date":"26.11.26"}, {"особое требование":"согласовать образец"}):
+        response = await client.post("/api/v3/needs", headers=auth(make_token(buyer_user)), json={
+            "company_id":str(buyer), "category":"Строительство", "subcategory":"Крепёж",
+            "characteristics":{**attributes, **extra}, "volume_units":200, "budget_rub":5000,
+            "deadline_date":(date.today()+timedelta(days=30)).isoformat()})
+        assert response.status_code == 201, response.text
+        need = response.json()
+        assert need["matching_warnings"] and "обязательны при подборе" in need["matching_warnings"][0]
+        assert need["characteristics"] == {**attributes, **extra}  # Never weaken API constraints.
+        published = await client.post(f"/api/v3/needs/{need['id']}/publish", headers=auth(make_token(buyer_user)))
+        assert published.status_code == 200, published.text
+        ids.append(need["id"])
+    feed = await client.get("/api/v3/needs", params={"seller_company_id":str(seller)}, headers=auth(make_token(seller_user)))
+    assert feed.status_code == 200, feed.text
+    visible = {need["id"] for need in feed.json()}
+    assert ids[0] in visible
+    assert not visible.intersection(ids[1:])
+
+
+async def test_matching_preview_and_saved_need_use_the_same_common_and_hard_rules(client, db_session):
+    buyer_user = await make_user(db_session)
+    buyer = await make_company(db_session, buyer_user, can_buy=True, can_sell=False)
+    headers = auth(make_token(buyer_user))
+    for key, value, warned in [("food_contact",True,True), ("mandatory_requirements",["согласовать образец"],True),
+                               ("свой параметр","значение",True), ("material","сталь",False),
+                               ("print","логотип",False), ("volume_tolerance",5,False)]:
+        values = {"category":"Строительство","subcategory":"Крепёж","characteristics":{"unit":"шт",key:value},"volume_units":200}
+        preview = await client.post('/api/v2/physical-quantities/preview',json={"kind":"need","values":{
+            **values,"category_profile":{"fields":{key:{"label":"Клиентское определение"}}}}})
+        assert preview.status_code == 200, preview.text
+        created = await client.post('/api/v3/needs',headers=headers,json={**values,"company_id":str(buyer),
+            "deadline_date":(date.today()+timedelta(days=30)).isoformat(),"budget_rub":5000})
+        assert created.status_code == 201, created.text
+        assert preview.json()["matching_warnings"] == created.json()["matching_warnings"]
+        assert bool(created.json()["matching_warnings"]) is warned

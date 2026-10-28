@@ -2,7 +2,7 @@ import uuid
 from decimal import Decimal
 from datetime import date, datetime
 
-from sqlalchemy import Boolean, CheckConstraint, Date, DateTime, Float, ForeignKey, Integer, String, Text, UniqueConstraint, Index, func, text
+from sqlalchemy import BigInteger, Boolean, CheckConstraint, Date, DateTime, Float, ForeignKey, Integer, String, Text, UniqueConstraint, Index, func, text
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -11,6 +11,58 @@ from .category_profile_snapshot import profile_for_insert
 from .money_storage import ExactJSONB, ExactNumeric
 
 SCHEMA = "marketplace"
+
+
+class SupplierRequest(Base):
+    """Private procurement workspace; board selection never creates a Deal."""
+    __tablename__ = "supplier_requests"
+    __table_args__ = (
+        UniqueConstraint("need_id", "need_revision", "seller_company_id", name="uq_supplier_request_version"),
+        CheckConstraint("status IN ('draft','sent','replied','selected')", name="ck_supplier_request_status"),
+        {"schema": SCHEMA},
+    )
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    need_id: Mapped[uuid.UUID] = mapped_column(ForeignKey(f"{SCHEMA}.needs.id", ondelete="CASCADE"), index=True)
+    need_revision: Mapped[int] = mapped_column(Integer)
+    buyer_company_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), index=True)
+    seller_company_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), index=True)
+    buyer_name: Mapped[str] = mapped_column(String(255))
+    seller_name: Mapped[str] = mapped_column(String(255))
+    specification: Mapped[dict] = mapped_column(ExactJSONB)
+    status: Mapped[str] = mapped_column(String(16), default="draft", server_default="draft")
+    revision: Mapped[int] = mapped_column(Integer, default=1, server_default="1")
+    quoted_price_rub: Mapped[Decimal | None] = mapped_column(ExactNumeric(), nullable=True)
+    price_basis: Mapped[str] = mapped_column(String(16), default="unknown", server_default="unknown")
+    lead_time_days: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    delivery_date: Mapped[date | None] = mapped_column(Date, nullable=True)
+    note: Mapped[str] = mapped_column(String(2000), default="", server_default="")
+    sent_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
+
+
+class SupplierRequestMessage(Base):
+    __tablename__ = "supplier_request_messages"
+    __table_args__ = (UniqueConstraint("request_id", "author_company_id", "request_key", name="uq_supplier_message_request"), {"schema": SCHEMA})
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    request_id: Mapped[uuid.UUID] = mapped_column(ForeignKey(f"{SCHEMA}.supplier_requests.id", ondelete="CASCADE"), index=True)
+    author_company_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True))
+    author_user_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True))
+    request_key: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True))
+    message: Mapped[str] = mapped_column(String(6000))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+class SupplierReplyFile(Base):
+    __tablename__ = "supplier_reply_files"
+    __table_args__ = (UniqueConstraint("request_id", "content_hash", name="uq_supplier_reply_content"), {"schema": SCHEMA})
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    request_id: Mapped[uuid.UUID] = mapped_column(ForeignKey(f"{SCHEMA}.supplier_requests.id", ondelete="CASCADE"), index=True)
+    file_name: Mapped[str] = mapped_column(String(255))
+    file_key: Mapped[str] = mapped_column(String(500))
+    content_hash: Mapped[str] = mapped_column(String(64))
+    content_type: Mapped[str] = mapped_column(String(120))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
 
 def _uuid() -> uuid.UUID:
@@ -971,3 +1023,11 @@ class AgentQualityEvaluation(Base):
     reference_hash: Mapped[str] = mapped_column(String(64), nullable=False)
     assessment: Mapped[dict] = mapped_column(ExactJSONB(), nullable=False)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now())
+
+
+class AddressSuggestionLimit(Base):
+    __tablename__ = "address_suggestion_limits"
+    __table_args__ = {"schema": SCHEMA}
+    company_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True)
+    bucket: Mapped[int] = mapped_column(BigInteger, primary_key=True)
+    attempts: Mapped[int] = mapped_column(Integer, nullable=False)

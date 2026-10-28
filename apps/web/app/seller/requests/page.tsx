@@ -272,7 +272,7 @@ export default function SellerRequestsPage() {
     <div className="market-page">
       <header className="market-page__head">
         <div><span className="eyebrow">Рынок спроса</span><h1>Потребности покупателей</h1><p>Опубликованные запросы российских компаний — предложите производство на своих условиях</p></div>
-        <Link href="/seller/opportunities" className="btn btn-secondary">Аналитика спроса</Link>
+        <div className="actions"><Link href="/seller/inquiries" className="btn btn-secondary">Переписка с покупателями</Link><Link href="/seller/opportunities" className="btn btn-secondary">Аналитика спроса</Link></div>
       </header>
       <div className="catalog-toolbar"><label className="catalog-search"><span aria-hidden="true">⌕</span><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Категория или характеристика" aria-label="Поиск потребностей" /></label><span className="result-count">{openNeeds.length} открытых запросов</span></div>
 

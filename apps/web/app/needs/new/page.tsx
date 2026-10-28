@@ -1,7 +1,9 @@
 "use client";
+import { formatDate, parseDateInput } from "../../lib/dates";
 import { AddressDialog } from "../../components/AddressDialog";
 import { CharacteristicValue } from "../../components/CharacteristicValue";
 import { categoryProfile } from "../../lib/categoryProfiles";
+import RequirementSource from "../../components/RequirementSource";
 import { DateInput } from "../../components/DateInput";
 
 // Создание потребности (POST /needs). Форма покупателя: компания (can_buy),
@@ -30,6 +32,7 @@ import {
   DeliveryAddress,
   marketplace,
   NeedVisibility,
+  NEED_VISIBILITY_LABELS,
   PRODUCT_CATEGORIES,
   PRODUCT_CATEGORY_TREE,
 } from "../../lib/marketplace";
@@ -371,7 +374,10 @@ export default function NewNeedPage() {
     }
     if (values.has("quantity_units")) setVolumeUnits(editableFact(values.get("quantity_units")!));
     if (values.has("budget_rub")) setBudgetRub(editableFact(values.get("budget_rub")!));
-    if (values.has("lead_time_days")) {
+    const rawDate = String(values.get("delivery_date") ?? values.get("deadline_date") ?? "");
+    const exactDate = /^\d{4}-\d{2}-\d{2}$/.test(rawDate) && formatDate(rawDate, "") ? rawDate : parseDateInput(rawDate);
+    if (exactDate) setDeadlineDate(exactDate);
+    else if (values.has("lead_time_days")) {
       const days = Number(values.get("lead_time_days"));
       if (Number.isFinite(days) && days > 0) {
         const deadline = new Date();
@@ -379,16 +385,22 @@ export default function NewNeedPage() {
         setDeadlineDate(new Date(deadline.getTime() - deadline.getTimezoneOffset() * 60000).toISOString().slice(0, 10));
       }
     }
-    const excluded = new Set(["quantity_units", "budget_rub", "lead_time_days", "delivery_city"]);
+    const excluded = new Set(["quantity_units", "budget_rub", "lead_time_days", "delivery_city", "delivery_date", "deadline_date", "delivery_address", "delivery_address_id"]);
+    const effectiveCategory = detected?.category ?? category;
+    const effectiveSubcategory = detected?.subcategory ?? subcategory;
     const extractedRows = result.properties
       .filter((property) => property.value !== null && !excluded.has(property.key))
       .map((property) =>
         newRow(
-          property.key,
+          canonicalCharacteristicKey(property.key, effectiveCategory, effectiveSubcategory),
           editableFact(property.value!),
         ),
       );
-    if (extractedRows.length > 0) setRows(extractedRows.some(row => row.key === "unit") ? extractedRows : [newRow("unit", "шт"), ...extractedRows]);
+    // Equal aliases collapse; contradictory aliases remain editable duplicate
+    // rows and cannot pass validate(), rather than silently overwriting a fact.
+    const uniqueRows = extractedRows.filter((row, index) => !extractedRows.slice(0, index)
+      .some(previous => previous.key === row.key && previous.value === row.value));
+    if (uniqueRows.length > 0) setRows(uniqueRows.some(row => row.key === "unit") ? uniqueRows : [newRow("unit", "шт"), ...uniqueRows]);
     setError(null);
     openManual();
   }
@@ -460,7 +472,7 @@ export default function NewNeedPage() {
         progress = { ...progress, uploaded: [...progress.uploaded, signature] };
         setSavedNeed(progress);
       }
-      if (company.verification_status === "verified" && need.status === "draft") {
+      if (need.status === "draft") {
         await marketplace.publishNeed(token, need.id);
       }
       await draftFiles(draftKey, null).catch(() => {});
@@ -519,7 +531,6 @@ export default function NewNeedPage() {
     <form className="card need-create-form" onSubmit={handleSubmit} aria-busy={analyzing || submitting || !draftReady}>
       <fieldset className="form-fieldset" disabled={!draftReady || submitting}>
         {available.length > 1 ? <div className="field need-company"><label htmlFor="company_id">Компания</label><select id="company_id" value={companyId} disabled={analyzing || recording || transcribing} onChange={event => { setCompanyId(event.target.value); setAgentRun(null); setAnswers({}); }}>{available.map(item => <option key={item.id} value={item.id}>{item.display_name}</option>)}</select></div> : <p className="need-company-name"><Icon name="building" size={17} />{company?.display_name}</p>}
-        {company?.verification_status !== "verified" && <p className="hint">До проверки компании закупка сохранится черновиком.</p>}
         {!manualExpanded && <section className="need-brief" aria-labelledby="materials-heading">
           <h2 id="materials-heading">Что нужно купить?</h2>
           <div className="field"><label className="visually-hidden" htmlFor="request_description">Что требуется купить</label><textarea id="request_description" disabled={analyzing} maxLength={20000} rows={5} value={requestDescription} onChange={event => { analysisGeneration.current += 1; setRequestDescription(event.target.value); setAgentRun(null); setAnswers({}); }} placeholder="Например: 5 000 бумажных стаканов по 350 мл с нашим логотипом. Доставка в Новосибирск до 15 ноября, бюджет 60 000 ₽." /></div>
@@ -534,15 +545,18 @@ export default function NewNeedPage() {
         </section>}
         {!!agentRun?.result.omitted_source_hashes?.length && <p className="hint" role="status">По вашему решению непрочитанные материалы не будут приложены: {agentRun.result.unreadable_sources?.filter(source => agentRun.result.omitted_source_hashes?.includes(source.content_hash)).map(source => source.name).join(", ")}.</p>}
         {manualExpanded && <section ref={manualRef} className="need-review" aria-labelledby="need-review-heading"><div className="company-row"><h2 id="need-review-heading" tabIndex={-1}>Детали закупки</h2><button type="button" className="btn btn-secondary btn-sm" onClick={() => setManualExpanded(false)}>Изменить описание</button></div>
+          {agentRun?.result.can_confirm && Array.from(new Set(agentRun.result.warnings)).map(warning => <p className="alert alert-warning" role="status" key={warning}>{warning}</p>)}
           <div className="need-form-grid"><div className="field"><label htmlFor="category">Категория</label><select id="category" value={category} onChange={event => { setCategory(event.target.value); setSubcategory(""); }}>{PRODUCT_CATEGORIES.map(item => <option key={item}>{item}</option>)}</select></div><div className="field"><label htmlFor="subcategory">Вид товара</label><select id="subcategory" required value={subcategory} onChange={event => { const next = event.target.value; setSubcategory(next); setRows(current => { const required = categoryProfile(category,next)?.required_for_product ?? []; const existing = new Set(current.map(row => row.key)); return [...current,...required.filter(key => !existing.has(key)).map(key => newRow(key))]; }); }}><option value="">Выберите вид товара</option>{PRODUCT_CATEGORY_TREE[category].map(item => <option key={item}>{item}</option>)}</select></div></div>
-          <div className="need-properties">{rows.map((row,index) => <div key={index} className="need-property"><div className="field"><label htmlFor={`property-name-${index}`} className="visually-hidden">Название характеристики {index+1}</label><input id={`property-name-${index}`} aria-label={`Характеристика ${index+1}: название`} placeholder="Название характеристики" required value={fieldName(row.key)} onChange={event => updateRow(index,{ key:canonicalCharacteristicKey(event.target.value) })} /></div><CharacteristicValue category={category} subcategory={subcategory} fieldKey={row.key} value={row.value} label={`Характеристика ${index+1}: значение`} onChange={value => updateRow(index,{value})} /><button type="button" className="icon-button" aria-label={`Удалить характеристику ${index+1}`} onClick={() => setRows(current => current.filter((_,i)=>i!==index))}><Icon name="close" size={16} /></button></div>)}
+          <div className="need-properties">{rows.map((row,index) => <div key={index} className="need-property"><div className="field"><label htmlFor={`property-name-${index}`} className="visually-hidden">Название характеристики {index+1}</label><input id={`property-name-${index}`} aria-label={`Характеристика ${index+1}: название`} placeholder="Название характеристики" required value={fieldName(row.key)} onChange={event => updateRow(index,{ key:canonicalCharacteristicKey(event.target.value, category, subcategory) })} /></div><CharacteristicValue category={category} subcategory={subcategory} fieldKey={row.key} value={row.value} label={`Характеристика ${index+1}: значение`} onChange={value => updateRow(index,{value})} /><button type="button" className="icon-button" aria-label={`Удалить характеристику ${index+1}`} onClick={() => setRows(current => current.filter((_,i)=>i!==index))}><Icon name="close" size={16} /></button></div>)}
             {characteristicsOpen && <div className="characteristic-picker"><CharacteristicSuggestions category={category} subcategory={subcategory} keys={rows.map(row=>row.key)} compact onAdd={key=>{setRows(current=>[...current,newRow(key)]);setCharacteristicsOpen(false);}} /></div>}
             <button type="button" className="btn btn-secondary btn-sm" disabled={countUserCharacteristics(rows,category,subcategory)>=25} onClick={()=>setCharacteristicsOpen(value=>!value)}>+ Добавить характеристику</button>
           </div>
           <div className="need-form-grid need-commercial"><div className="field"><label htmlFor="volume_units">Количество</label><input id="volume_units" type="number" min="0.000001" step="any" value={volumeUnits} onChange={event=>setVolumeUnits(event.target.value)} required placeholder="Сколько нужно" /></div><div className="field"><label htmlFor="budget_rub">Бюджет, ₽</label><input id="budget_rub" type="number" min="0.01" step="0.01" value={budgetRub} onChange={event=>setBudgetRub(event.target.value)} required placeholder="Общая сумма" /></div><div className="field"><label htmlFor="deadline_date">Получить до</label><DateInput id="deadline_date" min={new Date(Date.now()-new Date().getTimezoneOffset()*60000).toISOString().slice(0,10)} value={deadlineDate} onValueChange={setDeadlineDate} required /></div><div className="field"><label htmlFor="delivery_address_id">Адрес доставки</label><div className="need-address"><select id="delivery_address_id" required value={deliveryAddressId} onChange={event=>setDeliveryAddressId(event.target.value)}><option value="">Выберите адрес</option>{addresses.map(item=><option key={item.id} value={item.id}>{item.city}, {item.address}</option>)}</select><button type="button" className="btn btn-secondary btn-sm" disabled={busyAddress} onClick={()=>setAddressOpen(true)}>+ Добавить адрес</button></div></div></div>
-          {visibility!=="open_anonymized" && <p className="alert alert-warning">У сохранённого запроса ограничена видимость. <button type="button" className="btn btn-secondary btn-sm" onClick={()=>setVisibility("open_anonymized")}>Открыть подбор производителям</button></p>}
-          <PhysicalQuantityReview kind="need" values={{characteristics:Object.fromEntries(rows.filter(row=>row.key.trim()).map(row=>[row.key.trim(),row.value])),volume_units:volumeUnits}} approved={quantityApproved} onApproval={setQuantityApproved} compact />
-          <footer className="need-review__footer"><p className="hint">Производители увидят требования без реквизитов компании.</p><div className="actions"><button type="submit" className="btn btn-primary" disabled={submitting || !company}>{submitting ? "Отправляем…" : company?.verification_status==="verified" ? "Подтвердить и опубликовать" : "Сохранить черновик"}<Icon name="arrow" size={18} /></button><Link href="/needs" className="btn btn-secondary">Отмена</Link></div></footer>
+          {agentRun && agentRun.result.properties.some(property => property.key === "delivery_city" && property.sources?.some(source => source.normalization === "model_city_name")) && <details className="need-disclosure"><summary>Город из материалов</summary>{agentRun.result.properties.filter(property => property.key === "delivery_city").flatMap(property => property.sources ?? []).filter(source => source.normalization === "model_city_name").map((source,index) => <RequirementSource key={`${source.source_id}:${index}`} runId={agentRun.id} source={source} />)}</details>}
+          <details className="need-disclosure"><summary>Настройки видимости</summary><div className="field"><label htmlFor="visibility">Кто увидит потребность</label><select id="visibility" value={visibility} onChange={event => setVisibility(event.target.value as NeedVisibility)}><option value="open_anonymized">{NEED_VISIBILITY_LABELS.open_anonymized}</option><option value="closed">{NEED_VISIBILITY_LABELS.closed}</option>{visibility === "selected_producers" && <option value="selected_producers">Для выбранных производителей — сохранённый режим</option>}</select><p className="hint">Закрытая потребность не участвует в общем подборе. Адресный запрос КП отправляется отдельно.</p></div></details>
+          {visibility!=="open_anonymized" && <p className="alert alert-warning">Потребность скрыта из общего подбора. <button type="button" className="btn btn-secondary btn-sm" onClick={()=>setVisibility("open_anonymized")}>Открыть подбор производителям</button></p>}
+          <PhysicalQuantityReview kind="need" values={{category, subcategory, characteristics:Object.fromEntries(rows.filter(row=>row.key.trim()).map(row=>[row.key.trim(),row.value])),volume_units:volumeUnits}} approved={quantityApproved} onApproval={setQuantityApproved} compact />
+          <footer className="need-review__footer"><p className="hint">{visibility === "open_anonymized" ? "Производители увидят требования без реквизитов компании." : "Потребность сохранится вне общего подбора производителей."}</p><div className="actions"><button type="submit" className="btn btn-primary" disabled={submitting || !company}>{submitting ? "Отправляем…" : visibility === "open_anonymized" ? "Подтвердить и опубликовать" : "Сохранить закрытую потребность"}<Icon name="arrow" size={18} /></button><Link href="/needs" className="btn btn-secondary">Отмена</Link></div></footer>
         </section>}
       </fieldset>
     </form>

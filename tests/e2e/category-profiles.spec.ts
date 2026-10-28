@@ -43,7 +43,7 @@ test("saved technical labels remain tied to their captured profile", async () =>
     fields: { length_mm: { label: "Сохранённая длина, мм", type: "number" as const, aliases: ["длина"] } },
   };
   expect(formatCharacteristics({ length_mm: 12, " ДЛИНА ": "15 мм", custom: "значение" }, profile))
-    .toBe("Сохранённая длина, мм: 12 · Сохранённая длина, мм: 15 мм · custom: значение");
+    .toBe("Сохранённая длина, мм: 12 · Сохранённая длина, мм: 15 мм · Дополнительный параметр: значение");
   expect(formatCharacteristics({ length_mm: 12 }, null)).toBe("Длина, мм: 12");
 });
 
@@ -64,4 +64,18 @@ test("AI category aliases and product facts resolve without silently choosing Ot
   const { characteristicLabel } = await import("../../apps/web/app/lib/marketplace");
   expect(characteristicLabel("print")).toBe("Печать");
   expect(characteristicLabel("top_diameter_mm")).toBe("Диаметр верха, мм");
+});
+
+
+test("public characteristic labels use Russian while preserving custom Russian names", async () => {
+  const { characteristicLabel } = await import("../../apps/web/app/lib/marketplace");
+  const labels = {
+    package_kg: "Масса упаковки, кг", package_m: "Длина в упаковке, м", batch: "Партия",
+    package_m2: "Площадь в упаковке, м²", food_contact: "Контакт с пищевыми продуктами",
+    cross_section_mm2: "Сечение, мм²", shelf_load_kg: "Нагрузка на полку, кг", ports: "Разъёмы",
+    assembly: "Сборка", strength_class: "Класс прочности",
+  };
+  for (const [key, label] of Object.entries(labels)) expect(characteristicLabel(key)).toBe(label);
+  expect(characteristicLabel("custom")).toBe("Дополнительный параметр");
+  expect(characteristicLabel("Параметр покупателя")).toBe("Параметр покупателя");
 });

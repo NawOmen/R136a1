@@ -196,7 +196,7 @@ async def test_active_reserve_cannot_reject_invitation(client, db_session, monke
     assert after["version"] == plan["version"] + 1 and after["status"] == "recovered"
 
 
-@pytest.mark.parametrize("blocker", ["budget", "deadline", "switching", "unknown_switching", "buyer_revoked"])
+@pytest.mark.parametrize("blocker", ["budget", "deadline", "switching", "unknown_switching"])
 async def test_auto_recovery_obeys_hard_constraints(client, db_session, monkeypatch, blocker):
     companies, plan = await setup_confirmed(client, db_session, monkeypatch, automatic=True)
     primary, primary_token = companies["primary"][1:]
@@ -204,8 +204,6 @@ async def test_auto_recovery_obeys_hard_constraints(client, db_session, monkeypa
     assert response.status_code == 200, response.text
     need = await db_session.get(Need, uuid.UUID(plan["need_id"]))
     if blocker == "budget": need.budget_rub = Decimal(60000)
-    if blocker == "buyer_revoked":
-        await db_session.execute(text("UPDATE auth.companies SET verification_status='draft' WHERE id=:company"), {"company": companies["buyer"][1]})
     if blocker == "deadline": need.deadline_date = date.today()+timedelta(days=2)
     await db_session.commit()
     await confirm_hot_reserve(client, db_session, companies, plan["id"], switchover_days=365 if blocker == "switching" else None if blocker == "unknown_switching" else 2)
@@ -441,3 +439,15 @@ async def test_paid_reconfirmation_after_failure_can_be_approved_without_rewindi
     recovered = await approve(client, confirmed.json(), scenario, buyer_token)
     assert recovered.status_code == 200, recovered.text
     assert recovered.json()["current_total_cost_rub"] == "62025.00"
+
+
+async def test_unverified_buyer_can_activate_previously_confirmed_recovery(client, db_session, monkeypatch):
+    companies, plan = await setup_confirmed(client, db_session, monkeypatch, automatic=True)
+    await db_session.execute(text("UPDATE auth.companies SET verification_status='pending' WHERE id=:company"), {"company": companies["buyer"][1]})
+    await db_session.commit()
+    primary, primary_token = companies["primary"][1:]
+    response = await report(client, plan, primary, primary_token)
+    assert response.status_code == 200, response.text
+    await confirm_hot_reserve(client, db_session, companies, plan["id"], switchover_days=2)
+    after = await current_plan(client, plan, companies["buyer"][2])
+    assert after["status"] == "recovered"

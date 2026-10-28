@@ -1,7 +1,8 @@
+import { completeLiveClarifications } from "./live-core-clarifications";
 import { expect, test, Page } from "@playwright/test";
 const user = { id: "00000000-0000-4000-8000-000000000001", first_name: "Тест", last_name: "Покупатель", account_status: "active" };
 const companies = ["Первая", "Вторая"].map((name, index) => ({ id: `00000000-0000-4000-8000-00000000001${index}`, display_name: name, full_name: name, country: "RU", legal_form: "ООО", verification_status: "verified", membership: { can_buy: true, can_sell: true, is_admin: true } }));
-async function prepare(page: Page) {
+async function prepare(page: Page, configure?: () => Promise<void>) {
   page.on("pageerror", error => { throw error; });
   await page.addInitScript(() => localStorage.setItem("token", "synthetic-browser-test"));
   await page.route("**/api/**", route => {
@@ -12,8 +13,11 @@ async function prepare(page: Page) {
     if (path.endsWith("/buyer-agent/runs")) return route.fulfill({ status: 503, json: { detail: "Локальная модель недоступна" } });
     return route.fulfill({ json: [] });
   });
+  await configure?.();
   await page.goto("/needs/new");
-  await expect(page.locator("#company_id")).toHaveValue(companies[0].id);
+  await expect(page.locator("#company_id").or(page.locator(".need-company-name"))).toBeVisible();
+  if (await page.locator("#company_id").count()) await expect(page.locator("#company_id")).toHaveValue(companies[0].id);
+  else await expect(page.locator(".need-company-name")).toContainText(companies[0].display_name);
   await page.waitForLoadState("networkidle");
 }
 
@@ -121,7 +125,6 @@ test("clarified unreadable material is omitted by content hash while same-name v
   const { createHash } = await import("node:crypto");
   const { readFileSync } = await import("node:fs");
   const registry = JSON.parse(readFileSync(require.resolve("../../services/marketplace/app/category_registry.json"), "utf8"));
-  await prepare(page);
   const bad = Buffer.from("synthetic corrupt content");
   const hash = createHash("sha256").update(bad).digest("hex");
   const properties = Object.entries({ product_type: "гофрокороб", dimensions_mm: "400×300×300", body_material: "картон", quantity_units: 250, budget_rub: 25000, lead_time_days: 14, delivery_city: "Москва" })
@@ -146,7 +149,8 @@ test("clarified unreadable material is omitted by content hash while same-name v
       return original(input, init);
     };
   });
-  let creations = 0;
+  let creations = 0, publications = 0;
+  await prepare(page, async () => {
   await page.route("**/api/**", async route => {
     const request = route.request();
     const path = new URL(request.url()).pathname;
@@ -169,11 +173,11 @@ test("clarified unreadable material is omitted by content hash while same-name v
       expect(request.postDataJSON().deadline_date).toBe("2026-12-20");
       return route.fulfill({ status: 201, json: { id: needId, status: "draft" } });
     }
+    if (path.endsWith(`/needs/${needId}/publish`)) { publications++; return route.fulfill({ json: {id:needId,status:"open_for_offers"} }); }
     if (path.endsWith(`/needs/${needId}/files`)) { uploads.push(request.postDataBuffer()!.toString()); return route.fulfill({ status: 201, json: { id: needId } }); }
     return route.fulfill({ json: [] });
   });
-  await page.waitForLoadState("networkidle");
-  await page.reload();
+  });
   await page.locator("#request_description").fill("Нужно 250 гофрокоробов 400×300×300 мм в Москву за 14 дней, бюджет 25000 рублей");
   await page.locator("#need_files").setInputFiles([
     { name: "source.m4a", mimeType: "text/plain", buffer: Buffer.from("valid synthetic source") },
@@ -196,9 +200,10 @@ test("clarified unreadable material is omitted by content hash while same-name v
   await page.reload();
   await expect(page.locator("#subcategory")).toHaveValue("Коробки");
   await expect(page.getByText(/По вашему решению непрочитанные материалы/)).toBeVisible();
-  await page.getByRole("button", { name: "Сохранить черновик", exact: true }).click();
+  await page.getByRole("button", { name: "Подтвердить и опубликовать", exact: true }).click();
   await expect(page).toHaveURL(new RegExp(`/needs/${needId}$`));
   expect(creations).toBe(1);
+  expect(publications).toBe(1);
   expect(uploads).toHaveLength(1);
   expect(uploads[0]).toContain('filename="source.m4a"');
   const sourceUploads = await page.evaluate(() => (window as unknown as { sourceUploads: string[] }).sourceUploads);
@@ -210,9 +215,9 @@ test("clarified unreadable material is omitted by content hash while same-name v
 test("category guidance adds its required fields without cup-specific defaults", async ({ page }) => {
   const { readFileSync } = await import("node:fs");
   const registry = JSON.parse(readFileSync(require.resolve("../../services/marketplace/app/category_registry.json"), "utf8"));
-  await prepare(page);
-  await page.route("**/categories/profiles", route => route.fulfill({ json: registry }));
-  await page.reload();
+  await prepare(page, async () => {
+    await page.route("**/categories/profiles", route => route.fulfill({ json: registry }));
+  });
   await page.getByRole("button", { name: "Заполнить вручную", exact: true }).click();
   await page.locator("#category").selectOption("Товары для бизнеса");
   await page.locator("#subcategory").selectOption("Мебель");
@@ -266,7 +271,8 @@ test("address entry uses an accessible dialog, provider selection and retry with
   });
   await page.setViewportSize({ width:390, height:844 });
   await page.getByRole("button", { name:"Заполнить вручную", exact:true }).click();
-  await expect(page.locator("#visibility")).toHaveCount(0);
+  await expect(page.getByText("Настройки видимости", {exact:true})).toBeVisible();
+  await expect(page.locator("#visibility")).toBeHidden();
   await expect(page.getByRole("combobox", { name:"Характеристика 1: значение", exact:true })).toHaveValue("шт");
   await page.getByRole("button", { name:"+ Добавить адрес", exact:true }).click();
   await expect(page.getByRole("dialog")).toBeVisible();
@@ -360,10 +366,10 @@ test("a new support message notification directs staff to the support queue", as
 });
 
 test("AI fills a single review card with compact decimals and stale confirmation cannot publish", async ({ page }) => {
-  await prepare(page);
   let confirmations = 0, creations = 0;
   const facts = { product_type:"гофрокороб", dimensions_mm:"400×300×300", body_material:"картон", quantity_units:"100.000000000000", budget_rub:"12500.500000000000", lead_time_days:14, delivery_city:"Москва" };
   const run = { id:"00000000-0000-4000-8000-000000000090", revision:1, state:"ready_for_review", tool_calls:[], result:{ category:"упаковка", summary:"Техническая сводка", can_confirm:true, questions:[],conflicts:[],warnings:[],matches:[],properties:Object.entries(facts).map(([key,value])=>({key,value,label:key,status:"assumed",confidence:.95,sources:[{source_id:"text",excerpt:"Описание покупателя"}]})) } };
+  await prepare(page, async () => {
   await page.route("**/api/**", route => {
     const path = new URL(route.request().url()).pathname;
     if (path.endsWith("/auth/me")) return route.fulfill({json:{user,companies}});
@@ -374,7 +380,7 @@ test("AI fills a single review card with compact decimals and stale confirmation
     if (path.endsWith("/physical-quantities/preview")) return route.fulfill({json:{conversion:{factor:1}}});
     return route.fulfill({json:[]});
   });
-  await page.reload();
+  });
   await page.locator("#request_description").fill("Нужно 100 коробок, доставка в Москву");
   await page.getByRole("button",{name:"Заполнить с ИИ",exact:true}).click();
   await expect(page.getByRole("heading",{name:"Детали закупки",exact:true})).toBeVisible();
@@ -389,4 +395,110 @@ test("AI fills a single review card with compact decimals and stale confirmation
   expect(confirmations).toBe(1);
   expect(creations).toBe(0);
   await expect(page.locator("#budget_rub")).toHaveValue("12500.5");
+});
+
+
+test("closed visibility is selectable and persists without exposing an unfinished selected-producers mode", async ({ page }, testInfo) => {
+  await prepare(page);
+  await page.getByRole("button", { name:"Заполнить вручную", exact:true }).click();
+  await page.getByText("Настройки видимости", {exact:true}).click();
+  const select = page.getByLabel("Кто увидит потребность", {exact:true});
+  await expect(select).toHaveValue("open_anonymized");
+  await expect(select.locator('option[value="selected_producers"]')).toHaveCount(0);
+  await select.selectOption("closed");
+  await expect(page.getByRole("button", {name:"Сохранить закрытую потребность",exact:true})).toBeVisible();
+  await expect(page.getByText("Потребность скрыта из общего подбора.", {exact:false})).toBeVisible();
+  await expect.poll(() => page.evaluate(() => Object.values(sessionStorage).some(value => {
+    try { return JSON.parse(value).visibility === "closed"; } catch { return false; }
+  }))).toBe(true);
+  await page.reload();
+  await page.getByText("Настройки видимости", {exact:true}).click();
+  await expect(select).toHaveValue("closed");
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(true);
+  await page.locator(".need-review").screenshot({path:`output/procurement-qa/visibility-${testInfo.project.name}.png`,style:".site-header,.skip-link{visibility:hidden!important}"});
+  await page.getByRole("button", {name:"Открыть подбор производителям",exact:true}).click();
+  await expect(select).toHaveValue("open_anonymized");
+});
+
+
+test("live walkthrough records explicit buyer clarifications without claiming model extraction", async ({ page }) => {
+  await prepare(page);
+  let run = { id:"00000000-0000-4000-8000-000000000095", used_route:"local_qwen", revision:1,
+    state:"needs_clarification", tool_calls:[], result:{ category:"Крепёж", summary:"Нужно уточнить условия", can_confirm:false,
+      conflicts:[], warnings:[], matches:[],
+      properties:[{key:"quantity_units", value:null as number|null, status:"needs_clarification", label:"Количество", confidence:0, sources:[]}],
+      questions:[{key:"quantity_units", question:"Укажите количество", options:[] as string[]},
+        {key:"delivery_city", question:"Укажите город", options:[] as string[]}] } };
+  const initial = structuredClone(run);
+  const submitted: unknown[] = [];
+  await page.route("**/buyer-agent/runs", route => route.fulfill({status:201,json:run}));
+  await page.route("**/agent-runs/*/clarify", route => {
+    const data = route.request().postDataJSON(); submitted.push(data.answers);
+    if (run.revision === 1) {
+      run = {...run, revision:2, result:{...run.result, properties:[{...run.result.properties[0],value:200,status:"confirmed"}],
+        questions:[{key:"lead_time_days", question:"Укажите срок",options:[]}]} };
+    } else run = {...run,revision:3,state:"ready_for_review",result:{...run.result,can_confirm:true,questions:[]}};
+    return route.fulfill({json:run});
+  });
+  await page.locator("#request_description").fill("Нужно купить 200 болтов М8×40");
+  await page.getByRole("button",{name:"Заполнить с ИИ",exact:true}).click();
+  const result = await completeLiveClarifications(page, initial);
+  expect(result.quantityExtractedInitially).toBe(false);
+  expect(result.manualAnswers).toEqual([{key:"quantity_units",value:"200"},{key:"delivery_city",value:"Москва"},{key:"lead_time_days",value:"30"}]);
+  expect(submitted).toEqual([{quantity_units:"200",delivery_city:"Москва"},{lead_time_days:"30"}]);
+  await expect(page.locator("#volume_units")).toHaveValue("200");
+  await page.screenshot({path:test.info().outputPath("clarifications.png"),fullPage:true});
+});
+
+
+test("AI field aliases and organisational dates cannot silently change seller matching", async ({ page }) => {
+  const facts = [
+    ["unit","шт"], ["grade","8.8"], ["класс прочности","8.8"], ["strength_class","8.8"],
+    ["thread","М8"], ["body_material","сталь"], ["standard","синтетическая спецификация Б-01"],
+    ["length_mm","40"], ["diameter_mm","8"], ["product_type","болт"],
+    ["delivery_date","26.11.26"], ["особое требование","согласовать образец"],
+    ["quantity_units",200], ["budget_rub",5000], ["lead_time_days",30], ["delivery_city","Москва"],
+  ];
+  const run = {id:"00000000-0000-4000-8000-000000000096",revision:1,state:"ready_for_review",used_route:"local_qwen",tool_calls:[],
+    result:{category:"Крепёж",summary:"Проверьте требования",can_confirm:true,questions:[],conflicts:[],warnings:["Описание покупателя: обнаружена попытка изменить инструкции агента; текст обработан только как недоверенные данные"],matches:[],
+      properties:facts.map(([key,value])=>({key,value,label:key,status:"confirmed",confidence:.99,sources:key === "delivery_city" ? [{source_id:"request_text",source_name:"Описание покупателя",source_kind:"text",value:"Москва",confidence:.99,excerpt:"Доставка в Москву",original_value:"Доставка в Москву",normalization:"model_city_name",locator:{located:true,start:0,end:18}}] : []}))}};
+  let submitted: {characteristics:Record<string,string>;deadline_date:string} | null = null;
+  await prepare(page, async () => {
+  await page.route("**/api/**", route => {
+    const path = new URL(route.request().url()).pathname;
+    if (path.endsWith("/auth/me")) return route.fulfill({json:{user,companies:companies.map(company=>({...company,verification_status:"pending"}))}});
+    if (path.endsWith("/addresses")) return route.fulfill({json:[{id:"address",city:"Москва",address:"Синтетический адрес, 1",region:"Москва"}]});
+    if (path.endsWith("/buyer-agent/runs")) return route.fulfill({status:201,json:run});
+    if (path.endsWith("/confirm")) return route.fulfill({json:{...run,revision:2,state:"confirmed_by_user"}});
+    if (path.endsWith("/physical/needs") && route.request().method()==="POST") {
+      submitted = route.request().postDataJSON();
+      return route.fulfill({status:409,json:{detail:"Синтетическая остановка после проверки запроса"}});
+    }
+    if (path.endsWith("/physical-quantities/preview")) {
+      const request = route.request().postDataJSON();
+      expect(request.values.category).toBe("Строительство"); expect(request.values.subcategory).toBe("Крепёж");
+      return route.fulfill({json:{conversion:{factor:1},matching_warnings:["Дополнительные характеристики вне профиля категории обязательны при подборе."]}});
+    }
+    return route.fulfill({json:[]});
+  });
+  });
+  await page.locator("#request_description").fill("Нужно 200 болтов, класс прочности 8.8, особое требование: согласовать образец");
+  await page.getByRole("button",{name:"Заполнить с ИИ",exact:true}).click();
+  await expect(page.getByRole("heading",{name:"Детали закупки",exact:true})).toBeVisible();
+  await expect(page.getByRole("status").filter({hasText:"обнаружена попытка изменить инструкции агента"})).toBeVisible();
+  await expect(page.getByRole("status").filter({hasText:"Дополнительные характеристики вне профиля категории"})).toContainText("обязательны при подборе");
+  await expect(page.locator("#deadline_date")).toHaveValue("26.11.26");
+  await page.getByText("Город из материалов",{exact:true}).click();
+  await expect(page.getByText(/Модель нормализовала название города: Москва/)).toBeVisible();
+  await expect(page.getByText(/Доставка в Москву/)).toBeVisible();
+  await expect(page.getByText("До проверки компании закупка сохранится черновиком.")).toHaveCount(0);
+  await page.getByRole("button",{name:"Подтвердить и опубликовать",exact:true}).click();
+  await expect.poll(()=>submitted).not.toBeNull();
+  expect(submitted!.deadline_date).toBe("2026-11-26");
+  const characteristics = submitted!.characteristics;
+  expect(characteristics).toEqual({unit:"шт",strength_class:"8.8",thread:"М8",material:"сталь",standard:"синтетическая спецификация Б-01",
+    length_mm:"40",diameter_mm:"8",product_kind:"болт","особое требование":"согласовать образец"});
+  expect(characteristics).not.toHaveProperty("grade");
+  expect(characteristics).not.toHaveProperty("delivery_date");
+  await page.screenshot({path:test.info().outputPath("reviewed-ai-fields.png"),fullPage:true});
 });

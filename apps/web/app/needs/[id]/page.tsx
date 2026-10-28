@@ -12,6 +12,8 @@ import Link from "next/link";
 import ProfileRevisionPanel from "../../components/ProfileRevisionPanel";
 import NeedDraftEditor from "../../components/NeedDraftEditor";
 import NeedRequirements from "../../components/NeedRequirements";
+import SupplierBoard from "../../components/SupplierBoard";
+import OrderExport from "../../components/OrderExport";
 import { useParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import { getToken } from "../../lib/api";
@@ -240,6 +242,7 @@ export default function NeedDetailPage() {
           <Link href="/needs" className="btn btn-secondary btn-sm">
             Мои потребности
           </Link>
+          {isBuyer && ownedNeed && <OrderExport id={need.id} companyId={ownedNeed.company_id} specification />}
         </div>
       </div>
 
@@ -259,6 +262,8 @@ export default function NeedDetailPage() {
         <section className="need-match-note"><Icon name="search" size={24} /><div><h2>Подбираем подходящее производство</h2><p>{ownedNeed.no_match_reason}</p><Link href="/catalog">Посмотреть товары в каталоге →</Link></div></section>
       )}
 
+      {ownedNeed?.matching_warnings?.map(warning => <p className="alert alert-warning" role="status" key={warning}>{warning}</p>)}
+
       {!isBuyer && !!need.requirement_decisions?.length && <section className="card"><h2>Уточнения покупателя</h2><p>В текущей версии покупатель разрешил противоречия в этих требованиях:</p>{need.requirement_decisions.map(item => <p key={item.field}>{formatCharacteristics({ [item.field]: item.confirmed_value }, need.category_profile)}</p>)}</section>}
       {isBuyer && ownedNeed && <details className="card need-disclosure"><summary>Требования, источники и история</summary><NeedRequirements key={`${need.id}:${need.revision}`} need={ownedNeed} addresses={addresses} /></details>}
       {isBuyer && ownedNeed && buyerCompany?.membership?.is_admin && ["open_for_offers", "waiting_for_match", "coalition_candidate", "awaiting_approvals"].includes(need.status) && (
@@ -269,7 +274,7 @@ export default function NeedDetailPage() {
           <h2>Черновик потребности</h2>
           {ownedNeed && buyerCompany?.membership?.is_admin && <NeedDraftEditor key={`${need.id}:${need.revision}`} need={ownedNeed} onSaved={setNeed} />}
           {ownedNeed && buyerCompany?.membership?.is_admin && <ProfileRevisionPanel kind="needs" id={need.id} revision={need.revision} draft={need.status === "draft"} onAdopted={async () => { const token = getToken(); if (token) setNeed(await marketplace.getNeed(token, need.id)); }} />}
-          {buyerCompany?.verification_status === "verified" ? (
+          {buyerCompany?.membership?.is_admin && (
             <div className="actions">
               <button
                 type="button"
@@ -280,13 +285,11 @@ export default function NeedDetailPage() {
                 {publishing ? "Публикуем..." : "Опубликовать"}
               </button>
             </div>
-          ) : (
-            <p className="hint mode-hint">
-              Черновик сохранён. Публикация станет доступна после проверки компании.
-            </p>
           )}
         </section>
       )}
+
+      {isBuyer && need.status === "matched" && !deal && <section className="card"><h2>Предложение выбрано</h2><p className="hint">Продолжите согласование получения и исполнение в заказах.</p><Link href="/deals" prefetch={false} className="btn btn-primary">Перейти к заказам</Link></section>}
 
       {deal && (
         <section className="card">
@@ -298,6 +301,7 @@ export default function NeedDetailPage() {
             Объём: {formatUnits(deal.units, itemUnit(need?.characteristics))} · Сумма: {formatRub(deal.total_price_rub)}
           </p>
           <CommercialEstimate value={deal.commercial_snapshot?.estimate} />
+          <Link href={`/deals?deal=${deal.id}`} prefetch={false} className="btn btn-primary">Открыть заказ</Link>
         </section>
       )}
 
@@ -391,6 +395,9 @@ export default function NeedDetailPage() {
           </ul>
         )}
       </section>
+
+      {isBuyer && ownedNeed && <p className="hint">Адресные запросы — для переписки и сравнения ответов. Чтобы оформить сделку, выберите КП в разделе «Предложения» выше.</p>}
+      {isBuyer && ownedNeed && <SupplierBoard key={`${need.id}:${ownedNeed.company_id}`} needId={need.id} companyId={ownedNeed.company_id} needRevision={need.revision} canManage={buyerCompany?.membership?.is_admin === true} />}
 
       {variants.length > 0 && (
         <section className="card">

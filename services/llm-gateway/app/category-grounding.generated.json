@@ -1,5 +1,5 @@
 {
-  "registry_version": "catalog-4",
+  "registry_version": "catalog-5",
   "fields": {
     "unit": {
       "label": "Единица заказа",
@@ -277,6 +277,58 @@
       ],
       "unit": "мм",
       "positive": true
+    },
+    "package_kg": {
+      "label": "Масса упаковки, кг",
+      "type": "text",
+      "aliases": []
+    },
+    "package_m": {
+      "label": "Длина в упаковке, м",
+      "type": "text",
+      "aliases": []
+    },
+    "batch": {
+      "label": "Партия",
+      "type": "text",
+      "aliases": []
+    },
+    "package_m2": {
+      "label": "Площадь в упаковке, м²",
+      "type": "text",
+      "aliases": []
+    },
+    "food_contact": {
+      "label": "Контакт с пищевыми продуктами",
+      "type": "text",
+      "aliases": []
+    },
+    "cross_section_mm2": {
+      "label": "Сечение, мм²",
+      "type": "text",
+      "aliases": []
+    },
+    "shelf_load_kg": {
+      "label": "Нагрузка на полку, кг",
+      "type": "text",
+      "aliases": []
+    },
+    "ports": {
+      "label": "Разъёмы",
+      "type": "text",
+      "aliases": []
+    },
+    "assembly": {
+      "label": "Сборка",
+      "type": "text",
+      "aliases": []
+    },
+    "strength_class": {
+      "label": "Класс прочности",
+      "type": "text",
+      "aliases": [
+        "класс прочности"
+      ]
     }
   },
   "categories": [
@@ -298,6 +350,10 @@
       "required": [
         "material",
         "volume_ml"
+      ],
+      "units": [
+        "шт",
+        "упак"
       ]
     },
     {
@@ -318,6 +374,10 @@
         "material",
         "dimensions_mm",
         "purpose"
+      ],
+      "units": [
+        "шт",
+        "упак"
       ]
     },
     {
@@ -338,6 +398,10 @@
         "material",
         "dimensions_mm",
         "thickness_mm"
+      ],
+      "units": [
+        "шт",
+        "упак"
       ]
     },
     {
@@ -356,6 +420,10 @@
       "required": [
         "material",
         "dimensions_mm"
+      ],
+      "units": [
+        "шт",
+        "упак"
       ]
     },
     {
@@ -376,6 +444,10 @@
         "material",
         "volume_ml",
         "purpose"
+      ],
+      "units": [
+        "шт",
+        "упак"
       ]
     },
     {
@@ -396,6 +468,13 @@
         "material",
         "width_mm",
         "thickness_mm"
+      ],
+      "units": [
+        "м",
+        "кг",
+        "рулон",
+        "г",
+        "мм"
       ]
     },
     {
@@ -416,6 +495,14 @@
         "material",
         "format",
         "grammage_g_m2"
+      ],
+      "units": [
+        "кг",
+        "м²",
+        "шт",
+        "упак",
+        "г",
+        "см²"
       ]
     },
     {
@@ -435,6 +522,11 @@
       "required": [
         "material",
         "grade"
+      ],
+      "units": [
+        "кг",
+        "т",
+        "г"
       ]
     },
     {
@@ -457,6 +549,14 @@
         "grade",
         "dimensions_mm",
         "standard"
+      ],
+      "units": [
+        "кг",
+        "т",
+        "м",
+        "шт",
+        "г",
+        "мм"
       ]
     },
     {
@@ -476,6 +576,14 @@
       "required": [
         "composition",
         "width_cm"
+      ],
+      "units": [
+        "м",
+        "м²",
+        "рулон",
+        "шт",
+        "мм",
+        "см²"
       ]
     },
     {
@@ -498,6 +606,13 @@
         "grade",
         "purpose",
         "storage_conditions"
+      ],
+      "units": [
+        "кг",
+        "т",
+        "л",
+        "г",
+        "мл"
       ]
     },
     {
@@ -518,6 +633,10 @@
         "model",
         "process",
         "power_kw"
+      ],
+      "units": [
+        "шт",
+        "комплект"
       ]
     },
     {
@@ -538,6 +657,10 @@
         "model",
         "dimensions_mm",
         "purpose"
+      ],
+      "units": [
+        "шт",
+        "комплект"
       ]
     },
     {
@@ -558,6 +681,10 @@
         "model",
         "dimensions_mm",
         "weight_kg"
+      ],
+      "units": [
+        "шт",
+        "комплект"
       ]
     },
     {
@@ -578,6 +705,10 @@
         "model",
         "process",
         "power_kw"
+      ],
+      "units": [
+        "шт",
+        "комплект"
       ]
     },
     {
@@ -598,6 +729,10 @@
         "model",
         "compatibility",
         "material"
+      ],
+      "units": [
+        "шт",
+        "комплект"
       ]
     },
     {
@@ -622,6 +757,19 @@
         "material",
         "purpose",
         "product_kind"
+      ],
+      "units": [
+        "шт",
+        "м",
+        "м²",
+        "кг",
+        "упак",
+        "мешок",
+        "м³",
+        "г",
+        "мм",
+        "см²",
+        "мл"
       ]
     },
     {
@@ -647,6 +795,12 @@
         "material",
         "standard",
         "product_kind"
+      ],
+      "units": [
+        "шт",
+        "кг",
+        "упак",
+        "г"
       ]
     },
     {
@@ -667,6 +821,12 @@
         "model",
         "dimensions_mm",
         "purpose"
+      ],
+      "units": [
+        "шт",
+        "м",
+        "комплект",
+        "мм"
       ]
     },
     {
@@ -687,6 +847,10 @@
         "model",
         "material",
         "purpose"
+      ],
+      "units": [
+        "шт",
+        "комплект"
       ]
     },
     {
@@ -710,6 +874,12 @@
         "volume_ml",
         "storage_conditions",
         "shelf_life_days"
+      ],
+      "units": [
+        "шт",
+        "л",
+        "упак",
+        "мл"
       ]
     },
     {
@@ -733,6 +903,13 @@
         "grade",
         "storage_conditions",
         "shelf_life_days"
+      ],
+      "units": [
+        "кг",
+        "т",
+        "шт",
+        "упак",
+        "г"
       ]
     },
     {
@@ -758,6 +935,12 @@
         "temperature_min_c",
         "temperature_max_c",
         "shelf_life_days"
+      ],
+      "units": [
+        "кг",
+        "шт",
+        "упак",
+        "г"
       ]
     },
     {
@@ -782,6 +965,13 @@
         "purpose",
         "storage_conditions",
         "shelf_life_days"
+      ],
+      "units": [
+        "кг",
+        "т",
+        "л",
+        "г",
+        "мл"
       ]
     },
     {
@@ -801,6 +991,11 @@
       "required": [
         "material",
         "format"
+      ],
+      "units": [
+        "шт",
+        "упак",
+        "комплект"
       ]
     },
     {
@@ -821,6 +1016,11 @@
         "material",
         "purpose",
         "dimensions_mm"
+      ],
+      "units": [
+        "шт",
+        "упак",
+        "комплект"
       ]
     },
     {
@@ -842,6 +1042,10 @@
         "composition",
         "size",
         "purpose"
+      ],
+      "units": [
+        "шт",
+        "комплект"
       ]
     },
     {
@@ -862,6 +1066,10 @@
         "material",
         "dimensions_mm",
         "finish"
+      ],
+      "units": [
+        "шт",
+        "комплект"
       ]
     },
     {
@@ -882,6 +1090,13 @@
       "required": [
         "model",
         "product_kind"
+      ],
+      "units": [
+        "шт",
+        "упак",
+        "м",
+        "бухта",
+        "мм"
       ]
     },
     {
@@ -901,6 +1116,10 @@
       "required": [
         "model",
         "interface"
+      ],
+      "units": [
+        "шт",
+        "комплект"
       ]
     },
     {
@@ -921,6 +1140,10 @@
         "model",
         "interface",
         "purpose"
+      ],
+      "units": [
+        "шт",
+        "комплект"
       ]
     },
     {
@@ -943,6 +1166,10 @@
         "voltage_v",
         "interface",
         "process"
+      ],
+      "units": [
+        "шт",
+        "комплект"
       ]
     },
     {
@@ -963,6 +1190,10 @@
         "material",
         "dimensions_mm",
         "weight_kg"
+      ],
+      "units": [
+        "шт",
+        "комплект"
       ]
     },
     {
@@ -983,6 +1214,10 @@
         "model",
         "compatibility",
         "material"
+      ],
+      "units": [
+        "шт",
+        "комплект"
       ]
     },
     {
@@ -1003,6 +1238,12 @@
         "service_scope",
         "storage_conditions",
         "output"
+      ],
+      "units": [
+        "шт",
+        "м²",
+        "комплект",
+        "см²"
       ]
     },
     {
@@ -1023,6 +1264,12 @@
         "material",
         "dimensions_mm",
         "finish"
+      ],
+      "units": [
+        "шт",
+        "рулон",
+        "м²",
+        "см²"
       ]
     },
     {
@@ -1045,6 +1292,12 @@
         "format",
         "process",
         "color"
+      ],
+      "units": [
+        "шт",
+        "м²",
+        "комплект",
+        "см²"
       ]
     },
     {
@@ -1065,6 +1318,10 @@
         "material",
         "dimensions_mm",
         "process"
+      ],
+      "units": [
+        "шт",
+        "комплект"
       ]
     },
     {
@@ -1085,6 +1342,10 @@
         "material",
         "dimensions_mm",
         "process"
+      ],
+      "units": [
+        "шт",
+        "комплект"
       ]
     },
     {
@@ -1105,6 +1366,14 @@
         "process",
         "material",
         "output"
+      ],
+      "units": [
+        "шт",
+        "кг",
+        "м",
+        "комплект",
+        "г",
+        "мм"
       ]
     },
     {
@@ -1125,6 +1394,12 @@
         "process",
         "packaging",
         "output"
+      ],
+      "units": [
+        "шт",
+        "кг",
+        "упак",
+        "г"
       ]
     },
     {
@@ -1147,6 +1422,15 @@
         "material",
         "dimensions_mm",
         "standard"
+      ],
+      "units": [
+        "шт",
+        "кг",
+        "м",
+        "м²",
+        "г",
+        "мм",
+        "см²"
       ]
     },
     {
@@ -1167,6 +1451,10 @@
         "process",
         "compatibility",
         "output"
+      ],
+      "units": [
+        "шт",
+        "комплект"
       ]
     },
     {
@@ -1187,6 +1475,10 @@
         "material",
         "size",
         "purpose"
+      ],
+      "units": [
+        "шт",
+        "упак"
       ]
     },
     {
@@ -1207,6 +1499,11 @@
         "material",
         "size",
         "purpose"
+      ],
+      "units": [
+        "шт",
+        "комплект",
+        "упак"
       ]
     },
     {
@@ -1227,6 +1524,12 @@
         "composition",
         "purpose",
         "packaging"
+      ],
+      "units": [
+        "шт",
+        "л",
+        "упак",
+        "мл"
       ]
     },
     {
@@ -1247,6 +1550,20 @@
         "purpose",
         "material",
         "dimensions_mm"
+      ],
+      "units": [
+        "шт",
+        "кг",
+        "м",
+        "м²",
+        "л",
+        "рулон",
+        "упак",
+        "комплект",
+        "г",
+        "мм",
+        "см²",
+        "мл"
       ]
     }
   ]

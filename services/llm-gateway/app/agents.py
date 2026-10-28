@@ -3,6 +3,7 @@ import re
 import uuid
 from collections import defaultdict
 from decimal import Decimal, InvalidOperation
+from datetime import date
 from typing import Any
 
 from pydantic import BaseModel, Field
@@ -41,7 +42,17 @@ SYSTEM_PROMPT = """Ты Buyer Investigation Agent российского B2B-м�
 Габариты прямоугольного изделия вида Д×Ш×В мм сохраняй как dimensions_mm,
 не превращай их в диаметр; явно подписанные оси сохраняй отдельно.
 Для финансовых и организационных полей используй quantity_units, budget_rub,
-lead_time_days, delivery_city, mandatory_requirements. Для материала и покрытия
+lead_time_days, delivery_city, mandatory_requirements.
+Количество всегда извлекай отдельным числом в quantity_units, например «200 болтов»
+→ quantity_units=200. unit — только единица заказа («шт», «кг», «м»), без числа.
+Не подменяй количество единицей и не выводи единицу из названия изделия:
+«200 болтов» подтверждает количество, но «шт» требует явного указания или ответа человека.
+Не превращай дату доставки в число дней без известной даты отсчёта.
+Для крепежа класс прочности сохраняй как strength_class, не grade.
+Дата доставки — delivery_date в ISO, организационное поле, не характеристика изделия.
+Числовые сокращения нормализуй: «5 тысяч штук» = quantity_units=5000,
+«бюджет 60 тыс. рублей» = budget_rub=60000. Цитату сохраняй дословно.
+Для материала и покрытия
 сохраняй совместимые ключи body_material и inner_coating; остальные — из справочника.
 Для бумажных стаканов: volume_ml, print, top_diameter_mm, bottom_diameter_mm, height_mm.
 Каждый факт обязан ссылаться на существующий source_id и содержать точную короткую
@@ -59,11 +70,13 @@ LABELS = {
     "quantity_units": "Количество, шт.",
     "budget_rub": "Бюджет, ₽",
     "lead_time_days": "Срок, дней",
+    "delivery_date": "Дата поставки",
     "delivery_city": "Город доставки",
     "mandatory_requirements": "Обязательные требования",
     "product_type": "Тип изделия",
     "material_grade": "Марка материала",
     "complexity": "Сложность и операции",
+    "strength_class": "Класс прочности",
     "diameter_mm": "Диаметр, мм",
     "length_mm": "Длина, мм",
     "packaging": "Упаковка",
@@ -78,9 +91,15 @@ ALIASES = {
     "материал": "body_material",
     "покрытие": "inner_coating",
     "количество": "quantity_units",
+    "quantity": "quantity_units",
+    "qty": "quantity_units",
+    "units": "quantity_units",
+    "штук": "quantity_units",
+    "шт.": "quantity_units",
     "бюджет": "budget_rub",
     "срок": "lead_time_days",
     "город": "delivery_city",
+    "класс_прочности": "strength_class",
 }
 
 PLACEHOLDER_VALUES = {
@@ -232,25 +251,141 @@ EVIDENCE_NUMBER = re.compile(
 )
 
 
-def numeric_evidence_support(value: FactValue, excerpt: str) -> bool | None:
-    """Check scalar numbers only; text, lists and dimension triples stay intact.
+SCALE = re.compile(r"\s*(тыс(?:яч[аиу]?)?\.?|млн\.?|миллион(?:а|ов)?)\b\.?", re.I)
 
-    Number words and unit conversions are not inferred here. Without a literal
-    matching number they cannot give a model-produced scalar confirmed status.
-    """
+
+def evidence_numbers(excerpt: str, *, scaled=False):
+    for match in EVIDENCE_NUMBER.finditer(excerpt):
+        number = Decimal(re.sub(r"[ \u00a0\u202f]", "", match.group()).replace(",", ".").replace("−", "-"))
+        suffix = SCALE.match(excerpt, match.end()) if scaled else None
+        if suffix:
+            number *= 1000 if suffix[1].lower().startswith("тыс") else 1_000_000
+        yield number
+
+
+def numeric_evidence_support(value: FactValue, excerpt: str, *, scaled=False) -> bool | None:
     if isinstance(value, (bool, list)):
         return None
-    raw = re.sub(r"[ \u00a0\u202f]", "", str(value)).replace(",", ".").replace("−", "-")
     try:
-        number = Decimal(raw)
+        number = Decimal(re.sub(r"[ \u00a0\u202f]", "", str(value)).replace(",", ".").replace("−", "-"))
     except InvalidOperation:
         return None
-    if not number.is_finite():
-        return False
-    return any(
-        Decimal(re.sub(r"[ \u00a0\u202f]", "", match.group()).replace(",", ".").replace("−", "-")) == number
-        for match in EVIDENCE_NUMBER.finditer(excerpt)
+    return number.is_finite() and number in evidence_numbers(excerpt, scaled=scaled)
+
+
+def calendar_value(value) -> str | None:
+    if not isinstance(value, str):
+        return None
+    try:
+        if re.fullmatch(r"\d{4}-\d{2}-\d{2}", value):
+            return date.fromisoformat(value).isoformat()
+        match = re.fullmatch(r"(\d{2})\.(\d{2})\.(\d{2}|\d{4})", value)
+        if match:
+            year = int(match[3]) + (2000 if len(match[3]) == 2 else 0)
+            return date(year, int(match[2]), int(match[1])).isoformat()
+    except ValueError:
+        pass
+    return None
+
+
+def date_evidence_support(value, excerpt):
+    return calendar_value(value) is not None and any(
+        calendar_value(m.group()) == value
+        for m in re.finditer(r"(?<![\w.-])(?:\d{4}-\d{2}-\d{2}|\d{2}\.\d{2}\.(?:\d{4}|\d{2}))(?![\w-]|\.\d)", excerpt)
     )
+
+
+def normalize_business_numbers(extraction, sources):
+    """Only explicit numeric multipliers with a budget/quantity context.
+
+    Original source text and citations are retained. No guessed values, unit
+    conversions or arithmetic on commercial terms are performed.
+    """
+    facts = []
+    for fact in extraction.facts:
+        key = _canonical_key(fact.key)
+        value = fact.value
+        if key in {"budget_rub", "quantity_units"} and isinstance(value, str):
+            pattern = r"\s*(\d+(?:[.,]\d+)?)\s*(тыс(?:яч[аиу]?)?\.?|млн\.?|миллион(?:а|ов)?)\s*(?:руб(?:лей|ля)?\.?|₽|шт\.?|штук|штуки)?\s*"
+            m = re.fullmatch(pattern, value, re.I)
+            if m:
+                amount = Decimal(m[1].replace(",", ".")) * (1000 if m[2].lower().startswith("тыс") else 1_000_000)
+                value = format(amount, "f")
+        if key in {"delivery_date", "deadline_date"}:
+            key = "delivery_date"
+            value = calendar_value(value) or value
+        facts.append(fact.model_copy(update={"key": key, "value": value}))
+    # Recover fields the model omitted, but only from explicit unambiguous
+    # number+multiplier phrases; separate sources still enter conflict detection.
+    pattern = re.compile(r"(?<![\w.,+−-])(?P<number>\d+(?:[.,]\d+)?)\s*(?P<scale>тыс(?:яч[аиу]?)?\.?|млн\.?|миллион(?:а|ов)?)\s*(?P<unit>руб(?:лей|ля)?\.?|₽|шт\.?|штук|штуки)(?!\w)", re.I)
+    from .schemas import RawFact
+    existing = {(f.source_id, f.key) for f in facts}
+    for source in sources:
+        for m in pattern.finditer(source.text):
+            currency = m['unit'].lower().startswith('руб') or m['unit'] == '₽'
+            if currency and not re.search(r"бюджет\s*(?:до\s*)?[:—-]?\s*$", source.text[max(0,m.start()-30):m.start()], re.I):
+                continue
+            if not currency and re.search(r'(?:от|до|не менее|не более)\s*$', source.text[max(0,m.start()-30):m.start()], re.I):
+                continue
+            key = 'budget_rub' if currency else 'quantity_units'
+            if (source.id, key) in existing:
+                continue
+            amount = Decimal(m['number'].replace(',', '.')) * (1000 if m['scale'].lower().startswith('тыс') else 1_000_000)
+            facts.append(RawFact(key=key, value=format(amount, 'f'), source_id=source.id, confidence=.99, evidence=m.group()))
+    return extraction.model_copy(update={"facts": facts})
+
+
+# Vocabulary only: no quantity conversion and no inference from a product noun.
+UNIT_WORDS = {
+    "шт": ("шт", "штука", "штуки", "штук"),
+    "кг": ("кг", "килограмм", "килограммы", "килограммов"),
+    "г": ("г", "грамм", "граммов"), "т": ("т", "тонна", "тонны", "тонн"),
+    "м": ("м", "метр", "метры", "метров"), "м²": ("м²", "м2", "кв.м"),
+    "мм": ("мм", "миллиметр", "миллиметров"), "см²": ("см²", "см2", "кв.см"),
+    "м³": ("м³", "м3", "куб.м"), "л": ("л", "литр", "литры", "литров"),
+    "мл": ("мл", "миллилитр", "миллилитров"),
+    "упак": ("упак", "упаковка", "упаковки", "упаковок"),
+    "рулон": ("рулон", "рул", "рулона", "рулонов"),
+    "бухта": ("бухта", "бухты", "бухт"), "мешок": ("мешок", "мешка", "мешков"),
+    "комплект": ("комплект", "компл", "набор", "комплектов"),
+}
+
+
+def unit_value(value: FactValue) -> str | None:
+    if not isinstance(value, str):
+        return None
+    cleaned = value.strip().lower().rstrip(".")
+    return next((unit for unit, words in UNIT_WORDS.items() if cleaned in words), None)
+
+
+def unit_evidence_support(value: FactValue, excerpt: str) -> bool:
+    unit = unit_value(value)
+    return unit is not None and any(
+        re.search(r"(?<!\w)" + re.escape(word) + r"(?!\w)", excerpt, re.I)
+        for word in UNIT_WORDS[unit]
+    )
+
+
+def normalize_fact_keys(extraction: RawExtraction) -> RawExtraction:
+    facts = []
+    fasteners = canonical_category(extraction.category).casefold().replace("ё", "е") == "крепеж"
+    for fact in extraction.facts:
+        key = _canonical_key(fact.key)
+        if fasteners and key in {"grade", "класс"}:
+            key = "strength_class"
+        value = fact.value
+        # Repair the observed model error unit=5000 without inventing a unit.
+        # The existing numeric evidence check still verifies the original quote.
+        if key == "unit" and not isinstance(value, (bool, list)):
+            try:
+                if Decimal(str(value)).is_finite():
+                    key = "quantity_units"
+            except InvalidOperation:
+                pass
+        if key in {"unit", "quantity_units"} and unit_value(value) is not None:
+            key, value = "unit", unit_value(value)
+        facts.append(fact.model_copy(update={"key": key, "value": value}))
+    return extraction.model_copy(update={"facts": facts})
 
 
 def merge_facts(
@@ -258,7 +393,7 @@ def merge_facts(
     sources: list[SourceDescriptor],
     warnings: list[str],
 ) -> tuple[list[RequirementProperty], list[RequirementConflict], list[ClarificationQuestion]]:
-    extraction = normalize_dimensions(extraction, sources)
+    extraction = normalize_business_numbers(normalize_fact_keys(normalize_dimensions(extraction, sources)), sources)
     source_map = {source.id: source for source in sources}
     grouped: dict[str, list] = defaultdict(list)
     for fact in extraction.facts:
@@ -284,6 +419,9 @@ def merge_facts(
                 confidence=fact.confidence,
                 excerpt=fact.evidence,
                 original_value=fact.evidence or fact.value,
+                normalization=("model_city_name" if key == "delivery_city" and isinstance(fact.value, str)
+                    and fact.evidence and fact.evidence in source_map[fact.source_id].text
+                    and not re.search(r"(?<!\w)" + re.escape(fact.value.strip()) + r"(?!\w)", fact.evidence, re.I) else None),
                 original_unit=fact.original_unit if fact.original_unit and fact.original_unit in source_map[fact.source_id].text else None,
                 normalized_unit=(fact.original_unit.strip().lower() if fact.original_unit and fact.original_unit in source_map[fact.source_id].text else None),
                 content_hash=source_map[fact.source_id].content_hash,
@@ -292,6 +430,16 @@ def merge_facts(
             for fact in facts
         ]
         label = LABELS.get(key, field_label(key))
+        if key == "unit":
+            category = canonical_category(extraction.category).casefold()
+            allowed = next((item.get("units", []) for item in REGISTRY["categories"]
+                            if category in {item["label"].casefold(), item["id"].casefold()}
+                            or (category == "бумажные стаканы" and item["id"] == "packaging.paper-cups")), [])
+            if any(unit_value(fact.value) is None or (allowed and fact.value not in allowed) for fact in facts):
+                properties.append(RequirementProperty(key=key, label=label, status="needs_clarification",
+                    confidence=max(fact.confidence for fact in facts), sources=evidence))
+                questions.append(ClarificationQuestion(key=key, question="Уточните единицу заказа по справочнику категории.", options=allowed))
+                continue
         if len(by_value) > 1:
             values = [items[0].value for items in by_value.values()]
             conflicts.append(
@@ -319,11 +467,13 @@ def merge_facts(
                 )
             )
             continue
-        support = [numeric_evidence_support(fact.value, fact.evidence) for fact in facts]
+        support = [unit_evidence_support(fact.value, fact.evidence) if key == "unit"
+                   else date_evidence_support(fact.value, fact.evidence) if key == "delivery_date"
+                   else numeric_evidence_support(fact.value, fact.evidence, scaled=key in {"quantity_units", "budget_rub"}) for fact in facts]
         # A located quote containing a different number is a concrete mismatch,
         # even if another source or high model confidence corroborates the value.
         mismatch = any(
-            item.locator.get("located") and checked is False and EVIDENCE_NUMBER.search(fact.evidence)
+            key != "unit" and item.locator.get("located") and checked is False and (key == "delivery_date" or EVIDENCE_NUMBER.search(fact.evidence))
             for fact, item, checked in zip(facts, evidence, support)
         )
         if mismatch:
@@ -354,6 +504,8 @@ def merge_facts(
 
     present = set(grouped)
     for key in REQUIRED_KEYS:
+        if key == "lead_time_days" and any(p.key == "delivery_date" and p.status == "confirmed" for p in properties):
+            continue
         if key not in present:
             label = LABELS[key]
             properties.append(
@@ -370,14 +522,6 @@ def merge_facts(
                     question=f"Укажите обязательное значение: {label.lower()}.",
                 )
             )
-    if warnings and len(questions) < 3:
-        questions.append(
-            ClarificationQuestion(
-                key="unreadable_materials",
-                question="Часть материалов не прочитана. Продолжить без них?",
-                options=["Да, продолжить без них"],
-            )
-        )
     return properties, conflicts, questions[:3]
 
 
@@ -402,6 +546,15 @@ async def search_capabilities(
     properties: list[RequirementProperty],
     excluded_company_id: uuid.UUID | None = None,
 ) -> list[CapabilityMatch]:
+    broad = category.strip().casefold() in {"другая продукция", "другое", "прочее", "other", "other.other-products"}
+    specific_object = next((str(p.value) for p in properties
+        if p.key == "product_type" and p.status == "confirmed" and isinstance(p.value, str)), "")
+    generic_words = {"другая", "продукция", "другое", "прочее", "товар", "товары", "упаковка", "изделие", "изделия", "материал", "оборудование"}
+    object_tokens = {t for t in re.findall(r"[а-яёa-z0-9]+", specific_object.casefold()) if len(t) > 3 and t not in generic_words}
+    if broad and not object_tokens:
+        # A generic category/material is not evidence of a production match.
+        # The buyer can clarify the object or use the manual product route.
+        return []
     rows = (
         await db.execute(
             text(
@@ -416,7 +569,7 @@ async def search_capabilities(
         )
     ).mappings().all()
     category_tokens = {
-        token for token in re.findall(r"[а-яёa-z0-9]+", category.lower()) if len(token) > 3
+        token for token in re.findall(r"[а-яёa-z0-9]+", (specific_object if broad else category).lower()) if len(token) > 3
     }
     required_text = " ".join(
         str(prop.value)

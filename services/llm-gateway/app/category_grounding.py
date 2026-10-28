@@ -18,7 +18,7 @@ EXTRA_LABELS = {"print": "Печать", "top_diameter_mm": "Диаметр ве
 
 
 def catalogue_prompt() -> str:
-    categories = [{"category": item["label"], "parent": item["parent"], "fields": item["fields"]}
+    categories = [{"category": item["label"], "parent": item["parent"], "fields": item["fields"], "units": item.get("units", [])}
                   for item in REGISTRY["categories"]]
     return ("Справочник платформы (не содержимое материалов). Выбирай точное название category, "
             "только если вид изделия определён; иначе сохрани общую категорию. "

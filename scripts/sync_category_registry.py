@@ -43,7 +43,8 @@ def main() -> int:
         "fields": web["characteristic_fields"],
         "categories": [{"parent": parent, "label": label, "id": leaf_id,
                         "fields": web["technical_profiles"][leaf_id]["fields"],
-                        "required": web["technical_profiles"][leaf_id]["required_for_product"]}
+                        "required": web["technical_profiles"][leaf_id]["required_for_product"],
+                        "units": web["technical_profiles"][leaf_id].get("passport", {}).get("units", {}).get("allowed", [])}
                        for parent, leaves in web["leaf_ids"].items() for label, leaf_id in leaves.items()],
     }
     ai_content = json.dumps(grounding, ensure_ascii=False, indent=2) + "\n"

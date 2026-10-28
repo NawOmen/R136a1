@@ -2,6 +2,7 @@
 import { russianMessage } from "../lib/russianMessages";
 import { useState } from "react";
 import { agents, EvidenceItem } from "../lib/agents";
+import { displayValue } from "../lib/presentation";
 import { getToken } from "../lib/api";
 
 export default function RequirementSource({ runId, source, onInvalidate }: {
@@ -32,6 +33,7 @@ export default function RequirementSource({ runId, source, onInvalidate }: {
       {source.locator?.page && ` · страница ${source.locator.page}`}
       {source.locator?.seconds && ` · ${source.locator.seconds.join("–")} с`}
       {source.excerpt && ` · ${source.excerpt}`}</p>
+    {source.normalization === "model_city_name" && <p>Модель нормализовала название города: {displayValue(source.value)}. Проверьте его по исходной записи в цитате.</p>}
     {saved && source.active !== false && <div className="actions">
       <button type="button" className="btn btn-secondary btn-sm" disabled={busy} onClick={() => void open(false)}>Открыть фрагмент и текст</button>
       <button type="button" className="btn btn-secondary btn-sm" disabled={busy} onClick={() => void open(true)}>Скачать оригинал</button>

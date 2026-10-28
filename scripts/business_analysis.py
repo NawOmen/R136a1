@@ -220,7 +220,7 @@ def readme_markdown(report):
     catalogue = report['catalogue']
     lines = [
         f"Набор: **{report['case_count']} расчётных сценариев**; реестр: "
-        f"**{catalogue['leaves']} профилей в {catalogue['groups']} разделах**, "
+        f"**{catalogue['leaves']} профилей в {catalogue['groups']} группах категорий**, "
         f"из них {catalogue['seeded_working_leaves']} с рабочим наполнением.", '',
         'Примеры по заданным допущениям; эквивалент включает стоимость активного труда, рубли.', '',
         '| Сценарий | Эффект покупателя | Вклад поставщика |',

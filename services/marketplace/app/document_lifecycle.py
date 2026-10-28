@@ -47,7 +47,7 @@ async def process_expiry(db, document_id, *, today=None):
         lost = await _reevaluate_products(db, document.company_id, document.scope_category, document.scope_subcategory)
         _queue_document_rematch(db, document.id)
     message = (f"Документ «{document.name}»: срок {'истёк' if kind == 'document_expired' else 'истекает'} "
-               f"{document.valid_until.isoformat()}. Ответственному нужно продлить подтверждение. "
+               f"{document.valid_until.strftime("%d.%m.%y")}. Ответственному нужно продлить подтверждение. "
                "Действующие договорённости сохраняются; новые действия проверяют актуальный допуск.")
     await _notify_company(db, document.company_id, message)
     await _notify_affected_deals(db, document.company_id, document.name,

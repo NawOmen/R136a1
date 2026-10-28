@@ -85,7 +85,7 @@ export default function EditorPage() {
       for (const line of (verified ? values.confirms : "").split("\n").filter(line => line.trim())) {
         const separator = line.indexOf(":");
         if (separator < 1) throw new Error("Подтверждения: название поля и значения через двоеточие; варианты разделяйте символом |.");
-        const key = canonicalCharacteristicKey(line.slice(0,separator).trim());
+        const key = canonicalCharacteristicKey(line.slice(0,separator).trim(), values.category, values.subcategory);
         if (Object.hasOwn(confirms,key)) throw new Error("Подтверждаемые поля не должны повторяться.");
         confirms[key] = line.slice(separator+1).split("|").map(value => value.trim()).filter(Boolean);
       }

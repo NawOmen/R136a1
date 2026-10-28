@@ -99,6 +99,29 @@ def _need_parts(need: Need) -> tuple[dict, dict, dict, dict]:
     return common, hard, flexible, individual
 
 
+def additional_matching_keys(need: Need) -> list[str]:
+    """Explain custom constraints without silently weakening their matching."""
+    from .category_characteristics import characteristic_profile
+    fields = (getattr(need, "category_profile", None) or {}).get("fields")
+    if fields is None:
+        profile = characteristic_profile(need.category, need.subcategory)
+        if profile is None:
+            return []
+        fields = profile["fields"]
+    common, hard, _, _ = _need_parts(need)
+    # Discovery checks common + hard; only INDIVIDUAL_KEYS are excluded there.
+    # Flexible tolerances are evaluated separately and are not passport fields.
+    return sorted((set(common) | set(hard)) - set(fields) - {"unit", "category_profile_version"})
+
+
+def need_matching_warnings(need: Need) -> list[str]:
+    if not additional_matching_keys(need):
+        return []
+    return ["Дополнительные характеристики вне профиля категории обязательны при подборе. "
+            "Если паспорт производителя их не подтверждает, он не увидит запрос. "
+            "Проверьте характеристики и удалите ненужные через изменение требований."]
+
+
 def _tokens(value: str) -> set[str]:
     return {item for item in re.findall(r"[а-яёa-z0-9]+", value.lower()) if len(item) > 2}
 
@@ -317,7 +340,7 @@ async def _build_coalitions(db: AsyncSession, needs: list[Need]) -> None:
                 explanation=[
                     "Общая производственная основа и жёсткие ограничения совпадают",
                     f"Общий объём {total_units:,} {order_unit(members[0].characteristics)} достигает MOQ {target_moq or 0:,} {order_unit(members[0].characteristics)}".replace(",", " "),
-                    f"Согласуемое окно: производство до {earliest_deadline.isoformat()} (ранний дедлайн участников)",
+                    f"Согласуемое окно: производство до {earliest_deadline.strftime("%d.%m.%y")} (ранний дедлайн участников)",
                     "Индивидуальная печать, упаковка и логистика будут рассчитаны отдельно",
                 ],
             )
@@ -464,7 +487,7 @@ async def _rebuild_opportunities(db: AsyncSession, needs: list[Need]) -> None:
             opportunity.need_ids = [str(item.id) for item in category_needs]
             opportunity.reasons = [
                 "Есть подтверждённый незакрытый спрос",
-                "Capability Passport соответствует категории и материалам",
+                "Паспорт возможностей соответствует категории и материалам",
                 "Расчёт не является гарантией продаж или прибыли",
             ]
             opportunity.missing_data = ["Себестоимость и целевая маржа производителя"]

@@ -101,7 +101,7 @@ class PublicationGuardTests(unittest.IsolatedAsyncioTestCase):
         from app.api import products
         product = SimpleNamespace(company_id=uuid.uuid4(),category='Упаковка и тара',subcategory='Бумажные стаканы',characteristics={},moq_units=1)
         db=SimpleNamespace(get=AsyncMock(return_value=product),commit=AsyncMock(),execute=AsyncMock(),refresh=AsyncMock())
-        with patch.object(products,'require_company_seller',AsyncMock()), patch.object(products,'require_company_admin',AsyncMock()), patch.object(products,'require_verified_company',AsyncMock()):
+        with patch.object(products,'require_company_seller',AsyncMock()), patch.object(products,'require_company_admin',AsyncMock()), patch.object(products,'require_verified_seller',AsyncMock()):
             with self.assertRaises(HTTPException) as caught:
                 await products.publish_product(uuid.uuid4(),PublishIn(published=True),SimpleNamespace(id=uuid.uuid4()),db)
         self.assertEqual(caught.exception.status_code,422)
@@ -123,7 +123,7 @@ class PublicationGuardTests(unittest.IsolatedAsyncioTestCase):
         from datetime import timedelta
         need=SimpleNamespace(id=uuid.uuid4(),company_id=uuid.uuid4(),category='Строительство',subcategory='Крепёж',characteristics={'length_mm':-1},status='draft',deadline_date=date.today()+timedelta(days=1),valid_until=None)
         db=SimpleNamespace(scalar=AsyncMock(return_value=need),commit=AsyncMock())
-        with patch.object(needs,'require_company_buyer',AsyncMock()), patch.object(needs,'require_company_admin',AsyncMock()), patch.object(needs,'require_verified_company',AsyncMock()):
+        with patch.object(needs,'require_company_buyer',AsyncMock()), patch.object(needs,'require_company_admin',AsyncMock()):
             with self.assertRaises(HTTPException) as caught:
                 await needs.publish_need(need.id,SimpleNamespace(id=uuid.uuid4()),db)
         self.assertEqual(caught.exception.status_code,422)

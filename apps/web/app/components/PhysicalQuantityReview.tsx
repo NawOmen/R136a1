@@ -8,18 +8,19 @@ export default function PhysicalQuantityReview({ kind, values, approved, onAppro
   compact?: boolean; kind: "product" | "need"; values: Record<string, unknown>; approved: boolean; onApproval: (approved: boolean) => void;
 }) {
   const [preview, setPreview] = useState<QuantityConversionPreview | null>(null);
+  const [matchingWarnings, setMatchingWarnings] = useState<string[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [retry, setRetry] = useState(0);
   const signature = JSON.stringify(values);
   useEffect(() => {
     let cancelled = false;
-    onApproval(false); setPreview(null); setError(null); setLoading(false);
+    onApproval(false); setPreview(null); setMatchingWarnings([]); setError(null); setLoading(false);
     const input = JSON.parse(signature) as Record<string, unknown>;
     if (!(kind === "need" ? input.volume_units : input.moq_units)) return;
     setLoading(true);
     const timer = window.setTimeout(() => {
-      marketplace.previewPhysicalQuantity(kind, input).then((result) => { if (!cancelled) setPreview(result.conversion); })
+      marketplace.previewPhysicalQuantity(kind, input).then((result) => { if (!cancelled) { setPreview(result.conversion); setMatchingWarnings(result.matching_warnings ?? []); } })
         .catch((err: unknown) => { if (!cancelled) setError(err instanceof Error ? russianMessage(err.message) : "Не удалось проверить объём."); })
         .finally(() => { if (!cancelled) setLoading(false); });
     }, 200);
@@ -28,9 +29,11 @@ export default function PhysicalQuantityReview({ kind, values, approved, onAppro
   }, [signature, kind, retry]);
   if (error) return <div role="alert" className="alert alert-error">{error} <button type="button" onClick={() => setRetry((value) => value + 1)}>Повторить расчёт</button></div>;
   if (loading) return <p role="status" className="hint">Проверяем точность объёма…</p>;
-  if (!preview || preview.factor === 1) return compact ? null : <p className="hint">Штуки, рулоны, упаковки и комплекты — целыми числами. Физические объёмы — в том числе дробными, без округления.</p>;
+  const matchingNotes = matchingWarnings.map(warning => <p key={warning} className="alert alert-warning" role="status">{warning}</p>);
+  if (!preview || preview.factor === 1) return <>{matchingNotes}{compact ? null : <p className="hint">Штуки, рулоны, упаковки и комплекты — целыми числами. Физические объёмы — в том числе дробными, без округления.</p>}</>;
   const labels: Record<string, string> = { volume_units: "Объём", moq_units: "Минимальный заказ", stock_units: "Остаток" };
   return <div className="field">
+    {matchingNotes}
     <p className="hint">Пересчёт: 1 {russianUnit(preview.input_unit)} = {displayValue(preview.factor)} {russianUnit(preview.stored_unit)}. В заказах и ресурсах будет использоваться {russianUnit(preview.stored_unit)}.</p>
     {Object.entries(preview.quantities).map(([key, value]) => value != null && <p key={key}>{labels[key] ?? russianLabel(key)}: {displayValue(value)} {russianUnit(preview.stored_unit)}</p>)}
     {preview.price_rub != null && <p>Цена: {formatRub(preview.price_rub, 12)} / {russianUnit(preview.stored_unit)}</p>}

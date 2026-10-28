@@ -451,7 +451,7 @@ async def test_plan_confirm_records_thresholds_and_version(client, db_session, m
 
 
 
-async def test_last_consent_rechecks_all_sides_verification(client, db_session, monkeypatch):
+async def test_last_consent_rechecks_seller_verification_and_buyer_permissions(client, db_session, monkeypatch):
     ctx = await _awaiting_coalition(client, db_session, monkeypatch)
     buyer_one, token_one, _ = ctx["one"]
     buyer_two, token_two, _ = ctx["two"]
@@ -478,12 +478,23 @@ async def test_last_consent_rechecks_all_sides_verification(client, db_session, 
     await db_session.execute(text("UPDATE auth.companies SET verification_status = 'rejected' WHERE id = :id"),
                              {"id": buyer_one})
     await db_session.commit()
+    await db_session.execute(text("UPDATE auth.company_members SET can_buy=false WHERE company_id=:id"), {"id": buyer_one})
+    await db_session.commit()
     last_again = await client.post(f"/api/v1/coalitions/{ctx['coalition_id']}/decision",
                                    json={"company_id": str(buyer_two), "decision": "approved",
                                          "expected_revision": ctx["revision"]},
                                    headers=auth(token_two))
     assert last_again.status_code == 409
     assert (await db_session.execute(select(ParticipantOrder))).scalars().all() == []
+
+    # A rejected verification no longer blocks purchases, but a buyer role is
+    # still mandatory for every participant at the moment of commitment.
+    await db_session.execute(text("UPDATE auth.company_members SET can_buy=true WHERE company_id=:id"), {"id": buyer_one})
+    await db_session.commit()
+    allowed = await client.post(f"/api/v1/coalitions/{ctx['coalition_id']}/decision",
+        json={"company_id": str(buyer_two), "decision": "approved", "expected_revision": ctx["revision"]}, headers=auth(token_two))
+    assert allowed.status_code == 200, allowed.text
+    assert len((await db_session.execute(select(ParticipantOrder))).scalars().all()) == 2
 
 
 async def test_select_and_decision_request_keys(client, db_session):

@@ -82,7 +82,12 @@ export function resolveAgentCategory(category: string, productType = ""): { cate
 }
 
 /** Russian input labels and legacy aliases serialize to stable API keys. */
-export function canonicalCharacteristicKey(value: string): string {
+export function canonicalCharacteristicKey(value: string, category = "", subcategory = ""): string {
   const wanted = normalize(value);
+  // grade is a legitimate material grade elsewhere; only fasteners use it as
+  // a legacy model synonym of strength class. Do not rewrite other categories.
+  if (["strength_class", "класс прочности"].includes(wanted) ||
+      (category === "Строительство" && subcategory === "Крепёж" && ["grade", "класс"].includes(wanted))) return "strength_class";
+  if (wanted === "product_type" && categoryProfile(category, subcategory)?.fields.includes("product_kind")) return "product_kind";
   return Object.entries(fields).find(([name, field]) => [name, field.label, ...field.aliases].some(alias => normalize(alias) === wanted))?.[0] ?? value;
 }

@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import CommercialEstimate from "../components/CommercialEstimate";
 import DealExecutionPanel from "../components/DealExecutionPanel";
 import DealFulfillmentPanel from "../components/DealFulfillmentPanel";
+import OrderExport from "../components/OrderExport";
 import { api, Company, getToken } from "../lib/api";
 import { Deal, formatRub, formatUnits, marketplace } from "../lib/marketplace";
 
@@ -52,6 +53,7 @@ function DealWorkspace({ selected, companyId, partyCompanies, onCompanyChange }:
   return <div>
     <section className="card"><h2>Заказ: исполнение и получение</h2>{partyCompanies.length > 1 && <label>Компания в сделке<select aria-label="Компания в сделке" value={companyId} onChange={e => onCompanyChange(e.target.value)}>{partyCompanies.map(company => <option key={company.id} value={company.id}>{company.display_name}</option>)}</select></label>}</section>
     <details><summary>Исходная смета при заключении сделки</summary><CommercialEstimate value={selected.commercial_snapshot?.estimate} /></details>
+    <OrderExport id={selected.id} companyId={companyId} />
     <DealFulfillmentPanel dealId={selected.id} companyId={companyId} isBuyer={isBuyer} canManage={canManage} onRevision={setRevision} />
     <DealExecutionPanel key={`${selected.id}:${companyId}:${revision}`} dealId={selected.id} companyId={companyId} isBuyer={isBuyer} canManage={canManage} executionControls={false} />
   </div>;

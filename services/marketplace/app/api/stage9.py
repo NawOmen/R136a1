@@ -292,11 +292,11 @@ async def personal_next_step(
         "SELECT id, verification_status FROM auth.companies WHERE id = ANY(:ids)"),
         {"ids": [row["company_id"] for row in memberships]})).mappings().all()
     verified = {row["id"]: row["verification_status"] == "verified" for row in companies}
-    if not any(verified.values()):
+    if not any(verified.values()) and not any(row["can_buy"] for row in memberships if mode != "sell"):
         return NextStepOut(title="Завершите проверку компании",
-                           description="Публикация и сделки доступны проверенным компаниям.",
+                           description="Для продаж требуется проверка компании.",
                            href=f"/company/{memberships[0]["company_id"]}")
-    buyer_ids = [row["company_id"] for row in memberships if row["can_buy"] and verified.get(row["company_id"]) and mode != "sell"]
+    buyer_ids = [row["company_id"] for row in memberships if row["can_buy"] and mode != "sell"]
     seller_ids = [row["company_id"] for row in memberships if row["can_sell"]
                   and verified.get(row["company_id"]) and mode != "buy"]
     active_deal = await db.scalar(select(Deal.id).where(

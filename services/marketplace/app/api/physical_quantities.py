@@ -1,5 +1,6 @@
 """Versioned fractional input; v1 retains integer quantities and stored units."""
 import uuid
+from types import SimpleNamespace
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import ValidationError
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -47,7 +48,14 @@ async def physical_preview(raw:dict,db:AsyncSession=Depends(get_db)):
     if kind not in {'product','need'}:raise HTTPException(422,'Выберите товар или потребность')
     try:
         values,preview=normalize_physical(kind,raw.get('values',{}),require_approval=False)
-        return {'normalized':values,'conversion':preview}
+        result = {'normalized':values,'conversion':preview}
+        if kind == 'need':
+            from ..matching import need_matching_warnings
+            # Use server-owned current rules, never a client-supplied profile.
+            need = SimpleNamespace(category=values.get('category'), subcategory=values.get('subcategory'),
+                characteristics=values.get('characteristics', {}), category_profile=None)
+            result['matching_warnings'] = need_matching_warnings(need)
+        return result
     except (ValueError,TypeError,KeyError) as exc:raise HTTPException(422,str(exc)) from None
 
 
