@@ -121,11 +121,9 @@ class TrainedMLXProvider:
     ) -> BaseModel:
         global _MLX_ACCEPTS_TEMPLATE_KWARGS
         schema = json.dumps(response_model.model_json_schema(), ensure_ascii=False)
-        system_content = f"{system}\nВерни только JSON по схеме: {schema}"
-        if not settings.mlx_enable_thinking:
-            # Мягкий переключатель Qwen и шаблонный флаг действуют вместе:
-            # /no_think работает и на серверах без chat_template_kwargs.
-            system_content += "\n/no_think"
+        # Мягкий переключатель Qwen и шаблонный флаг действуют вместе:
+        # /no_think работает и на серверах без chat_template_kwargs.
+        system_content = f"{system}\nВерни только JSON по схеме: {schema}\n/no_think"
         payload = {
             # MLX server связывает default_model с --model и --adapter-path.
             # Произвольное имя здесь заставило бы сервер искать другую модель.
@@ -138,7 +136,7 @@ class TrainedMLXProvider:
                 {"role": "user", "content": prompt},
             ],
         }
-        if not settings.mlx_enable_thinking and _MLX_ACCEPTS_TEMPLATE_KWARGS:
+        if _MLX_ACCEPTS_TEMPLATE_KWARGS:
             payload["chat_template_kwargs"] = {"enable_thinking": False}
         url = f"{settings.mlx_base_url.rstrip('/')}/v1/chat/completions"
         try:
