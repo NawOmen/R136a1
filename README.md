@@ -543,6 +543,40 @@ Optimizer доступен только внутри Docker-сети. Парол
 docker compose --project-name infra --env-file .env -f infra/docker-compose.yml stop
 ```
 
+### 5. Открыть с других устройств в локальной сети
+
+Порты базового Compose привязаны к loopback: с телефона или второго ноутбука по ним
+сайт недоступен. Для работы в одной сети поднимается HTTPS-профиль — он добавляет
+edge на порты 80/443, остальные сервисы остаются закрытыми.
+
+Сертификат на адрес этой машины выпускает локальный центр сертификации. Ключи
+остаются вне Git, на другие устройства переносится только `ca.pem`:
+
+```bash
+python3 scripts/lan-tls.py --directory "$HOME/Library/Application Support/PoRukam-LLM/tls"
+```
+
+Укажите этот каталог в `.env` и запустите проект вместе с профилем:
+
+```dotenv
+TLS_CERT_DIR="/Users/ваш-пользователь/Library/Application Support/PoRukam-LLM/tls"
+```
+
+```bash
+docker compose --project-name infra --env-file .env \
+  -f infra/docker-compose.yml -f infra/docker-compose.https.yml up -d
+python3 scripts/print-access-url.py
+```
+
+На телефоне или другом ноутбуке установите доверие к `ca.pem` из этого каталога и
+откройте `https://<адрес машины>`. Браузер обращается к `https://<адрес>/gateway/`,
+`/marketplace/` и `/llm/`, то есть к тому же источнику: CORS не требуется, а порты
+8001–8003 в сеть не открываются. HTTP на edge отвечает отказом; PostgreSQL, MinIO и
+pgAdmin остаются только на loopback. Если адрес машины изменился, повторите
+`scripts/lan-tls.py` и перезагрузите nginx:
+`docker compose ... exec edge nginx -s reload`. Стенд синтетический: не переносите в
+общую сеть известные пароли из `.env` и не открывайте его в интернет.
+
 <a id="api-contracts"></a>
 ## API и совместимость
 
