@@ -12,7 +12,6 @@ import Link from "next/link";
 import ProfileRevisionPanel from "../../components/ProfileRevisionPanel";
 import NeedDraftEditor from "../../components/NeedDraftEditor";
 import NeedRequirements from "../../components/NeedRequirements";
-import SupplierBoard from "../../components/SupplierBoard";
 import OrderExport from "../../components/OrderExport";
 import { useParams } from "next/navigation";
 import { useEffect, useState } from "react";
@@ -239,6 +238,7 @@ export default function NeedDetailPage() {
         <div className="actions">
           <span className={`badge badge-${need.status}`}>{NEED_STATUS_LABELS[need.status]}</span>
           <span className={`badge badge-${need.visibility}`}>{NEED_VISIBILITY_LABELS[need.visibility]}</span>
+          {isBuyer && ownedNeed && <Link href={`/needs/${need.id}/suppliers`} className="btn btn-primary btn-sm">Подбор поставщиков</Link>}
           <Link href="/needs" className="btn btn-secondary btn-sm">
             Мои потребности
           </Link>
@@ -267,7 +267,7 @@ export default function NeedDetailPage() {
       {!isBuyer && !!need.requirement_decisions?.length && <section className="card"><h2>Уточнения покупателя</h2><p>В текущей версии покупатель разрешил противоречия в этих требованиях:</p>{need.requirement_decisions.map(item => <p key={item.field}>{formatCharacteristics({ [item.field]: item.confirmed_value }, need.category_profile)}</p>)}</section>}
       {isBuyer && ownedNeed && <details className="card need-disclosure"><summary>Требования, источники и история</summary><NeedRequirements key={`${need.id}:${need.revision}`} need={ownedNeed} addresses={addresses} /></details>}
       {isBuyer && ownedNeed && buyerCompany?.membership?.is_admin && ["open_for_offers", "waiting_for_match", "coalition_candidate", "awaiting_approvals"].includes(need.status) && (
-        <details className="card need-disclosure"><summary>Изменить требования</summary><NeedDraftEditor key={`${need.id}:${need.revision}`} need={ownedNeed} onSaved={async value => { setNeed(value); const token = getToken(); if (token) setOffers(await marketplace.getOffers(token, value.id)); }} /></details>
+        <div className="card need-edit-action"><NeedDraftEditor key={`${need.id}:${need.revision}`} need={ownedNeed} onSaved={async value => { setNeed(value); const token = getToken(); if (token) setOffers(await marketplace.getOffers(token, value.id)); }} /></div>
       )}
       {isBuyer && ownedNeed && need.status === "draft" && (
         <section className="card">
@@ -397,7 +397,6 @@ export default function NeedDetailPage() {
       </section>
 
       {isBuyer && ownedNeed && <p className="hint">Адресные запросы — для переписки и сравнения ответов. Чтобы оформить сделку, выберите КП в разделе «Предложения» выше.</p>}
-      {isBuyer && ownedNeed && <SupplierBoard key={`${need.id}:${ownedNeed.company_id}`} needId={need.id} companyId={ownedNeed.company_id} needRevision={need.revision} canManage={buyerCompany?.membership?.is_admin === true} />}
 
       {variants.length > 0 && (
         <section className="card">

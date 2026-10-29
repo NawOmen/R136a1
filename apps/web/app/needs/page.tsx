@@ -20,6 +20,41 @@ import {
   RepeatPreview,
 } from "../lib/marketplace";
 import { useMe } from "../lib/useMe";
+import { NeedEditDialog } from "../components/NeedEditDialog";
+
+type NeedSort = "recent" | "deadline" | "budget" | "status";
+
+// Отменённые, истёкшие и закрытые сделки не редактируются и не удаляются повторно.
+const CLOSED_STATUSES: Need["status"][] = ["cancelled", "expired", "matched"];
+
+const SORT_LABELS: Record<NeedSort, string> = {
+  recent: "Сначала новые",
+  deadline: "Ближайший срок поставки",
+  budget: "Самый большой бюджет",
+  status: "По статусу",
+};
+
+const money = (value: Need["budget_rub"]) => (value === null || value === undefined ? -1 : Number(value));
+
+function sortNeeds(items: Need[], sort: NeedSort): Need[] {
+  const date = (value: string) => new Date(`${value}T00:00:00Z`).getTime();
+  if (sort === "recent") return items;
+  return [...items].sort((left, right) => {
+    if (sort === "deadline") return date(left.deadline_date) - date(right.deadline_date);
+    if (sort === "budget") return money(right.budget_rub) - money(left.budget_rub);
+    const byStatus = NEED_STATUS_LABELS[left.status].localeCompare(NEED_STATUS_LABELS[right.status], "ru");
+    return byStatus !== 0 ? byStatus : date(left.deadline_date) - date(right.deadline_date);
+  });
+}
+
+function canEdit(need: Need): boolean {
+  return !CLOSED_STATUSES.includes(need.status);
+}
+
+function canDelete(need: Need): boolean {
+  // Потребность со сделкой не удаляется из списка: обязательство уже создано.
+  return !CLOSED_STATUSES.includes(need.status);
+}
 
 function defaultDeadline(): string {
   const deadline = new Date();
@@ -42,6 +77,12 @@ export default function MyNeedsPage() {
   const [previewRetry, setPreviewRetry] = useState(0);
   const previewGeneration = useRef(0);
   const [repeating, setRepeating] = useState(false);
+  const [sort, setSort] = useState<NeedSort>("recent");
+  const [statusFilter, setStatusFilter] = useState<"active" | "all">("active");
+  const [editTarget, setEditTarget] = useState<Need | null>(null);
+  const [deleteId, setDeleteId] = useState<string | null>(null);
+  const [deleting, setDeleting] = useState(false);
+  const [publicationBusy, setPublicationBusy] = useState<string | null>(null);
 
   async function load() {
     const token = getToken();
@@ -116,7 +157,69 @@ export default function MyNeedsPage() {
     }
   }
 
-  const visibleNeeds = needs.filter(need => `${need.category} ${need.subcategory ?? ""} ${NEED_STATUS_LABELS[need.status]}`.toLocaleLowerCase("ru").includes(query.trim().toLocaleLowerCase("ru")));
+  const visibleNeeds = needs.filter(need => `${need.category} ${need.subcategory ?? ""} ${NEED_STATUS_LABELS[need.status]}`.toLocaleLowerCase("ru").includes(query.trim().toLocaleLowerCase("ru")))
+    .filter(need => statusFilter === "all" || !CLOSED_STATUSES.includes(need.status));
+  const orderedNeeds = sortNeeds(visibleNeeds, sort);
+  const closedCount = needs.filter(need => CLOSED_STATUSES.includes(need.status)).length;
+
+  async function removeNeed(need: Need) {
+    const token = getToken();
+    if (!token || deleting) return;
+    setDeleting(true);
+    setError(null);
+    try {
+      const updated = await marketplace.cancelNeed(token, need.id);
+      setNeeds(current => current.map(item => item.id === need.id ? { ...item, ...updated } : item));
+      setDeleteId(null);
+    } catch (err: unknown) {
+      setError(err instanceof ApiError ? russianMessage(err.message) : "Не удалось удалить потребность.");
+    } finally {
+      setDeleting(false);
+    }
+  }
+
+  async function togglePublication(need: Need) {
+    const token = getToken();
+    if (!token || publicationBusy) return;
+    const hide = need.visibility === "open_anonymized";
+    setPublicationBusy(need.id);
+    setError(null);
+    try {
+      const payload = {
+        company_id: need.company_id,
+        category: need.category,
+        subcategory: need.subcategory ?? null,
+        characteristics: need.characteristics,
+        volume_units: need.volume_units,
+        budget_rub: need.budget_rub ?? null,
+        deadline_date: need.deadline_date,
+        delivery_address_id: need.delivery_address_id,
+        visibility: hide ? ("closed" as const) : ("open_anonymized" as const),
+        valid_until: need.valid_until ?? undefined,
+        expected_revision: need.revision,
+      };
+      // Скрытие меняет версию потребности: сначала смотрим последствия,
+      // затем сохраняем с их подтверждением.
+      const impact = await marketplace.previewNeedEdit(token, need.id, payload);
+      if (!impact.editable && Object.keys(impact.changes).length > 0) {
+        setError("По этой потребности уже есть обязательства: скрыть её нельзя.");
+        return;
+      }
+      const updated = await marketplace.editNeed(token, need.id, {
+        ...payload,
+        impact_hash: impact.requires_confirmation ? impact.impact_hash : undefined,
+      });
+      setNeeds(current => current.map(item => item.id === updated.id ? { ...item, ...updated } : item));
+    } catch (err: unknown) {
+      setError(err instanceof ApiError ? russianMessage(err.message) : "Не удалось изменить публикацию потребности.");
+    } finally {
+      setPublicationBusy(null);
+    }
+  }
+
+  function applyEdit(updated: Need) {
+    setNeeds(current => current.map(item => item.id === updated.id ? { ...item, ...updated } : item));
+  }
 
   if (loading) return <p className="hint">Загрузка...</p>;
 
@@ -129,6 +232,12 @@ export default function MyNeedsPage() {
         </Link>
       </div>
       <p className="subtitle">Потребности, созданные вашими компаниями</p>
+
+      <div className="needs-toolbar">
+        <div className="field"><label htmlFor="needs-sort">Сортировка</label><select id="needs-sort" value={sort} onChange={event => setSort(event.target.value as NeedSort)}>{(Object.keys(SORT_LABELS) as NeedSort[]).map(value => <option key={value} value={value}>{SORT_LABELS[value]}</option>)}</select></div>
+        <div className="field"><label htmlFor="needs-scope">Показывать</label><select id="needs-scope" value={statusFilter} onChange={event => setStatusFilter(event.target.value as "active" | "all")}><option value="active">Только действующие</option><option value="all">Все, включая закрытые{closedCount > 0 ? ` (${closedCount})` : ""}</option></select></div>
+        <p className="hint" role="status">Показано {orderedNeeds.length} из {needs.length}</p>
+      </div>
 
       {error && (
         <div className="alert alert-error" role="alert">
@@ -146,7 +255,7 @@ export default function MyNeedsPage() {
       ) : (
         <ul className="company-list">
           {visibleNeeds.length === 0 && needs.length > 0 && <li className="hint">По вашему запросу потребностей нет. Измените запрос в поиске наверху.</li>}
-          {visibleNeeds.map((need) => (
+          {orderedNeeds.map((need) => (
             <li key={need.id} className="company-item repeat-order">
               <Link href={`/needs/${need.id}`} className="company-item">
                 <span className="company-item__name">
@@ -156,8 +265,15 @@ export default function MyNeedsPage() {
                   Бюджет: {formatRub(need.budget_rub)} · Срок: {formatDate(need.deadline_date)}
                 </span>
                 <span className={`badge badge-${need.status}`}>{NEED_STATUS_LABELS[need.status]}</span>
+                {need.visibility !== "open_anonymized" && <span className="badge badge-hidden">Скрыта из публикации</span>}
               </Link>
-              {repeatId === need.id ? (
+              <div className="need-row-actions">
+                {canEdit(need) && <button type="button" className="btn btn-secondary btn-sm" disabled={publicationBusy === need.id} onClick={() => void togglePublication(need)}>{publicationBusy === need.id ? "Сохраняем…" : need.visibility === "open_anonymized" ? "Скрыть из публикации" : "Вернуть в публикацию"}</button>}
+                {canEdit(need) && <button type="button" className="btn btn-secondary btn-sm" onClick={() => setEditTarget(need)}>Изменить</button>}
+                {canDelete(need) && <button type="button" className="btn btn-secondary btn-sm" disabled={deleting} onClick={() => setDeleteId(deleteId === need.id ? null : need.id)}>Удалить</button>}
+                {repeatId !== need.id && <button type="button" className="btn btn-secondary btn-sm" disabled={repeating} onClick={() => openRepeat(need)}>Повторить заказ</button>}
+              </div>
+              {repeatId === need.id && (
                 <div className="repeat-confirm">
                   <strong>Повтор закупки — новый черновик</strong>
                   {previewError && <div className="alert alert-error" role="alert">{previewError} <button type="button" className="btn btn-secondary btn-sm" onClick={() => setPreviewRetry((value) => value + 1)}>Повторить сравнение</button></div>}
@@ -224,20 +340,22 @@ export default function MyNeedsPage() {
                     </button>
                   </div>
                 </div>
-              ) : (
-                <button
-                  type="button"
-                  className="btn btn-secondary btn-sm"
-                  disabled={repeating}
-                  onClick={() => openRepeat(need)}
-                >
-                  Повторить заказ
-                </button>
+              )}
+              {deleteId === need.id && (
+                <div className="repeat-confirm">
+                  <strong>Удалить потребность?</strong>
+                  <p className="hint">Потребность будет отменена и уйдёт из подбора производителей. История и отклики сохранятся в архиве.</p>
+                  <div className="actions">
+                    <button type="button" className="btn btn-danger btn-sm" disabled={deleting} onClick={() => void removeNeed(need)}>{deleting ? "Удаляем…" : "Да, удалить"}</button>
+                    <button type="button" className="btn btn-secondary btn-sm" disabled={deleting} onClick={() => setDeleteId(null)}>Отмена</button>
+                  </div>
+                </div>
               )}
             </li>
           ))}
         </ul>
       )}
+      {editTarget && <NeedEditDialog key={editTarget.id} need={editTarget} onSaved={applyEdit} onClose={() => setEditTarget(null)} />}
     </div>
   );
 }

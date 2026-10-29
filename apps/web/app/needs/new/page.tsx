@@ -3,7 +3,6 @@ import { formatDate, parseDateInput } from "../../lib/dates";
 import { AddressDialog } from "../../components/AddressDialog";
 import { CharacteristicValue } from "../../components/CharacteristicValue";
 import { categoryProfile } from "../../lib/categoryProfiles";
-import RequirementSource from "../../components/RequirementSource";
 import { DateInput } from "../../components/DateInput";
 
 // Создание потребности (POST /needs). Форма покупателя: компания (can_buy),
@@ -32,7 +31,6 @@ import {
   DeliveryAddress,
   marketplace,
   NeedVisibility,
-  NEED_VISIBILITY_LABELS,
   PRODUCT_CATEGORIES,
   PRODUCT_CATEGORY_TREE,
 } from "../../lib/marketplace";
@@ -58,6 +56,9 @@ function newRow(key = "", value = ""): CharacteristicRow {
 
 export default function NewNeedPage() {
   const manualRef = useRef<HTMLElement>(null);
+  const briefRef = useRef<HTMLElement>(null);
+  const clarificationsRef = useRef<HTMLElement>(null);
+  const [clarifyError, setClarifyError] = useState<string | null>(null);
   const [manualExpanded, setManualExpanded] = useState(false);
   const [quantityApproved, setQuantityApproved] = useState(false);
   const router = useRouter();
@@ -286,6 +287,7 @@ export default function NewNeedPage() {
     try {
       analysisGeneration.current += 1;
       setAgentRun(null);
+      setClarifyError(null);
       const run = await agents.analyze(
         token,
         requestDescription.trim().length >= 3 ? requestDescription.trim() : "Подготовьте закупку по приложенным материалам.",
@@ -314,7 +316,7 @@ export default function NewNeedPage() {
     if (!token || !agentRun) return;
     const missing = agentRun.result.questions.some((question) => !answers[question.key]?.trim());
     if (missing) {
-      setError("Ответьте на все показанные вопросы.");
+      setClarifyError("Ответьте на все показанные вопросы.");
       return;
     }
     const parsed: Record<string, FactValue> = {};
@@ -325,18 +327,39 @@ export default function NewNeedPage() {
     }
     setAnalyzing(true);
     setError(null);
+    setClarifyError(null);
     try {
       const clarified = await agents.clarify(token, agentRun.id, parsed, agentRun.revision);
       if (activeScope.current !== scope) return;
       setAgentRun(clarified);
       setAnswers({});
+      setClarifyError(null);
       if (clarified.result.can_confirm) fillAgentResult(clarified);
     } catch (err) {
       if (activeScope.current !== scope) return;
-      setError(err instanceof MarketplaceError ? russianMessage(err.message) : "Не удалось сохранить уточнения.");
+      // Ошибка относится к полям уточнений: показываем её рядом с ними,
+      // а не наверху страницы, до которого нужно прокручивать.
+      setClarifyError(err instanceof MarketplaceError ? russianMessage(err.message) : "Не удалось сохранить уточнения.");
     } finally {
       if (activeScope.current === scope) setAnalyzing(false);
     }
+  }
+
+  useEffect(() => {
+    // Ошибка ввода в уточнениях должна быть видна там, где поля, а не только наверху.
+    if (!clarifyError) return;
+    clarificationsRef.current?.scrollIntoView({ block: "center", behavior: "auto" });
+  }, [clarifyError]);
+
+  function goToStep(step: "description" | "review") {
+    // Этапы переключаются кнопками: назад — без потери введённого,
+    // вперёд — в ту же проверку, что открывает «Заполнить вручную».
+    if (step === "description") {
+      setManualExpanded(false);
+      requestAnimationFrame(() => briefRef.current?.scrollIntoView({ block: "start", behavior: "auto" }));
+      return;
+    }
+    openManual();
   }
 
   function openManual() {
@@ -522,7 +545,7 @@ export default function NewNeedPage() {
 
   return <div className="need-create-page need-workflow">
     <header className="need-workflow__header"><div><h1 className="page-title">Создание потребности</h1><p className="subtitle">{manualExpanded ? "Проверьте детали перед отправкой производителям." : "Опишите задачу или приложите файл — ИИ заполнит детали закупки."}</p></div><Link className="btn btn-secondary btn-sm" href="/needs">Мои потребности</Link></header>
-    <ol className="need-steps" aria-label="Этапы закупки"><li aria-current={!manualExpanded ? "step" : undefined}><span>1</span>Описание</li><li aria-current={manualExpanded ? "step" : undefined}><span>2</span>Проверка и публикация</li></ol>
+    <ol className="need-steps" aria-label="Этапы закупки"><li><button type="button" className="need-step" aria-current={!manualExpanded ? "step" : undefined} disabled={analyzing || submitting || !draftReady} onClick={() => goToStep("description")}><span>1</span>Описание</button></li><li><button type="button" className="need-step" aria-current={manualExpanded ? "step" : undefined} disabled={analyzing || submitting || !draftReady} onClick={() => goToStep("review")}><span>2</span>Проверка и публикация</button></li></ol>
     {error && <div className="alert alert-error" role="alert">{error}</div>}
     {draftNotice && <p className="hint" role="status">{draftNotice.startsWith("Текст и поля восстановлены") ? "Черновик восстановлен" : draftNotice}</p>}
     {savedNeed && <p className="alert alert-warning">Потребность сохранена. <Link href={`/needs/${savedNeed.id}`}>Открыть карточку</Link>. Повторная отправка продолжит загрузку файлов.</p>}
@@ -531,15 +554,16 @@ export default function NewNeedPage() {
     <form className="card need-create-form" onSubmit={handleSubmit} aria-busy={analyzing || submitting || !draftReady}>
       <fieldset className="form-fieldset" disabled={!draftReady || submitting}>
         {available.length > 1 ? <div className="field need-company"><label htmlFor="company_id">Компания</label><select id="company_id" value={companyId} disabled={analyzing || recording || transcribing} onChange={event => { setCompanyId(event.target.value); setAgentRun(null); setAnswers({}); }}>{available.map(item => <option key={item.id} value={item.id}>{item.display_name}</option>)}</select></div> : <p className="need-company-name"><Icon name="building" size={17} />{company?.display_name}</p>}
-        {!manualExpanded && <section className="need-brief" aria-labelledby="materials-heading">
+        {!manualExpanded && <section ref={briefRef} className="need-brief" aria-labelledby="materials-heading">
           <h2 id="materials-heading">Что нужно купить?</h2>
           <div className="field"><label className="visually-hidden" htmlFor="request_description">Что требуется купить</label><textarea id="request_description" disabled={analyzing} maxLength={20000} rows={5} value={requestDescription} onChange={event => { analysisGeneration.current += 1; setRequestDescription(event.target.value); setAgentRun(null); setAnswers({}); }} placeholder="Например: 5 000 бумажных стаканов по 350 мл с нашим логотипом. Доставка в Новосибирск до 15 ноября, бюджет 60 000 ₽." /></div>
           <div className="need-attachments"><FilePicker id="need_files" disabled={analyzing || loadedFilesKey !== draftKey} multiple accept="image/*,application/pdf,audio/*,text/plain,text/markdown" onChange={event => { analysisGeneration.current += 1; setFiles(Array.from(event.target.files ?? [])); setAgentRun(null); setAnswers({}); }} status={files.length ? `Выбрано файлов: ${files.length}` : "Фото, PDF, текст или аудио"} /><button type="button" className={recording ? "btn btn-danger btn-sm" : "btn btn-secondary btn-sm"} disabled={transcribing || analyzing || loadedFilesKey !== draftKey} onClick={() => void toggleRecording()}><Icon name="mic" size={17} />{transcribing ? "Распознаём…" : recording ? "Остановить запись" : "Продиктовать запрос"}</button></div>
           {files.length > 0 && <p className="hint need-file-list">{files.map(file => file.name).join(" · ")}</p>}
           <div className="need-brief__actions"><button type="button" className="btn btn-primary" disabled={analyzing || recording || transcribing || loadedFilesKey !== draftKey} onClick={() => void handleAnalyze()}>{analyzing ? "Заполняем детали…" : "Заполнить с ИИ"}<Icon name="arrow" size={18} /></button><button type="button" className="btn btn-secondary" disabled={analyzing || recording || transcribing} onClick={() => { setAgentRun(null); setAnswers({}); openManual(); }}>Заполнить вручную</button></div>
-          {agentRun && !agentRun.result.can_confirm && <section className="need-clarifications" aria-labelledby="clarification-heading"><h3 id="clarification-heading">Уточним детали</h3>
+          {agentRun && !agentRun.result.can_confirm && <section ref={clarificationsRef} className="need-clarifications" aria-labelledby="clarification-heading"><h3 id="clarification-heading">Уточним детали</h3>
+            {clarifyError && <p className="alert alert-error" role="alert">{clarifyError}</p>}
             {Array.from(new Set(agentRun.result.warnings)).map(warning => <p className="hint" key={warning}>{warning}</p>)}
-            {agentRun.result.questions.map(question => <div className="field" key={question.key}><label htmlFor={`answer_${question.key}`}>{question.question}</label>{question.options.length ? <select id={`answer_${question.key}`} value={answers[question.key] ?? ""} onChange={event => setAnswers(current => ({ ...current, [question.key]: event.target.value }))}><option value="">Выберите ответ</option>{question.options.map((option,index) => <option key={index} value={String(option)}>{displayValue(option)}</option>)}</select> : <input id={`answer_${question.key}`} value={answers[question.key] ?? ""} onChange={event => setAnswers(current => ({ ...current, [question.key]: event.target.value }))} />}</div>)}
+            {agentRun.result.questions.map(question => <div className="field" key={question.key}><label htmlFor={`answer_${question.key}`}>{question.question}</label>{question.options.length ? <select id={`answer_${question.key}`} value={answers[question.key] ?? ""} onChange={event => { setClarifyError(null); setAnswers(current => ({ ...current, [question.key]: event.target.value })); }}><option value="">Выберите ответ</option>{question.options.map((option,index) => <option key={index} value={String(option)}>{displayValue(option)}</option>)}</select> : <input id={`answer_${question.key}`} value={answers[question.key] ?? ""} onChange={event => { setClarifyError(null); setAnswers(current => ({ ...current, [question.key]: event.target.value })); }} />}</div>)}
             {agentRun.result.questions.length > 0 && <button type="button" className="btn btn-primary" disabled={analyzing} onClick={() => void handleClarify()}>{analyzing ? "Уточняем…" : "Продолжить"}<Icon name="arrow" size={18} /></button>}
           </section>}
         </section>}
@@ -552,9 +576,6 @@ export default function NewNeedPage() {
             <button type="button" className="btn btn-secondary btn-sm" disabled={countUserCharacteristics(rows,category,subcategory)>=25} onClick={()=>setCharacteristicsOpen(value=>!value)}>+ Добавить характеристику</button>
           </div>
           <div className="need-form-grid need-commercial"><div className="field"><label htmlFor="volume_units">Количество</label><input id="volume_units" type="number" min="0.000001" step="any" value={volumeUnits} onChange={event=>setVolumeUnits(event.target.value)} required placeholder="Сколько нужно" /></div><div className="field"><label htmlFor="budget_rub">Бюджет, ₽</label><input id="budget_rub" type="number" min="0.01" step="0.01" value={budgetRub} onChange={event=>setBudgetRub(event.target.value)} required placeholder="Общая сумма" /></div><div className="field"><label htmlFor="deadline_date">Получить до</label><DateInput id="deadline_date" min={new Date(Date.now()-new Date().getTimezoneOffset()*60000).toISOString().slice(0,10)} value={deadlineDate} onValueChange={setDeadlineDate} required /></div><div className="field"><label htmlFor="delivery_address_id">Адрес доставки</label><div className="need-address"><select id="delivery_address_id" required value={deliveryAddressId} onChange={event=>setDeliveryAddressId(event.target.value)}><option value="">Выберите адрес</option>{addresses.map(item=><option key={item.id} value={item.id}>{item.city}, {item.address}</option>)}</select><button type="button" className="btn btn-secondary btn-sm" disabled={busyAddress} onClick={()=>setAddressOpen(true)}>+ Добавить адрес</button></div></div></div>
-          {agentRun && agentRun.result.properties.some(property => property.key === "delivery_city" && property.sources?.some(source => source.normalization === "model_city_name")) && <details className="need-disclosure"><summary>Город из материалов</summary>{agentRun.result.properties.filter(property => property.key === "delivery_city").flatMap(property => property.sources ?? []).filter(source => source.normalization === "model_city_name").map((source,index) => <RequirementSource key={`${source.source_id}:${index}`} runId={agentRun.id} source={source} />)}</details>}
-          <details className="need-disclosure"><summary>Настройки видимости</summary><div className="field"><label htmlFor="visibility">Кто увидит потребность</label><select id="visibility" value={visibility} onChange={event => setVisibility(event.target.value as NeedVisibility)}><option value="open_anonymized">{NEED_VISIBILITY_LABELS.open_anonymized}</option><option value="closed">{NEED_VISIBILITY_LABELS.closed}</option>{visibility === "selected_producers" && <option value="selected_producers">Для выбранных производителей — сохранённый режим</option>}</select><p className="hint">Закрытая потребность не участвует в общем подборе. Адресный запрос КП отправляется отдельно.</p></div></details>
-          {visibility!=="open_anonymized" && <p className="alert alert-warning">Потребность скрыта из общего подбора. <button type="button" className="btn btn-secondary btn-sm" onClick={()=>setVisibility("open_anonymized")}>Открыть подбор производителям</button></p>}
           <PhysicalQuantityReview kind="need" values={{category, subcategory, characteristics:Object.fromEntries(rows.filter(row=>row.key.trim()).map(row=>[row.key.trim(),row.value])),volume_units:volumeUnits}} approved={quantityApproved} onApproval={setQuantityApproved} compact />
           <footer className="need-review__footer"><p className="hint">{visibility === "open_anonymized" ? "Производители увидят требования без реквизитов компании." : "Потребность сохранится вне общего подбора производителей."}</p><div className="actions"><button type="submit" className="btn btn-primary" disabled={submitting || !company}>{submitting ? "Отправляем…" : visibility === "open_anonymized" ? "Подтвердить и опубликовать" : "Сохранить закрытую потребность"}<Icon name="arrow" size={18} /></button><Link href="/needs" className="btn btn-secondary">Отмена</Link></div></footer>
         </section>}
