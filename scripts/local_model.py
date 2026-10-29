@@ -493,6 +493,7 @@ def report_status(settings: Settings, out: Callable[[str], None] = print) -> int
         autostart = "включён в системе, но агент не загружен (сервер остановлен вручную)"
     else:
         autostart = "выключен"
+    failure = None
     if ids:
         failure = probe_generation(settings)
         out(f"Генерация:   {'работает' if failure is None else 'сбой — ' + failure}")
@@ -500,7 +501,7 @@ def report_status(settings: Settings, out: Callable[[str], None] = print) -> int
             out("             перезапустите: scripts/local_model.py restart")
     out(f"Автозапуск:  {autostart}")
     out(f"Журнал:      {settings.log_file}")
-    return 0 if ids else 1
+    return 0 if ids and failure is None else 1
 
 
 def run(argv: list[str], env: Mapping[str, str] | None = None,

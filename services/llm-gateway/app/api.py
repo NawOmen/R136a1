@@ -86,6 +86,8 @@ def _model_version(used_route: str) -> str:
         return "rules_only"
     if used_route == "local_general":
         return settings.ollama_model
+    if used_route == "local_trained":
+        return settings.trained_model_version
     return _local_model_version()
 
 
@@ -389,6 +391,12 @@ async def analyze_buyer_request(
             "prompt_version": PROMPT_VERSION,
             "schema_version": task_contract.SCHEMA_VERSION,
         }
+        # Ответ общей модели нельзя переиспользовать после смены её версии
+        # или отключения fallback, даже если версия адаптера не изменилась.
+        generation["model_version"] += (
+            f";assistant={settings.assistant_llm_backend}:"
+            f"{settings.ollama_model if settings.assistant_llm_backend == 'ollama' else settings.trained_model_version}"
+        )
         cache_binding = {
             "cache_key": task_contract.extraction_cache_key("buyer_investigation", **generation),
             "input_hash": task_contract.canonical_hash(
@@ -817,7 +825,7 @@ async def explain_seller_match(
     run.error = failure
     run.result = {"eligible": eligible, "reasons": reasons, "explanation": explanation}
     run.initial_result = dict(run.result)
-    if used_route in {"local", "local_qwen"}:
+    if used_route in {"local", "local_qwen", "local_general", "local_trained"}:
         run.estimated_cost_rub = (Decimal(run.duration_ms)/Decimal(60_000)*settings.local_inference_cost_rub_per_minute).quantize(Decimal("0.0001"),rounding=ROUND_HALF_UP)
         run.cost_basis = "Оценка локального выполнения, не подтверждённый биллинг"
     await db.commit()

@@ -205,6 +205,11 @@ export default function MyNeedsPage() {
         setError("По этой потребности уже есть обязательства: скрыть её нельзя.");
         return;
       }
+      if (impact.requires_confirmation && !window.confirm(
+        "Изменение публикации создаст новую версию потребности. " +
+        "Действующие КП, запросы поставщикам и согласования могут потребовать повторного подтверждения. " +
+        "Подтвердить изменение?"
+      )) return;
       const updated = await marketplace.editNeed(token, need.id, {
         ...payload,
         impact_hash: impact.requires_confirmation ? impact.impact_hash : undefined,

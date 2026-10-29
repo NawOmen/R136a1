@@ -52,6 +52,24 @@ class CertificateTest(unittest.TestCase):
             self.prepare(directory)
             self.assertEqual((directory / "leaf.pem").read_bytes(), leaf)
 
+    def test_refuses_repository_directory_before_creating_keys(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            (root / ".git").mkdir()
+            with self.assertRaisesRegex(ValueError, "вне Git"):
+                self.prepare(root / "tls")
+            self.assertFalse((root / "tls").exists())
+
+    def test_missing_ca_key_does_not_silently_replace_device_trust(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            directory = Path(tmp) / "tls"
+            self.prepare(directory)
+            certificate = (directory / "ca.pem").read_bytes()
+            (directory / "ca.key").unlink()
+            with self.assertRaisesRegex(ValueError, "неполный"):
+                self.prepare(directory)
+            self.assertEqual((directory / "ca.pem").read_bytes(), certificate)
+
     def test_new_address_forces_reissue(self):
         with tempfile.TemporaryDirectory() as tmp:
             directory = Path(tmp) / "tls"

@@ -188,6 +188,15 @@ class ProbeAndRunTest(unittest.TestCase):
                 self.assertEqual(module.report_status(settings, messages.append), 1)
             self.assertIn("не отвечает", "\n".join(messages))
 
+    def test_status_fails_when_models_endpoint_works_but_generation_is_broken(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            with isolated(root), mock.patch.object(module, "probe", return_value=["default_model"]), \
+                    mock.patch.object(module, "probe_generation", return_value="generation thread died"):
+                messages = []
+                self.assertEqual(module.report_status(settings_for(root), messages.append), 1)
+                self.assertIn("сбой", "\n".join(messages))
+
     def test_start_refuses_broken_checksums_and_does_not_spawn(self):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)

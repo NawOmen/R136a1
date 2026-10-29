@@ -42,7 +42,7 @@ const REQUEST_LABELS: Record<string, string> = {
 };
 
 function offerOf(supplier: string, offers: Offer[]) {
-  return offers.find(offer => offer.company_id === supplier) ?? null;
+  return offers.find(offer => offer.company_id === supplier && ["sent", "selected"].includes(offer.status)) ?? null;
 }
 
 function requestOf(supplier: string, requests: SupplierRequest[]) {
@@ -93,7 +93,7 @@ export default function SupplierSelectionPage() {
   useEffect(() => { void load(); }, [needId]);
 
   const companyId = need && "company_id" in need ? need.company_id : null;
-  const canManage = Boolean(companyId && need && need.visibility === "open_anonymized");
+  const canManage = Boolean(companyId && need && !["cancelled", "expired", "matched"].includes(need.status));
 
   async function askQuote(supplier: string) {
     const token = getToken();
@@ -192,7 +192,7 @@ export default function SupplierSelectionPage() {
 
                   {item.products.length > 0 && <div className="supplier-tile__products" title={item.products.join(", ")}>{item.products.slice(0, 3).map(product => <span key={product} className="product-chip">{product}</span>)}{item.products.length > 3 && <span className="product-chip product-chip--more">+{item.products.length - 3}</span>}</div>}
 
-                  {total !== null && <p className="supplier-tile__total">За весь объём: <strong>{formatRub(total)}</strong></p>}
+                  {total !== null && <p className="supplier-tile__total">Товар за весь объём: <strong>{formatRub(total)}</strong>. Доставка и расходы — в смете КП.</p>}
 
                   <div className="supplier-tile__actions">
                     <Link className="btn btn-secondary btn-sm" href={`/producers/${item.company_id}`}>О поставщике</Link>

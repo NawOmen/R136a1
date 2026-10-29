@@ -195,7 +195,14 @@ class RoutedProvider:
         self.local = TrainedMLXProvider() if settings.local_llm_backend == "mlx" else OllamaProvider()
         # Разговорные задачи (справка, объяснение совместимости) идут в общую модель:
         # обученный адаптер отвечает по фактам, а не беседует.
-        self.assistant = OllamaProvider() if settings.assistant_llm_backend == "ollama" else self.local
+        if settings.assistant_llm_backend == settings.local_llm_backend:
+            self.assistant = self.local
+        elif settings.assistant_llm_backend == "mlx":
+            self.assistant = TrainedMLXProvider()
+            self.assistant.route_name = "local_trained"
+        else:
+            self.assistant = OllamaProvider()
+            self.assistant.route_name = "local_general"
         self.external = DeepSeekProvider()
 
     async def structured(
@@ -218,7 +225,8 @@ class RoutedProvider:
             # Адаптер обучен извлечению фактов и на части категорий возвращает
             # некорректный ответ. Общая локальная модель обслуживается тем же
             # контрактом; подмена не скрывается — маршрут и модель пишутся в прогон.
-            if self.assistant is self.local:
+            if (self.assistant is self.local or settings.local_llm_backend != "mlx"
+                    or settings.assistant_llm_backend != "ollama"):
                 raise
             try:
                 result = await self.assistant.structured(system, prompt, response_model)

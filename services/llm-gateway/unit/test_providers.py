@@ -8,6 +8,53 @@ from app.providers import ModelUnavailable, OllamaProvider, _ollama_schema
 from app.schemas import PlatformAssistantOut, RawExtraction
 
 
+@pytest.mark.parametrize("local,assistant", [("mlx", "ollama"), ("ollama", "mlx"), ("ollama", "ollama"), ("mlx", "mlx")])
+def test_assistant_backend_and_route_match_the_actual_model(monkeypatch, local, assistant):
+    from app.providers import RoutedProvider, TrainedMLXProvider
+    monkeypatch.setattr(settings, "local_llm_backend", local)
+    monkeypatch.setattr(settings, "assistant_llm_backend", assistant)
+    provider = RoutedProvider()
+    assert isinstance(provider.assistant, OllamaProvider if assistant == "ollama" else TrainedMLXProvider)
+    assert (provider.assistant is provider.local) == (local == assistant)
+    if local == "mlx" and assistant == "ollama":
+        assert provider.assistant.route_name == "local_general"
+    if local == "ollama" and assistant == "mlx":
+        assert provider.assistant.route_name == "local_trained"
+
+
+@pytest.mark.asyncio
+async def test_trained_failure_uses_general_model_and_reports_fallback(monkeypatch):
+    from app.providers import RoutedProvider
+    monkeypatch.setattr(settings, "local_llm_backend", "mlx")
+    monkeypatch.setattr(settings, "assistant_llm_backend", "ollama")
+    provider = RoutedProvider()
+    async def broken(*args):
+        raise ModelUnavailable("синтетический сбой адаптера")
+    async def general(*args):
+        return RawExtraction(category="Крепёж", facts=[])
+    monkeypatch.setattr(provider.local, "structured", broken)
+    monkeypatch.setattr(provider.assistant, "structured", general)
+    result, route, reason = await provider.structured("system", "prompt", RawExtraction, False)
+    assert result.category == "Крепёж" and route == "local_general"
+    assert "сбой адаптера" in reason
+
+
+@pytest.mark.asyncio
+async def test_same_ollama_backend_is_not_retried_as_a_different_model(monkeypatch):
+    from app.providers import RoutedProvider
+    monkeypatch.setattr(settings, "local_llm_backend", "ollama")
+    monkeypatch.setattr(settings, "assistant_llm_backend", "ollama")
+    provider = RoutedProvider()
+    calls = []
+    async def broken(*args):
+        calls.append(True)
+        raise ModelUnavailable("синтетический сбой")
+    monkeypatch.setattr(provider.local, "structured", broken)
+    with pytest.raises(ModelUnavailable):
+        await provider.structured("system", "prompt", RawExtraction, False)
+    assert len(calls) == 1
+
+
 class FakeResponse:
     def __init__(self, content: str):
         self.content = content

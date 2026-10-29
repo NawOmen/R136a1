@@ -5,6 +5,7 @@ import { Icon } from "./Icon";
 import { getToken } from "../lib/api";
 import { ApiError, formatRub, marketplace, Need, NeedEditImpact } from "../lib/marketplace";
 import { russianMessage } from "../lib/russianMessages";
+import { formatDate } from "../lib/dates";
 
 // Изменение потребности из списка: сначала показываем последствия правки
 // (POST /needs/{id}/edit-preview), затем сохраняем новую версию (PUT).
@@ -25,6 +26,7 @@ const FIELD_LABELS: Record<string, string> = {
 function displayValue(field: string, value: unknown): string {
   if (value === null || value === undefined || value === "") return "—";
   if (field === "budget_rub") return formatRub(value as string | number);
+  if (field === "deadline_date" || field === "valid_until") return formatDate(String(value));
   if (field === "visibility") return value === "open_anonymized" ? "Открыта для подбора" : value === "closed" ? "Закрытая" : String(value);
   return String(value);
 }

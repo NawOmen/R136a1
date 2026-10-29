@@ -161,6 +161,9 @@ test("insufficient shader precision keeps intact CSS glass with working actions"
   await page.goto("/ai-procurement");
   await expect(page.locator(".guidance-hero .liquid-surface__material")).toBeVisible();
   await expect(page.locator(".guidance-hero")).not.toHaveAttribute("data-mesh-ready", "true");
+  // Дожидаемся гидратации и отложенной 3D-сцены: ранний клик по SSR-ссылке
+  // во время замены дерева React мог потеряться на загруженном CI runner.
+  await page.waitForLoadState("networkidle");
   await page.getByRole("link", { name: "Создать потребность", exact: true }).first().click();
   await expect(page).toHaveURL(/\/needs\/new$/);
   expect(errors).toEqual([]);

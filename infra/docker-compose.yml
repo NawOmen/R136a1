@@ -127,6 +127,7 @@ services:
       OPTIMIZER_TOKEN: ${OPTIMIZER_TOKEN:?Задайте OPTIMIZER_TOKEN}
       ENABLE_DEMO_SEED: ${ENABLE_DEMO_SEED:-false}
       SEED_SELLER_EMAIL: ${SEED_SELLER_EMAIL:-seller@demo.ru}
+      SEED_SELLER_STORIES: ${SEED_SELLER_STORIES:-true}
       CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:3000,http://127.0.0.1:3000}
     ports:
       - "127.0.0.1:${MARKETPLACE_PORT:-8002}:8002"

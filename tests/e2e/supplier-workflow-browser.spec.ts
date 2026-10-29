@@ -7,7 +7,7 @@ const seller={...buyer,id:sellerId,display_name:sellerName,full_name:sellerName,
 const need={id:needId,company_id:buyerId,category:"Упаковка и тара",subcategory:"Бумажные стаканы",status:"open_for_offers",visibility:"open_anonymized",revision:1,volume_units:100,budget_rub:"5000.00",deadline_date:"2026-11-20",valid_until:"2026-11-19",delivery_address_id:null,characteristics:{unit:"шт",material:"бумага"},files:[],requirements_evidence:null};
 const draftText=`Здравствуйте, ${sellerName}! Просим КП на 100 бумажных стаканов. Укажите цену в рублях, НДС и срок поставки.`;
 
-async function prepare(page: Page, options: {empty?:boolean; draftFailure?:boolean; extractionFailure?:boolean; sendFailure?:boolean}={}) {
+async function prepare(page: Page, options: {empty?:boolean; draftFailure?:boolean; extractionFailure?:boolean; sendFailure?:boolean; closed?:boolean}={}) {
   let row={id:requestId,need_id:needId,need_revision:1,buyer_company_id:buyerId,seller_company_id:sellerId,buyer_name:buyer.display_name,seller_name:sellerName,specification:{category:need.category,subcategory:need.subcategory,characteristics:need.characteristics,quantity:100,unit:"шт",deadline_date:need.deadline_date},status:"sent",revision:1,quoted_price_rub:null as string|null,price_basis:"unknown",lead_time_days:null as number|null,delivery_date:null as string|null,note:"",sent_at:"2026-10-26T01:00:00Z",updated_at:"2026-10-26T01:00:00Z"};
   let rows=options.empty?[]:[row]; const messages: unknown[]=[]; let files: unknown[]=[]; let sendAttempts=0;
   const updates: Record<string,unknown>[]=[];const sends: Record<string,unknown>[]=[];
@@ -18,7 +18,7 @@ async function prepare(page: Page, options: {empty?:boolean; draftFailure?:boole
     let json:unknown=[];
     if(path.endsWith("/auth/me"))json={user:{id:"synthetic-user",first_name:"Тест",last_name:"Покупатель",account_status:"active"},companies:[buyer,seller]};
     else if(path.endsWith("/next-step"))json={title:"Потребности",description:"",href:"/needs"};
-    else if(path.endsWith(`/needs/${needId}`))json=need;
+    else if(path.endsWith(`/needs/${needId}`))json={...need,visibility:options.closed?"closed":need.visibility};
     else if(path.endsWith("/needs/mine"))json=[need];
     else if(path.endsWith(`/needs/${needId}/suppliers`))json=[{company_id:sellerId,company_name:sellerName,specialization:[need.category],relevant:true,products:["Бумажный стакан"]}];
     else if(path.endsWith("/suppliers"))json=[{company_id:sellerId,company_name:sellerName,specialization:[need.category],relevant:true,products:["Бумажный стакан"]}];
@@ -51,6 +51,17 @@ async function prepare(page: Page, options: {empty?:boolean; draftFailure?:boole
 
 async function openBoard(page:Page){await page.goto(`/needs/${needId}/suppliers`);await page.getByRole('tab',{name:/Доска запросов/}).click();}
 async function openCard(page:Page){await openBoard(page);await page.locator('.supplier-card__open').first().click();return page.getByRole('region',{name:'Работа с поставщиком'});}
+
+test('closed need still permits an addressed RFQ and editing its reply',async({page})=>{
+  const state=await prepare(page,{empty:true,closed:true});
+  await page.goto(`/needs/${needId}/suppliers`);
+  await page.getByRole('button',{name:'Запросить КП',exact:true}).click();
+  const workspace=page.getByRole('region',{name:'Работа с поставщиком'});
+  await workspace.getByLabel('Запрос коммерческого предложения').fill('Просим КП на 100 стаканов.');
+  await expect(workspace.getByRole('button',{name:'Отправить поставщику',exact:true})).toBeEnabled();
+  await workspace.getByRole('button',{name:'Отправить поставщику',exact:true}).click();
+  expect(state.sends).toHaveLength(1);
+});
 
 test('supplier RFQ is addressed, editable and never sent by generation',async({page})=>{
   const state=await prepare(page,{empty:true});await openBoard(page);

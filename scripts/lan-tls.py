@@ -100,6 +100,8 @@ def run(command: list[str], **kwargs) -> None:
 
 def ensure_ca(directory: Path, days: int) -> tuple[Path, Path]:
     key, certificate = directory / "ca.key", directory / "ca.pem"
+    if key.is_file() != certificate.is_file():
+        raise ValueError("Комплект CA неполный. Восстановите ключ и сертификат из копии или выберите новый каталог.")
     if key.is_file() and certificate.is_file():
         return key, certificate
     run(["openssl", "req", "-x509", "-newkey", "rsa:3072", "-nodes", "-days", str(days),
@@ -145,6 +147,9 @@ def ensure_certificate(directory: Path, ca_key: Path, ca_pem: Path, entries: lis
 
 def prepare(directory: Path, addresses: list[str], hostname: str = DEFAULT_HOSTNAME,
             days: int = 397, ca_days: int = 3650, out=print) -> Path:
+    directory = directory.resolve()
+    if any((parent / ".git").exists() for parent in (directory, *directory.parents)):
+        raise ValueError("Ключи TLS должны лежать вне Git-репозитория. Выберите другой каталог.")
     directory.mkdir(parents=True, exist_ok=True)
     os.chmod(directory, 0o700)
     entries = san_entries(addresses, hostname)

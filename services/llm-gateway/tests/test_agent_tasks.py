@@ -521,6 +521,12 @@ async def test_cache_key_includes_model_versions_and_hit_returns_them(client, to
     assert any(call["status"] == "cached" for call in fourth["tool_calls"])
     assert fourth["model_version"] == "synthetic-model-v2"
 
+    calls_before_change = len(fake_provider.prompts)
+    monkeypatch.setattr(settings, "ollama_model", "synthetic-assistant-v2")
+    fifth = await make_buyer_run(client, token, company_id, text_value)
+    assert len(fake_provider.prompts) > calls_before_change
+    assert not any(call["status"] == "cached" for call in fifth["tool_calls"])
+
 
 @pytest.mark.asyncio
 async def test_unverifiable_calculation_artifacts_rejected(client, token, db_session, user_id):

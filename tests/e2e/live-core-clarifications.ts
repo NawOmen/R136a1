@@ -14,15 +14,16 @@ type Run = {
 // These are declared buyer answers for the synthetic request, never model output.
 const answers: Record<string, string> = { quantity_units: "200", unit: "шт", lead_time_days: "30", delivery_city: "Москва" };
 
-export async function completeLiveClarifications(page: Page, initial: Run) {
+export async function completeLiveClarifications(page: Page, initial: Run, quantity = 200) {
   let run = initial;
+  const declaredAnswers = {...answers, quantity_units:String(quantity)};
   const manualAnswers: { key: string; value: string }[] = [];
   const initialQuantity = initial.result.properties.find(property => property.key === "quantity_units");
-  if (initialQuantity?.value != null) expect(Number(initialQuantity.value), "Извлечённое количество должно соответствовать исходному тексту").toBe(200);
+  if (initialQuantity?.value != null) expect(Number(initialQuantity.value), "Извлечённое количество должно соответствовать исходному тексту").toBe(quantity);
   for (let round = 0; !run.result.can_confirm && round < 5; round++) {
     expect(run.result.questions.length, "Не готовый к проверке разбор должен показывать уточнения").toBeGreaterThan(0);
     for (const question of run.result.questions) {
-      const value = answers[question.key];
+      const value = declaredAnswers[question.key];
       expect(value, `Неожиданное уточнение ${question.key}: тест не должен придумывать ответ`).toBeDefined();
       const input = page.locator(`#answer_${question.key}`);
       if (question.options.length) {
@@ -35,12 +36,12 @@ export async function completeLiveClarifications(page: Page, initial: Run) {
       new URL(response.url()).pathname.endsWith(`/agent-runs/${run.id}/clarify`));
     await page.getByRole("button", { name: "Продолжить", exact: true }).click();
     const response = await responsePromise;
-    expect(response.status()).toBe(200);
+    expect(response.status()).toBe(quantity);
     run = await response.json() as Run;
-    expect(run.used_route).toBe("local_qwen");
+    expect(run.used_route).toBe(initial.used_route);
   }
   expect(run.result.can_confirm, "После явных ответов покупателя разбор должен завершиться").toBe(true);
   expect(run.result.conflicts).toEqual([]);
-  expect(Number(run.result.properties.find(property => property.key === "quantity_units")?.value)).toBe(200);
+  expect(Number(run.result.properties.find(property => property.key === "quantity_units")?.value)).toBe(quantity);
   return { run, manualAnswers, quantityExtractedInitially: initialQuantity?.value != null && initialQuantity.status === "confirmed" };
 }
