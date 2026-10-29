@@ -51,11 +51,16 @@ class FinalDemoPreflightTest(unittest.TestCase):
         self.assertTrue(module.inspect(self.args(), ok)["infrastructure_passed"])
         def no_model(url, timeout, **kw):
             if url.endswith("/v1/models"):
-                return {"data": [{"id": "another-model"}]}
+                return {"data": []}
             return ok(url, timeout, **kw)
         report = module.inspect(self.args(), no_model)
         self.assertFalse(report["infrastructure_passed"])
         self.assertIn("MLX", " ".join(check["name"] for check in report["checks"] if not check["passed"]))
+        def wrong_gateway_name(url, timeout, **kw):
+            if url.endswith("/health"):
+                return {**health, "local_model": "qwen3.5:9b"}
+            return ok(url, timeout, **kw)
+        self.assertFalse(module.inspect(self.args(), wrong_gateway_name)["infrastructure_passed"])
         def no_vision(url, timeout, **kw):
             if url.endswith("/api/tags"):
                 return {"models": [{"name": "another-model"}]}

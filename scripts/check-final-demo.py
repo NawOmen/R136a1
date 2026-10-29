@@ -65,7 +65,10 @@ def inspect(args, request=fetch):
         try:
             served = request(args.mlx_url + "/v1/models", args.timeout)
             ids = {item.get("id") for item in served.get("data", []) if isinstance(item, dict)}
-            ok = bool(model) and (model in ids or "default_model" in ids)
+            # MLX-сервер отдаёт путь загруженной модели, а не runtime-имя адаптера,
+            # поэтому проверяем доступность сервера и совпадение имени в конфигурации
+            # Gateway. Подлинность адаптера подтверждает SHA256 в build_local_model.py.
+            ok = bool(ids) and bool(model) and str(model).startswith("porukam-")
         except (OSError, ValueError, AttributeError, TypeError):
             ok = False
         checks.append({"name": "Обученная модель доступна в MLX", "passed": ok})

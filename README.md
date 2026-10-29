@@ -198,12 +198,13 @@ README содержит описание продукта и условия по
 через Gateway. PostgreSQL хранит три схемы (`auth`, `marketplace`, `agents`), MinIO — файлы.
 Схемы не означают физической изоляции; резервная копия должна охватывать общее состояние.
 
-Текст разбирает локальная модель через LLM Gateway. Основной режим — обученный адаптер
-`porukam-buyer-qwen3.5` на базе `mlx-community/Qwen3.5-9B-4bit`, он запускается нативным
-MLX-сервером на Apple Silicon (`LOCAL_LLM_BACKEND=mlx`). Без такого сервера стенд работает
-на `qwen3.5:9b` через Ollama — это значение по умолчанию (`LOCAL_LLM_BACKEND=ollama`).
-Изображения распознаёт vision-модель через Ollama, аудио — Whisper `small`/`int8` внутри
-Gateway. Версии и контрольные суммы: [models.lock.json](infra/models.lock.json); точные
+Текст разбирает локальная обученная модель через LLM Gateway. Рабочий режим —
+адаптер `porukam-buyer-qwen3.5` на базе `mlx-community/Qwen3.5-9B-4bit`; он запускается
+нативным MLX-сервером на Apple Silicon, и это значение по умолчанию
+(`LOCAL_LLM_BACKEND=mlx`). Базовая Qwen3.5-9B в Ollama используется только для
+распознавания изображений и как технический обход на машинах без Apple Silicon
+(`LOCAL_LLM_BACKEND=ollama`) — рабочим режимом показа он не является.
+Аудио распознаёт Whisper `small`/`int8` внутри Gateway. Версии и контрольные суммы: [models.lock.json](infra/models.lock.json); точные
 команды запуска — [docs/ml-trained-deployment.md](docs/ml-trained-deployment.md).
 Размышления модели отключены всегда: на извлечении фактов они не улучшают ответ,
 но на порядок увеличивают время. Контекст остаётся 8192 токена и на скорость
@@ -437,29 +438,28 @@ CI проверяет сервисы, миграции, интерфейс и с
 
 ### 1. Запустить локальную модель
 
-Базовый вариант — Ollama на ноутбуке. Откройте приложение или выполните `ollama serve`
-в отдельном терминале и один раз загрузите модель:
-
-```bash
-ollama pull qwen3.5:9b
-```
-
-Ollama должна оставаться запущенной во время работы ИИ-сценариев: через неё распознаются
-изображения и речь, а с `LOCAL_LLM_BACKEND=ollama` — и текстовая заявка.
-
-Режим обученной модели (Apple Silicon). Получите базовые веса
+Текст разбирает обученная модель на Apple Silicon. Получите базовые веса
 `mlx-community/Qwen3.5-9B-4bit` (revision из `infra/models.lock.json`) и каталог адаптера
-`porukam-trained-current`, затем проверьте контрольные суммы и запустите MLX-сервер:
+`porukam-trained-current` с файлом `adapters.safetensors`, затем проверьте контрольные
+суммы и запустите MLX-сервер (он слушает только loopback):
 
 ```bash
 pip install -r ml/training/porukam-trained-current/requirements-serving.txt
 /path/to/mlx-python infra/build_local_model.py --base /path/to/model-9b-4bit \
-  --adapter ml/training/porukam-trained-current --host 127.0.0.1 --port 8080 --serve
+  --adapter /path/to/porukam-trained-current --host 127.0.0.1 --port 8080 --serve
 ```
 
-В `.env` для этого режима задайте `LOCAL_LLM_BACKEND=mlx` и `MLX_BASE_URL`.
-Если адаптер не скачан или контрольные суммы не совпали, ИИ-функции вернут понятную
+В `.env` задайте `LOCAL_LLM_BACKEND=mlx` и `MLX_BASE_URL=http://host.docker.internal:8080`.
+Если адаптер не найден или контрольные суммы не совпали, ИИ-функции вернут понятную
 ошибку 503 и не подменят модель молча. Подробнее: [docs/ml-trained-deployment.md](docs/ml-trained-deployment.md).
+
+Ollama нужна отдельно и всегда: через неё распознаются изображения и речь. Откройте
+приложение Ollama или выполните `ollama serve` в отдельном терминале и один раз загрузите
+модель:
+
+```bash
+ollama pull qwen3.5:9b
+```
 
 ### 2. Подготовить настройки
 
@@ -478,12 +478,13 @@ docker run --rm --user "$(id -u):$(id -g)" \
 OLLAMA_DOCKER_BASE_URL=http://host.docker.internal:11434
 OLLAMA_MODEL=qwen3.5:9b
 OLLAMA_VISION_MODEL=qwen3.5:9b
-LOCAL_LLM_BACKEND=ollama
+LOCAL_LLM_BACKEND=mlx
+MLX_BASE_URL=http://host.docker.internal:8080
 ENABLE_DEMO_SEED=true
 ```
 
-`LOCAL_LLM_BACKEND=ollama` — рабочий вариант по умолчанию. Если поднят обученный
-MLX-сервер, поставьте `LOCAL_LLM_BACKEND=mlx` и пересоздайте `llm-gateway`.
+`LOCAL_LLM_BACKEND=mlx` — рабочий режим с обученной моделью. `ollama` допустим только
+как технический обход на машине без Apple Silicon; для показа он не используется.
 
 `ENABLE_DEMO_SEED=true` включает синтетические компании, аккаунты и каталог для
 локальной работы. Пароли аккаунтов уже созданы в `.env`; файл не добавлять в Git.

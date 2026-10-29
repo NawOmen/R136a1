@@ -61,8 +61,11 @@ Gateway (`up -d --force-recreate llm-gateway`; обычный `restart` новы
 
 | Режим | Настройки | Что разбирает текст | Что распознаёт изображения |
 | --- | --- | --- | --- |
-| Ollama, по умолчанию | `LOCAL_LLM_BACKEND=ollama` | `qwen3.5:9b` через Ollama | `OLLAMA_VISION_MODEL` через Ollama |
-| Обученная модель | `LOCAL_LLM_BACKEND=mlx`, `MLX_BASE_URL` | адаптер `porukam-buyer-qwen3.5` в MLX | `OLLAMA_VISION_MODEL` через Ollama |
+| Обученная модель, по умолчанию | `LOCAL_LLM_BACKEND=mlx`, `MLX_BASE_URL` | адаптер `porukam-buyer-qwen3.5` в MLX | `OLLAMA_VISION_MODEL` через Ollama |
+| Технический обход без Apple Silicon | `LOCAL_LLM_BACKEND=ollama` | `qwen3.5:9b` через Ollama | `OLLAMA_VISION_MODEL` через Ollama |
+
+Режим `ollama` нужен только для стендов без Apple Silicon и для отладки; рабочим режимом
+показа он не является.
 
 Каталог адаптера `ml/training/porukam-trained-current` содержит конфигурацию, манифест и
 служебный сервер, но не веса: файл `adapters.safetensors` оператор получает из опубликованного
