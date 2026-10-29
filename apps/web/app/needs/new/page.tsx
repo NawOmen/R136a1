@@ -3,7 +3,6 @@ import { formatDate, parseDateInput } from "../../lib/dates";
 import { AddressDialog } from "../../components/AddressDialog";
 import { CharacteristicValue } from "../../components/CharacteristicValue";
 import { categoryProfile } from "../../lib/categoryProfiles";
-import RequirementSource from "../../components/RequirementSource";
 import { DateInput } from "../../components/DateInput";
 
 // Создание потребности (POST /needs). Форма покупателя: компания (can_buy),
@@ -32,7 +31,6 @@ import {
   DeliveryAddress,
   marketplace,
   NeedVisibility,
-  NEED_VISIBILITY_LABELS,
   PRODUCT_CATEGORIES,
   PRODUCT_CATEGORY_TREE,
 } from "../../lib/marketplace";
@@ -578,9 +576,6 @@ export default function NewNeedPage() {
             <button type="button" className="btn btn-secondary btn-sm" disabled={countUserCharacteristics(rows,category,subcategory)>=25} onClick={()=>setCharacteristicsOpen(value=>!value)}>+ Добавить характеристику</button>
           </div>
           <div className="need-form-grid need-commercial"><div className="field"><label htmlFor="volume_units">Количество</label><input id="volume_units" type="number" min="0.000001" step="any" value={volumeUnits} onChange={event=>setVolumeUnits(event.target.value)} required placeholder="Сколько нужно" /></div><div className="field"><label htmlFor="budget_rub">Бюджет, ₽</label><input id="budget_rub" type="number" min="0.01" step="0.01" value={budgetRub} onChange={event=>setBudgetRub(event.target.value)} required placeholder="Общая сумма" /></div><div className="field"><label htmlFor="deadline_date">Получить до</label><DateInput id="deadline_date" min={new Date(Date.now()-new Date().getTimezoneOffset()*60000).toISOString().slice(0,10)} value={deadlineDate} onValueChange={setDeadlineDate} required /></div><div className="field"><label htmlFor="delivery_address_id">Адрес доставки</label><div className="need-address"><select id="delivery_address_id" required value={deliveryAddressId} onChange={event=>setDeliveryAddressId(event.target.value)}><option value="">Выберите адрес</option>{addresses.map(item=><option key={item.id} value={item.id}>{item.city}, {item.address}</option>)}</select><button type="button" className="btn btn-secondary btn-sm" disabled={busyAddress} onClick={()=>setAddressOpen(true)}>+ Добавить адрес</button></div></div></div>
-          {agentRun && agentRun.result.properties.some(property => property.key === "delivery_city" && property.sources?.some(source => source.normalization === "model_city_name")) && <details className="need-disclosure"><summary>Город из материалов</summary>{agentRun.result.properties.filter(property => property.key === "delivery_city").flatMap(property => property.sources ?? []).filter(source => source.normalization === "model_city_name").map((source,index) => <RequirementSource key={`${source.source_id}:${index}`} runId={agentRun.id} source={source} />)}</details>}
-          <details className="need-disclosure"><summary>Настройки видимости</summary><div className="field"><label htmlFor="visibility">Кто увидит потребность</label><select id="visibility" value={visibility} onChange={event => setVisibility(event.target.value as NeedVisibility)}><option value="open_anonymized">{NEED_VISIBILITY_LABELS.open_anonymized}</option><option value="closed">{NEED_VISIBILITY_LABELS.closed}</option>{visibility === "selected_producers" && <option value="selected_producers">Для выбранных производителей — сохранённый режим</option>}</select><p className="hint">Закрытая потребность не участвует в общем подборе. Адресный запрос КП отправляется отдельно.</p></div></details>
-          {visibility!=="open_anonymized" && <p className="alert alert-warning">Потребность скрыта из общего подбора. <button type="button" className="btn btn-secondary btn-sm" onClick={()=>setVisibility("open_anonymized")}>Открыть подбор производителям</button></p>}
           <PhysicalQuantityReview kind="need" values={{category, subcategory, characteristics:Object.fromEntries(rows.filter(row=>row.key.trim()).map(row=>[row.key.trim(),row.value])),volume_units:volumeUnits}} approved={quantityApproved} onApproval={setQuantityApproved} compact />
           <footer className="need-review__footer"><p className="hint">{visibility === "open_anonymized" ? "Производители увидят требования без реквизитов компании." : "Потребность сохранится вне общего подбора производителей."}</p><div className="actions"><button type="submit" className="btn btn-primary" disabled={submitting || !company}>{submitting ? "Отправляем…" : visibility === "open_anonymized" ? "Подтвердить и опубликовать" : "Сохранить закрытую потребность"}<Icon name="arrow" size={18} /></button><Link href="/needs" className="btn btn-secondary">Отмена</Link></div></footer>
         </section>}

@@ -82,6 +82,7 @@ export default function MyNeedsPage() {
   const [editTarget, setEditTarget] = useState<Need | null>(null);
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [deleting, setDeleting] = useState(false);
+  const [publicationBusy, setPublicationBusy] = useState<string | null>(null);
 
   async function load() {
     const token = getToken();
@@ -177,6 +178,45 @@ export default function MyNeedsPage() {
     }
   }
 
+  async function togglePublication(need: Need) {
+    const token = getToken();
+    if (!token || publicationBusy) return;
+    const hide = need.visibility === "open_anonymized";
+    setPublicationBusy(need.id);
+    setError(null);
+    try {
+      const payload = {
+        company_id: need.company_id,
+        category: need.category,
+        subcategory: need.subcategory ?? null,
+        characteristics: need.characteristics,
+        volume_units: need.volume_units,
+        budget_rub: need.budget_rub ?? null,
+        deadline_date: need.deadline_date,
+        delivery_address_id: need.delivery_address_id,
+        visibility: hide ? ("closed" as const) : ("open_anonymized" as const),
+        valid_until: need.valid_until ?? undefined,
+        expected_revision: need.revision,
+      };
+      // Скрытие меняет версию потребности: сначала смотрим последствия,
+      // затем сохраняем с их подтверждением.
+      const impact = await marketplace.previewNeedEdit(token, need.id, payload);
+      if (!impact.editable && Object.keys(impact.changes).length > 0) {
+        setError("По этой потребности уже есть обязательства: скрыть её нельзя.");
+        return;
+      }
+      const updated = await marketplace.editNeed(token, need.id, {
+        ...payload,
+        impact_hash: impact.requires_confirmation ? impact.impact_hash : undefined,
+      });
+      setNeeds(current => current.map(item => item.id === updated.id ? { ...item, ...updated } : item));
+    } catch (err: unknown) {
+      setError(err instanceof ApiError ? russianMessage(err.message) : "Не удалось изменить публикацию потребности.");
+    } finally {
+      setPublicationBusy(null);
+    }
+  }
+
   function applyEdit(updated: Need) {
     setNeeds(current => current.map(item => item.id === updated.id ? { ...item, ...updated } : item));
   }
@@ -225,8 +265,10 @@ export default function MyNeedsPage() {
                   Бюджет: {formatRub(need.budget_rub)} · Срок: {formatDate(need.deadline_date)}
                 </span>
                 <span className={`badge badge-${need.status}`}>{NEED_STATUS_LABELS[need.status]}</span>
+                {need.visibility !== "open_anonymized" && <span className="badge badge-hidden">Скрыта из публикации</span>}
               </Link>
               <div className="need-row-actions">
+                {canEdit(need) && <button type="button" className="btn btn-secondary btn-sm" disabled={publicationBusy === need.id} onClick={() => void togglePublication(need)}>{publicationBusy === need.id ? "Сохраняем…" : need.visibility === "open_anonymized" ? "Скрыть из публикации" : "Вернуть в публикацию"}</button>}
                 {canEdit(need) && <button type="button" className="btn btn-secondary btn-sm" onClick={() => setEditTarget(need)}>Изменить</button>}
                 {canDelete(need) && <button type="button" className="btn btn-secondary btn-sm" disabled={deleting} onClick={() => setDeleteId(deleteId === need.id ? null : need.id)}>Удалить</button>}
                 {repeatId !== need.id && <button type="button" className="btn btn-secondary btn-sm" disabled={repeating} onClick={() => openRepeat(need)}>Повторить заказ</button>}

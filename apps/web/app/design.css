@@ -718,3 +718,6 @@ html { --page-gutter:clamp(35px,2.73vw,44px); --header-gutter:clamp(32px,2.73vw,
 .need-edit-dialog { width:min(680px,calc(100vw - 24px)); }
 .need-edit-changes { margin:0 0 16px; }
 @media (max-width:600px) { .needs-toolbar .field { flex:1 1 100%; min-width:0; }.need-row-actions { justify-content:stretch; }.need-row-actions > .btn { flex:1 1 140px; } }
+
+/* Потребность, временно скрытая покупателем из общего подбора. */
+.badge-hidden { background:var(--bg-accent); color:var(--text-muted); border:1px dashed var(--border); }
