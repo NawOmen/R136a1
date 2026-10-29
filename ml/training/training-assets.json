@@ -1,0 +1,274 @@
+{
+  "archive_name": "training-snapshot.tar.gz",
+  "archive_bytes": 1770334924,
+  "archive_sha256": "f36c158520993c74370b869abbd45b4133f5f6ce0997ed0ff53513042bb9828e",
+  "parts": [
+    {
+      "name": "training-20261023.part0001",
+      "bytes": 33554432,
+      "sha256": "ee26361dcc4b18b561b3d9eaa363d56e85f1ecb204a4b8287e92051af1e6b634"
+    },
+    {
+      "name": "training-20261023.part0002",
+      "bytes": 33554432,
+      "sha256": "41f0c1dd1749e141a730570ecabba8e216d647b63ca7bb34004802e420ca6246"
+    },
+    {
+      "name": "training-20261023.part0003",
+      "bytes": 33554432,
+      "sha256": "5eec80d602c43ef90f679486d44950fe4f183f0f58623964b530221783fcf541"
+    },
+    {
+      "name": "training-20261023.part0004",
+      "bytes": 33554432,
+      "sha256": "8f4d1b4fa9430c06d82369086daf6d151be993142722b1f69a65d3221c1af1cd"
+    },
+    {
+      "name": "training-20261023.part0005",
+      "bytes": 33554432,
+      "sha256": "2ee21fb050050d429357b3fe20a6c74e601035218bba25f77ced8354009b5a17"
+    },
+    {
+      "name": "training-20261023.part0006",
+      "bytes": 33554432,
+      "sha256": "a8bc935263bf5cc327aa91cb25c89b036fccb0dfc5667b5d6aeda8a7c08c184d"
+    },
+    {
+      "name": "training-20261023.part0007",
+      "bytes": 33554432,
+      "sha256": "b068c569a2c8f3f65098ae6a266491c1b2183db75de967ff4e0991732994773c"
+    },
+    {
+      "name": "training-20261023.part0008",
+      "bytes": 33554432,
+      "sha256": "c7d5f7a52e5ebd7cf929669e0e190d0f6e2054ef0e8a82cc1c5ca0080fb873aa"
+    },
+    {
+      "name": "training-20261023.part0009",
+      "bytes": 33554432,
+      "sha256": "35472cfb06285055cee9395d34b6d6002bd7aa084626b14d137c8ab3a1ae909b"
+    },
+    {
+      "name": "training-20261023.part0010",
+      "bytes": 33554432,
+      "sha256": "05ecb601aeab3db473c389dcb9d8f1baf7eedbacf0428a105172a922560f2c11"
+    },
+    {
+      "name": "training-20261023.part0011",
+      "bytes": 33554432,
+      "sha256": "fc9c2529e283f298ef20b074ed472e5ed44c69544e1178d40f5b652219e1f381"
+    },
+    {
+      "name": "training-20261023.part0012",
+      "bytes": 33554432,
+      "sha256": "5d1f73707b377368fdc83b7933e98749c5b09a5e14cc2638a210f058375827b4"
+    },
+    {
+      "name": "training-20261023.part0013",
+      "bytes": 33554432,
+      "sha256": "e5bee84d39ea1dbe90625e9684c5cf3d2cbc155a7ce33f6ccfa0c11fe8bdc2cd"
+    },
+    {
+      "name": "training-20261023.part0014",
+      "bytes": 33554432,
+      "sha256": "4b2cf0d8d255bc9f4fe88394baa29536cfa8b17db505d7b614cb0c46e7140301"
+    },
+    {
+      "name": "training-20261023.part0015",
+      "bytes": 33554432,
+      "sha256": "3f882d5d28e2fa8a8be3e881bd9857a29d027dc8cce3099fecc58ca3db3b50a7"
+    },
+    {
+      "name": "training-20261023.part0016",
+      "bytes": 33554432,
+      "sha256": "15cffb745d9f105e1dd04df3e8ef86231e9c4890de27adc22d6c2579838afb8f"
+    },
+    {
+      "name": "training-20261023.part0017",
+      "bytes": 33554432,
+      "sha256": "4cb985732f682b2b121cc2ba6d8abadafdd20957822e558d5b6a4cb08c5fdaea"
+    },
+    {
+      "name": "training-20261023.part0018",
+      "bytes": 33554432,
+      "sha256": "b9ec378f1c74be3605ccde2d89222f2bfbf7df37288aefb0de3c36b627b44731"
+    },
+    {
+      "name": "training-20261023.part0019",
+      "bytes": 33554432,
+      "sha256": "1cf98255ac43c230d68e88216982be4aa280e6fdf482fc9388545cd2cfd160f2"
+    },
+    {
+      "name": "training-20261023.part0020",
+      "bytes": 33554432,
+      "sha256": "510f5fd39b16ada3c6ff23a8f81e94fbf829f0250da7371607dfb62268ceb2de"
+    },
+    {
+      "name": "training-20261023.part0021",
+      "bytes": 33554432,
+      "sha256": "fc2a11108a3726773c0676081a2e018466127c422bd9f0f56da64f24e5ee2c03"
+    },
+    {
+      "name": "training-20261023.part0022",
+      "bytes": 33554432,
+      "sha256": "55c32c8ff6234871e51494f86fe878e3ba394f7b355959eb405746f611553607"
+    },
+    {
+      "name": "training-20261023.part0023",
+      "bytes": 33554432,
+      "sha256": "53a794ecd421dbfe975b753389f7d962ee6aa9b812aa434eb0c2bd5e4f6fa871"
+    },
+    {
+      "name": "training-20261023.part0024",
+      "bytes": 33554432,
+      "sha256": "70f6d9164d41083f0de16eb67c098b01d1fadac4e47a321ccaa4195b0cfd3b2d"
+    },
+    {
+      "name": "training-20261023.part0025",
+      "bytes": 33554432,
+      "sha256": "abd5aa8f68dae1a8b8fd6f5b5bc3eb723656806d3b236ce5ec6253827584a50a"
+    },
+    {
+      "name": "training-20261023.part0026",
+      "bytes": 33554432,
+      "sha256": "c41715321a735e6f35dae83e23d9f3114c0fd19df155633c309471f543cb68f7"
+    },
+    {
+      "name": "training-20261023.part0027",
+      "bytes": 33554432,
+      "sha256": "b1de35de63986d431b6f2d565a2dac86b8b0ea956940961950d4933084df0f8c"
+    },
+    {
+      "name": "training-20261023.part0028",
+      "bytes": 33554432,
+      "sha256": "79482c8ed1f688b7d152b71c3c09b2f5d76c76239fdc24899805b75f1295ada9"
+    },
+    {
+      "name": "training-20261023.part0029",
+      "bytes": 33554432,
+      "sha256": "d3067fbda1714051eadcee9b9941f6168a8f154f6dc3ba69ad4c2665d4bcbf3d"
+    },
+    {
+      "name": "training-20261023.part0030",
+      "bytes": 33554432,
+      "sha256": "4fe0be25a1593c4a33c19b3ec56d41636bcd4b3ecba61bdeb993c80197281c4b"
+    },
+    {
+      "name": "training-20261023.part0031",
+      "bytes": 33554432,
+      "sha256": "f5182cdd89d839d66ca82080bd2dcf6b2e3b4547e0b19deb47ce905e2e354b7f"
+    },
+    {
+      "name": "training-20261023.part0032",
+      "bytes": 33554432,
+      "sha256": "df2202b5b391a41ffc8935548a5ed808cc15d6214aab5d965c90502a4152c05c"
+    },
+    {
+      "name": "training-20261023.part0033",
+      "bytes": 33554432,
+      "sha256": "9bb87526b15128a71f712830b0009c9313bb5968304192d01a54cfe284cedb2d"
+    },
+    {
+      "name": "training-20261023.part0034",
+      "bytes": 33554432,
+      "sha256": "6a493e109b94585062acd4e90a603a4cd28055b255cf4153c731d7c5a5fe5e44"
+    },
+    {
+      "name": "training-20261023.part0035",
+      "bytes": 33554432,
+      "sha256": "d2e85699b757af88c2c2994361029c73a6dfb413b72074d90941edf989b0c9e6"
+    },
+    {
+      "name": "training-20261023.part0036",
+      "bytes": 33554432,
+      "sha256": "208638c3edc2903e642ffd427b73238d44dc268b1d1256a97f991d1ce69da511"
+    },
+    {
+      "name": "training-20261023.part0037",
+      "bytes": 33554432,
+      "sha256": "8ca727a35ec1bb552033d1517cdde0f02afbcfbcc6a1c4759efe0fa1580ad58b"
+    },
+    {
+      "name": "training-20261023.part0038",
+      "bytes": 33554432,
+      "sha256": "507f610705aeb459e54391de4ce08deba3db4759d20b3fe6bfcbe26b151b3e62"
+    },
+    {
+      "name": "training-20261023.part0039",
+      "bytes": 33554432,
+      "sha256": "4ea842f179d06f37bd0f75672961f7c02d160591d86a318d72791d58326ea73a"
+    },
+    {
+      "name": "training-20261023.part0040",
+      "bytes": 33554432,
+      "sha256": "6b1484de6be720d128f9c99b0eab359f19f866d3cd85fd2f8646c2cdc1f9bd8e"
+    },
+    {
+      "name": "training-20261023.part0041",
+      "bytes": 33554432,
+      "sha256": "73ada0e17f9bff2ec460a666a2d00117a4ab9f7edd02b828fc90025f04cc551e"
+    },
+    {
+      "name": "training-20261023.part0042",
+      "bytes": 33554432,
+      "sha256": "9303608437889d8e6a19a2b6c43f9215c821a324c6ec556086b58b1e4619b599"
+    },
+    {
+      "name": "training-20261023.part0043",
+      "bytes": 33554432,
+      "sha256": "87564264ec99107bc84cc793db46ec37945ee5af9ca707dc71f2b62e3dca019c"
+    },
+    {
+      "name": "training-20261023.part0044",
+      "bytes": 33554432,
+      "sha256": "6dfbd32a7af3d3061fa5081f293cfafb864236b1f0bc37c5b0910c535ac035f1"
+    },
+    {
+      "name": "training-20261023.part0045",
+      "bytes": 33554432,
+      "sha256": "c5e082fe3f33be96b2fe6f0d6011afc27865c355c3c5fb2c9dcd8217105c299d"
+    },
+    {
+      "name": "training-20261023.part0046",
+      "bytes": 33554432,
+      "sha256": "edec8dab8a4f991ec86b2c2b4e5ab97579c5e31d63377d7324dd640dac28ed3b"
+    },
+    {
+      "name": "training-20261023.part0047",
+      "bytes": 33554432,
+      "sha256": "1171802eed49cfd328593037e610171da3625e11ee63142c8dfd899938df2fd3"
+    },
+    {
+      "name": "training-20261023.part0048",
+      "bytes": 33554432,
+      "sha256": "424b6c8c8e57beebf2e4c82c829a291827be7f58312d84e8a774add4b6d2a6a1"
+    },
+    {
+      "name": "training-20261023.part0049",
+      "bytes": 33554432,
+      "sha256": "912b00cb3e9c11a07d98fc0529e8a14655a8031248211886d41ceb4e76603cf0"
+    },
+    {
+      "name": "training-20261023.part0050",
+      "bytes": 33554432,
+      "sha256": "793225a01bbbadc855801b394109f00a1ffec39f7149930d39bb08dd11db9817"
+    },
+    {
+      "name": "training-20261023.part0051",
+      "bytes": 33554432,
+      "sha256": "5948b8cb3faaea2cc79303c2ee5dc3b338e22267f995dd65e0a6ce7f28bc4917"
+    },
+    {
+      "name": "training-20261023.part0052",
+      "bytes": 33554432,
+      "sha256": "f34ff1cab92d5065249560d0be7668a497accf42706ea177f3102ca825d38168"
+    },
+    {
+      "name": "training-20261023.part0053",
+      "bytes": 25504460,
+      "sha256": "dc9e4203efdb04066d0c1f45ed2a86f1892bc92da174152882b7c97a39e17359"
+    }
+  ],
+  "restored_files_verified": 187,
+  "snapshot_utc": "2026-10-23T10:06:45Z"
+}

@@ -1,4 +1,5 @@
 import json
+import re
 from copy import deepcopy
 from typing import Any
 
@@ -36,8 +37,19 @@ def _ollama_schema(response_model: type[BaseModel]) -> dict[str, Any]:
     return schema
 
 
+_REASONING_BLOCK = re.compile(r"^\s*<(?:think|thinking)>.*?</(?:think|thinking)>\s*", re.S)
+
+# Старый MLX-сервер может не знать chat_template_kwargs: тогда один раз
+# повторяем запрос без поля и запоминаем это для процесса.
+_MLX_ACCEPTS_TEMPLATE_KWARGS = True
+
+
 def _json_from_text(value: str) -> dict[str, Any]:
     text = value.strip()
+    # Снимаем только явно размеченный блок размышлений в начале ответа.
+    # JSON, в строках которого встречается текст, не изменяется.
+    if text.startswith("<think"):
+        text = _REASONING_BLOCK.sub("", text).strip()
     if text.startswith("```"):
         text = text.split("\n", 1)[-1]
         text = text.rsplit("```", 1)[0]
@@ -74,11 +86,11 @@ class OllamaProvider:
                 content = response.json()["message"]["content"]
             return response_model.model_validate(_json_from_text(content))
         except (httpx.HTTPError, KeyError, ValueError, ValidationError, json.JSONDecodeError) as exc:
-            raise ModelUnavailable("Локальная Qwen недоступна или вернула неверный JSON") from exc
+            raise ModelUnavailable("Локальная модель недоступна или вернула неверный JSON") from exc
 
     async def vision_text(self, image_base64: str, prompt: str) -> str:
         payload = {
-            "model": settings.ollama_model,
+            "model": settings.ollama_vision_model,
             "stream": False,
             "think": False,
             "messages": [
@@ -97,6 +109,64 @@ class OllamaProvider:
                 return str(response.json()["message"]["content"]).strip()
         except (httpx.HTTPError, KeyError, ValueError) as exc:
             raise ModelUnavailable("Локальное распознавание изображения недоступно") from exc
+
+
+class TrainedMLXProvider:
+    # Сохраняем версионированный идентификатор маршрута существующего API.
+    # Конкретная версия адаптера сохраняется отдельно в model_version.
+    route_name = "local_qwen"
+
+    async def structured(
+        self, system: str, prompt: str, response_model: type[BaseModel]
+    ) -> BaseModel:
+        global _MLX_ACCEPTS_TEMPLATE_KWARGS
+        schema = json.dumps(response_model.model_json_schema(), ensure_ascii=False)
+        # Мягкий переключатель Qwen и шаблонный флаг действуют вместе:
+        # /no_think работает и на серверах без chat_template_kwargs.
+        system_content = f"{system}\nВерни только JSON по схеме: {schema}\n/no_think"
+        payload = {
+            # MLX server связывает default_model с --model и --adapter-path.
+            # Произвольное имя здесь заставило бы сервер искать другую модель.
+            "model": "default_model",
+            "stream": False,
+            "temperature": 0,
+            "max_tokens": settings.mlx_max_tokens,
+            "messages": [
+                {"role": "system", "content": system_content},
+                {"role": "user", "content": prompt},
+            ],
+        }
+        if _MLX_ACCEPTS_TEMPLATE_KWARGS:
+            payload["chat_template_kwargs"] = {"enable_thinking": False}
+        url = f"{settings.mlx_base_url.rstrip('/')}/v1/chat/completions"
+        try:
+            try:
+                async with httpx.AsyncClient(timeout=settings.mlx_timeout_seconds) as client:
+                    response = await client.post(url, json=payload)
+                    response.raise_for_status()
+                    data = response.json()
+            except httpx.HTTPStatusError as exc:
+                # Сервер не принимает chat_template_kwargs: повторяем без поля,
+                # оставляя /no_think; дальше поле не отправляем.
+                if "chat_template_kwargs" not in payload or exc.response.status_code not in (400, 404, 422):
+                    raise
+                _MLX_ACCEPTS_TEMPLATE_KWARGS = False
+                payload.pop("chat_template_kwargs", None)
+                async with httpx.AsyncClient(timeout=settings.mlx_timeout_seconds) as client:
+                    response = await client.post(url, json=payload)
+                    response.raise_for_status()
+                    data = response.json()
+            content = data["choices"][0]["message"]["content"]
+            if not isinstance(content, str):
+                raise ValueError("Ожидался текст JSON")
+            return response_model.model_validate(_json_from_text(content))
+        except (httpx.HTTPError, KeyError, IndexError, TypeError, ValueError, ValidationError) as exc:
+            # Без скрытого переключения на базовую модель или внешний сервис.
+            raise ModelUnavailable("Обученная локальная модель недоступна или вернула неверный JSON") from exc
+
+    async def vision_text(self, image_base64: str, prompt: str) -> str:
+        # Адаптер обучен извлечению текста; vision остаётся отдельным маршрутом.
+        return await OllamaProvider().vision_text(image_base64, prompt)
 
 
 class DeepSeekProvider:
@@ -138,7 +208,7 @@ class DeepSeekProvider:
 
 class RoutedProvider:
     def __init__(self) -> None:
-        self.local = OllamaProvider()
+        self.local = TrainedMLXProvider() if settings.local_llm_backend == "mlx" else OllamaProvider()
         self.external = DeepSeekProvider()
 
     async def structured(

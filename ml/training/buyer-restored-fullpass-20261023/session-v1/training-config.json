@@ -1,0 +1,42 @@
+{
+  "model": "/Users/assweg/Desktop/b2b/porukam-ml-experiments/model-9b-4bit",
+  "train": true,
+  "fine_tune_type": "lora",
+  "optimizer": "adam",
+  "optimizer_config": {
+    "adam": {},
+    "adamw": {},
+    "muon": {},
+    "sgd": {},
+    "adafactor": {}
+  },
+  "data": "/Users/assweg/Desktop/b2b/porukam-ml-experiments/buyer-restored-fullpass-20261023",
+  "seed": 20261023,
+  "num_layers": 1,
+  "batch_size": 1,
+  "iters": 2132,
+  "val_batches": 1,
+  "learning_rate": 5e-06,
+  "steps_per_report": 1,
+  "steps_per_eval": 256,
+  "resume_adapter_file": "/Users/assweg/Desktop/b2b/porukam-ml-experiments/porukam-trained-current/adapters.safetensors",
+  "adapter_path": "/Users/assweg/Desktop/b2b/porukam-ml-experiments/buyer-restored-fullpass-20261023/adapter-final",
+  "save_every": 16,
+  "test": false,
+  "test_batches": 500,
+  "max_seq_length": 1280,
+  "config": null,
+  "grad_checkpoint": true,
+  "grad_accumulation_steps": 2,
+  "clear_cache_threshold": 0,
+  "lr_schedule": null,
+  "lora_parameters": {
+    "rank": 64,
+    "dropout": 0.05,
+    "scale": 2.0
+  },
+  "mask_prompt": true,
+  "report_to": null,
+  "project_name": null,
+  "trust_remote_code": false
+}

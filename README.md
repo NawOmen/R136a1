@@ -198,11 +198,17 @@ README содержит описание продукта и условия по
 через Gateway. PostgreSQL хранит три схемы (`auth`, `marketplace`, `agents`), MinIO — файлы.
 Схемы не означают физической изоляции; резервная копия должна охватывать общее состояние.
 
-Основная модель — `qwen3.5:9b`, распознавание аудио — Whisper `small`/`int8`.
-Версии и параметры: [models.lock.json](infra/models.lock.json). В локальном запуске
-Ollama работает на ноутбуке, OCR и Whisper — внутри Gateway.
-
-Собственный LoRA-адаптер подготовлен отдельно; [методика, результаты и ограничения](#agent-quality).
+Текст разбирает локальная обученная модель через LLM Gateway. Рабочий режим —
+адаптер `porukam-buyer-qwen3.5` на базе `mlx-community/Qwen3.5-9B-4bit`; он запускается
+нативным MLX-сервером на Apple Silicon, и это значение по умолчанию
+(`LOCAL_LLM_BACKEND=mlx`). Базовая Qwen3.5-9B в Ollama используется только для
+распознавания изображений и как технический обход на машинах без Apple Silicon
+(`LOCAL_LLM_BACKEND=ollama`) — рабочим режимом показа он не является.
+Аудио распознаёт Whisper `small`/`int8` внутри Gateway. Версии и контрольные суммы: [models.lock.json](infra/models.lock.json); точные
+команды запуска — [docs/ml-trained-deployment.md](docs/ml-trained-deployment.md).
+Размышления модели отключены всегда: на извлечении фактов они не улучшают ответ,
+но на порядок увеличивают время. Контекст остаётся 8192 токена и на скорость
+не влияет. [Методика, результаты и ограничения обучения](#agent-quality).
 
 | Подключение | Состояние |
 |---|---|
@@ -432,14 +438,40 @@ CI проверяет сервисы, миграции, интерфейс и с
 
 ### 1. Запустить локальную модель
 
-Откройте приложение Ollama на ноутбуке. Если запускаете без приложения, выполните
-`ollama serve` в отдельном терминале. Затем загрузите модель (один раз):
+Модель не работает в контейнере: текст разбирает обученная модель на Apple Silicon,
+поднятая на хосте, а Compose ходит к ней по `MLX_BASE_URL`. Получите базовые веса
+`mlx-community/Qwen3.5-9B-4bit` (revision из `infra/models.lock.json`) и каталог адаптера
+`porukam-trained-current` с файлом `adapters.safetensors`, укажите пути в `.env` и запустите
+сервер одной командой — она сверяет SHA256 адаптера и весов, слушает только loopback и
+пишет журнал в `~/Library/Logs/PoRukam-LLM/`:
+
+```bash
+pip install -r ml/training/porukam-trained-current/requirements-serving.txt
+```
+
+```dotenv
+MLX_MODEL_DIR=/path/to/model-9b-4bit
+MLX_ADAPTER_DIR=/path/to/porukam-trained-current
+MLX_SERVE_PYTHON=/path/to/mlx-python
+```
+
+```bash
+python3 scripts/local_model.py start         # поднять модель вне Docker
+python3 scripts/local_model.py status        # адрес, процесс, модель, автозапуск
+python3 scripts/local_model.py install-agent # поднимать при входе в систему
+```
+
+В `.env` также задайте `LOCAL_LLM_BACKEND=mlx` и `MLX_BASE_URL=http://host.docker.internal:8080`.
+Если адаптер не найден или контрольные суммы не совпали, ИИ-функции вернут понятную
+ошибку 503 и не подменят модель молча. Подробнее: [docs/ml-trained-deployment.md](docs/ml-trained-deployment.md).
+
+Ollama нужна отдельно и всегда: через неё распознаются изображения и речь. Откройте
+приложение Ollama или выполните `ollama serve` в отдельном терминале и один раз загрузите
+модель:
 
 ```bash
 ollama pull qwen3.5:9b
 ```
-
-Ollama должна оставаться запущенной во время работы ИИ-сценариев.
 
 ### 2. Подготовить настройки
 
@@ -457,8 +489,14 @@ docker run --rm --user "$(id -u):$(id -g)" \
 ```dotenv
 OLLAMA_DOCKER_BASE_URL=http://host.docker.internal:11434
 OLLAMA_MODEL=qwen3.5:9b
+OLLAMA_VISION_MODEL=qwen3.5:9b
+LOCAL_LLM_BACKEND=mlx
+MLX_BASE_URL=http://host.docker.internal:8080
 ENABLE_DEMO_SEED=true
 ```
+
+`LOCAL_LLM_BACKEND=mlx` — рабочий режим с обученной моделью. `ollama` допустим только
+как технический обход на машине без Apple Silicon; для показа он не используется.
 
 `ENABLE_DEMO_SEED=true` включает синтетические компании, аккаунты и каталог для
 локальной работы. Пароли аккаунтов уже созданы в `.env`; файл не добавлять в Git.

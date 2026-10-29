@@ -1,0 +1,17 @@
+{
+  "archive_sha256": "e96497a96df3e892a754b35ff947bb3c6219faece2dad1da8d55e43ed34cfbde",
+  "archive_bytes": 38045998,
+  "parts": [
+    {
+      "name": "training-delta1.part0001",
+      "bytes": 33554432,
+      "sha256": "785968e97d96921375eef71fa416dc3e9109f9da773ea2f15571fd85865ae7fb"
+    },
+    {
+      "name": "training-delta1.part0002",
+      "bytes": 4491566,
+      "sha256": "815a95b3daf907f434654629674c043f08623a01328b697e0325a568f8355605"
+    }
+  ],
+  "files_verified_in_archive": 9
+}

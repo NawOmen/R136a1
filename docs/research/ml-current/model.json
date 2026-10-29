@@ -1,0 +1,51 @@
+{
+  "model_version": "porukam-buyer-b2cf30b11110",
+  "adapter_sha256": "b2cf30b111109ee10439b4308cb97058ab00a85115eedd36118bbc534e52b665",
+  "base_model": "mlx-community/Qwen3.5-9B-4bit",
+  "base_revision": "8b2b98c00a6b4d291155e4890773ca8f769aee53",
+  "training_unique_examples": 2160,
+  "training_stages": [
+    1424,
+    736
+  ],
+  "optimizer_reset": true,
+  "evaluation_cases": 412,
+  "exact": 404,
+  "per_bank": {
+    "marketplace": {
+      "rows": 184,
+      "exact": 182,
+      "prior_exact": 177
+    },
+    "business": {
+      "rows": 220,
+      "exact": 220,
+      "prior_exact": 220
+    },
+    "authored": {
+      "rows": 8,
+      "exact": 2,
+      "prior_exact": 2
+    }
+  },
+  "metrics": {
+    "cases": 412,
+    "expected_facts": 2230,
+    "matched_facts": 2218,
+    "extra_facts": 8,
+    "fact_precision": 0.9964,
+    "fact_recall": 0.9946,
+    "fact_f1": 0.9955,
+    "category_accuracy": 1.0,
+    "json_rate": 1.0,
+    "fully_correct_rate": 0.9806,
+    "grounded_fact_recall": 0.9946,
+    "value_type_rate": 1.0,
+    "critical_type_errors": 0
+  },
+  "semantic_accuracy": null,
+  "autonomous_use_accepted": false,
+  "last_interrupted128_candidate_discarded": true,
+  "full_manual_semantic_review_complete": false,
+  "independent_expert": false
+}

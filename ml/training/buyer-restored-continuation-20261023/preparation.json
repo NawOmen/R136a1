@@ -1,0 +1,28 @@
+{
+  "train": 676,
+  "valid": 588,
+  "original_schedule": "/Users/assweg/Desktop/b2b/porukam-ml-experiments/buyer-restored-fullpass-20261023/schedule.json",
+  "original_schedule_sha256": "f5403fc4f979ab73abde05bd4ddf91cece83ca1ece33e4352ee246d429fa3839",
+  "source_train_sha256": "0d251904829fd3f65d64e2d39040fff1f53039e31cd940461e9231928e8781c1",
+  "warm_checkpoint": "/Users/assweg/Desktop/b2b/porukam-ml-experiments/buyer-restored-fullpass-20261023/adapter-final/0001456_adapters.safetensors",
+  "warm_checkpoint_sha256": "9b9670d64468426168b8ed376abd941d1abe0a533d0fc41633d4665f9804990d",
+  "saved_prefix": 1456,
+  "suffix_original_steps": [
+    1457,
+    2132
+  ],
+  "original_unpersisted_metric_steps_reprocessed": [
+    1457,
+    1471
+  ],
+  "full_order_binding_verified": true,
+  "optimizer_reset": true,
+  "rng_reset": true,
+  "exact_continuous_resume": false,
+  "save_every": 128,
+  "runtime_hypothesis": "One-second host pause after each completed step, before next step. No loss/model math changes. Reduced continuous GPU duty is unproven mitigation, not a watchdog fix.",
+  "prior_error": "Metal Impacting Interactivity",
+  "os_evidence": "No matching explanatory GPU diagnostic report found; exact trigger unknown. Prior swap stable, no recorded memory-allocation error.",
+  "no_automatic_retry_or_extra_epochs": true,
+  "canonical_preserved": true
+}

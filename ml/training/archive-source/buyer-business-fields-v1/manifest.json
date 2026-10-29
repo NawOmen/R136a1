@@ -1,0 +1,6686 @@
+{
+  "created_utc": "2026-10-13T19:26:50.083324+00:00",
+  "version": "buyer-business-fields-v1",
+  "splits": {
+    "train": 660,
+    "valid": 220,
+    "test": 220
+  },
+  "seeds": {
+    "train": 961,
+    "valid": 962,
+    "test": 963
+  },
+  "synthetic": true,
+  "human_expert_reviewed": false,
+  "model_evaluated": false,
+  "not_added_to_active_training": true,
+  "explicit_category": true,
+  "covered_leaves": 46,
+  "package_eligible_leaves": 18,
+  "max_tokens": 980,
+  "max_completion_tokens": 275,
+  "checks": [
+    {
+      "case_id": "business-v1-train-0001",
+      "tokens": 880,
+      "completion_tokens": 220,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0002",
+      "tokens": 883,
+      "completion_tokens": 222,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0003",
+      "tokens": 882,
+      "completion_tokens": 221,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0004",
+      "tokens": 788,
+      "completion_tokens": 161,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0005",
+      "tokens": 789,
+      "completion_tokens": 162,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0006",
+      "tokens": 795,
+      "completion_tokens": 166,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0007",
+      "tokens": 764,
+      "completion_tokens": 129,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0008",
+      "tokens": 757,
+      "completion_tokens": 125,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0009",
+      "tokens": 755,
+      "completion_tokens": 123,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0010",
+      "tokens": 841,
+      "completion_tokens": 182,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0011",
+      "tokens": 836,
+      "completion_tokens": 179,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0012",
+      "tokens": 835,
+      "completion_tokens": 178,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0013",
+      "tokens": 923,
+      "completion_tokens": 259,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0014",
+      "tokens": 925,
+      "completion_tokens": 260,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0015",
+      "tokens": 928,
+      "completion_tokens": 262,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0016",
+      "tokens": 835,
+      "completion_tokens": 188,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0017",
+      "tokens": 844,
+      "completion_tokens": 194,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0018",
+      "tokens": 844,
+      "completion_tokens": 194,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0019",
+      "tokens": 883,
+      "completion_tokens": 227,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0020",
+      "tokens": 887,
+      "completion_tokens": 230,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0021",
+      "tokens": 878,
+      "completion_tokens": 224,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0022",
+      "tokens": 785,
+      "completion_tokens": 164,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0023",
+      "tokens": 793,
+      "completion_tokens": 170,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0024",
+      "tokens": 792,
+      "completion_tokens": 169,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0025",
+      "tokens": 760,
+      "completion_tokens": 131,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0026",
+      "tokens": 760,
+      "completion_tokens": 131,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0027",
+      "tokens": 753,
+      "completion_tokens": 127,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0028",
+      "tokens": 833,
+      "completion_tokens": 181,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0029",
+      "tokens": 828,
+      "completion_tokens": 178,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0030",
+      "tokens": 827,
+      "completion_tokens": 177,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0031",
+      "tokens": 921,
+      "completion_tokens": 262,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0032",
+      "tokens": 923,
+      "completion_tokens": 263,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0033",
+      "tokens": 923,
+      "completion_tokens": 263,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0034",
+      "tokens": 831,
+      "completion_tokens": 190,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0035",
+      "tokens": 827,
+      "completion_tokens": 187,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0036",
+      "tokens": 836,
+      "completion_tokens": 193,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0037",
+      "tokens": 874,
+      "completion_tokens": 222,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0038",
+      "tokens": 873,
+      "completion_tokens": 221,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0039",
+      "tokens": 879,
+      "completion_tokens": 225,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0040",
+      "tokens": 787,
+      "completion_tokens": 166,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0041",
+      "tokens": 787,
+      "completion_tokens": 166,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0042",
+      "tokens": 782,
+      "completion_tokens": 163,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0043",
+      "tokens": 749,
+      "completion_tokens": 125,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0044",
+      "tokens": 744,
+      "completion_tokens": 121,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0045",
+      "tokens": 756,
+      "completion_tokens": 129,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0046",
+      "tokens": 824,
+      "completion_tokens": 176,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0047",
+      "tokens": 823,
+      "completion_tokens": 175,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0048",
+      "tokens": 824,
+      "completion_tokens": 176,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0049",
+      "tokens": 914,
+      "completion_tokens": 258,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0050",
+      "tokens": 917,
+      "completion_tokens": 260,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0051",
+      "tokens": 907,
+      "completion_tokens": 253,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0052",
+      "tokens": 827,
+      "completion_tokens": 188,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0053",
+      "tokens": 826,
+      "completion_tokens": 187,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0054",
+      "tokens": 832,
+      "completion_tokens": 191,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0055",
+      "tokens": 867,
+      "completion_tokens": 225,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0056",
+      "tokens": 869,
+      "completion_tokens": 226,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0057",
+      "tokens": 870,
+      "completion_tokens": 227,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0058",
+      "tokens": 775,
+      "completion_tokens": 166,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0059",
+      "tokens": 778,
+      "completion_tokens": 168,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0060",
+      "tokens": 772,
+      "completion_tokens": 164,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0061",
+      "tokens": 737,
+      "completion_tokens": 124,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0062",
+      "tokens": 739,
+      "completion_tokens": 126,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0063",
+      "tokens": 734,
+      "completion_tokens": 122,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0064",
+      "tokens": 819,
+      "completion_tokens": 180,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0065",
+      "tokens": 811,
+      "completion_tokens": 175,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0066",
+      "tokens": 813,
+      "completion_tokens": 176,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0067",
+      "tokens": 903,
+      "completion_tokens": 258,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0068",
+      "tokens": 909,
+      "completion_tokens": 262,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0069",
+      "tokens": 909,
+      "completion_tokens": 262,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0070",
+      "tokens": 819,
+      "completion_tokens": 190,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0071",
+      "tokens": 813,
+      "completion_tokens": 186,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0072",
+      "tokens": 816,
+      "completion_tokens": 188,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0073",
+      "tokens": 893,
+      "completion_tokens": 233,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0074",
+      "tokens": 889,
+      "completion_tokens": 230,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0075",
+      "tokens": 884,
+      "completion_tokens": 227,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0076",
+      "tokens": 804,
+      "completion_tokens": 176,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0077",
+      "tokens": 797,
+      "completion_tokens": 171,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0078",
+      "tokens": 795,
+      "completion_tokens": 170,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0079",
+      "tokens": 757,
+      "completion_tokens": 128,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0080",
+      "tokens": 759,
+      "completion_tokens": 130,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0081",
+      "tokens": 754,
+      "completion_tokens": 126,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0082",
+      "tokens": 839,
+      "completion_tokens": 184,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0083",
+      "tokens": 837,
+      "completion_tokens": 183,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0084",
+      "tokens": 833,
+      "completion_tokens": 180,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0085",
+      "tokens": 921,
+      "completion_tokens": 261,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0086",
+      "tokens": 926,
+      "completion_tokens": 264,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0087",
+      "tokens": 924,
+      "completion_tokens": 263,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0088",
+      "tokens": 836,
+      "completion_tokens": 192,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0089",
+      "tokens": 842,
+      "completion_tokens": 196,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0090",
+      "tokens": 842,
+      "completion_tokens": 196,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0091",
+      "tokens": 869,
+      "completion_tokens": 221,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0092",
+      "tokens": 872,
+      "completion_tokens": 223,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0093",
+      "tokens": 879,
+      "completion_tokens": 228,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0094",
+      "tokens": 777,
+      "completion_tokens": 162,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0095",
+      "tokens": 783,
+      "completion_tokens": 166,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0096",
+      "tokens": 779,
+      "completion_tokens": 163,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0097",
+      "tokens": 745,
+      "completion_tokens": 125,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0098",
+      "tokens": 743,
+      "completion_tokens": 123,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0099",
+      "tokens": 745,
+      "completion_tokens": 125,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0100",
+      "tokens": 824,
+      "completion_tokens": 179,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0101",
+      "tokens": 830,
+      "completion_tokens": 183,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0102",
+      "tokens": 830,
+      "completion_tokens": 183,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0103",
+      "tokens": 891,
+      "completion_tokens": 230,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0104",
+      "tokens": 890,
+      "completion_tokens": 229,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0105",
+      "tokens": 888,
+      "completion_tokens": 228,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0106",
+      "tokens": 798,
+      "completion_tokens": 170,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0107",
+      "tokens": 797,
+      "completion_tokens": 169,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0108",
+      "tokens": 803,
+      "completion_tokens": 173,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0109",
+      "tokens": 764,
+      "completion_tokens": 131,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0110",
+      "tokens": 762,
+      "completion_tokens": 129,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0111",
+      "tokens": 764,
+      "completion_tokens": 131,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0112",
+      "tokens": 839,
+      "completion_tokens": 182,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0113",
+      "tokens": 840,
+      "completion_tokens": 183,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0114",
+      "tokens": 839,
+      "completion_tokens": 182,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0115",
+      "tokens": 932,
+      "completion_tokens": 267,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0116",
+      "tokens": 931,
+      "completion_tokens": 266,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0117",
+      "tokens": 944,
+      "completion_tokens": 275,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0118",
+      "tokens": 848,
+      "completion_tokens": 198,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0119",
+      "tokens": 845,
+      "completion_tokens": 196,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0120",
+      "tokens": 843,
+      "completion_tokens": 195,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0121",
+      "tokens": 872,
+      "completion_tokens": 227,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0122",
+      "tokens": 871,
+      "completion_tokens": 226,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0123",
+      "tokens": 877,
+      "completion_tokens": 230,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0124",
+      "tokens": 779,
+      "completion_tokens": 167,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0125",
+      "tokens": 781,
+      "completion_tokens": 168,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0126",
+      "tokens": 791,
+      "completion_tokens": 175,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0127",
+      "tokens": 743,
+      "completion_tokens": 126,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0128",
+      "tokens": 745,
+      "completion_tokens": 128,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0129",
+      "tokens": 740,
+      "completion_tokens": 124,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0130",
+      "tokens": 817,
+      "completion_tokens": 177,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0131",
+      "tokens": 826,
+      "completion_tokens": 183,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0132",
+      "tokens": 826,
+      "completion_tokens": 183,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0133",
+      "tokens": 891,
+      "completion_tokens": 227,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0134",
+      "tokens": 892,
+      "completion_tokens": 228,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0135",
+      "tokens": 891,
+      "completion_tokens": 227,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0136",
+      "tokens": 794,
+      "completion_tokens": 164,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0137",
+      "tokens": 811,
+      "completion_tokens": 176,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0138",
+      "tokens": 804,
+      "completion_tokens": 171,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0139",
+      "tokens": 765,
+      "completion_tokens": 129,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0140",
+      "tokens": 763,
+      "completion_tokens": 127,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0141",
+      "tokens": 765,
+      "completion_tokens": 129,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0142",
+      "tokens": 840,
+      "completion_tokens": 180,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0143",
+      "tokens": 838,
+      "completion_tokens": 179,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0144",
+      "tokens": 840,
+      "completion_tokens": 180,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0145",
+      "tokens": 877,
+      "completion_tokens": 231,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0146",
+      "tokens": 872,
+      "completion_tokens": 227,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0147",
+      "tokens": 877,
+      "completion_tokens": 231,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0148",
+      "tokens": 786,
+      "completion_tokens": 172,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0149",
+      "tokens": 785,
+      "completion_tokens": 171,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0150",
+      "tokens": 785,
+      "completion_tokens": 171,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0151",
+      "tokens": 753,
+      "completion_tokens": 133,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0152",
+      "tokens": 753,
+      "completion_tokens": 133,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0153",
+      "tokens": 746,
+      "completion_tokens": 129,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0154",
+      "tokens": 821,
+      "completion_tokens": 180,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0155",
+      "tokens": 819,
+      "completion_tokens": 179,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0156",
+      "tokens": 818,
+      "completion_tokens": 178,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0157",
+      "tokens": 895,
+      "completion_tokens": 233,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0158",
+      "tokens": 897,
+      "completion_tokens": 234,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0159",
+      "tokens": 898,
+      "completion_tokens": 235,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0160",
+      "tokens": 811,
+      "completion_tokens": 179,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0161",
+      "tokens": 799,
+      "completion_tokens": 171,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0162",
+      "tokens": 805,
+      "completion_tokens": 175,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0163",
+      "tokens": 763,
+      "completion_tokens": 130,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0164",
+      "tokens": 765,
+      "completion_tokens": 132,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0165",
+      "tokens": 760,
+      "completion_tokens": 128,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0166",
+      "tokens": 841,
+      "completion_tokens": 184,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0167",
+      "tokens": 840,
+      "completion_tokens": 183,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0168",
+      "tokens": 841,
+      "completion_tokens": 184,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0169",
+      "tokens": 880,
+      "completion_tokens": 233,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0170",
+      "tokens": 876,
+      "completion_tokens": 230,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0171",
+      "tokens": 875,
+      "completion_tokens": 230,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0172",
+      "tokens": 778,
+      "completion_tokens": 167,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0173",
+      "tokens": 780,
+      "completion_tokens": 168,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0174",
+      "tokens": 781,
+      "completion_tokens": 169,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0175",
+      "tokens": 751,
+      "completion_tokens": 132,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0176",
+      "tokens": 744,
+      "completion_tokens": 128,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0177",
+      "tokens": 742,
+      "completion_tokens": 126,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0178",
+      "tokens": 825,
+      "completion_tokens": 183,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0179",
+      "tokens": 825,
+      "completion_tokens": 183,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0180",
+      "tokens": 817,
+      "completion_tokens": 178,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0181",
+      "tokens": 878,
+      "completion_tokens": 230,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0182",
+      "tokens": 873,
+      "completion_tokens": 227,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0183",
+      "tokens": 872,
+      "completion_tokens": 226,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0184",
+      "tokens": 783,
+      "completion_tokens": 169,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0185",
+      "tokens": 779,
+      "completion_tokens": 166,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0186",
+      "tokens": 785,
+      "completion_tokens": 170,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0187",
+      "tokens": 753,
+      "completion_tokens": 132,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0188",
+      "tokens": 746,
+      "completion_tokens": 128,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0189",
+      "tokens": 744,
+      "completion_tokens": 126,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0190",
+      "tokens": 821,
+      "completion_tokens": 179,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0191",
+      "tokens": 822,
+      "completion_tokens": 180,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0192",
+      "tokens": 818,
+      "completion_tokens": 177,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0193",
+      "tokens": 876,
+      "completion_tokens": 225,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0194",
+      "tokens": 878,
+      "completion_tokens": 226,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0195",
+      "tokens": 880,
+      "completion_tokens": 227,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0196",
+      "tokens": 789,
+      "completion_tokens": 169,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0197",
+      "tokens": 792,
+      "completion_tokens": 171,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0198",
+      "tokens": 791,
+      "completion_tokens": 170,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0199",
+      "tokens": 759,
+      "completion_tokens": 132,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0200",
+      "tokens": 759,
+      "completion_tokens": 132,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0201",
+      "tokens": 752,
+      "completion_tokens": 128,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0202",
+      "tokens": 833,
+      "completion_tokens": 183,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0203",
+      "tokens": 833,
+      "completion_tokens": 183,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0204",
+      "tokens": 828,
+      "completion_tokens": 180,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0205",
+      "tokens": 873,
+      "completion_tokens": 227,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0206",
+      "tokens": 883,
+      "completion_tokens": 234,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0207",
+      "tokens": 879,
+      "completion_tokens": 231,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0208",
+      "tokens": 781,
+      "completion_tokens": 168,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0209",
+      "tokens": 780,
+      "completion_tokens": 167,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0210",
+      "tokens": 784,
+      "completion_tokens": 170,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0211",
+      "tokens": 747,
+      "completion_tokens": 129,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0212",
+      "tokens": 745,
+      "completion_tokens": 127,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0213",
+      "tokens": 747,
+      "completion_tokens": 129,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0214",
+      "tokens": 828,
+      "completion_tokens": 184,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0215",
+      "tokens": 820,
+      "completion_tokens": 179,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0216",
+      "tokens": 822,
+      "completion_tokens": 180,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0217",
+      "tokens": 881,
+      "completion_tokens": 231,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0218",
+      "tokens": 885,
+      "completion_tokens": 234,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0219",
+      "tokens": 876,
+      "completion_tokens": 228,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0220",
+      "tokens": 790,
+      "completion_tokens": 173,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0221",
+      "tokens": 782,
+      "completion_tokens": 167,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0222",
+      "tokens": 783,
+      "completion_tokens": 168,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0223",
+      "tokens": 749,
+      "completion_tokens": 129,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0224",
+      "tokens": 744,
+      "completion_tokens": 125,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0225",
+      "tokens": 756,
+      "completion_tokens": 133,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0226",
+      "tokens": 824,
+      "completion_tokens": 180,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0227",
+      "tokens": 825,
+      "completion_tokens": 181,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0228",
+      "tokens": 824,
+      "completion_tokens": 180,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0229",
+      "tokens": 925,
+      "completion_tokens": 232,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0230",
+      "tokens": 924,
+      "completion_tokens": 232,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0231",
+      "tokens": 916,
+      "completion_tokens": 226,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0232",
+      "tokens": 826,
+      "completion_tokens": 168,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0233",
+      "tokens": 834,
+      "completion_tokens": 174,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0234",
+      "tokens": 826,
+      "completion_tokens": 168,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0235",
+      "tokens": 800,
+      "completion_tokens": 134,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0236",
+      "tokens": 800,
+      "completion_tokens": 134,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0237",
+      "tokens": 793,
+      "completion_tokens": 130,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0238",
+      "tokens": 866,
+      "completion_tokens": 180,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0239",
+      "tokens": 868,
+      "completion_tokens": 181,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0240",
+      "tokens": 874,
+      "completion_tokens": 185,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0241",
+      "tokens": 960,
+      "completion_tokens": 265,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0242",
+      "tokens": 966,
+      "completion_tokens": 269,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0243",
+      "tokens": 963,
+      "completion_tokens": 267,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0244",
+      "tokens": 871,
+      "completion_tokens": 193,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0245",
+      "tokens": 877,
+      "completion_tokens": 197,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0246",
+      "tokens": 877,
+      "completion_tokens": 197,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0247",
+      "tokens": 931,
+      "completion_tokens": 227,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0248",
+      "tokens": 937,
+      "completion_tokens": 231,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0249",
+      "tokens": 934,
+      "completion_tokens": 229,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0250",
+      "tokens": 849,
+      "completion_tokens": 174,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0251",
+      "tokens": 846,
+      "completion_tokens": 172,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0252",
+      "tokens": 841,
+      "completion_tokens": 169,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0253",
+      "tokens": 814,
+      "completion_tokens": 134,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0254",
+      "tokens": 814,
+      "completion_tokens": 134,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0255",
+      "tokens": 807,
+      "completion_tokens": 130,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0256",
+      "tokens": 882,
+      "completion_tokens": 181,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0257",
+      "tokens": 888,
+      "completion_tokens": 185,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0258",
+      "tokens": 888,
+      "completion_tokens": 185,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0259",
+      "tokens": 980,
+      "completion_tokens": 269,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0260",
+      "tokens": 977,
+      "completion_tokens": 267,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0261",
+      "tokens": 975,
+      "completion_tokens": 266,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0262",
+      "tokens": 885,
+      "completion_tokens": 193,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0263",
+      "tokens": 891,
+      "completion_tokens": 197,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0264",
+      "tokens": 891,
+      "completion_tokens": 197,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0265",
+      "tokens": 886,
+      "completion_tokens": 232,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0266",
+      "tokens": 886,
+      "completion_tokens": 232,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0267",
+      "tokens": 882,
+      "completion_tokens": 230,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0268",
+      "tokens": 787,
+      "completion_tokens": 168,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0269",
+      "tokens": 795,
+      "completion_tokens": 174,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0270",
+      "tokens": 790,
+      "completion_tokens": 170,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0271",
+      "tokens": 749,
+      "completion_tokens": 126,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0272",
+      "tokens": 761,
+      "completion_tokens": 134,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0273",
+      "tokens": 761,
+      "completion_tokens": 134,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0274",
+      "tokens": 838,
+      "completion_tokens": 187,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0275",
+      "tokens": 835,
+      "completion_tokens": 185,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0276",
+      "tokens": 830,
+      "completion_tokens": 182,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0277",
+      "tokens": 868,
+      "completion_tokens": 226,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0278",
+      "tokens": 878,
+      "completion_tokens": 233,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0279",
+      "tokens": 878,
+      "completion_tokens": 233,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0280",
+      "tokens": 771,
+      "completion_tokens": 163,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0281",
+      "tokens": 779,
+      "completion_tokens": 169,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0282",
+      "tokens": 782,
+      "completion_tokens": 171,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0283",
+      "tokens": 737,
+      "completion_tokens": 124,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0284",
+      "tokens": 749,
+      "completion_tokens": 132,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0285",
+      "tokens": 749,
+      "completion_tokens": 132,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0286",
+      "tokens": 826,
+      "completion_tokens": 185,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0287",
+      "tokens": 818,
+      "completion_tokens": 180,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0288",
+      "tokens": 817,
+      "completion_tokens": 179,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0289",
+      "tokens": 895,
+      "completion_tokens": 226,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0290",
+      "tokens": 896,
+      "completion_tokens": 227,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0291",
+      "tokens": 899,
+      "completion_tokens": 229,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0292",
+      "tokens": 815,
+      "completion_tokens": 175,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0293",
+      "tokens": 803,
+      "completion_tokens": 167,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0294",
+      "tokens": 809,
+      "completion_tokens": 171,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0295",
+      "tokens": 776,
+      "completion_tokens": 132,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0296",
+      "tokens": 769,
+      "completion_tokens": 128,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0297",
+      "tokens": 767,
+      "completion_tokens": 126,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0298",
+      "tokens": 850,
+      "completion_tokens": 183,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0299",
+      "tokens": 850,
+      "completion_tokens": 183,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0300",
+      "tokens": 845,
+      "completion_tokens": 180,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0301",
+      "tokens": 944,
+      "completion_tokens": 269,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0302",
+      "tokens": 936,
+      "completion_tokens": 263,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0303",
+      "tokens": 942,
+      "completion_tokens": 267,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0304",
+      "tokens": 853,
+      "completion_tokens": 195,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0305",
+      "tokens": 848,
+      "completion_tokens": 192,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0306",
+      "tokens": 847,
+      "completion_tokens": 191,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0307",
+      "tokens": 902,
+      "completion_tokens": 231,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0308",
+      "tokens": 897,
+      "completion_tokens": 227,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0309",
+      "tokens": 902,
+      "completion_tokens": 231,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0310",
+      "tokens": 812,
+      "completion_tokens": 173,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0311",
+      "tokens": 811,
+      "completion_tokens": 172,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0312",
+      "tokens": 810,
+      "completion_tokens": 171,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0313",
+      "tokens": 771,
+      "completion_tokens": 129,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0314",
+      "tokens": 769,
+      "completion_tokens": 127,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0315",
+      "tokens": 771,
+      "completion_tokens": 129,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0316",
+      "tokens": 844,
+      "completion_tokens": 179,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0317",
+      "tokens": 846,
+      "completion_tokens": 180,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0318",
+      "tokens": 850,
+      "completion_tokens": 183,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0319",
+      "tokens": 942,
+      "completion_tokens": 267,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0320",
+      "tokens": 938,
+      "completion_tokens": 264,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0321",
+      "tokens": 939,
+      "completion_tokens": 265,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0322",
+      "tokens": 850,
+      "completion_tokens": 193,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0323",
+      "tokens": 849,
+      "completion_tokens": 192,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0324",
+      "tokens": 847,
+      "completion_tokens": 191,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0325",
+      "tokens": 925,
+      "completion_tokens": 232,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0326",
+      "tokens": 920,
+      "completion_tokens": 228,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0327",
+      "tokens": 921,
+      "completion_tokens": 229,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0328",
+      "tokens": 833,
+      "completion_tokens": 172,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0329",
+      "tokens": 828,
+      "completion_tokens": 169,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0330",
+      "tokens": 827,
+      "completion_tokens": 168,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0331",
+      "tokens": 789,
+      "completion_tokens": 126,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0332",
+      "tokens": 801,
+      "completion_tokens": 134,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0333",
+      "tokens": 801,
+      "completion_tokens": 134,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0334",
+      "tokens": 875,
+      "completion_tokens": 185,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0335",
+      "tokens": 875,
+      "completion_tokens": 185,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0336",
+      "tokens": 873,
+      "completion_tokens": 184,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0337",
+      "tokens": 969,
+      "completion_tokens": 271,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0338",
+      "tokens": 961,
+      "completion_tokens": 265,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0339",
+      "tokens": 974,
+      "completion_tokens": 274,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0340",
+      "tokens": 873,
+      "completion_tokens": 194,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0341",
+      "tokens": 872,
+      "completion_tokens": 193,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0342",
+      "tokens": 873,
+      "completion_tokens": 194,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0343",
+      "tokens": 894,
+      "completion_tokens": 229,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0344",
+      "tokens": 894,
+      "completion_tokens": 229,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0345",
+      "tokens": 889,
+      "completion_tokens": 226,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0346",
+      "tokens": 798,
+      "completion_tokens": 167,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0347",
+      "tokens": 796,
+      "completion_tokens": 166,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0348",
+      "tokens": 795,
+      "completion_tokens": 165,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0349",
+      "tokens": 762,
+      "completion_tokens": 127,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0350",
+      "tokens": 757,
+      "completion_tokens": 123,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0351",
+      "tokens": 769,
+      "completion_tokens": 131,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0352",
+      "tokens": 843,
+      "completion_tokens": 182,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0353",
+      "tokens": 838,
+      "completion_tokens": 179,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0354",
+      "tokens": 837,
+      "completion_tokens": 178,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0355",
+      "tokens": 875,
+      "completion_tokens": 229,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0356",
+      "tokens": 874,
+      "completion_tokens": 228,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0357",
+      "tokens": 884,
+      "completion_tokens": 235,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0358",
+      "tokens": 782,
+      "completion_tokens": 169,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0359",
+      "tokens": 788,
+      "completion_tokens": 173,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0360",
+      "tokens": 785,
+      "completion_tokens": 171,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0361",
+      "tokens": 748,
+      "completion_tokens": 130,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0362",
+      "tokens": 746,
+      "completion_tokens": 128,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0363",
+      "tokens": 748,
+      "completion_tokens": 130,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0364",
+      "tokens": 826,
+      "completion_tokens": 183,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0365",
+      "tokens": 824,
+      "completion_tokens": 182,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0366",
+      "tokens": 823,
+      "completion_tokens": 181,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0367",
+      "tokens": 928,
+      "completion_tokens": 274,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0368",
+      "tokens": 918,
+      "completion_tokens": 267,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0369",
+      "tokens": 913,
+      "completion_tokens": 264,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0370",
+      "tokens": 826,
+      "completion_tokens": 193,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0371",
+      "tokens": 827,
+      "completion_tokens": 194,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0372",
+      "tokens": 826,
+      "completion_tokens": 193,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0373",
+      "tokens": 880,
+      "completion_tokens": 227,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0374",
+      "tokens": 890,
+      "completion_tokens": 234,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0375",
+      "tokens": 886,
+      "completion_tokens": 231,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0376",
+      "tokens": 800,
+      "completion_tokens": 176,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0377",
+      "tokens": 788,
+      "completion_tokens": 168,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0378",
+      "tokens": 790,
+      "completion_tokens": 169,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0379",
+      "tokens": 752,
+      "completion_tokens": 127,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0380",
+      "tokens": 754,
+      "completion_tokens": 129,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0381",
+      "tokens": 749,
+      "completion_tokens": 125,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0382",
+      "tokens": 830,
+      "completion_tokens": 181,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0383",
+      "tokens": 829,
+      "completion_tokens": 180,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0384",
+      "tokens": 835,
+      "completion_tokens": 184,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0385",
+      "tokens": 918,
+      "completion_tokens": 262,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0386",
+      "tokens": 927,
+      "completion_tokens": 268,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0387",
+      "tokens": 927,
+      "completion_tokens": 268,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0388",
+      "tokens": 838,
+      "completion_tokens": 196,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0389",
+      "tokens": 838,
+      "completion_tokens": 196,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0390",
+      "tokens": 833,
+      "completion_tokens": 193,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0391",
+      "tokens": 881,
+      "completion_tokens": 228,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0392",
+      "tokens": 891,
+      "completion_tokens": 235,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0393",
+      "tokens": 887,
+      "completion_tokens": 232,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0394",
+      "tokens": 788,
+      "completion_tokens": 168,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0395",
+      "tokens": 789,
+      "completion_tokens": 169,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0396",
+      "tokens": 791,
+      "completion_tokens": 170,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0397",
+      "tokens": 753,
+      "completion_tokens": 128,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0398",
+      "tokens": 755,
+      "completion_tokens": 130,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0399",
+      "tokens": 750,
+      "completion_tokens": 126,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0400",
+      "tokens": 836,
+      "completion_tokens": 185,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0401",
+      "tokens": 839,
+      "completion_tokens": 187,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0402",
+      "tokens": 831,
+      "completion_tokens": 182,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0403",
+      "tokens": 870,
+      "completion_tokens": 222,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0404",
+      "tokens": 884,
+      "completion_tokens": 232,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0405",
+      "tokens": 884,
+      "completion_tokens": 232,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0406",
+      "tokens": 794,
+      "completion_tokens": 174,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0407",
+      "tokens": 787,
+      "completion_tokens": 169,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0408",
+      "tokens": 782,
+      "completion_tokens": 166,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0409",
+      "tokens": 748,
+      "completion_tokens": 127,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0410",
+      "tokens": 746,
+      "completion_tokens": 125,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0411",
+      "tokens": 748,
+      "completion_tokens": 127,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0412",
+      "tokens": 829,
+      "completion_tokens": 182,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0413",
+      "tokens": 824,
+      "completion_tokens": 179,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0414",
+      "tokens": 826,
+      "completion_tokens": 180,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0415",
+      "tokens": 890,
+      "completion_tokens": 233,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0416",
+      "tokens": 885,
+      "completion_tokens": 230,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0417",
+      "tokens": 880,
+      "completion_tokens": 226,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0418",
+      "tokens": 787,
+      "completion_tokens": 166,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0419",
+      "tokens": 788,
+      "completion_tokens": 167,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0420",
+      "tokens": 787,
+      "completion_tokens": 166,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0421",
+      "tokens": 754,
+      "completion_tokens": 128,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0422",
+      "tokens": 749,
+      "completion_tokens": 124,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0423",
+      "tokens": 761,
+      "completion_tokens": 132,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0424",
+      "tokens": 829,
+      "completion_tokens": 179,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0425",
+      "tokens": 830,
+      "completion_tokens": 180,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0426",
+      "tokens": 829,
+      "completion_tokens": 179,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0427",
+      "tokens": 926,
+      "completion_tokens": 267,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0428",
+      "tokens": 921,
+      "completion_tokens": 263,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0429",
+      "tokens": 929,
+      "completion_tokens": 269,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0430",
+      "tokens": 832,
+      "completion_tokens": 191,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0431",
+      "tokens": 833,
+      "completion_tokens": 192,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0432",
+      "tokens": 829,
+      "completion_tokens": 189,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0433",
+      "tokens": 883,
+      "completion_tokens": 231,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0434",
+      "tokens": 885,
+      "completion_tokens": 232,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0435",
+      "tokens": 878,
+      "completion_tokens": 227,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0436",
+      "tokens": 794,
+      "completion_tokens": 173,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0437",
+      "tokens": 796,
+      "completion_tokens": 175,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0438",
+      "tokens": 795,
+      "completion_tokens": 174,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0439",
+      "tokens": 762,
+      "completion_tokens": 135,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0440",
+      "tokens": 762,
+      "completion_tokens": 135,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0441",
+      "tokens": 755,
+      "completion_tokens": 131,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0442",
+      "tokens": 831,
+      "completion_tokens": 183,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0443",
+      "tokens": 830,
+      "completion_tokens": 182,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0444",
+      "tokens": 833,
+      "completion_tokens": 184,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0445",
+      "tokens": 870,
+      "completion_tokens": 227,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0446",
+      "tokens": 873,
+      "completion_tokens": 229,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0447",
+      "tokens": 870,
+      "completion_tokens": 227,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0448",
+      "tokens": 789,
+      "completion_tokens": 175,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0449",
+      "tokens": 780,
+      "completion_tokens": 169,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0450",
+      "tokens": 776,
+      "completion_tokens": 166,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0451",
+      "tokens": 750,
+      "completion_tokens": 132,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0452",
+      "tokens": 750,
+      "completion_tokens": 132,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0453",
+      "tokens": 743,
+      "completion_tokens": 128,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0454",
+      "tokens": 818,
+      "completion_tokens": 179,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0455",
+      "tokens": 819,
+      "completion_tokens": 180,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0456",
+      "tokens": 818,
+      "completion_tokens": 179,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0457",
+      "tokens": 886,
+      "completion_tokens": 230,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0458",
+      "tokens": 882,
+      "completion_tokens": 227,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0459",
+      "tokens": 890,
+      "completion_tokens": 233,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0460",
+      "tokens": 796,
+      "completion_tokens": 172,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0461",
+      "tokens": 792,
+      "completion_tokens": 169,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0462",
+      "tokens": 793,
+      "completion_tokens": 170,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0463",
+      "tokens": 766,
+      "completion_tokens": 135,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0464",
+      "tokens": 759,
+      "completion_tokens": 131,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0465",
+      "tokens": 757,
+      "completion_tokens": 129,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0466",
+      "tokens": 834,
+      "completion_tokens": 182,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0467",
+      "tokens": 840,
+      "completion_tokens": 186,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0468",
+      "tokens": 840,
+      "completion_tokens": 186,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0469",
+      "tokens": 884,
+      "completion_tokens": 227,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0470",
+      "tokens": 889,
+      "completion_tokens": 231,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0471",
+      "tokens": 884,
+      "completion_tokens": 227,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0472",
+      "tokens": 792,
+      "completion_tokens": 168,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0473",
+      "tokens": 791,
+      "completion_tokens": 167,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0474",
+      "tokens": 792,
+      "completion_tokens": 168,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0475",
+      "tokens": 765,
+      "completion_tokens": 133,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0476",
+      "tokens": 758,
+      "completion_tokens": 129,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0477",
+      "tokens": 756,
+      "completion_tokens": 127,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0478",
+      "tokens": 834,
+      "completion_tokens": 181,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0479",
+      "tokens": 836,
+      "completion_tokens": 182,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0480",
+      "tokens": 839,
+      "completion_tokens": 184,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0481",
+      "tokens": 874,
+      "completion_tokens": 228,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0482",
+      "tokens": 884,
+      "completion_tokens": 235,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0483",
+      "tokens": 880,
+      "completion_tokens": 232,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0484",
+      "tokens": 788,
+      "completion_tokens": 173,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0485",
+      "tokens": 782,
+      "completion_tokens": 169,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0486",
+      "tokens": 781,
+      "completion_tokens": 168,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0487",
+      "tokens": 746,
+      "completion_tokens": 128,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0488",
+      "tokens": 748,
+      "completion_tokens": 130,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0489",
+      "tokens": 743,
+      "completion_tokens": 126,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0490",
+      "tokens": 823,
+      "completion_tokens": 181,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0491",
+      "tokens": 824,
+      "completion_tokens": 182,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0492",
+      "tokens": 826,
+      "completion_tokens": 183,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0493",
+      "tokens": 874,
+      "completion_tokens": 227,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0494",
+      "tokens": 879,
+      "completion_tokens": 231,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0495",
+      "tokens": 878,
+      "completion_tokens": 230,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0496",
+      "tokens": 781,
+      "completion_tokens": 167,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0497",
+      "tokens": 789,
+      "completion_tokens": 173,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0498",
+      "tokens": 781,
+      "completion_tokens": 167,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0499",
+      "tokens": 746,
+      "completion_tokens": 127,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0500",
+      "tokens": 748,
+      "completion_tokens": 129,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0501",
+      "tokens": 743,
+      "completion_tokens": 125,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0502",
+      "tokens": 824,
+      "completion_tokens": 181,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0503",
+      "tokens": 823,
+      "completion_tokens": 180,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0504",
+      "tokens": 829,
+      "completion_tokens": 184,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0505",
+      "tokens": 883,
+      "completion_tokens": 231,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0506",
+      "tokens": 875,
+      "completion_tokens": 225,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0507",
+      "tokens": 888,
+      "completion_tokens": 234,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0508",
+      "tokens": 794,
+      "completion_tokens": 173,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0509",
+      "tokens": 786,
+      "completion_tokens": 168,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0510",
+      "tokens": 785,
+      "completion_tokens": 167,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0511",
+      "tokens": 750,
+      "completion_tokens": 127,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0512",
+      "tokens": 752,
+      "completion_tokens": 129,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0513",
+      "tokens": 747,
+      "completion_tokens": 125,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0514",
+      "tokens": 830,
+      "completion_tokens": 182,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0515",
+      "tokens": 830,
+      "completion_tokens": 182,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0516",
+      "tokens": 828,
+      "completion_tokens": 181,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0517",
+      "tokens": 881,
+      "completion_tokens": 228,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0518",
+      "tokens": 879,
+      "completion_tokens": 226,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0519",
+      "tokens": 884,
+      "completion_tokens": 230,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0520",
+      "tokens": 787,
+      "completion_tokens": 167,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0521",
+      "tokens": 786,
+      "completion_tokens": 166,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0522",
+      "tokens": 790,
+      "completion_tokens": 169,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0523",
+      "tokens": 760,
+      "completion_tokens": 132,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0524",
+      "tokens": 760,
+      "completion_tokens": 132,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0525",
+      "tokens": 753,
+      "completion_tokens": 128,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0526",
+      "tokens": 828,
+      "completion_tokens": 179,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0527",
+      "tokens": 829,
+      "completion_tokens": 180,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0528",
+      "tokens": 828,
+      "completion_tokens": 179,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0529",
+      "tokens": 880,
+      "completion_tokens": 227,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0530",
+      "tokens": 890,
+      "completion_tokens": 234,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0531",
+      "tokens": 886,
+      "completion_tokens": 231,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0532",
+      "tokens": 787,
+      "completion_tokens": 167,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0533",
+      "tokens": 789,
+      "completion_tokens": 168,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0534",
+      "tokens": 800,
+      "completion_tokens": 176,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0535",
+      "tokens": 754,
+      "completion_tokens": 129,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0536",
+      "tokens": 752,
+      "completion_tokens": 127,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0537",
+      "tokens": 754,
+      "completion_tokens": 129,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0538",
+      "tokens": 835,
+      "completion_tokens": 184,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0539",
+      "tokens": 835,
+      "completion_tokens": 184,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0540",
+      "tokens": 830,
+      "completion_tokens": 181,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0541",
+      "tokens": 884,
+      "completion_tokens": 229,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0542",
+      "tokens": 883,
+      "completion_tokens": 228,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0543",
+      "tokens": 885,
+      "completion_tokens": 229,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0544",
+      "tokens": 790,
+      "completion_tokens": 168,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0545",
+      "tokens": 791,
+      "completion_tokens": 169,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0546",
+      "tokens": 790,
+      "completion_tokens": 168,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0547",
+      "tokens": 757,
+      "completion_tokens": 130,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0548",
+      "tokens": 752,
+      "completion_tokens": 126,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0549",
+      "tokens": 764,
+      "completion_tokens": 134,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0550",
+      "tokens": 832,
+      "completion_tokens": 181,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0551",
+      "tokens": 833,
+      "completion_tokens": 182,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0552",
+      "tokens": 832,
+      "completion_tokens": 181,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0553",
+      "tokens": 885,
+      "completion_tokens": 232,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0554",
+      "tokens": 882,
+      "completion_tokens": 230,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0555",
+      "tokens": 881,
+      "completion_tokens": 229,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0556",
+      "tokens": 788,
+      "completion_tokens": 169,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0557",
+      "tokens": 790,
+      "completion_tokens": 170,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0558",
+      "tokens": 794,
+      "completion_tokens": 173,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0559",
+      "tokens": 762,
+      "completion_tokens": 135,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0560",
+      "tokens": 762,
+      "completion_tokens": 135,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0561",
+      "tokens": 755,
+      "completion_tokens": 131,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0562",
+      "tokens": 833,
+      "completion_tokens": 184,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0563",
+      "tokens": 836,
+      "completion_tokens": 186,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0564",
+      "tokens": 831,
+      "completion_tokens": 183,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0565",
+      "tokens": 885,
+      "completion_tokens": 234,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0566",
+      "tokens": 881,
+      "completion_tokens": 231,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0567",
+      "tokens": 873,
+      "completion_tokens": 226,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0568",
+      "tokens": 788,
+      "completion_tokens": 171,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0569",
+      "tokens": 791,
+      "completion_tokens": 173,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0570",
+      "tokens": 790,
+      "completion_tokens": 173,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0571",
+      "tokens": 749,
+      "completion_tokens": 129,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0572",
+      "tokens": 744,
+      "completion_tokens": 125,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0573",
+      "tokens": 756,
+      "completion_tokens": 133,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0574",
+      "tokens": 830,
+      "completion_tokens": 184,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0575",
+      "tokens": 833,
+      "completion_tokens": 186,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0576",
+      "tokens": 825,
+      "completion_tokens": 181,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0577",
+      "tokens": 923,
+      "completion_tokens": 269,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0578",
+      "tokens": 929,
+      "completion_tokens": 273,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0579",
+      "tokens": 923,
+      "completion_tokens": 269,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0580",
+      "tokens": 830,
+      "completion_tokens": 194,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0581",
+      "tokens": 833,
+      "completion_tokens": 196,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0582",
+      "tokens": 825,
+      "completion_tokens": 191,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0583",
+      "tokens": 885,
+      "completion_tokens": 226,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0584",
+      "tokens": 888,
+      "completion_tokens": 228,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0585",
+      "tokens": 885,
+      "completion_tokens": 226,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0586",
+      "tokens": 795,
+      "completion_tokens": 168,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0587",
+      "tokens": 794,
+      "completion_tokens": 167,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0588",
+      "tokens": 797,
+      "completion_tokens": 169,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0589",
+      "tokens": 758,
+      "completion_tokens": 127,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0590",
+      "tokens": 753,
+      "completion_tokens": 123,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0591",
+      "tokens": 765,
+      "completion_tokens": 131,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0592",
+      "tokens": 836,
+      "completion_tokens": 180,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0593",
+      "tokens": 834,
+      "completion_tokens": 179,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0594",
+      "tokens": 833,
+      "completion_tokens": 178,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0595",
+      "tokens": 875,
+      "completion_tokens": 229,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0596",
+      "tokens": 872,
+      "completion_tokens": 227,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0597",
+      "tokens": 875,
+      "completion_tokens": 229,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0598",
+      "tokens": 779,
+      "completion_tokens": 167,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0599",
+      "tokens": 785,
+      "completion_tokens": 171,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0600",
+      "tokens": 791,
+      "completion_tokens": 175,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0601",
+      "tokens": 752,
+      "completion_tokens": 132,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0602",
+      "tokens": 745,
+      "completion_tokens": 128,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0603",
+      "tokens": 743,
+      "completion_tokens": 126,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0604",
+      "tokens": 817,
+      "completion_tokens": 177,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0605",
+      "tokens": 829,
+      "completion_tokens": 185,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0606",
+      "tokens": 823,
+      "completion_tokens": 181,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0607",
+      "tokens": 870,
+      "completion_tokens": 228,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0608",
+      "tokens": 869,
+      "completion_tokens": 227,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0609",
+      "tokens": 870,
+      "completion_tokens": 228,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0610",
+      "tokens": 782,
+      "completion_tokens": 171,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0611",
+      "tokens": 777,
+      "completion_tokens": 168,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0612",
+      "tokens": 783,
+      "completion_tokens": 172,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0613",
+      "tokens": 750,
+      "completion_tokens": 133,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0614",
+      "tokens": 750,
+      "completion_tokens": 133,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0615",
+      "tokens": 743,
+      "completion_tokens": 129,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0616",
+      "tokens": 816,
+      "completion_tokens": 179,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0617",
+      "tokens": 818,
+      "completion_tokens": 180,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0618",
+      "tokens": 819,
+      "completion_tokens": 181,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0619",
+      "tokens": 908,
+      "completion_tokens": 263,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0620",
+      "tokens": 907,
+      "completion_tokens": 262,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0621",
+      "tokens": 911,
+      "completion_tokens": 265,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0622",
+      "tokens": 822,
+      "completion_tokens": 193,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0623",
+      "tokens": 821,
+      "completion_tokens": 192,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0624",
+      "tokens": 827,
+      "completion_tokens": 196,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0625",
+      "tokens": 889,
+      "completion_tokens": 236,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0626",
+      "tokens": 889,
+      "completion_tokens": 236,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0627",
+      "tokens": 876,
+      "completion_tokens": 227,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0628",
+      "tokens": 790,
+      "completion_tokens": 172,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0629",
+      "tokens": 786,
+      "completion_tokens": 169,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0630",
+      "tokens": 792,
+      "completion_tokens": 173,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0631",
+      "tokens": 760,
+      "completion_tokens": 135,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0632",
+      "tokens": 753,
+      "completion_tokens": 131,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0633",
+      "tokens": 751,
+      "completion_tokens": 129,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0634",
+      "tokens": 834,
+      "completion_tokens": 186,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0635",
+      "tokens": 829,
+      "completion_tokens": 183,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0636",
+      "tokens": 828,
+      "completion_tokens": 182,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0637",
+      "tokens": 933,
+      "completion_tokens": 275,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0638",
+      "tokens": 925,
+      "completion_tokens": 270,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0639",
+      "tokens": 924,
+      "completion_tokens": 269,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0640",
+      "tokens": 832,
+      "completion_tokens": 195,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0641",
+      "tokens": 828,
+      "completion_tokens": 192,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0642",
+      "tokens": 832,
+      "completion_tokens": 195,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0643",
+      "tokens": 882,
+      "completion_tokens": 230,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0644",
+      "tokens": 883,
+      "completion_tokens": 231,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0645",
+      "tokens": 875,
+      "completion_tokens": 225,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0646",
+      "tokens": 785,
+      "completion_tokens": 167,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0647",
+      "tokens": 791,
+      "completion_tokens": 171,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0648",
+      "tokens": 791,
+      "completion_tokens": 171,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0649",
+      "tokens": 752,
+      "completion_tokens": 129,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0650",
+      "tokens": 747,
+      "completion_tokens": 125,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0651",
+      "tokens": 759,
+      "completion_tokens": 133,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0652",
+      "tokens": 833,
+      "completion_tokens": 184,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0653",
+      "tokens": 825,
+      "completion_tokens": 179,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0654",
+      "tokens": 827,
+      "completion_tokens": 180,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0655",
+      "tokens": 920,
+      "completion_tokens": 265,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0656",
+      "tokens": 919,
+      "completion_tokens": 264,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0657",
+      "tokens": 922,
+      "completion_tokens": 266,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0658",
+      "tokens": 831,
+      "completion_tokens": 193,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0659",
+      "tokens": 830,
+      "completion_tokens": 192,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-train-0660",
+      "tokens": 836,
+      "completion_tokens": 196,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-valid-0001",
+      "tokens": 882,
+      "completion_tokens": 223,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-valid-0002",
+      "tokens": 788,
+      "completion_tokens": 163,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-valid-0003",
+      "tokens": 749,
+      "completion_tokens": 121,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-valid-0004",
+      "tokens": 827,
+      "completion_tokens": 174,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-valid-0005",
+      "tokens": 922,
+      "completion_tokens": 259,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-valid-0006",
+      "tokens": 831,
+      "completion_tokens": 187,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-valid-0007",
+      "tokens": 869,
+      "completion_tokens": 219,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-valid-0008",
+      "tokens": 777,
+      "completion_tokens": 160,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-valid-0009",
+      "tokens": 741,
+      "completion_tokens": 120,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-valid-0010",
+      "tokens": 824,
+      "completion_tokens": 177,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-valid-0011",
+      "tokens": 917,
+      "completion_tokens": 261,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-valid-0012",
+      "tokens": 827,
+      "completion_tokens": 189,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-valid-0013",
+      "tokens": 876,
+      "completion_tokens": 225,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-valid-0014",
+      "tokens": 784,
+      "completion_tokens": 166,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-valid-0015",
+      "tokens": 744,
+      "completion_tokens": 123,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-valid-0016",
+      "tokens": 826,
+      "completion_tokens": 179,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-valid-0017",
+      "tokens": 911,
+      "completion_tokens": 258,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-valid-0018",
+      "tokens": 823,
+      "completion_tokens": 187,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-valid-0019",
+      "tokens": 861,
+      "completion_tokens": 223,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-valid-0020",
+      "tokens": 771,
+      "completion_tokens": 165,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-valid-0021",
+      "tokens": 743,
+      "completion_tokens": 130,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-valid-0022",
+      "tokens": 816,
+      "completion_tokens": 180,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-valid-0023",
+      "tokens": 903,
+      "completion_tokens": 260,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-valid-0024",
+      "tokens": 819,
+      "completion_tokens": 192,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-valid-0025",
+      "tokens": 884,
+      "completion_tokens": 229,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-valid-0026",
+      "tokens": 801,
+      "completion_tokens": 176,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-valid-0027",
+      "tokens": 763,
+      "completion_tokens": 134,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-valid-0028",
+      "tokens": 827,
+      "completion_tokens": 178,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-valid-0029",
+      "tokens": 918,
+      "completion_tokens": 261,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-valid-0030",
+      "tokens": 834,
+      "completion_tokens": 193,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-valid-0031",
+      "tokens": 872,
+      "completion_tokens": 225,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-valid-0032",
+      "tokens": 774,
+      "completion_tokens": 162,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-valid-0033",
+      "tokens": 749,
+      "completion_tokens": 129,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-valid-0034",
+      "tokens": 822,
+      "completion_tokens": 179,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-valid-0035",
+      "tokens": 887,
+      "completion_tokens": 228,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-valid-0036",
+      "tokens": 796,
+      "completion_tokens": 170,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-valid-0037",
+      "tokens": 764,
+      "completion_tokens": 132,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-valid-0038",
+      "tokens": 831,
+      "completion_tokens": 178,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-valid-0039",
+      "tokens": 921,
+      "completion_tokens": 260,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-valid-0040",
+      "tokens": 835,
+      "completion_tokens": 191,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-valid-0041",
+      "tokens": 866,
+      "completion_tokens": 224,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-valid-0042",
+      "tokens": 774,
+      "completion_tokens": 165,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-valid-0043",
+      "tokens": 738,
+      "completion_tokens": 125,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-valid-0044",
+      "tokens": 818,
+      "completion_tokens": 179,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-valid-0045",
+      "tokens": 878,
+      "completion_tokens": 219,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-valid-0046",
+      "tokens": 798,
+      "completion_tokens": 169,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-valid-0047",
+      "tokens": 753,
+      "completion_tokens": 122,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-valid-0048",
+      "tokens": 833,
+      "completion_tokens": 177,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-valid-0049",
+      "tokens": 863,
+      "completion_tokens": 222,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-valid-0050",
+      "tokens": 772,
+      "completion_tokens": 164,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-valid-0051",
+      "tokens": 746,
+      "completion_tokens": 130,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-valid-0052",
+      "tokens": 822,
+      "completion_tokens": 182,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-valid-0053",
+      "tokens": 888,
+      "completion_tokens": 229,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-valid-0054",
+      "tokens": 793,
+      "completion_tokens": 168,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-valid-0055",
+      "tokens": 765,
+      "completion_tokens": 133,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-valid-0056",
+      "tokens": 841,
+      "completion_tokens": 185,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-valid-0057",
+      "tokens": 865,
+      "completion_tokens": 224,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-valid-0058",
+      "tokens": 782,
+      "completion_tokens": 171,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-valid-0059",
+      "tokens": 737,
+      "completion_tokens": 125,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-valid-0060",
+      "tokens": 811,
+      "completion_tokens": 175,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-valid-0061",
+      "tokens": 864,
+      "completion_tokens": 222,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-valid-0062",
+      "tokens": 775,
+      "completion_tokens": 165,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-valid-0063",
+      "tokens": 734,
+      "completion_tokens": 121,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-valid-0064",
+      "tokens": 814,
+      "completion_tokens": 176,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-valid-0065",
+      "tokens": 869,
+      "completion_tokens": 221,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-valid-0066",
+      "tokens": 783,
+      "completion_tokens": 166,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-valid-0067",
+      "tokens": 752,
+      "completion_tokens": 129,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-valid-0068",
+      "tokens": 820,
+      "completion_tokens": 176,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-valid-0069",
+      "tokens": 870,
+      "completion_tokens": 226,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-valid-0070",
+      "tokens": 778,
+      "completion_tokens": 167,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-valid-0071",
+      "tokens": 738,
+      "completion_tokens": 124,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-valid-0072",
+      "tokens": 814,
+      "completion_tokens": 176,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-valid-0073",
+      "tokens": 871,
+      "completion_tokens": 226,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-valid-0074",
+      "tokens": 775,
+      "completion_tokens": 164,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-valid-0075",
+      "tokens": 737,
+      "completion_tokens": 122,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-valid-0076",
+      "tokens": 817,
+      "completion_tokens": 177,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-valid-0077",
+      "tokens": 911,
+      "completion_tokens": 224,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-valid-0078",
+      "tokens": 825,
+      "completion_tokens": 169,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-valid-0079",
+      "tokens": 786,
+      "completion_tokens": 127,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-valid-0080",
+      "tokens": 866,
+      "completion_tokens": 181,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-valid-0081",
+      "tokens": 956,
+      "completion_tokens": 263,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-valid-0082",
+      "tokens": 864,
+      "completion_tokens": 190,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-valid-0083",
+      "tokens": 925,
+      "completion_tokens": 224,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-valid-0084",
+      "tokens": 841,
+      "completion_tokens": 170,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-valid-0085",
+      "tokens": 795,
+      "completion_tokens": 123,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-valid-0086",
+      "tokens": 875,
+      "completion_tokens": 178,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-valid-0087",
+      "tokens": 961,
+      "completion_tokens": 257,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-valid-0088",
+      "tokens": 883,
+      "completion_tokens": 193,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-valid-0089",
+      "tokens": 872,
+      "completion_tokens": 224,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-valid-0090",
+      "tokens": 792,
+      "completion_tokens": 173,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-valid-0091",
+      "tokens": 747,
+      "completion_tokens": 127,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-valid-0092",
+      "tokens": 827,
+      "completion_tokens": 181,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-valid-0093",
+      "tokens": 863,
+      "completion_tokens": 224,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-valid-0094",
+      "tokens": 776,
+      "completion_tokens": 168,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-valid-0095",
+      "tokens": 733,
+      "completion_tokens": 123,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-valid-0096",
+      "tokens": 809,
+      "completion_tokens": 175,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-valid-0097",
+      "tokens": 892,
+      "completion_tokens": 225,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-valid-0098",
+      "tokens": 801,
+      "completion_tokens": 167,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-valid-0099",
+      "tokens": 769,
+      "completion_tokens": 129,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-valid-0100",
+      "tokens": 844,
+      "completion_tokens": 181,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-valid-0101",
+      "tokens": 939,
+      "completion_tokens": 267,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-valid-0102",
+      "tokens": 845,
+      "completion_tokens": 192,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-valid-0103",
+      "tokens": 899,
+      "completion_tokens": 231,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-valid-0104",
+      "tokens": 798,
+      "completion_tokens": 165,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-valid-0105",
+      "tokens": 763,
+      "completion_tokens": 125,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-valid-0106",
+      "tokens": 849,
+      "completion_tokens": 184,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-valid-0107",
+      "tokens": 948,
+      "completion_tokens": 273,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-valid-0108",
+      "tokens": 852,
+      "completion_tokens": 196,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-valid-0109",
+      "tokens": 923,
+      "completion_tokens": 232,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-valid-0110",
+      "tokens": 830,
+      "completion_tokens": 172,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-valid-0111",
+      "tokens": 798,
+      "completion_tokens": 134,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-valid-0112",
+      "tokens": 869,
+      "completion_tokens": 183,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-valid-0113",
+      "tokens": 962,
+      "completion_tokens": 268,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-valid-0114",
+      "tokens": 867,
+      "completion_tokens": 192,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-valid-0115",
+      "tokens": 885,
+      "completion_tokens": 225,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-valid-0116",
+      "tokens": 798,
+      "completion_tokens": 169,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-valid-0117",
+      "tokens": 754,
+      "completion_tokens": 123,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-valid-0118",
+      "tokens": 835,
+      "completion_tokens": 179,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-valid-0119",
+      "tokens": 875,
+      "completion_tokens": 231,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-valid-0120",
+      "tokens": 791,
+      "completion_tokens": 177,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-valid-0121",
+      "tokens": 752,
+      "completion_tokens": 134,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-valid-0122",
+      "tokens": 823,
+      "completion_tokens": 183,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-valid-0123",
+      "tokens": 918,
+      "completion_tokens": 269,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-valid-0124",
+      "tokens": 824,
+      "completion_tokens": 194,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-valid-0125",
+      "tokens": 887,
+      "completion_tokens": 234,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-valid-0126",
+      "tokens": 780,
+      "completion_tokens": 164,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-valid-0127",
+      "tokens": 749,
+      "completion_tokens": 127,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-valid-0128",
+      "tokens": 827,
+      "completion_tokens": 181,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-valid-0129",
+      "tokens": 918,
+      "completion_tokens": 264,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-valid-0130",
+      "tokens": 829,
+      "completion_tokens": 192,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-valid-0131",
+      "tokens": 875,
+      "completion_tokens": 226,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-valid-0132",
+      "tokens": 789,
+      "completion_tokens": 171,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-valid-0133",
+      "tokens": 759,
+      "completion_tokens": 134,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-valid-0134",
+      "tokens": 828,
+      "completion_tokens": 182,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-valid-0135",
+      "tokens": 871,
+      "completion_tokens": 225,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-valid-0136",
+      "tokens": 782,
+      "completion_tokens": 168,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-valid-0137",
+      "tokens": 740,
+      "completion_tokens": 123,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-valid-0138",
+      "tokens": 826,
+      "completion_tokens": 182,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-valid-0139",
+      "tokens": 883,
+      "completion_tokens": 230,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-valid-0140",
+      "tokens": 785,
+      "completion_tokens": 167,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-valid-0141",
+      "tokens": 751,
+      "completion_tokens": 128,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-valid-0142",
+      "tokens": 832,
+      "completion_tokens": 183,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-valid-0143",
+      "tokens": 925,
+      "completion_tokens": 268,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-valid-0144",
+      "tokens": 832,
+      "completion_tokens": 193,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-valid-0145",
+      "tokens": 884,
+      "completion_tokens": 233,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-valid-0146",
+      "tokens": 788,
+      "completion_tokens": 171,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-valid-0147",
+      "tokens": 752,
+      "completion_tokens": 131,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-valid-0148",
+      "tokens": 828,
+      "completion_tokens": 183,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-valid-0149",
+      "tokens": 868,
+      "completion_tokens": 228,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-valid-0150",
+      "tokens": 779,
+      "completion_tokens": 170,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-valid-0151",
+      "tokens": 740,
+      "completion_tokens": 128,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-valid-0152",
+      "tokens": 816,
+      "completion_tokens": 180,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-valid-0153",
+      "tokens": 888,
+      "completion_tokens": 233,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-valid-0154",
+      "tokens": 789,
+      "completion_tokens": 169,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-valid-0155",
+      "tokens": 756,
+      "completion_tokens": 131,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-valid-0156",
+      "tokens": 832,
+      "completion_tokens": 183,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-valid-0157",
+      "tokens": 887,
+      "completion_tokens": 231,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-valid-0158",
+      "tokens": 788,
+      "completion_tokens": 167,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-valid-0159",
+      "tokens": 755,
+      "completion_tokens": 129,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-valid-0160",
+      "tokens": 830,
+      "completion_tokens": 180,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-valid-0161",
+      "tokens": 875,
+      "completion_tokens": 231,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-valid-0162",
+      "tokens": 786,
+      "completion_tokens": 174,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-valid-0163",
+      "tokens": 745,
+      "completion_tokens": 130,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-valid-0164",
+      "tokens": 820,
+      "completion_tokens": 181,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-valid-0165",
+      "tokens": 877,
+      "completion_tokens": 231,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-valid-0166",
+      "tokens": 779,
+      "completion_tokens": 168,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-valid-0167",
+      "tokens": 752,
+      "completion_tokens": 133,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-valid-0168",
+      "tokens": 820,
+      "completion_tokens": 180,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-valid-0169",
+      "tokens": 885,
+      "completion_tokens": 234,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-valid-0170",
+      "tokens": 782,
+      "completion_tokens": 167,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-valid-0171",
+      "tokens": 749,
+      "completion_tokens": 129,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-valid-0172",
+      "tokens": 830,
+      "completion_tokens": 184,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-valid-0173",
+      "tokens": 876,
+      "completion_tokens": 226,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-valid-0174",
+      "tokens": 789,
+      "completion_tokens": 170,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-valid-0175",
+      "tokens": 757,
+      "completion_tokens": 132,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-valid-0176",
+      "tokens": 829,
+      "completion_tokens": 182,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-valid-0177",
+      "tokens": 883,
+      "completion_tokens": 231,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-valid-0178",
+      "tokens": 791,
+      "completion_tokens": 172,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-valid-0179",
+      "tokens": 749,
+      "completion_tokens": 127,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-valid-0180",
+      "tokens": 826,
+      "completion_tokens": 180,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-valid-0181",
+      "tokens": 885,
+      "completion_tokens": 232,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-valid-0182",
+      "tokens": 794,
+      "completion_tokens": 173,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-valid-0183",
+      "tokens": 754,
+      "completion_tokens": 130,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-valid-0184",
+      "tokens": 829,
+      "completion_tokens": 181,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-valid-0185",
+      "tokens": 878,
+      "completion_tokens": 229,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-valid-0186",
+      "tokens": 793,
+      "completion_tokens": 175,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-valid-0187",
+      "tokens": 759,
+      "completion_tokens": 135,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-valid-0188",
+      "tokens": 830,
+      "completion_tokens": 184,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-valid-0189",
+      "tokens": 877,
+      "completion_tokens": 231,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-valid-0190",
+      "tokens": 779,
+      "completion_tokens": 167,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-valid-0191",
+      "tokens": 741,
+      "completion_tokens": 125,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-valid-0192",
+      "tokens": 821,
+      "completion_tokens": 180,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-valid-0193",
+      "tokens": 921,
+      "completion_tokens": 270,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-valid-0194",
+      "tokens": 825,
+      "completion_tokens": 193,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-valid-0195",
+      "tokens": 882,
+      "completion_tokens": 226,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-valid-0196",
+      "tokens": 797,
+      "completion_tokens": 171,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-valid-0197",
+      "tokens": 755,
+      "completion_tokens": 127,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-valid-0198",
+      "tokens": 830,
+      "completion_tokens": 178,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-valid-0199",
+      "tokens": 873,
+      "completion_tokens": 230,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-valid-0200",
+      "tokens": 788,
+      "completion_tokens": 175,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-valid-0201",
+      "tokens": 740,
+      "completion_tokens": 126,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-valid-0202",
+      "tokens": 817,
+      "completion_tokens": 179,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-valid-0203",
+      "tokens": 866,
+      "completion_tokens": 227,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-valid-0204",
+      "tokens": 773,
+      "completion_tokens": 167,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-valid-0205",
+      "tokens": 735,
+      "completion_tokens": 125,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-valid-0206",
+      "tokens": 821,
+      "completion_tokens": 184,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-valid-0207",
+      "tokens": 908,
+      "completion_tokens": 265,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-valid-0208",
+      "tokens": 818,
+      "completion_tokens": 192,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-valid-0209",
+      "tokens": 882,
+      "completion_tokens": 233,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-valid-0210",
+      "tokens": 784,
+      "completion_tokens": 170,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-valid-0211",
+      "tokens": 750,
+      "completion_tokens": 131,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-valid-0212",
+      "tokens": 826,
+      "completion_tokens": 183,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-valid-0213",
+      "tokens": 922,
+      "completion_tokens": 270,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-valid-0214",
+      "tokens": 829,
+      "completion_tokens": 195,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-valid-0215",
+      "tokens": 881,
+      "completion_tokens": 231,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-valid-0216",
+      "tokens": 782,
+      "completion_tokens": 167,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-valid-0217",
+      "tokens": 749,
+      "completion_tokens": 129,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-valid-0218",
+      "tokens": 824,
+      "completion_tokens": 180,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-valid-0219",
+      "tokens": 925,
+      "completion_tokens": 270,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-valid-0220",
+      "tokens": 829,
+      "completion_tokens": 193,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-test-0001",
+      "tokens": 880,
+      "completion_tokens": 222,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-test-0002",
+      "tokens": 786,
+      "completion_tokens": 162,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-test-0003",
+      "tokens": 761,
+      "completion_tokens": 129,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-test-0004",
+      "tokens": 830,
+      "completion_tokens": 176,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-test-0005",
+      "tokens": 921,
+      "completion_tokens": 258,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-test-0006",
+      "tokens": 830,
+      "completion_tokens": 186,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-test-0007",
+      "tokens": 873,
+      "completion_tokens": 222,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-test-0008",
+      "tokens": 777,
+      "completion_tokens": 160,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-test-0009",
+      "tokens": 746,
+      "completion_tokens": 124,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-test-0010",
+      "tokens": 828,
+      "completion_tokens": 180,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-test-0011",
+      "tokens": 908,
+      "completion_tokens": 255,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-test-0012",
+      "tokens": 833,
+      "completion_tokens": 193,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-test-0013",
+      "tokens": 874,
+      "completion_tokens": 224,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-test-0014",
+      "tokens": 778,
+      "completion_tokens": 162,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-test-0015",
+      "tokens": 746,
+      "completion_tokens": 125,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-test-0016",
+      "tokens": 826,
+      "completion_tokens": 179,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-test-0017",
+      "tokens": 916,
+      "completion_tokens": 261,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-test-0018",
+      "tokens": 820,
+      "completion_tokens": 185,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-test-0019",
+      "tokens": 860,
+      "completion_tokens": 222,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-test-0020",
+      "tokens": 769,
+      "completion_tokens": 164,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-test-0021",
+      "tokens": 736,
+      "completion_tokens": 126,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-test-0022",
+      "tokens": 810,
+      "completion_tokens": 176,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-test-0023",
+      "tokens": 901,
+      "completion_tokens": 259,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-test-0024",
+      "tokens": 813,
+      "completion_tokens": 188,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-test-0025",
+      "tokens": 886,
+      "completion_tokens": 230,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-test-0026",
+      "tokens": 789,
+      "completion_tokens": 168,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-test-0027",
+      "tokens": 763,
+      "completion_tokens": 134,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-test-0028",
+      "tokens": 831,
+      "completion_tokens": 181,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-test-0029",
+      "tokens": 926,
+      "completion_tokens": 266,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-test-0030",
+      "tokens": 833,
+      "completion_tokens": 192,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-test-0031",
+      "tokens": 866,
+      "completion_tokens": 221,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-test-0032",
+      "tokens": 775,
+      "completion_tokens": 163,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-test-0033",
+      "tokens": 742,
+      "completion_tokens": 125,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-test-0034",
+      "tokens": 816,
+      "completion_tokens": 175,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-test-0035",
+      "tokens": 887,
+      "completion_tokens": 228,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-test-0036",
+      "tokens": 796,
+      "completion_tokens": 170,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-test-0037",
+      "tokens": 757,
+      "completion_tokens": 128,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-test-0038",
+      "tokens": 831,
+      "completion_tokens": 178,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-test-0039",
+      "tokens": 925,
+      "completion_tokens": 263,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-test-0040",
+      "tokens": 840,
+      "completion_tokens": 194,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-test-0041",
+      "tokens": 868,
+      "completion_tokens": 225,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-test-0042",
+      "tokens": 774,
+      "completion_tokens": 165,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-test-0043",
+      "tokens": 736,
+      "completion_tokens": 123,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-test-0044",
+      "tokens": 818,
+      "completion_tokens": 179,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-test-0045",
+      "tokens": 888,
+      "completion_tokens": 226,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-test-0046",
+      "tokens": 790,
+      "completion_tokens": 163,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-test-0047",
+      "tokens": 758,
+      "completion_tokens": 126,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-test-0048",
+      "tokens": 836,
+      "completion_tokens": 179,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-test-0049",
+      "tokens": 869,
+      "completion_tokens": 226,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-test-0050",
+      "tokens": 771,
+      "completion_tokens": 163,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-test-0051",
+      "tokens": 739,
+      "completion_tokens": 126,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-test-0052",
+      "tokens": 819,
+      "completion_tokens": 180,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-test-0053",
+      "tokens": 888,
+      "completion_tokens": 229,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-test-0054",
+      "tokens": 798,
+      "completion_tokens": 172,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-test-0055",
+      "tokens": 758,
+      "completion_tokens": 129,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-test-0056",
+      "tokens": 835,
+      "completion_tokens": 181,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-test-0057",
+      "tokens": 867,
+      "completion_tokens": 225,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-test-0058",
+      "tokens": 782,
+      "completion_tokens": 171,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-test-0059",
+      "tokens": 744,
+      "completion_tokens": 129,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-test-0060",
+      "tokens": 812,
+      "completion_tokens": 176,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-test-0061",
+      "tokens": 867,
+      "completion_tokens": 224,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-test-0062",
+      "tokens": 771,
+      "completion_tokens": 162,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-test-0063",
+      "tokens": 734,
+      "completion_tokens": 121,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-test-0064",
+      "tokens": 810,
+      "completion_tokens": 173,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-test-0065",
+      "tokens": 870,
+      "completion_tokens": 222,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-test-0066",
+      "tokens": 777,
+      "completion_tokens": 162,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-test-0067",
+      "tokens": 745,
+      "completion_tokens": 125,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-test-0068",
+      "tokens": 819,
+      "completion_tokens": 175,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-test-0069",
+      "tokens": 871,
+      "completion_tokens": 227,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-test-0070",
+      "tokens": 785,
+      "completion_tokens": 172,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-test-0071",
+      "tokens": 747,
+      "completion_tokens": 130,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-test-0072",
+      "tokens": 815,
+      "completion_tokens": 177,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-test-0073",
+      "tokens": 873,
+      "completion_tokens": 227,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-test-0074",
+      "tokens": 780,
+      "completion_tokens": 167,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-test-0075",
+      "tokens": 749,
+      "completion_tokens": 130,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-test-0076",
+      "tokens": 819,
+      "completion_tokens": 178,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-test-0077",
+      "tokens": 910,
+      "completion_tokens": 223,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-test-0078",
+      "tokens": 827,
+      "completion_tokens": 170,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-test-0079",
+      "tokens": 793,
+      "completion_tokens": 131,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-test-0080",
+      "tokens": 866,
+      "completion_tokens": 181,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-test-0081",
+      "tokens": 950,
+      "completion_tokens": 259,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-test-0082",
+      "tokens": 866,
+      "completion_tokens": 191,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-test-0083",
+      "tokens": 930,
+      "completion_tokens": 227,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-test-0084",
+      "tokens": 835,
+      "completion_tokens": 166,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-test-0085",
+      "tokens": 798,
+      "completion_tokens": 125,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-test-0086",
+      "tokens": 877,
+      "completion_tokens": 179,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-test-0087",
+      "tokens": 970,
+      "completion_tokens": 263,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-test-0088",
+      "tokens": 883,
+      "completion_tokens": 193,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-test-0089",
+      "tokens": 875,
+      "completion_tokens": 226,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-test-0090",
+      "tokens": 785,
+      "completion_tokens": 168,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-test-0091",
+      "tokens": 745,
+      "completion_tokens": 125,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-test-0092",
+      "tokens": 824,
+      "completion_tokens": 179,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-test-0093",
+      "tokens": 869,
+      "completion_tokens": 228,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-test-0094",
+      "tokens": 768,
+      "completion_tokens": 163,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-test-0095",
+      "tokens": 742,
+      "completion_tokens": 129,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-test-0096",
+      "tokens": 813,
+      "completion_tokens": 178,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-test-0097",
+      "tokens": 886,
+      "completion_tokens": 221,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-test-0098",
+      "tokens": 807,
+      "completion_tokens": 171,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-test-0099",
+      "tokens": 762,
+      "completion_tokens": 125,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-test-0100",
+      "tokens": 847,
+      "completion_tokens": 183,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-test-0101",
+      "tokens": 934,
+      "completion_tokens": 264,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-test-0102",
+      "tokens": 850,
+      "completion_tokens": 195,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-test-0103",
+      "tokens": 900,
+      "completion_tokens": 231,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-test-0104",
+      "tokens": 810,
+      "completion_tokens": 173,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-test-0105",
+      "tokens": 768,
+      "completion_tokens": 129,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-test-0106",
+      "tokens": 843,
+      "completion_tokens": 180,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-test-0107",
+      "tokens": 948,
+      "completion_tokens": 273,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-test-0108",
+      "tokens": 847,
+      "completion_tokens": 193,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-test-0109",
+      "tokens": 922,
+      "completion_tokens": 232,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-test-0110",
+      "tokens": 830,
+      "completion_tokens": 172,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-test-0111",
+      "tokens": 791,
+      "completion_tokens": 130,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-test-0112",
+      "tokens": 867,
+      "completion_tokens": 182,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-test-0113",
+      "tokens": 959,
+      "completion_tokens": 266,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-test-0114",
+      "tokens": 869,
+      "completion_tokens": 193,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-test-0115",
+      "tokens": 895,
+      "completion_tokens": 232,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-test-0116",
+      "tokens": 796,
+      "completion_tokens": 168,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-test-0117",
+      "tokens": 754,
+      "completion_tokens": 123,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-test-0118",
+      "tokens": 835,
+      "completion_tokens": 179,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-test-0119",
+      "tokens": 875,
+      "completion_tokens": 231,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-test-0120",
+      "tokens": 779,
+      "completion_tokens": 169,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-test-0121",
+      "tokens": 745,
+      "completion_tokens": 130,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-test-0122",
+      "tokens": 820,
+      "completion_tokens": 181,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-test-0123",
+      "tokens": 916,
+      "completion_tokens": 268,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-test-0124",
+      "tokens": 829,
+      "completion_tokens": 197,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-test-0125",
+      "tokens": 882,
+      "completion_tokens": 231,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-test-0126",
+      "tokens": 792,
+      "completion_tokens": 173,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-test-0127",
+      "tokens": 751,
+      "completion_tokens": 129,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-test-0128",
+      "tokens": 826,
+      "completion_tokens": 180,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-test-0129",
+      "tokens": 927,
+      "completion_tokens": 270,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-test-0130",
+      "tokens": 830,
+      "completion_tokens": 193,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-test-0131",
+      "tokens": 879,
+      "completion_tokens": 229,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-test-0132",
+      "tokens": 785,
+      "completion_tokens": 168,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-test-0133",
+      "tokens": 759,
+      "completion_tokens": 134,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-test-0134",
+      "tokens": 836,
+      "completion_tokens": 187,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-test-0135",
+      "tokens": 876,
+      "completion_tokens": 229,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-test-0136",
+      "tokens": 784,
+      "completion_tokens": 169,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-test-0137",
+      "tokens": 752,
+      "completion_tokens": 131,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-test-0138",
+      "tokens": 826,
+      "completion_tokens": 182,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-test-0139",
+      "tokens": 877,
+      "completion_tokens": 226,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-test-0140",
+      "tokens": 790,
+      "completion_tokens": 170,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-test-0141",
+      "tokens": 758,
+      "completion_tokens": 132,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-test-0142",
+      "tokens": 826,
+      "completion_tokens": 179,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-test-0143",
+      "tokens": 925,
+      "completion_tokens": 268,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-test-0144",
+      "tokens": 835,
+      "completion_tokens": 195,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-test-0145",
+      "tokens": 879,
+      "completion_tokens": 230,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-test-0146",
+      "tokens": 791,
+      "completion_tokens": 173,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-test-0147",
+      "tokens": 752,
+      "completion_tokens": 131,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-test-0148",
+      "tokens": 827,
+      "completion_tokens": 182,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-test-0149",
+      "tokens": 872,
+      "completion_tokens": 230,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-test-0150",
+      "tokens": 779,
+      "completion_tokens": 170,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-test-0151",
+      "tokens": 747,
+      "completion_tokens": 132,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-test-0152",
+      "tokens": 821,
+      "completion_tokens": 183,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-test-0153",
+      "tokens": 882,
+      "completion_tokens": 229,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-test-0154",
+      "tokens": 795,
+      "completion_tokens": 173,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-test-0155",
+      "tokens": 751,
+      "completion_tokens": 127,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-test-0156",
+      "tokens": 840,
+      "completion_tokens": 188,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-test-0157",
+      "tokens": 887,
+      "completion_tokens": 231,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-test-0158",
+      "tokens": 789,
+      "completion_tokens": 168,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-test-0159",
+      "tokens": 755,
+      "completion_tokens": 129,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-test-0160",
+      "tokens": 836,
+      "completion_tokens": 184,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-test-0161",
+      "tokens": 876,
+      "completion_tokens": 232,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-test-0162",
+      "tokens": 784,
+      "completion_tokens": 172,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-test-0163",
+      "tokens": 740,
+      "completion_tokens": 126,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-test-0164",
+      "tokens": 826,
+      "completion_tokens": 185,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-test-0165",
+      "tokens": 877,
+      "completion_tokens": 231,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-test-0166",
+      "tokens": 785,
+      "completion_tokens": 172,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-test-0167",
+      "tokens": 745,
+      "completion_tokens": 129,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-test-0168",
+      "tokens": 826,
+      "completion_tokens": 184,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-test-0169",
+      "tokens": 871,
+      "completion_tokens": 224,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-test-0170",
+      "tokens": 788,
+      "completion_tokens": 171,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-test-0171",
+      "tokens": 744,
+      "completion_tokens": 125,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-test-0172",
+      "tokens": 824,
+      "completion_tokens": 180,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-test-0173",
+      "tokens": 876,
+      "completion_tokens": 226,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-test-0174",
+      "tokens": 789,
+      "completion_tokens": 170,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-test-0175",
+      "tokens": 745,
+      "completion_tokens": 124,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-test-0176",
+      "tokens": 831,
+      "completion_tokens": 183,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-test-0177",
+      "tokens": 881,
+      "completion_tokens": 230,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-test-0178",
+      "tokens": 790,
+      "completion_tokens": 171,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-test-0179",
+      "tokens": 751,
+      "completion_tokens": 129,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-test-0180",
+      "tokens": 826,
+      "completion_tokens": 180,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-test-0181",
+      "tokens": 883,
+      "completion_tokens": 230,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-test-0182",
+      "tokens": 787,
+      "completion_tokens": 168,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-test-0183",
+      "tokens": 761,
+      "completion_tokens": 134,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-test-0184",
+      "tokens": 835,
+      "completion_tokens": 185,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-test-0185",
+      "tokens": 884,
+      "completion_tokens": 233,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-test-0186",
+      "tokens": 786,
+      "completion_tokens": 170,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-test-0187",
+      "tokens": 747,
+      "completion_tokens": 127,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-test-0188",
+      "tokens": 828,
+      "completion_tokens": 183,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-test-0189",
+      "tokens": 878,
+      "completion_tokens": 231,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-test-0190",
+      "tokens": 779,
+      "completion_tokens": 167,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-test-0191",
+      "tokens": 741,
+      "completion_tokens": 125,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-test-0192",
+      "tokens": 827,
+      "completion_tokens": 184,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-test-0193",
+      "tokens": 913,
+      "completion_tokens": 264,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-test-0194",
+      "tokens": 824,
+      "completion_tokens": 192,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-test-0195",
+      "tokens": 885,
+      "completion_tokens": 228,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-test-0196",
+      "tokens": 791,
+      "completion_tokens": 167,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-test-0197",
+      "tokens": 750,
+      "completion_tokens": 123,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-test-0198",
+      "tokens": 836,
+      "completion_tokens": 182,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-test-0199",
+      "tokens": 873,
+      "completion_tokens": 230,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-test-0200",
+      "tokens": 781,
+      "completion_tokens": 170,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-test-0201",
+      "tokens": 737,
+      "completion_tokens": 124,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-test-0202",
+      "tokens": 817,
+      "completion_tokens": 179,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-test-0203",
+      "tokens": 876,
+      "completion_tokens": 234,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-test-0204",
+      "tokens": 775,
+      "completion_tokens": 168,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-test-0205",
+      "tokens": 740,
+      "completion_tokens": 129,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-test-0206",
+      "tokens": 815,
+      "completion_tokens": 180,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-test-0207",
+      "tokens": 914,
+      "completion_tokens": 269,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-test-0208",
+      "tokens": 818,
+      "completion_tokens": 192,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-test-0209",
+      "tokens": 878,
+      "completion_tokens": 230,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-test-0210",
+      "tokens": 791,
+      "completion_tokens": 175,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-test-0211",
+      "tokens": 750,
+      "completion_tokens": 131,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-test-0212",
+      "tokens": 826,
+      "completion_tokens": 183,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-test-0213",
+      "tokens": 926,
+      "completion_tokens": 272,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-test-0214",
+      "tokens": 829,
+      "completion_tokens": 195,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-test-0215",
+      "tokens": 881,
+      "completion_tokens": 231,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-test-0216",
+      "tokens": 788,
+      "completion_tokens": 171,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-test-0217",
+      "tokens": 749,
+      "completion_tokens": 129,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-test-0218",
+      "tokens": 825,
+      "completion_tokens": 181,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-test-0219",
+      "tokens": 917,
+      "completion_tokens": 265,
+      "pure_profile_validation_passed": true
+    },
+    {
+      "case_id": "business-v1-test-0220",
+      "tokens": 828,
+      "completion_tokens": 193,
+      "pure_profile_validation_passed": true
+    }
+  ],
+  "sha256": {
+    "train": "ba6ca3af54eaaeb7185fe79f51a54bfac66c1953c50e40d52a1f678723ac6745",
+    "valid": "51bbe296ab6993962a31bb9ec95aefd1275e154a4a3fd317d55932a35307fac2",
+    "test": "4435ae8a162711749c3c17cc584efa45028ac79af805791cc9328c22d490089f"
+  },
+  "system_sha256_by_category": {
+    "packaging.bags": "37ac00fe59464fc1083b8c6f421b4ee5f3de94dcf0fbb6a2c57f775bc09f05ce",
+    "printing.printing": "dea4c2e3cdf0d86e7770f4b52ad70a77ded8096338706a6929d9c0b040de5018",
+    "electronics.components": "80efad9c2e06ec216bca073e602c97f31921379f394b3819358e710a40e55325",
+    "transport.containers": "8c79788aed7d5297a28e1765681974329ffd5c80a57fb20863163728e119654a",
+    "business-supplies.stationery": "b6ac9e4338c0e54a2626b765a37daaaaedb6b74c990e5ef3c91fbae0a7f4f37a",
+    "printing.signs": "707b981ad6fc5eafc8afe1773b02073163f477fd199c878290001524b76f7f38",
+    "construction.tools": "97c7780ba7de405a77ebfcba4deca6b65ee0b1ba48c238e0013fb30a4fefca34",
+    "other.other-products": "4adefe3a05b1b3745bda1ed7428d4162d8403e42dc705859ec55dcc963f5bb4c",
+    "equipment.retail": "e7a4987718e7b073cc0b43819c672147fe7f64c12c9a50bfd3456da876ccf686",
+    "equipment.manufacturing": "db99a28b482000c6edda11889faae2859b097857947e417b514f0033df5083e9",
+    "construction.fasteners": "e4abb555692fee437e4e9e197324262624ead4401dd4495ed888018a0e8e11e3",
+    "materials.textile": "203ca136a259e0cea7e8a093e7f666755593fe718b14c09592875b29d4784c77",
+    "food.frozen": "cf0d1f52f334a1914d19b9685c56c878fc554838a6f36fe99e9b3d2039b49e0b",
+    "printing.labels": "d2f95d6ca1ba20396a6fb465e4d3cb7d5a784082e53f80c57c76292563005c39",
+    "medical-hygiene.hygiene": "aaef1b1cec6f1fc7ca082841e6f9a1098b2337df21cee4c2306af3a5526be284",
+    "packaging.food-packaging": "fb5cbac5d3c61836a19a0434d6f6c1e2b2207ec01f8fb1a2e8823ca4c556c687",
+    "electronics.communication": "1f914899671105b6baf79cdb36ed18bdb11f69f3702eb8f9b91bc72b9167567d",
+    "packaging.film": "ab0f4e41a264ff1499e46bca7402be3de22a799a434b633c7a1fc93f507c143b",
+    "materials.paper-cardboard": "d69a526db2116d0ac8c770bdb0bddd6c10b46e6afcfc565e5e405d18c118cb33",
+    "construction.engineering": "3a3bc997bfb6907b487fcb589d7832015133b78191f7ffd6f30c713ec772dca1",
+    "equipment.spare-parts": "35f88a81a85cc0c60581f282f8627096a7aed820dabb59c917059888d7fe669b",
+    "transport.components": "d30645687a6408bfa036924a8bedb39d62635f830b07db0b4b3d703b0bc4040a",
+    "electronics.automation": "9e7e2ffd6ee9cc23a899f502cb8a2962571878e17778764eaa23d0e190502780",
+    "medical-hygiene.protection": "719cf14fb95ec09f622fffbd31cdc6cc9fedd58595d72695b92a2adb5c6e2dd9",
+    "materials.polymers": "a53cf4b794dd54ef3ce99f8cf44340565c5690404626fc186488f5be6ffd8928",
+    "electronics.computers": "a10dedb603c246eea15333e8360d6674e0d1506c4c739c60a9dd9e40b03365b5",
+    "manufacturing-services.processing": "566237a4f87f352e263e76bd5f7ab5d3e6760236b1ab1300f209e39999f82453",
+    "equipment.warehouse": "b9ee855e510e422f97bf3c69938c842450e2165fa504b38341aa507b977444b0",
+    "materials.chemical-feedstock": "12fc56eccb8c35a523a0940c58889446663155990b2c8b6b78fd545bdbd4a7ba",
+    "packaging.boxes": "abc98f86693b2b01db41edb43bc48d41e038637c050cdea8a49efe0d7b42c27c",
+    "business-supplies.furniture": "6cb56f5505e9e6d6e8922e885595f16c88bbdf418194146f8d706233385a64e6",
+    "packaging.bottles-canisters": "6677ef8d39e5fe29c97af9615f9ac5bc5c0cdf4d80abb4290c6843264ddd0355",
+    "business-supplies.household": "1a1e76f2d48b0f8da10e99a1d2f9a7f532f10aa2049dafeae629db6f309e1be2",
+    "manufacturing-services.contract-manufacturing": "c151ad113cbe21b400a8ecd91d41f0e12c5f2fed71ceb5ff3104d1acf4b8067f",
+    "food.groceries": "c47ea1e7110070bfa572e68daef004f3bf5099f70e673f152ed6a37305a2dfee",
+    "manufacturing-services.packing": "54108401f6fcdf6b878e3f593b9b2bfd7de94e96f8ef815ec6313ed8592feba3",
+    "printing.merchandise": "b52073b872db04840591e6e3aa0c08594039949df216b98f4d38e5a15e20129c",
+    "manufacturing-services.assembly": "f49caecccdee84a8a87823905f9325bff8f256b8081f701a7bcac490de1b59b1",
+    "equipment.food": "c826d8fad89d293c549b05fa5c173db8d6a960853a0b1437e1041f75fee9b596",
+    "materials.metals": "2a22d209bf51c647e0ffa4f60a5faaae05481bb7f901b013affe6d3945a53391",
+    "construction.finishing": "7a8faf10f3a76e8c12a3b3d735f66e1f1c494e51239a14a16724a2d62911a860",
+    "packaging.paper-cups": "7eccceae27815f13c44eb74bd84663dec579dd13399705555de4f64c331bd972",
+    "food.ingredients": "6ddff0512d6d40e6b24adadd5441b88fbbf0888933c6ffa8c7d6f661d8820fb9",
+    "business-supplies.workwear": "aad77e1dfb6088334c70f8b3eb740a7fc51b1e16b09a4a12a9d55a0ab61101ee",
+    "food.drinks": "808febe297de64490c97fcb5369f457951c083020c5637b03207f93ee534ba29",
+    "transport.warehousing": "95385f7dff6bc7650ad3247f59d286fab4d591bf066d63889745b0c31586520a"
+  },
+  "limitations": [
+    "Generated partial business requirements, not independently authored requests.",
+    "Package scenarios only for leaves explicitly allowing упак.",
+    "No product-field completeness or industry truth claim.",
+    "Existing main training and all old holdouts unchanged.",
+    "Fresh valid may guide a future version; test only after frozen selection.",
+    "No prices calculated by LLM, conversion or changes to resources/deals."
+  ]
+}

@@ -1,0 +1,30 @@
+{
+  "actual_exit": true,
+  "locks_free": [
+    "/Users/assweg/Desktop/b2b/porukam-ml-experiments/.buyer-profile-broad-controller.lock",
+    "/Users/assweg/Desktop/b2b/porukam-ml-experiments/.buyer-role-prompt-controller.lock",
+    "/Users/assweg/Desktop/b2b/porukam-ml-experiments/.mlx-gpu.lock",
+    "/Users/assweg/Desktop/b2b/porukam-ml-experiments/.restored-continuation-20261023.lock",
+    "/Users/assweg/Desktop/b2b/porukam-ml-experiments/.restored-fullpass-20261023.lock"
+  ],
+  "fullps": "[local process inventory omitted]",
+  "other_heavy": [],
+  "ollama_models": [],
+  "own_db_absent": true,
+  "input_sha256_unchanged": true,
+  "last_metric": 236,
+  "saved_suffix_steps": 128,
+  "persisted_original_steps": 1584,
+  "remaining_after_saved": 548,
+  "checkpoint_sha256": "9aba5de96f01fa7c907a101e43a255a5e75f033f8e0fba547d6cd178059e3c33",
+  "saved_bank_counts": {
+    "business": 512,
+    "marketplace": 1072
+  },
+  "error": "Metal Impacting Interactivity",
+  "pacing_1s_prevents_failure": false,
+  "exact_trigger_unknown": true,
+  "optimizer_rng_not_saved": true,
+  "canonical_preserved": true,
+  "restarted": false
+}

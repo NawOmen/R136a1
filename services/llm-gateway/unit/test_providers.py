@@ -1,6 +1,7 @@
 import pytest
 from pydantic import BaseModel, Field
 
+from app.config import settings
 from app.providers import ModelUnavailable, OllamaProvider, _ollama_schema
 from app.schemas import PlatformAssistantOut, RawExtraction
 
@@ -48,6 +49,8 @@ async def test_ollama_typical_operations_disable_thinking(monkeypatch):
     assert image_text == "На изображении синтетический стакан"
     assert len(RecordingClient.payloads) == 2
     assert all(payload["think"] is False for payload in RecordingClient.payloads)
+    assert RecordingClient.payloads[0]["model"] == settings.ollama_model
+    assert RecordingClient.payloads[1]["model"] == settings.ollama_vision_model
 
 
 def test_ollama_schema_relaxes_only_string_lengths_in_schema_nodes():
@@ -94,3 +97,131 @@ async def test_assistant_uses_compatible_grammar_but_keeps_output_validation(mon
     assert "minLength" not in schema["properties"]["answer"]
     assert "maxLength" not in schema["properties"]["answer"]
     assert schema["properties"]["links"]["maxItems"] == 3
+
+
+@pytest.mark.asyncio
+async def test_trained_mlx_default_route_and_validated_json(monkeypatch):
+    from app.providers import RoutedProvider, TrainedMLXProvider
+    class MLXResponse(FakeResponse):
+        def json(self):
+            return {"choices": [{"message": {"content": self.content}}]}
+    class MLXClient(RecordingClient):
+        async def post(self, url, json):
+            assert url.endswith('/v1/chat/completions')
+            self.payloads.append(json)
+            return MLXResponse('{"category":"Крепёж","facts":[]}')
+    MLXClient.payloads = []
+    monkeypatch.setattr(settings, 'local_llm_backend', 'mlx')
+    monkeypatch.setattr('app.providers.httpx.AsyncClient', MLXClient)
+    provider = RoutedProvider()
+    assert isinstance(provider.local, TrainedMLXProvider)
+    result, route, fallback = await provider.structured('system', 'prompt', RawExtraction, False)
+    assert result.category == 'Крепёж' and route == 'local_qwen' and fallback is None
+    payload = MLXClient.payloads[0]
+    assert payload['model'] == 'default_model'
+    assert payload['temperature'] == 0 and payload['stream'] is False
+    assert payload['max_tokens'] == 640
+    assert 'properties' in payload['messages'][0]['content']
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize('content', ['not json', '{}', '[]'])
+async def test_trained_mlx_bad_response_fails_without_base_fallback(monkeypatch, content):
+    from app.providers import TrainedMLXProvider
+    class BadResponse(FakeResponse):
+        def json(self):
+            return {'choices': [{'message': {'content': content}}]}
+    class Client(RecordingClient):
+        async def post(self, url, json):
+            assert '/api/chat' not in url
+            return BadResponse(content)
+    monkeypatch.setattr('app.providers.httpx.AsyncClient', Client)
+    with pytest.raises(ModelUnavailable):
+        await TrainedMLXProvider().structured('s', 'p', RawExtraction)
+
+
+@pytest.mark.asyncio
+async def test_trained_mlx_network_failure_does_not_call_ollama(monkeypatch):
+    import httpx
+    from app.providers import TrainedMLXProvider
+    urls = []
+    class Client(RecordingClient):
+        async def post(self, url, json):
+            urls.append(url)
+            raise httpx.ConnectError('synthetic unavailable')
+    monkeypatch.setattr('app.providers.httpx.AsyncClient', Client)
+    with pytest.raises(ModelUnavailable):
+        await TrainedMLXProvider().structured('s', 'p', RawExtraction)
+    assert len(urls) == 1 and urls[0].endswith('/v1/chat/completions')
+
+
+@pytest.mark.asyncio
+async def test_trained_text_keeps_vision_separate(monkeypatch):
+    from app.providers import TrainedMLXProvider
+    RecordingClient.payloads = []
+    monkeypatch.setattr('app.providers.httpx.AsyncClient', RecordingClient)
+    await TrainedMLXProvider().vision_text('synthetic', 'p')
+    assert RecordingClient.payloads[0]['model'] == settings.ollama_vision_model
+    assert 'images' in RecordingClient.payloads[0]['messages'][0]
+
+
+@pytest.mark.asyncio
+async def test_trained_mlx_always_disables_thinking(monkeypatch):
+    from app.providers import TrainedMLXProvider
+    class MLXResponse(FakeResponse):
+        def json(self):
+            return {"choices": [{"message": {"content": '{"category":"Крепёж","facts":[]}'}}]}
+    class Client(RecordingClient):
+        async def post(self, url, json):
+            self.payloads.append(dict(json))
+            return MLXResponse("ok")
+    Client.payloads = []
+    monkeypatch.setattr("app.providers.httpx.AsyncClient", Client)
+    monkeypatch.setattr("app.providers._MLX_ACCEPTS_TEMPLATE_KWARGS", True)
+    await TrainedMLXProvider().structured("s", "p", RawExtraction)
+    payload = Client.payloads[0]
+    assert payload["chat_template_kwargs"] == {"enable_thinking": False}
+    assert payload["messages"][0]["content"].rstrip().endswith("/no_think")
+    assert "enable_thinking" not in payload and payload["max_tokens"] == settings.mlx_max_tokens
+    assert not hasattr(settings, "mlx_enable_thinking")
+
+
+@pytest.mark.asyncio
+async def test_trained_mlx_retries_without_template_kwargs_on_old_server(monkeypatch):
+    import httpx
+    from app.providers import TrainedMLXProvider
+    class Ok(FakeResponse):
+        def json(self):
+            return {"choices": [{"message": {"content": '{"category":"Крепёж","facts":[]}'}}]}
+    class StrictResponse(FakeResponse):
+        status_code = 422
+        def raise_for_status(self):
+            request = httpx.Request("POST", "http://mlx/v1/chat/completions")
+            raise httpx.HTTPStatusError("unknown field", request=request, response=self)
+    class Client(RecordingClient):
+        async def post(self, url, json):
+            # Копия: провайдер удаляет chat_template_kwargs из того же словаря при повторе.
+            self.payloads.append(dict(json))
+            return StrictResponse("no") if "chat_template_kwargs" in json else Ok("ok")
+    Client.payloads = []
+    monkeypatch.setattr("app.providers.httpx.AsyncClient", Client)
+    monkeypatch.setattr("app.providers._MLX_ACCEPTS_TEMPLATE_KWARGS", True)
+    result = await TrainedMLXProvider().structured("s", "p", RawExtraction)
+    assert result.category == "Крепёж"
+    assert len(Client.payloads) == 2
+    assert "chat_template_kwargs" in Client.payloads[0] and "chat_template_kwargs" not in Client.payloads[1]
+    assert "/no_think" in Client.payloads[1]["messages"][0]["content"]
+
+
+@pytest.mark.asyncio
+async def test_tagged_reasoning_block_is_stripped_before_json(monkeypatch):
+    from app.providers import TrainedMLXProvider
+    class MLXResponse(FakeResponse):
+        def json(self):
+            return {"choices": [{"message": {"content": '<think>долго рассуждал</think>{"category":"Крепёж","facts":[]}'}}]}
+    class Client(RecordingClient):
+        async def post(self, url, json):
+            return MLXResponse("ok")
+    monkeypatch.setattr("app.providers.httpx.AsyncClient", Client)
+    result = await TrainedMLXProvider().structured("s", "p", RawExtraction)
+    assert result.category == "Крепёж"

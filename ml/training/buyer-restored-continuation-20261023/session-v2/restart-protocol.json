@@ -1,0 +1,10 @@
+{
+  "user_authorized_unload_Ollama": true,
+  "prior_failed_local_steps": 103,
+  "prior_suffix_checkpoint_saved": false,
+  "restart_from_original_saved_prefix": 1456,
+  "optimizer_rng_reset": true,
+  "exact_resume": false,
+  "other_model_unloaded_before_start": true,
+  "no_extra_epoch": true
+}

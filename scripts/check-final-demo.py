@@ -35,12 +35,15 @@ def fetch(url, timeout, *, json_body=True):
 def inspect(args, request=fetch):
     checks = []
     model = None
+    backend, vision = "ollama", None
     for name, url in (("Авторизация", args.auth_url), ("Маркетплейс", args.marketplace_url), ("LLM Gateway", args.llm_url)):
         try:
             data = request(url + "/health", args.timeout)
             ok = isinstance(data, dict) and data.get("status") == "ok"
             if name == "LLM Gateway" and ok:
                 model = data.get("local_model")
+                backend = str(data.get("local_backend") or "ollama")
+                vision = data.get("vision_model") or None
         except (OSError, ValueError):
             ok = False
         checks.append({"name": name, "passed": ok})
@@ -57,13 +60,33 @@ def inspect(args, request=fetch):
     except (OSError, ValueError):
         ok = False
     checks.append({"name": "Непустой каталог из БД", "passed": ok})
-    try:
-        tags = request(args.ollama_url + "/api/tags", args.timeout)
-        names = {item.get("name") for item in tags.get("models", []) if isinstance(item, dict)}
-        ok = bool(model) and (model in names or (":" not in model and model + ":latest" in names))
-    except (OSError, ValueError, AttributeError, TypeError):
-        ok = False
-    checks.append({"name": "Модель из конфигурации Gateway загружена в Ollama", "passed": ok})
+    if backend == "mlx":
+        # Обученный текст отдаёт нативный MLX-сервер; Ollama остаётся для vision.
+        try:
+            served = request(args.mlx_url + "/v1/models", args.timeout)
+            ids = {item.get("id") for item in served.get("data", []) if isinstance(item, dict)}
+            # MLX-сервер отдаёт путь загруженной модели, а не runtime-имя адаптера,
+            # поэтому проверяем доступность сервера и совпадение имени в конфигурации
+            # Gateway. Подлинность адаптера подтверждает SHA256 в build_local_model.py.
+            ok = bool(ids) and bool(model) and str(model).startswith("porukam-")
+        except (OSError, ValueError, AttributeError, TypeError):
+            ok = False
+        checks.append({"name": "Обученная модель доступна в MLX", "passed": ok})
+        try:
+            tags = request(args.ollama_url + "/api/tags", args.timeout)
+            names = {item.get("name") for item in tags.get("models", []) if isinstance(item, dict)}
+            vision_ok = bool(vision) and (vision in names or (":" not in vision and vision + ":latest" in names))
+        except (OSError, ValueError, AttributeError, TypeError):
+            vision_ok = False
+        checks.append({"name": "Vision-модель загружена в Ollama", "passed": vision_ok})
+    else:
+        try:
+            tags = request(args.ollama_url + "/api/tags", args.timeout)
+            names = {item.get("name") for item in tags.get("models", []) if isinstance(item, dict)}
+            ok = bool(model) and (model in names or (":" not in model and model + ":latest" in names))
+        except (OSError, ValueError, AttributeError, TypeError):
+            ok = False
+        checks.append({"name": "Модель из конфигурации Gateway загружена в Ollama", "passed": ok})
     return {"scope": "Только доступность окружения. Не проверяет вход, допуск, генерацию, закупку или качество ИИ.",
             "infrastructure_passed": all(item["passed"] for item in checks), "checks": checks,
             "live_core_flow": "Не проверен: запустите final-core-flow.config.ts на отдельном синтетическом стенде"}
@@ -71,7 +94,7 @@ def inspect(args, request=fetch):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    for option, port in (("web", 3000), ("auth", 8001), ("marketplace", 8002), ("llm", 8003), ("storage", 9000), ("ollama", 11434)):
+    for option, port in (("web", 3000), ("auth", 8001), ("marketplace", 8002), ("llm", 8003), ("storage", 9000), ("ollama", 11434), ("mlx", 8080)):
         parser.add_argument(f"--{option}-url", type=local_url, default=f"http://localhost:{port}")
     parser.add_argument("--timeout", type=float, default=5)
     args = parser.parse_args()

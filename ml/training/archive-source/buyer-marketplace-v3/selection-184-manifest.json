@@ -1,0 +1,7 @@
+{
+  "count": 184,
+  "sha256": "a28ede1672b3bd5dd9709b9a102dc051d3038a03cfc99fce48b22fe8ddc4d6b3",
+  "subset_of": "valid",
+  "chosen_before_any_model_generation": true,
+  "policy": "Lexicographically first case per46 leaf/scenario, no quality-based selection"
+}

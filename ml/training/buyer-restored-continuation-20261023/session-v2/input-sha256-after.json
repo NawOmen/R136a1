@@ -1,0 +1,16 @@
+{
+  "/Users/assweg/Desktop/b2b/porukam-ml-experiments/buyer-restored-fullpass-20261023/adapter-final/0001456_adapters.safetensors": "9b9670d64468426168b8ed376abd941d1abe0a533d0fc41633d4665f9804990d",
+  "/Users/assweg/Desktop/b2b/porukam-ml-experiments/buyer-restored-continuation-20261023/train.jsonl": "c2c2b3792a3dc376ecc48c7420c73362114a3c0798fd5b57adc2eee8c4bb995a",
+  "/Users/assweg/Desktop/b2b/porukam-ml-experiments/buyer-restored-continuation-20261023/valid.jsonl": "3adf389130115c29283b04b1a657c8eb7a4a68de6f27b5aaa7949769f58916de",
+  "/Users/assweg/Desktop/b2b/porukam-ml-experiments/buyer-restored-continuation-20261023/schedule.json": "192ada7ab080ec46293ba3dff14da2b0176cfb9c611acf8fd8cd1d4aad893518",
+  "/Users/assweg/Desktop/b2b/porukam-ml-experiments/buyer-restored-continuation-20261023/preparation.json": "8ca6d6064f7c2aaeae3ddcf1c1066d568b9dfdd876d85be254cfb8277b54a619",
+  "/Users/assweg/Desktop/b2b/porukam-ml-experiments/buyer-restored-continuation-20261023/token-check.json": "44f9fa2120e249320e8e63b16c249e5bbe285551fcc5b5f5a2d07d5bac7a1808",
+  "/Users/assweg/Desktop/b2b/porukam-ml-experiments/porukam-trained-current/adapters.safetensors": "b2cf30b111109ee10439b4308cb97058ab00a85115eedd36118bbc534e52b665",
+  "/Users/assweg/Desktop/b2b/porukam-ml-experiments/porukam-trained-current/adapter_config.json": "f715c2cac7c67a67b59f3bc0d178df986bd766d34aa9e68d809d2cd2d6b01262",
+  "/Users/assweg/Desktop/b2b/porukam-ml-experiments/completion_loss.py": "f880c689d6f391113f76feff7e38ebeace8409a1a301ec4d67a46d03967e621d",
+  "/Users/assweg/Desktop/b2b/porukam-ml-experiments/frozen_gated_kernel_v2.py": "d7f3a7ef702514ca1da3f26467779a3d07d575ba2b7566a4e10b7befe4cbacb4",
+  "/Users/assweg/Desktop/b2b/porukam-ml-experiments/aligned_chat_process_v1.py": "4a9c76fd8bc2aff029dff28ab4922a8ad8e4a1b617f5c4a2ca5d0933da666af5",
+  "/Users/assweg/Desktop/b2b/porukam-ml-experiments/coverage_iterator_v1.py": "ae4c2d86e178e208ac46dee8cdbbaca149093fefd096f09bc6c6f9bbb62585c9",
+  "/Users/assweg/Desktop/b2b/porukam-ml-experiments/heavy_process_guard_v2.py": "267ae9fa4250aa1c2bae8ef34a3ce674bc9e7b8a1d29ac416ab098f43768ba3b",
+  "/Users/assweg/Desktop/b2b/porukam-ml-experiments/start_restored_continuation_20261023_v2.py": "1cb7614d12adada6b4d71d9ce08d4325b74072e335ff2864a9321ea33fef7bad"
+}

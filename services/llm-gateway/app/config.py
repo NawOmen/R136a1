@@ -23,7 +23,20 @@ class Settings(BaseSettings):
     jwt_algorithm: Literal["HS256"] = "HS256"
 
     ollama_base_url: str = "http://host.docker.internal:11434"
+    # Рабочий режим — обученная модель через нативный MLX-сервер.
+    # Ollama остаётся для vision и речи; LOCAL_LLM_BACKEND=ollama допустим только
+    # как технический обход для стенда без Apple Silicon (см. docs/ml-trained-deployment.md).
+    local_llm_backend: Literal["mlx", "ollama"] = "mlx"
+    mlx_base_url: str = "http://host.docker.internal:8080"
+    trained_model_version: str = "porukam-buyer-qwen3.5"
+    mlx_timeout_seconds: float = 180.0
+    mlx_max_tokens: int = Field(default=640, ge=1, le=2048)
+    # Размышления обученной модели не используются: на извлечении фактов они
+    # тратят токены и время, а на демо-заявке ещё и склеивают поля.
+
+    # Основная модель — обученный локальный кандидат; изображения распознаёт отдельная vision-модель.
     ollama_model: str = "qwen3.5:9b"
+    ollama_vision_model: str = "qwen3.5:9b"
     ollama_timeout_seconds: float = 180.0
     llm_context_tokens: int = 8192
     local_inference_cost_rub_per_minute: Decimal = Field(default=Decimal("0.35"),ge=0,le=Decimal("999999999999.999999999999"),max_digits=24,decimal_places=12,allow_inf_nan=False)
