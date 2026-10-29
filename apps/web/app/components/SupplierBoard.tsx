@@ -50,8 +50,8 @@ export default function SupplierBoard({ needId, companyId, needRevision, canMana
   }
   const selected = rows.find(r => r.id === selectedId);
   const drafts = rows.filter(r => r.status === "draft");
-  return <section className="supplier-board" aria-label="Поставщики и ответы">
-    <header className="supplier-board__heading"><div><h2>Поставщики и ответы</h2><p className="hint">Запросите КП, сравните ответы и отметьте свой выбор. Заказ оформляется отдельно.</p></div><button type="button" className="btn btn-secondary btn-sm" disabled={busy || loading} onClick={() => void perform(async () => reload())}>Обновить доску</button></header>
+  return <section className="supplier-board" aria-label="Доска запросов и ответов">
+    <header className="supplier-board__heading"><div><h2>Этапы запросов</h2><p className="hint">Запросите КП, сравните ответы и отметьте выбор. Заказ оформляется отдельно.</p></div><button type="button" className="btn btn-secondary btn-sm" disabled={busy || loading} onClick={() => void perform(async () => reload())}>Обновить доску</button></header>
     {error && <div className="alert alert-error" role="alert">{error}<button type="button" className="btn btn-secondary btn-sm" disabled={busy} onClick={() => void perform(async () => reload())}>Повторить</button></div>}
     {loading ? <p role="status">Загружаем поставщиков…</p> : <>
       {canManage && <form className="supplier-board__add" onSubmit={e => { e.preventDefault(); void perform(async token => { const row = await api.create(token, needId, companyId, supplierId, needRevision); await reload(); setSelectedId(row.id); }); }}><label>Получатель запроса<select aria-label="Получатель запроса" value={supplierId} onChange={e => setSupplierId(e.target.value)} required disabled={busy}><option value="">Выберите поставщика</option>{candidates.map(c => <option key={c.company_id} value={c.company_id}>{c.company_name}{c.relevant ? " · ваша категория" : ""}</option>)}</select></label><button className="btn btn-primary" disabled={busy || !supplierId}>Подготовить запрос</button></form>}

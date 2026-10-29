@@ -726,3 +726,41 @@ html { --page-gutter:clamp(35px,2.73vw,44px); --header-gutter:clamp(32px,2.73vw,
 .need-edit-action { display:flex; justify-content:flex-end; align-items:center; }
 .need-edit-action:has(form) { justify-content:stretch; }
 .need-edit-action > form { width:100%; }
+
+/* Подбор поставщиков: две вкладки, ровная сетка карточек, одинаковые ряды кнопок. */
+.supplier-selection { display:flex; flex-direction:column; gap:20px; }
+.supplier-selection__head { display:flex; align-items:flex-start; justify-content:space-between; gap:16px; }
+.supplier-selection__eyebrow { margin:0 0 6px; font-size:12px; letter-spacing:.04em; text-transform:uppercase; color:var(--text-muted); }
+.supplier-selection__head .page-title { margin:0 0 6px; }
+.supplier-selection__head .subtitle { margin:0; }
+.supplier-selection__back { flex:0 0 auto; }
+.supplier-tabs { display:inline-flex; gap:4px; padding:4px; border-radius:999px; background:var(--bg-accent); align-self:flex-start; }
+.supplier-tabs button { border:0; background:none; font:inherit; color:var(--text-muted); padding:8px 16px; border-radius:999px; cursor:pointer; display:inline-flex; gap:8px; align-items:center; }
+.supplier-tabs button[aria-selected="true"] { background:var(--bg); color:var(--text); font-weight:600; box-shadow:0 1px 2px rgb(0 0 0 / .12); }
+.supplier-tabs button span { font-size:12px; color:var(--text-muted); }
+.supplier-tabs button:focus-visible { outline:2px solid var(--primary); outline-offset:2px; }
+.supplier-filters { display:grid; grid-template-columns:minmax(240px,1.6fr) minmax(190px,1fr) auto; align-items:end; gap:12px 16px; }
+.supplier-filters .field { margin:0; }
+.supplier-filters__check { display:flex; align-items:center; gap:8px; font-size:13px; color:var(--text-muted); padding-bottom:12px; }
+.supplier-filters__count { grid-column:1 / -1; margin:0; font-size:13px; color:var(--text-muted); }
+.supplier-grid { list-style:none; margin:0; padding:0; display:grid; grid-template-columns:repeat(auto-fill,minmax(320px,1fr)); gap:16px; align-items:stretch; }
+.supplier-tile { display:flex; flex-direction:column; gap:14px; padding:20px; border:1px solid var(--border); border-radius:18px; background:var(--bg); }
+.supplier-tile__top { display:grid; grid-template-columns:minmax(0,1fr) auto; gap:12px; align-items:start; }
+.supplier-tile__name h2 { margin:0 0 8px; font-size:17px; line-height:1.3; }
+.supplier-tile__badges { display:flex; flex-wrap:wrap; gap:6px; }
+.supplier-tile__price { display:flex; flex-direction:column; gap:2px; text-align:right; white-space:nowrap; }
+.supplier-tile__price strong { font-size:19px; }
+.supplier-tile__price small { font-size:12px; color:var(--text-muted); }
+.supplier-tile__facts { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:12px; margin:0; padding:12px 0; border-top:1px solid var(--border); border-bottom:1px solid var(--border); }
+.supplier-tile__facts div { display:flex; flex-direction:column; gap:2px; min-width:0; }
+.supplier-tile__facts dt { font-size:11px; text-transform:uppercase; letter-spacing:.04em; color:var(--text-muted); }
+.supplier-tile__facts dd { margin:0; font-size:14px; font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.supplier-tile__products { display:flex; flex-wrap:wrap; gap:6px; }
+.product-chip { font-size:12px; padding:4px 10px; border-radius:999px; background:var(--bg-accent); color:var(--text); max-width:100%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.product-chip--more { color:var(--text-muted); }
+.supplier-tile__total { margin:0; font-size:13px; color:var(--text-muted); }
+.supplier-tile__actions { display:flex; gap:8px; justify-content:flex-end; align-items:center; margin-top:auto; }
+.supplier-tile__conversation { border-top:1px solid var(--border); padding-top:14px; }
+.supplier-empty { display:flex; gap:12px; align-items:center; padding:28px; border:1px dashed var(--border); border-radius:18px; color:var(--text-muted); }
+.supplier-empty p { margin:0; }
+@media (max-width:720px) { .supplier-selection__head { flex-direction:column; }.supplier-grid { grid-template-columns:1fr; }.supplier-filters { grid-template-columns:1fr; }.supplier-filters__check { padding-bottom:0; }.supplier-tile__actions > .btn { flex:1 1 auto; } }

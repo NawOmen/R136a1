@@ -20,6 +20,7 @@ async function prepare(page: Page, options: {empty?:boolean; draftFailure?:boole
     else if(path.endsWith("/next-step"))json={title:"Потребности",description:"",href:"/needs"};
     else if(path.endsWith(`/needs/${needId}`))json=need;
     else if(path.endsWith("/needs/mine"))json=[need];
+    else if(path.endsWith(`/needs/${needId}/suppliers`))json=[{company_id:sellerId,company_name:sellerName,specialization:[need.category],relevant:true,products:["Бумажный стакан"]}];
     else if(path.endsWith("/suppliers"))json=[{company_id:sellerId,company_name:sellerName,specialization:[need.category],relevant:true,products:["Бумажный стакан"]}];
     else if(path.endsWith("/specification.csv"))return route.fulfill({contentType:"text/csv",headers:{"Content-Disposition":"attachment; filename=spec.csv"},body:"Категория;Количество\nУпаковка;100"});
     else if(path.endsWith("/supplier-requests")&&req.method()==="POST"){row={...row,status:"draft",sent_at:null as unknown as string};rows=[row];json=row;}
@@ -48,10 +49,11 @@ async function prepare(page: Page, options: {empty?:boolean; draftFailure?:boole
   return {updates,sends};
 }
 
-async function openCard(page:Page){await page.goto(`/needs/${needId}`);await page.locator('.supplier-card__open').first().click();return page.getByRole('region',{name:'Работа с поставщиком'});}
+async function openBoard(page:Page){await page.goto(`/needs/${needId}/suppliers`);await page.getByRole('tab',{name:/Доска запросов/}).click();}
+async function openCard(page:Page){await openBoard(page);await page.locator('.supplier-card__open').first().click();return page.getByRole('region',{name:'Работа с поставщиком'});}
 
 test('supplier RFQ is addressed, editable and never sent by generation',async({page})=>{
-  const state=await prepare(page,{empty:true});await page.goto(`/needs/${needId}`);
+  const state=await prepare(page,{empty:true});await openBoard(page);
   await page.getByLabel('Получатель запроса').selectOption(sellerId);await page.getByRole('button',{name:'Подготовить запрос',exact:true}).click();
   const workspace=page.getByRole('region',{name:'Работа с поставщиком'});
   await workspace.getByRole('button',{name:'Подготовить запрос с ИИ'}).click();
@@ -61,7 +63,7 @@ test('supplier RFQ is addressed, editable and never sent by generation',async({p
 });
 
 test('board can be moved with keyboard without creating a deal',async({page})=>{
-  const state=await prepare(page);await page.goto(`/needs/${needId}`);
+  const state=await prepare(page);await openBoard(page);
   await page.getByLabel(`Этап: ${sellerName}`).selectOption('selected');
   await expect(page.getByRole('region',{name:'Выбрано',exact:true}).locator('.supplier-card')).toHaveCount(1);
   expect(state.updates.at(-1)?.status).toBe('selected');expect(state.updates.at(-1)?.expected_revision).toBe(1);
@@ -100,8 +102,11 @@ test('seller can draft and send a reply and cannot see private buyer quote field
 });
 
 test('specification download and responsive light/dark board remain usable',async({page},testInfo)=>{
-  await prepare(page);const workspace=await openCard(page);
+  await prepare(page);
+  // Скачивание спецификации живёт в карточке потребности, доска запросов — на странице подбора.
+  await page.goto(`/needs/${needId}`);
   const download=page.waitForEvent('download');await page.getByRole('button',{name:'Скачать спецификацию',exact:true}).click();expect((await download).suggestedFilename()).toContain('specification');
+  const workspace=await openCard(page);
   for(const theme of ['light','dark']){
     await page.evaluate(t=>{document.documentElement.dataset.theme=t;},theme);
     await workspace.scrollIntoViewIfNeeded();
@@ -117,7 +122,7 @@ test('specification download and responsive light/dark board remain usable',asyn
 
 test('desktop board drag moves a supplier card smoothly',async({page,isMobile})=>{
   test.skip(isMobile,'На touch используется доступный выбор этапа');
-  await prepare(page);await page.goto(`/needs/${needId}`);
+  await prepare(page);await openBoard(page);
   await page.locator('.supplier-card').dragTo(page.getByRole('region',{name:'Получен ответ',exact:true}));
   await expect(page.getByRole('region',{name:'Получен ответ',exact:true}).locator('.supplier-card')).toHaveCount(1);
 });
