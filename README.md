@@ -438,18 +438,30 @@ CI проверяет сервисы, миграции, интерфейс и с
 
 ### 1. Запустить локальную модель
 
-Текст разбирает обученная модель на Apple Silicon. Получите базовые веса
+Модель не работает в контейнере: текст разбирает обученная модель на Apple Silicon,
+поднятая на хосте, а Compose ходит к ней по `MLX_BASE_URL`. Получите базовые веса
 `mlx-community/Qwen3.5-9B-4bit` (revision из `infra/models.lock.json`) и каталог адаптера
-`porukam-trained-current` с файлом `adapters.safetensors`, затем проверьте контрольные
-суммы и запустите MLX-сервер (он слушает только loopback):
+`porukam-trained-current` с файлом `adapters.safetensors`, укажите пути в `.env` и запустите
+сервер одной командой — она сверяет SHA256 адаптера и весов, слушает только loopback и
+пишет журнал в `~/Library/Logs/PoRukam-LLM/`:
 
 ```bash
 pip install -r ml/training/porukam-trained-current/requirements-serving.txt
-/path/to/mlx-python infra/build_local_model.py --base /path/to/model-9b-4bit \
-  --adapter /path/to/porukam-trained-current --host 127.0.0.1 --port 8080 --serve
 ```
 
-В `.env` задайте `LOCAL_LLM_BACKEND=mlx` и `MLX_BASE_URL=http://host.docker.internal:8080`.
+```dotenv
+MLX_MODEL_DIR=/path/to/model-9b-4bit
+MLX_ADAPTER_DIR=/path/to/porukam-trained-current
+MLX_SERVE_PYTHON=/path/to/mlx-python
+```
+
+```bash
+python3 scripts/local_model.py start         # поднять модель вне Docker
+python3 scripts/local_model.py status        # адрес, процесс, модель, автозапуск
+python3 scripts/local_model.py install-agent # поднимать при входе в систему
+```
+
+В `.env` также задайте `LOCAL_LLM_BACKEND=mlx` и `MLX_BASE_URL=http://host.docker.internal:8080`.
 Если адаптер не найден или контрольные суммы не совпали, ИИ-функции вернут понятную
 ошибку 503 и не подменят модель молча. Подробнее: [docs/ml-trained-deployment.md](docs/ml-trained-deployment.md).
 

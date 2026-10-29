@@ -194,7 +194,7 @@ docker run -d --name porukam-ollama --restart unless-stopped \
 docker exec porukam-ollama ollama pull qwen3.5:9b
 ```
 
-Текстовый MLX server работает нативно на Apple Silicon, вне Docker; vision Ollama независим.
+Текстовый MLX server работает нативно на Apple Silicon, вне Docker; vision Ollama независим. На рабочей машине оператора моделью управляет `scripts/local_model.py` (`start`, `stop`, `status`, `logs`, `install-agent`); Compose не поднимает контейнер с моделью. Подробности — в [инструкции](docs/ml-trained-deployment.md).
 
 **На Mac это CPU-инференс.** Docker Desktop на macOS не предоставляет GPU passthrough
 для Ollama. Время прежнего нативного измерения Apple Silicon не является оценкой
@@ -384,7 +384,7 @@ curl --fail --max-time 180 http://172.17.0.1:11434/api/chat \
   -d '{"model":"qwen3.5:9b","stream":false,"think":false,"messages":[{"role":"user","content":"Ответь одним словом: работает"}],"options":{"num_ctx":8192}}'
 ```
 
-Эти команды проверяют только legacy/vision Ollama. Актуальный текстовый маршрут MLX и ручной порядок проверки описаны в [инструкции](docs/ml-trained-deployment.md).
+Эти команды проверяют только legacy/vision Ollama. Актуальный текстовый маршрут MLX, запуск модели вне Docker и ручной порядок проверки описаны в [инструкции](docs/ml-trained-deployment.md).
 
 ## 7. Автоматические режимы через Docker nginx
 

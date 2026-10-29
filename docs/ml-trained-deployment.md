@@ -20,19 +20,51 @@ MLX_MAX_TOKENS=640
 OLLAMA_VISION_MODEL=qwen3.5:9b
 ```
 
-Базовые веса нужны вместе с адаптером; они не преобразуются в Ollama или GGUF. Проверка файлов без запуска модели:
+### Модель работает вне Docker
 
-```sh
-/path/to/mlx-python infra/build_local_model.py --base /path/to/model-9b-4bit --adapter /path/to/porukam-trained-current
+Compose не содержит контейнера с моделью: ни MLX, ни Ollama не упакованы в образ. Веса,
+адаптер и вычислительный процесс живут на хосте с Apple Silicon, а контейнерный LLM Gateway
+обращается к ним по `MLX_BASE_URL` и `OLLAMA_DOCKER_BASE_URL`. Так металлическое ядро не
+делится с виртуальной машиной Docker, а модель переживает перезапуск и пересборку контейнеров.
+
+Модель на диске: базовые веса вместе с адаптером; в Ollama и GGUF они не преобразуются.
+Пути, интерпретатор с MLX-LM и порт берутся из `.env`:
+
+```dotenv
+MLX_MODEL_DIR=/path/to/model-9b-4bit
+MLX_ADAPTER_DIR=/path/to/porukam-trained-current
+MLX_SERVE_PYTHON=/path/to/mlx-python
+MLX_HOST=127.0.0.1
+MLX_PORT=8080
 ```
 
-Запуск сервера — только отдельной командой оператора:
+Интерпретатор `MLX_SERVE_PYTHON` — отдельное окружение на хосте (не в контейнере и не
+системный Python): `pip install -r ml/training/porukam-trained-current/requirements-serving.txt`.
+
+Управление — `scripts/local_model.py`; каждая команда сначала сверяет SHA256 адаптера,
+конфигурации и файлов базовой модели через `infra/build_local_model.py`:
 
 ```sh
-/path/to/mlx-python infra/build_local_model.py --base /path/to/model-9b-4bit --adapter /path/to/porukam-trained-current --host 127.0.0.1 --port 8080 --serve
+python3 scripts/local_model.py verify          # только контрольные суммы
+python3 scripts/local_model.py status          # адрес, процесс, модель, автозапуск
+python3 scripts/local_model.py start           # поднять (через агент launchd, если он включён)
+python3 scripts/local_model.py stop            # остановить, агент автозапуска остаётся
+python3 scripts/local_model.py logs --lines 60 # журнал
+python3 scripts/local_model.py install-agent   # автозапуск при входе в систему и после сбоя
+python3 scripts/local_model.py uninstall-agent # выключить автозапуск
 ```
 
-Скрипт проверяет SHA адаптера, конфигурации и файлов базовой модели, затем использует MLX-LM 0.32.0. Он не скачивает модель и не устанавливает зависимости. MLX-server должен быть доступен Gateway с хоста, но не должен быть открыт в публичный интернет. При сбое MLX Gateway возвращает ошибку; автоматического переключения текстовых запросов на базовую Qwen нет. Vision и распознавание речи остаются отдельными локальными компонентами.
+Агент launchd `ru.porukam.mlx-server` пишет журнал в
+`~/Library/Logs/PoRukam-LLM/ru.porukam.mlx-server.log` и держит пути модели в своём
+описании, поэтому правка `.env` на автозапуск не влияет — после смены путей повторите
+`install-agent`. `ProcessType` в описании агента намеренно не задан: с `Background` launchd
+снижает приоритет потоков и MLX отдаёт 7–8 токенов/с вместо 19–21 (замер на одном запросе:
+28,1 с против 9,6 с на 200 токенов), то есть разговорный разбор заявки растягивается вдвое.
+
+Скрипт не скачивает модель и не устанавливает зависимости. MLX-сервер должен быть доступен
+Gateway с хоста, но не должен быть открыт в публичный интернет. При сбое MLX Gateway
+возвращает ошибку; автоматического переключения текстовых запросов на базовую Qwen нет.
+Vision и распознавание речи остаются отдельными локальными компонентами на хосте.
 
 ## Скорость: размышления отключены всегда
 
@@ -77,11 +109,16 @@ Qwen нет. Состояние выбранного backend и фактичес
 
 ## Первый запуск на машине оператора
 
-Перед стартом сервера один раз создайте кеш-каталог Hugging Face, если его нет:
-`mkdir -p ~/.cache/huggingface/hub`. Без него MLX-сервер обслужит запросы генерации, но
-`GET /v1/models` вернёт `CacheNotFound`, и `scripts/check-final-demo.py` покажет ошибку
-проверки модели. Сервер слушает только loopback (`--host 127.0.0.1`); из контейнеров
-Gateway обращается к нему через `MLX_BASE_URL=http://host.docker.internal:8080`.
+Кеш-каталог Hugging Face `~/.cache/huggingface/hub` нужен для `GET /v1/models`: без него
+сервер обслужит генерацию, но список моделей вернёт `CacheNotFound`, и
+`scripts/check-final-demo.py` покажет ошибку проверки модели. `start` и `install-agent`
+создают каталог сами, если его нет. Сервер слушает только loopback (`MLX_HOST=127.0.0.1`);
+из контейнеров Gateway обращается к нему через `MLX_BASE_URL=http://host.docker.internal:8080`.
+
+Порядок на новой машине: `.env` с путями модели → `scripts/local_model.py verify` →
+`scripts/local_model.py start` → `scripts/check-final-demo.py`. После правки путей или
+переноса весов повторите `install-agent`, потому что агент launchd хранит абсолютные пути
+в своём описании.
 
 ## Проверки качества и ограничения
 
