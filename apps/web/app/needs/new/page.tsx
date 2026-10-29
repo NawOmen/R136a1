@@ -58,6 +58,7 @@ function newRow(key = "", value = ""): CharacteristicRow {
 
 export default function NewNeedPage() {
   const manualRef = useRef<HTMLElement>(null);
+  const briefRef = useRef<HTMLElement>(null);
   const [manualExpanded, setManualExpanded] = useState(false);
   const [quantityApproved, setQuantityApproved] = useState(false);
   const router = useRouter();
@@ -339,6 +340,17 @@ export default function NewNeedPage() {
     }
   }
 
+  function goToStep(step: "description" | "review") {
+    // Этапы переключаются кнопками: назад — без потери введённого,
+    // вперёд — в ту же проверку, что открывает «Заполнить вручную».
+    if (step === "description") {
+      setManualExpanded(false);
+      requestAnimationFrame(() => briefRef.current?.scrollIntoView({ block: "start", behavior: "auto" }));
+      return;
+    }
+    openManual();
+  }
+
   function openManual() {
     const opener = document.activeElement;
     setManualExpanded(true);
@@ -522,7 +534,7 @@ export default function NewNeedPage() {
 
   return <div className="need-create-page need-workflow">
     <header className="need-workflow__header"><div><h1 className="page-title">Создание потребности</h1><p className="subtitle">{manualExpanded ? "Проверьте детали перед отправкой производителям." : "Опишите задачу или приложите файл — ИИ заполнит детали закупки."}</p></div><Link className="btn btn-secondary btn-sm" href="/needs">Мои потребности</Link></header>
-    <ol className="need-steps" aria-label="Этапы закупки"><li aria-current={!manualExpanded ? "step" : undefined}><span>1</span>Описание</li><li aria-current={manualExpanded ? "step" : undefined}><span>2</span>Проверка и публикация</li></ol>
+    <ol className="need-steps" aria-label="Этапы закупки"><li><button type="button" className="need-step" aria-current={!manualExpanded ? "step" : undefined} disabled={analyzing || submitting || !draftReady} onClick={() => goToStep("description")}><span>1</span>Описание</button></li><li><button type="button" className="need-step" aria-current={manualExpanded ? "step" : undefined} disabled={analyzing || submitting || !draftReady} onClick={() => goToStep("review")}><span>2</span>Проверка и публикация</button></li></ol>
     {error && <div className="alert alert-error" role="alert">{error}</div>}
     {draftNotice && <p className="hint" role="status">{draftNotice.startsWith("Текст и поля восстановлены") ? "Черновик восстановлен" : draftNotice}</p>}
     {savedNeed && <p className="alert alert-warning">Потребность сохранена. <Link href={`/needs/${savedNeed.id}`}>Открыть карточку</Link>. Повторная отправка продолжит загрузку файлов.</p>}
@@ -531,7 +543,7 @@ export default function NewNeedPage() {
     <form className="card need-create-form" onSubmit={handleSubmit} aria-busy={analyzing || submitting || !draftReady}>
       <fieldset className="form-fieldset" disabled={!draftReady || submitting}>
         {available.length > 1 ? <div className="field need-company"><label htmlFor="company_id">Компания</label><select id="company_id" value={companyId} disabled={analyzing || recording || transcribing} onChange={event => { setCompanyId(event.target.value); setAgentRun(null); setAnswers({}); }}>{available.map(item => <option key={item.id} value={item.id}>{item.display_name}</option>)}</select></div> : <p className="need-company-name"><Icon name="building" size={17} />{company?.display_name}</p>}
-        {!manualExpanded && <section className="need-brief" aria-labelledby="materials-heading">
+        {!manualExpanded && <section ref={briefRef} className="need-brief" aria-labelledby="materials-heading">
           <h2 id="materials-heading">Что нужно купить?</h2>
           <div className="field"><label className="visually-hidden" htmlFor="request_description">Что требуется купить</label><textarea id="request_description" disabled={analyzing} maxLength={20000} rows={5} value={requestDescription} onChange={event => { analysisGeneration.current += 1; setRequestDescription(event.target.value); setAgentRun(null); setAnswers({}); }} placeholder="Например: 5 000 бумажных стаканов по 350 мл с нашим логотипом. Доставка в Новосибирск до 15 ноября, бюджет 60 000 ₽." /></div>
           <div className="need-attachments"><FilePicker id="need_files" disabled={analyzing || loadedFilesKey !== draftKey} multiple accept="image/*,application/pdf,audio/*,text/plain,text/markdown" onChange={event => { analysisGeneration.current += 1; setFiles(Array.from(event.target.files ?? [])); setAgentRun(null); setAnswers({}); }} status={files.length ? `Выбрано файлов: ${files.length}` : "Фото, PDF, текст или аудио"} /><button type="button" className={recording ? "btn btn-danger btn-sm" : "btn btn-secondary btn-sm"} disabled={transcribing || analyzing || loadedFilesKey !== draftKey} onClick={() => void toggleRecording()}><Icon name="mic" size={17} />{transcribing ? "Распознаём…" : recording ? "Остановить запись" : "Продиктовать запрос"}</button></div>

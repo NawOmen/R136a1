@@ -703,3 +703,18 @@ html { --page-gutter:clamp(35px,2.73vw,44px); --header-gutter:clamp(32px,2.73vw,
 :root[data-theme] form :is(input,select,textarea):focus,
 :root[data-theme] form :is(input,select,textarea):active { transform:none; }
 :root[data-theme] form :is(input[type="checkbox"],input[type="radio"]):is(:focus,:active) { transform:none; }
+
+/* Этапы создания потребности переключаются кнопками; ввод не теряется. */
+.need-steps .need-step { display:flex; align-items:center; gap:10px; padding:0; border:0; background:none; color:inherit; font:inherit; cursor:pointer; border-radius:999px; }
+.need-steps .need-step:hover:not(:disabled) { color:var(--text); }
+.need-steps .need-step:disabled { cursor:default; opacity:.55; }
+.need-steps .need-step:focus-visible { outline:2px solid var(--primary); outline-offset:4px; }
+
+/* Список потребностей: сортировка, фильтр и действия в строке. */
+.needs-toolbar { display:flex; flex-wrap:wrap; gap:16px; align-items:flex-end; margin:0 0 20px; }
+.needs-toolbar .field { min-width:230px; margin:0; }
+.needs-toolbar .hint { margin:0 0 10px; }
+.need-row-actions { display:flex; flex-wrap:wrap; gap:8px; justify-content:flex-end; }
+.need-edit-dialog { width:min(680px,calc(100vw - 24px)); }
+.need-edit-changes { margin:0 0 16px; }
+@media (max-width:600px) { .needs-toolbar .field { flex:1 1 100%; min-width:0; }.need-row-actions { justify-content:stretch; }.need-row-actions > .btn { flex:1 1 140px; } }
