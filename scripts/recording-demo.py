@@ -86,7 +86,7 @@ def snapshot() -> None:
         private_write(STATE / "baseline.dump", dump)
         private_write(STATE / "baseline.json", json.dumps({"project": PROJECT, "database": DATABASE, "commit": sha}).encode())
     finally:
-        compose("start", "gateway-auth", "marketplace", "llm-gateway", "web")
+        compose("up", "-d", "--wait", "gateway-auth", "marketplace", "llm-gateway", "web")
     print("Начальная точка сохранена локально. Входы и товар сохранятся после reset.")
 
 
@@ -103,7 +103,7 @@ def reset() -> None:
     # При ошибке оставляем приложение остановленным: частичный сброс не выдаётся за успех.
     compose("exec", "-T", "postgres", "sh", "-c",
             'exec pg_restore -U "$POSTGRES_USER" -d "$POSTGRES_DB" --clean --if-exists --no-owner --single-transaction', input=dump)
-    compose("start", "gateway-auth", "marketplace", "llm-gateway", "web")
+    compose("up", "-d", "--wait", "gateway-auth", "marketplace", "llm-gateway", "web")
     print("Восстановлено начальное состояние: аккаунты и товар готовы, результаты репетиции убраны.")
     print("Закройте сеансы браузера и войдите заново: браузерные черновики в базу не входят.")
 

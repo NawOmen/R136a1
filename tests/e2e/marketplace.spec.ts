@@ -165,6 +165,7 @@ test(`${mode === "live-ai" ? "Живая локальная модель" : clas
     await page.goto("/needs/new");
     const deadline = new Date(); deadline.setDate(deadline.getDate() + 30);
     const day = `${deadline.getFullYear()}-${String(deadline.getMonth()+1).padStart(2,"0")}-${String(deadline.getDate()).padStart(2,"0")}`;
+    if (recording && mode === "manual") await page.getByLabel("Что требуется купить", {exact:true}).fill("Болт М8×40 - 20000 шт, класс прочности 8.8\nСталь. Доставка в Москву.\nБюджет 100 000 ₽.");
     if (mode === "live-ai") {
       await page.getByLabel("Что требуется купить", {exact:true}).fill(recording ? "Болт М8×40 - 20000 шт, класс прочности 8.8\nСталь. Доставка в Москву.\nБюджет 100 000 ₽." : `Нужно купить ${units} болтов М8×40, класс прочности 8.8, материал сталь, диаметр 8 мм, длина 40 мм. Стандарт: синтетическая спецификация Б-01. Единица заказа: шт. Бюджет ${budget} рублей. Получить до ${formatDate(day)}. Категория Строительство, Крепёж.`);
       const analysis = page.waitForResponse(response => response.request().method() === "POST" && /\/buyer-agent\/runs$/.test(new URL(response.url()).pathname), {timeout:240_000});
