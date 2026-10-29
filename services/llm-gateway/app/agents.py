@@ -660,13 +660,13 @@ class BuyerInvestigationAgent:
         material_warnings = list(warnings)
         review_notes: list[str] = []
         prompt = build_extraction_prompt(sources)
-        extraction, _, _ = await self.provider.structured(
+        extraction, extraction_route, _ = await self.provider.structured(
             SYSTEM_PROMPT, prompt, RawExtraction, prefer_external=False
         )
         extraction = normalize_dimensions(extraction, sources).model_copy(
             update={"category": canonical_category(extraction.category)}
         )
-        route = "local_qwen"
+        route = extraction_route
         fallback = None
         await log_tool(
             db,

@@ -175,6 +175,8 @@ TOOL_REGISTRY: dict[str, dict] = {
                        "schemas": ["ExplanationDraft"], "sources": "own_passport_untrusted", "executor": "model"},
     "external_route_fallback": {"kind": "read", "actors": ["system"], "roles": ["buyer_investigation"],
                                 "schemas": [], "sources": "none", "executor": "system"},
+    "trained_model_fallback": {"kind": "read", "actors": ["system"], "roles": ["buyer_investigation"],
+                               "schemas": [], "sources": "none", "executor": "system"},
     "apply_user_clarification": {"kind": "write", "actors": ["human"], "roles": ["buyer"],
                                  "schemas": ["ClarificationIn"], "sources": "user_answer", "executor": "human"},
     "human_approval": {"kind": "write", "actors": ["human"], "roles": ["buyer"],

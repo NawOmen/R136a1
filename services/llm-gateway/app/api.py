@@ -84,6 +84,8 @@ def _model_version(used_route: str) -> str:
         return f"{_local_model_version()}+{settings.deepseek_model}"
     if used_route == "rules_only":
         return "rules_only"
+    if used_route == "local_general":
+        return settings.ollama_model
     return _local_model_version()
 
 
@@ -450,6 +452,13 @@ async def analyze_buyer_request(
                 "DeepSeek",
                 f"Выполнен возврат к локальной модели: {fallback}",
             )
+        if used_route == "local_general":
+            # Маршрут виден в трассе прогона и в поле used_route; интерфейс покупателя
+            # не показывает служебную разницу между двумя локальными моделями.
+            await log_tool(
+                db, run.id, "trained_model_fallback", "success",
+                "обученный адаптер", "Разбор выполнен общей локальной моделью", actor="system",
+            )
         unreadable = (await db.scalars(select(AgentSource).where(
             AgentSource.run_id == run.id, AgentSource.active.is_(False), AgentSource.extracted_text == ""
         ))).all()
@@ -464,7 +473,7 @@ async def analyze_buyer_request(
         run.initial_result = result.model_dump(mode="json")
         run.duration_ms = round((perf_counter() - started_at) * 1000)
         run.output_chars = len(json.dumps(run.result, ensure_ascii=False))
-        if used_route in {"local", "local_qwen"}:
+        if used_route in {"local", "local_qwen", "local_general"}:
             run.estimated_cost_rub = (Decimal(run.duration_ms)/Decimal(60_000)*settings.local_inference_cost_rub_per_minute).quantize(Decimal("0.0001"),rounding=ROUND_HALF_UP)
             run.cost_basis = "Оценка времени локального инференса по настраиваемому тарифу эксплуатации"
         else:

@@ -443,6 +443,35 @@ def serve(settings: Settings) -> int:
     return 1
 
 
+def probe_generation(settings: Settings, timeout: float = 90.0) -> str | None:
+    """Проверить не только список моделей, но и реальную генерацию.
+
+    mlx_lm.server может отвечать на /v1/models, роняя поток генерации: тогда
+    каждый разбор падает, хотя «модель доступна». Возвращает None при успехе
+    и текст ошибки сервера при сбое.
+    """
+    body = json.dumps({
+        "model": "default_model", "stream": False, "temperature": 0, "max_tokens": 16,
+        "messages": [{"role": "user", "content": "/no_think ответь: ок"}],
+    }).encode()
+    request = urllib.request.Request(settings.base_url + "/v1/chat/completions", data=body,
+                                     headers={"Content-Type": "application/json"})
+    opener = urllib.request.build_opener(urllib.request.ProxyHandler({}))
+    try:
+        with opener.open(request, timeout=timeout) as response:
+            payload = json.loads(response.read(1024 * 1024))
+    except (OSError, ValueError, urllib.error.URLError) as exc:
+        return f"{type(exc).__name__}: {exc}"
+    if not isinstance(payload, dict):
+        return "неожиданный ответ сервера"
+    if payload.get("error"):
+        return str(payload["error"])
+    choices = payload.get("choices")
+    if not isinstance(choices, list) or not choices:
+        return "в ответе нет генерации"
+    return None
+
+
 def report_status(settings: Settings, out: Callable[[str], None] = print) -> int:
     ids = probe(settings, timeout=2.0)
     pid = read_pid(settings) or agent_pid()
@@ -464,6 +493,11 @@ def report_status(settings: Settings, out: Callable[[str], None] = print) -> int
         autostart = "включён в системе, но агент не загружен (сервер остановлен вручную)"
     else:
         autostart = "выключен"
+    if ids:
+        failure = probe_generation(settings)
+        out(f"Генерация:   {'работает' if failure is None else 'сбой — ' + failure}")
+        if failure is not None:
+            out("             перезапустите: scripts/local_model.py restart")
     out(f"Автозапуск:  {autostart}")
     out(f"Журнал:      {settings.log_file}")
     return 0 if ids else 1
