@@ -153,7 +153,13 @@ def draft_dates(text: str) -> str:
 
 
 def local(request):
-    return (getattr(request.app.state, "llm_provider", None) or RoutedProvider()).local
+    """Черновики переписки и разбор ответа — разговорная задача, а не извлечение фактов.
+
+    Обученный адаптер отвечает на разбор заявки покупателя; свободный текст и выбор
+    намерения он не готовит, поэтому здесь используется общая локальная модель.
+    """
+    provider = getattr(request.app.state, "llm_provider", None) or RoutedProvider()
+    return getattr(provider, "assistant", None) or provider.local
 
 
 @router.post("/api/v1/procurement-assistant/draft", response_model=DraftOut)

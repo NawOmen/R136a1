@@ -209,6 +209,9 @@ class DeepSeekProvider:
 class RoutedProvider:
     def __init__(self) -> None:
         self.local = TrainedMLXProvider() if settings.local_llm_backend == "mlx" else OllamaProvider()
+        # Разговорные задачи (справка, объяснение совместимости) идут в общую модель:
+        # обученный адаптер отвечает по фактам, а не беседует.
+        self.assistant = OllamaProvider() if settings.assistant_llm_backend == "ollama" else self.local
         self.external = DeepSeekProvider()
 
     async def structured(

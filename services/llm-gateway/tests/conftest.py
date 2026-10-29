@@ -147,11 +147,26 @@ async def client(session_factory, fake_provider):
     del app.state.llm_provider
 
 
+class FakeAssistant:
+    """Стаб общей модели: как настоящие провайдеры, возвращает только модель."""
+
+    route_name = "local_qwen"
+
+    def __init__(self, provider):
+        self.provider = provider
+
+    async def structured(self, system, prompt, response_model):
+        result = await self.provider.structured(system, prompt, response_model)
+        # Настоящие провайдеры возвращают модель; тестовый стаб может вернуть кортеж.
+        return result[0] if isinstance(result, tuple) else result
+
+
 class FakeProvider:
     route_name = "local_qwen"
 
     def __init__(self):
         self.local = self
+        self.assistant = FakeAssistant(self)
         self.extraction = None
         self.prompts = []
 

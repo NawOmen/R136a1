@@ -139,6 +139,7 @@ async def health() -> HealthOut:
         status="ok",
         local_backend=settings.local_llm_backend,
         local_model=_local_model_version(),
+        assistant_backend=settings.assistant_llm_backend,
         vision_model=settings.ollama_vision_model,
         external_enabled=bool(settings.deepseek_api_key),
     )
@@ -201,7 +202,7 @@ async def platform_assistant(
               "из него. Не создавай источники, ссылки или финансовые рекомендации. СПРАВКА: "
               + json.dumps(RECORDS, ensure_ascii=False))
     try:
-        result = await _provider(request).local.structured(system, data.question, KnowledgeSelection)
+        result = await _provider(request).assistant.structured(system, data.question, KnowledgeSelection)
         selection = KnowledgeSelection.model_validate(result)
     except ModelUnavailable as exc:
         raise HTTPException(503, "Локальный помощник временно недоступен; воспользуйтесь FAQ") from exc

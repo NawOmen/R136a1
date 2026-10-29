@@ -159,6 +159,8 @@ services:
       LOCAL_LLM_BACKEND: ${LOCAL_LLM_BACKEND:-mlx}
       MLX_BASE_URL: ${MLX_BASE_URL:-http://host.docker.internal:8080}
       TRAINED_MODEL_VERSION: ${TRAINED_MODEL_VERSION:-porukam-buyer-qwen3.5}
+      # Справка, объяснения и черновики переписки — общая модель: адаптер обучен извлечению фактов.
+      ASSISTANT_LLM_BACKEND: ${ASSISTANT_LLM_BACKEND:-ollama}
       MLX_MAX_TOKENS: ${MLX_MAX_TOKENS:-640}
       OLLAMA_MODEL: ${OLLAMA_MODEL:-qwen3.5:9b}
       OLLAMA_VISION_MODEL: ${OLLAMA_VISION_MODEL:-qwen3.5:9b}

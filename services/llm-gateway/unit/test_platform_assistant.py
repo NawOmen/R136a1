@@ -49,3 +49,46 @@ async def test_platform_assistant_with_ollama_grammar_compatibility(monkeypatch,
         assert response.json() == answer(KnowledgeSelection(source_ids=source_ids))
     else:
         assert "FAQ" in response.json()["detail"]
+
+
+@pytest.mark.asyncio
+async def test_platform_assistant_uses_general_model_when_trained_adapter_is_default(monkeypatch):
+    """Адаптер обучен извлечению фактов: выбор источников справки идёт в общую модель."""
+    from app.config import settings
+    monkeypatch.setattr(settings, "local_llm_backend", "mlx")
+    monkeypatch.setattr(settings, "assistant_llm_backend", "ollama")
+    app = FastAPI()
+    app.include_router(router)
+
+    async def authenticated_user():
+        return CurrentUser(uuid.uuid4())
+
+    app.dependency_overrides[get_current_user] = authenticated_user
+
+    class OllamaClient:
+        def __init__(self, **kwargs):
+            pass
+
+        async def __aenter__(self):
+            return self
+
+        async def __aexit__(self, *args):
+            pass
+
+        async def post(self, url, json):
+            import json as json_module
+
+            return Response(200, request=Request("POST", url), json={
+                "message": {"content": json_module.dumps({"source_ids": ["deal"]})},
+            })
+
+    async def trained_adapter_is_not_a_chat_model(self, system, prompt, response_model):
+        raise AssertionError("Выбор источников справки не должен идти в обученный адаптер")
+
+    monkeypatch.setattr("app.providers.httpx.AsyncClient", OllamaClient)
+    monkeypatch.setattr("app.providers.TrainedMLXProvider.structured",
+                        trained_adapter_is_not_a_chat_model)
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        response = await client.post("/api/v1/platform-assistant", json={"question": "Как согласовать условия сделки?"})
+    assert response.status_code == 200
+    assert "/deals" in response.json()["links"]

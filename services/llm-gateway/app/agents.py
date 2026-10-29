@@ -807,6 +807,7 @@ class SellerAgent:
     async def explain(
         self, passport: dict[str, Any], category: str, requirements: dict[str, FactValue]
     ) -> tuple[str, str]:
+        """Объяснение совместимости — разговорная задача, а не извлечение фактов."""
         system = (
             "Ты Seller Agent. Объясни по-русски, почему производственные возможности "
             "подходят или не подходят запросу. Не назначай цену, не резервируй мощность "
@@ -820,7 +821,5 @@ class SellerAgent:
             {"capability_passport": passport, "category": category, "requirements": requirements},
             ensure_ascii=False,
         )
-        result, route, _ = await self.provider.structured(
-            system, prompt, ExplanationDraft, prefer_external=False
-        )
-        return result.explanation, route
+        explanation = await self.provider.assistant.structured(system, prompt, ExplanationDraft)
+        return explanation.explanation, getattr(self.provider.assistant, "route_name", "local_qwen")
