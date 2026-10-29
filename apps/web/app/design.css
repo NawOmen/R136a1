@@ -721,3 +721,8 @@ html { --page-gutter:clamp(35px,2.73vw,44px); --header-gutter:clamp(32px,2.73vw,
 
 /* Потребность, временно скрытая покупателем из общего подбора. */
 .badge-hidden { background:var(--bg-accent); color:var(--text-muted); border:1px dashed var(--border); }
+
+/* Правка спецификации доступна сразу кнопкой, без раскрытия блока. */
+.need-edit-action { display:flex; justify-content:flex-end; align-items:center; }
+.need-edit-action:has(form) { justify-content:stretch; }
+.need-edit-action > form { width:100%; }

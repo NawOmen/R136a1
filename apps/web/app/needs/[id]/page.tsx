@@ -267,7 +267,7 @@ export default function NeedDetailPage() {
       {!isBuyer && !!need.requirement_decisions?.length && <section className="card"><h2>Уточнения покупателя</h2><p>В текущей версии покупатель разрешил противоречия в этих требованиях:</p>{need.requirement_decisions.map(item => <p key={item.field}>{formatCharacteristics({ [item.field]: item.confirmed_value }, need.category_profile)}</p>)}</section>}
       {isBuyer && ownedNeed && <details className="card need-disclosure"><summary>Требования, источники и история</summary><NeedRequirements key={`${need.id}:${need.revision}`} need={ownedNeed} addresses={addresses} /></details>}
       {isBuyer && ownedNeed && buyerCompany?.membership?.is_admin && ["open_for_offers", "waiting_for_match", "coalition_candidate", "awaiting_approvals"].includes(need.status) && (
-        <details className="card need-disclosure"><summary>Изменить требования</summary><NeedDraftEditor key={`${need.id}:${need.revision}`} need={ownedNeed} onSaved={async value => { setNeed(value); const token = getToken(); if (token) setOffers(await marketplace.getOffers(token, value.id)); }} /></details>
+        <div className="card need-edit-action"><NeedDraftEditor key={`${need.id}:${need.revision}`} need={ownedNeed} onSaved={async value => { setNeed(value); const token = getToken(); if (token) setOffers(await marketplace.getOffers(token, value.id)); }} /></div>
       )}
       {isBuyer && ownedNeed && need.status === "draft" && (
         <section className="card">
