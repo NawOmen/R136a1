@@ -59,6 +59,8 @@ function newRow(key = "", value = ""): CharacteristicRow {
 export default function NewNeedPage() {
   const manualRef = useRef<HTMLElement>(null);
   const briefRef = useRef<HTMLElement>(null);
+  const clarificationsRef = useRef<HTMLElement>(null);
+  const [clarifyError, setClarifyError] = useState<string | null>(null);
   const [manualExpanded, setManualExpanded] = useState(false);
   const [quantityApproved, setQuantityApproved] = useState(false);
   const router = useRouter();
@@ -287,6 +289,7 @@ export default function NewNeedPage() {
     try {
       analysisGeneration.current += 1;
       setAgentRun(null);
+      setClarifyError(null);
       const run = await agents.analyze(
         token,
         requestDescription.trim().length >= 3 ? requestDescription.trim() : "Подготовьте закупку по приложенным материалам.",
@@ -315,7 +318,7 @@ export default function NewNeedPage() {
     if (!token || !agentRun) return;
     const missing = agentRun.result.questions.some((question) => !answers[question.key]?.trim());
     if (missing) {
-      setError("Ответьте на все показанные вопросы.");
+      setClarifyError("Ответьте на все показанные вопросы.");
       return;
     }
     const parsed: Record<string, FactValue> = {};
@@ -326,19 +329,29 @@ export default function NewNeedPage() {
     }
     setAnalyzing(true);
     setError(null);
+    setClarifyError(null);
     try {
       const clarified = await agents.clarify(token, agentRun.id, parsed, agentRun.revision);
       if (activeScope.current !== scope) return;
       setAgentRun(clarified);
       setAnswers({});
+      setClarifyError(null);
       if (clarified.result.can_confirm) fillAgentResult(clarified);
     } catch (err) {
       if (activeScope.current !== scope) return;
-      setError(err instanceof MarketplaceError ? russianMessage(err.message) : "Не удалось сохранить уточнения.");
+      // Ошибка относится к полям уточнений: показываем её рядом с ними,
+      // а не наверху страницы, до которого нужно прокручивать.
+      setClarifyError(err instanceof MarketplaceError ? russianMessage(err.message) : "Не удалось сохранить уточнения.");
     } finally {
       if (activeScope.current === scope) setAnalyzing(false);
     }
   }
+
+  useEffect(() => {
+    // Ошибка ввода в уточнениях должна быть видна там, где поля, а не только наверху.
+    if (!clarifyError) return;
+    clarificationsRef.current?.scrollIntoView({ block: "center", behavior: "auto" });
+  }, [clarifyError]);
 
   function goToStep(step: "description" | "review") {
     // Этапы переключаются кнопками: назад — без потери введённого,
@@ -549,9 +562,10 @@ export default function NewNeedPage() {
           <div className="need-attachments"><FilePicker id="need_files" disabled={analyzing || loadedFilesKey !== draftKey} multiple accept="image/*,application/pdf,audio/*,text/plain,text/markdown" onChange={event => { analysisGeneration.current += 1; setFiles(Array.from(event.target.files ?? [])); setAgentRun(null); setAnswers({}); }} status={files.length ? `Выбрано файлов: ${files.length}` : "Фото, PDF, текст или аудио"} /><button type="button" className={recording ? "btn btn-danger btn-sm" : "btn btn-secondary btn-sm"} disabled={transcribing || analyzing || loadedFilesKey !== draftKey} onClick={() => void toggleRecording()}><Icon name="mic" size={17} />{transcribing ? "Распознаём…" : recording ? "Остановить запись" : "Продиктовать запрос"}</button></div>
           {files.length > 0 && <p className="hint need-file-list">{files.map(file => file.name).join(" · ")}</p>}
           <div className="need-brief__actions"><button type="button" className="btn btn-primary" disabled={analyzing || recording || transcribing || loadedFilesKey !== draftKey} onClick={() => void handleAnalyze()}>{analyzing ? "Заполняем детали…" : "Заполнить с ИИ"}<Icon name="arrow" size={18} /></button><button type="button" className="btn btn-secondary" disabled={analyzing || recording || transcribing} onClick={() => { setAgentRun(null); setAnswers({}); openManual(); }}>Заполнить вручную</button></div>
-          {agentRun && !agentRun.result.can_confirm && <section className="need-clarifications" aria-labelledby="clarification-heading"><h3 id="clarification-heading">Уточним детали</h3>
+          {agentRun && !agentRun.result.can_confirm && <section ref={clarificationsRef} className="need-clarifications" aria-labelledby="clarification-heading"><h3 id="clarification-heading">Уточним детали</h3>
+            {clarifyError && <p className="alert alert-error" role="alert">{clarifyError}</p>}
             {Array.from(new Set(agentRun.result.warnings)).map(warning => <p className="hint" key={warning}>{warning}</p>)}
-            {agentRun.result.questions.map(question => <div className="field" key={question.key}><label htmlFor={`answer_${question.key}`}>{question.question}</label>{question.options.length ? <select id={`answer_${question.key}`} value={answers[question.key] ?? ""} onChange={event => setAnswers(current => ({ ...current, [question.key]: event.target.value }))}><option value="">Выберите ответ</option>{question.options.map((option,index) => <option key={index} value={String(option)}>{displayValue(option)}</option>)}</select> : <input id={`answer_${question.key}`} value={answers[question.key] ?? ""} onChange={event => setAnswers(current => ({ ...current, [question.key]: event.target.value }))} />}</div>)}
+            {agentRun.result.questions.map(question => <div className="field" key={question.key}><label htmlFor={`answer_${question.key}`}>{question.question}</label>{question.options.length ? <select id={`answer_${question.key}`} value={answers[question.key] ?? ""} onChange={event => { setClarifyError(null); setAnswers(current => ({ ...current, [question.key]: event.target.value })); }}><option value="">Выберите ответ</option>{question.options.map((option,index) => <option key={index} value={String(option)}>{displayValue(option)}</option>)}</select> : <input id={`answer_${question.key}`} value={answers[question.key] ?? ""} onChange={event => { setClarifyError(null); setAnswers(current => ({ ...current, [question.key]: event.target.value })); }} />}</div>)}
             {agentRun.result.questions.length > 0 && <button type="button" className="btn btn-primary" disabled={analyzing} onClick={() => void handleClarify()}>{analyzing ? "Уточняем…" : "Продолжить"}<Icon name="arrow" size={18} /></button>}
           </section>}
         </section>}
