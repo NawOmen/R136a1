@@ -143,6 +143,27 @@ test("each term is independently editable, exact price survives and edits invali
   expect(state.sends[0]).toMatchObject({ draft_id: draftId, price_rub: "4.12", available_units: 15000, moq_units: 500, lead_time_days: 3, delivery_cost_rub: "1500.50", price_tiers: [], commercial_terms: { tax_basis: "includes_vat", vat_rate_pct: "20", delivery_method: "separate", exceptions: "Отгрузка одной партией" } });
 });
 
+test("editing after a successful action keeps focus in the field instead of the old preview warning", async ({ page }) => {
+  const state = await prepare(page);
+  await open(page, state);
+  await deliveryAndTax(state.card);
+  await state.card.getByRole("button", { name: "Проверить условия", exact: true }).click();
+  await expect(state.card.getByRole("button", { name: "Подтвердить отправку КП", exact: true })).toBeVisible();
+  const price = page.locator(`#offer_price_${needId}`);
+  // Exercise the action/input race in one turn, before the queued error scan.
+  await price.evaluate((input: HTMLInputElement) => {
+    input.closest("form")!.querySelector<HTMLButtonElement>(".offer-resource button")!.click();
+    input.focus();
+    Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value")!.set!.call(input, "4.90");
+    input.dispatchEvent(new Event("input", { bubbles: true }));
+  });
+  await expect(state.card.getByText("Условия изменились после проверки. Проверьте условия заново.", { exact: true })).toBeVisible();
+  await page.evaluate(() => new Promise<void>(resolve => requestAnimationFrame(() => requestAnimationFrame(() => requestAnimationFrame(() => resolve())))));
+  await expect(price).toBeFocused();
+  await expect(price).toHaveValue("4.90");
+  expect(state.sends).toHaveLength(0);
+});
+
 test("changing the source or SKU sends the chosen source rather than the original draft binding", async ({ page }) => {
   const state = await prepare(page, { warnings: true });
   await open(page, state);
