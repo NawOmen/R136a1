@@ -347,8 +347,10 @@ def ensure_ollama():
         atomic_private(STATE / "ollama.pid", str(process.pid).encode())
     wait_for("Ollama на хосте", lambda: bool(local_json("http://127.0.0.1:11434/api/version")))
     env = dict(os.environ, OLLAMA_HOST="127.0.0.1:11434", OLLAMA_NO_CLOUD="1")
-    run([binary, "pull", MODEL], env=env)
     tags = local_json("http://127.0.0.1:11434/api/tags")
+    if MODEL not in {m.get("name") for m in tags.get("models", [])}:
+        run([binary, "pull", MODEL], env=env)
+        tags = local_json("http://127.0.0.1:11434/api/tags")
     if MODEL not in {m.get("name") for m in tags.get("models", [])}:
         raise DeployError("Ollama не подтвердила загрузку qwen3.5:9b")
     # Проверяем генерацию, а не только наличие имени модели. Освобождаем память перед MLX.

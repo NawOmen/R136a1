@@ -251,6 +251,23 @@ class DeployLocalTests(unittest.TestCase):
             self.assertEqual(env["MLX_HOST"], "127.0.0.1")
             self.assertEqual(env["MLX_PORT"], "8080")
 
+    def test_cached_ollama_model_does_not_contact_registry_on_restart(self):
+        tags = {"models": [{"name": deploy.MODEL}]}
+        with mock.patch.object(deploy.shutil, "which", return_value="/installed/ollama"), \
+                mock.patch.object(deploy, "wait_for"), mock.patch.object(deploy, "run") as run, \
+                mock.patch.object(deploy, "local_json", side_effect=[tags, tags, {"message": {"content": "готово"}}]) as request:
+            deploy.ensure_ollama()
+            run.assert_not_called()
+            self.assertEqual(request.call_args.args[1]["keep_alive"], 0)
+
+    def test_missing_ollama_model_is_pulled_and_generation_checked(self):
+        tags = {"models": [{"name": deploy.MODEL}]}
+        with mock.patch.object(deploy.shutil, "which", return_value="/installed/ollama"), \
+                mock.patch.object(deploy, "wait_for"), mock.patch.object(deploy, "run") as run, \
+                mock.patch.object(deploy, "local_json", side_effect=[{}, {}, tags, {"message": {"content": "готово"}}]):
+            deploy.ensure_ollama()
+            self.assertEqual(run.call_args.args[0][1:], ["pull", deploy.MODEL])
+
 
 if __name__ == "__main__":
     unittest.main()
