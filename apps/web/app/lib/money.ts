@@ -39,3 +39,15 @@ export function displayMoney(value: Money | null | undefined, precision = 2): st
     return `${raw < BigInt(0) ? '−' : ''}${whole}${fraction ? ',' + fraction : ''} ₽`;
   } catch { return '—'; }
 }
+
+/** Round a new monetary entry HALF_UP using decimal digits, without binary floats. */
+export function moneyInputValue(value: Money | null | undefined): string {
+  if (value == null) return "";
+  const text = String(value).trim().replace(",", ".");
+  const parts = /^(-?)(\d+)(?:\.(\d*))?$/.exec(text);
+  if (!parts || (parts[3]?.length ?? 0) <= 2) return text;
+  const [, sign, whole, fraction] = parts;
+  let cents = BigInt(whole) * BigInt(100) + BigInt(fraction.slice(0, 2));
+  if (fraction[2] >= "5") cents += BigInt(1);
+  return `${sign}${cents / BigInt(100)}.${(cents % BigInt(100)).toString().padStart(2, "0")}`;
+}

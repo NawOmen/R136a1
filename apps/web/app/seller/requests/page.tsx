@@ -1,8 +1,9 @@
 "use client";
+import MoneyInput from "../../components/MoneyInput";
 import { formatDate } from "../../lib/dates";
 import { russianMessage } from "../../lib/russianMessages";
-import { russianLabel } from "../../lib/presentation";
 import CommercialTermsFields, { emptyCommercialTerms } from "../../components/CommercialTermsFields";
+import { moneyInputValue } from "../../lib/money";
 import type { CommercialTerms } from "../../lib/marketplace";
 
 // Лента открытых потребностей для продавца (GET /needs).
@@ -12,7 +13,6 @@ import type { CommercialTerms } from "../../lib/marketplace";
 import Link from "next/link";
 import { FormEvent, useEffect, useRef, useState } from "react";
 import { getToken } from "../../lib/api";
-import { agents, FactValue } from "../../lib/agents";
 import {
   ApiError,
   formatCharacteristics,
@@ -52,8 +52,6 @@ export default function SellerRequestsPage() {
   const [moq, setMoq] = useState("");
   const [submittedIds, setSubmittedIds] = useState<Set<string>>(new Set());
   const [submitting, setSubmitting] = useState(false);
-  const [explainingId, setExplainingId] = useState<string | null>(null);
-  const [explanations, setExplanations] = useState<Record<string, string>>({});
   const [query, setQuery] = useState("");
   const [draftingId, setDraftingId] = useState<string | null>(null);
   const [drafts, setDrafts] = useState<Record<string, OfferDraft>>({});
@@ -94,7 +92,7 @@ export default function SellerRequestsPage() {
     const token = getToken();
     if (!token || !companyId) return;
     let cancelled = false;
-    setDrafts({}); setExplanations({}); setSubmittedIds(new Set()); setOpenFormId(null); setProducts([]);
+    setDrafts({}); setSubmittedIds(new Set()); setOpenFormId(null); setProducts([]);
     void marketplace.getCompanyProducts(token, companyId).then(items=>{if(!cancelled)setProducts(items);}).catch((e:Error)=>{if(!cancelled)setError(e.message);});
     setLoaded(false);
     setError(null);
@@ -129,12 +127,12 @@ export default function SellerRequestsPage() {
     setResourceKind(draft?.payload.resource_kind ?? "capacity");
     setProductId(draft?.payload.product_id ?? "");
     setCommercialTerms({ ...emptyCommercialTerms, expenses: [] });
-    setPrice(draft?.payload.price_rub != null ? String(draft.payload.price_rub) : "");
+    setPrice(draft?.payload.price_rub != null ? moneyInputValue(draft.payload.price_rub) : "");
     // Start with the buyer's requested quantity. A shortage must be explicit,
     // never silently converted into agreement to supply only part of the need.
     setUnits(String(need.volume_units));
     setLeadTime(draft?.payload.lead_time_days != null ? String(draft.payload.lead_time_days) : "");
-    setDeliveryCost(draft?.payload.delivery_cost_rub != null ? String(draft.payload.delivery_cost_rub) : "");
+    setDeliveryCost(draft?.payload.delivery_cost_rub != null ? moneyInputValue(draft.payload.delivery_cost_rub) : "");
     setMoq(draft?.payload.moq_units != null ? String(draft.payload.moq_units) : "");
     setRequestKeys((current) => ({ ...current, [need.id]: crypto.randomUUID() }));
     setChecks((current) => { const rest = { ...current }; delete rest[need.id]; return rest; });
@@ -224,40 +222,6 @@ export default function SellerRequestsPage() {
     }
   }
 
-  async function handleExplain(need: NeedFeedItem) {
-    const token = getToken();
-    if (!token || !company) return;
-    const requirements: Record<string, FactValue> = {};
-    for (const [key, value] of Object.entries(need.characteristics)) {
-      if (
-        typeof value === "string" ||
-        typeof value === "number" ||
-        typeof value === "boolean" ||
-        (Array.isArray(value) && value.every((item) => typeof item === "string"))
-      ) {
-        requirements[key] = value as FactValue;
-      }
-    }
-    setExplainingId(need.id);
-    setError(null);
-    try {
-      const result = await agents.explainSellerMatch(
-        token,
-        company.id,
-        need.category,
-        requirements,
-      );
-      setExplanations((current) => ({
-        ...current,
-        [need.id]: `${result.reasons.join(" ")} ${result.explanation}`,
-      }));
-    } catch (err) {
-      setError(err instanceof ApiError ? russianMessage(err.message) : "Не удалось объяснить совпадение.");
-    } finally {
-      setExplainingId(null);
-    }
-  }
-
   if (loading) return <p className="hint">Загрузка...</p>;
 
   if (meError) {
@@ -333,28 +297,6 @@ export default function SellerRequestsPage() {
               <p className="demand-description">{formatCharacteristics(need.characteristics, need.category_profile)}</p>
               <dl className="demand-facts"><div><dt>Необходимый объём</dt><dd>{formatUnits(need.volume_units, itemUnit(need.characteristics))}</dd></div><div><dt>Статус запроса</dt><dd>{NEED_STATUS_LABELS[need.status]}</dd></div></dl>
 
-              {explanations[need.id] && (
-                <p className="match-explanation"><b>Почему подходит</b>{explanations[need.id]}</p>
-              )}
-
-              {openFormId === need.id && drafts[need.id] && (
-                <details className="offer-sources">
-                  <summary>Откуда взяты условия</summary>
-                  <ul className="draft-fields">
-                    {drafts[need.id].fields.map((field) => (
-                      <li key={field.name}>
-                        <b>{field.label}:</b>{" "}
-                        {field.value != null ? String(field.value) : "нужно указать"}
-                        <span className="draft-source"> исходный источник: {russianLabel(field.source, "Данные предложения")}</span>
-                        {!field.confirmed && <span className="draft-manual"> решение человека</span>}
-                        {field.note && <span className="draft-note"> {field.note}</span>}
-                      </li>
-                    ))}
-                  </ul>
-                  {!draftAttached && <p className="hint">Источник объёма изменён вручную. Система проверит выбранный ресурс заново.</p>}
-                </details>
-              )}
-
               {submittedIds.has(need.id) ? (
                 <p className="hint mode-hint">Предложение отправлено. Ожидайте решения покупателя.</p>
               ) : openFormId === need.id ? (
@@ -362,21 +304,17 @@ export default function SellerRequestsPage() {
                   <div className="seller-offer__intro">
                     <h3>Условия предложения</h3>
                     <p>Оставьте подходящие условия или измените любой пункт. Покупатель получит предложение только после вашего подтверждения.</p>
-                    <p className="hint">Объём — из запроса покупателя. Цена, минимальная партия и срок — из каталога продавца. Указанная цена фиксирована для этого предложения.</p>
+                    <p className="hint">Проверьте заполненные поля. Указанная цена фиксирована для этого предложения.</p>
                   </div>
-                  {drafts[need.id] && !draftAttached && <p className="alert alert-warning seller-offer__wide">Источник объёма изменён. Проверьте цену, срок и минимальную партию для выбранного товара.</p>}
-                  {drafts[need.id]?.warnings.map((warning) => <p className="alert alert-warning seller-offer__wide" key={warning}>{warning}</p>)}
                   <fieldset className="seller-offer__fields" disabled={submitting || confirming}>
                   <legend className="visually-hidden">Редактируемые условия предложения</legend>
                   <div className="field">
                     <label htmlFor={`offer_price_${need.id}`}>
                       Цена за единицу, ₽<span className="req">*</span>
                     </label>
-                    <input
+                    <MoneyInput
                       id={`offer_price_${need.id}`}
-                      type="number"
-                      min="0"
-                      step="any"
+                      min="0.01"
                       value={price}
                       onChange={(event) => setPrice(event.target.value)}
                       placeholder="Например, 11.2"
@@ -432,11 +370,9 @@ export default function SellerRequestsPage() {
                     <label htmlFor={`offer_delivery_${need.id}`}>
                       Отдельная доставка, ₽<span className="req">*</span>
                     </label>
-                    <input
+                    <MoneyInput
                       id={`offer_delivery_${need.id}`}
-                      type="number"
                       min="0"
-                      step="0.01"
                       disabled={commercialTerms.delivery_method !== "separate"}
                       value={deliveryCost}
                       onChange={(event) => setDeliveryCost(event.target.value)}
@@ -444,7 +380,7 @@ export default function SellerRequestsPage() {
                     />
                   </div>
                   </fieldset>
-                  <p className="hint seller-offer__wide">Неизвестные условия не подставляются: уточните доставку и НДС. Характеристики товара должны соответствовать запросу покупателя.</p>
+                  <p className="hint seller-offer__wide">Уточните доставку и НДС перед отправкой.</p>
                   <div className="actions seller-offer__wide">
                     <button type="submit" className="btn btn-primary" disabled={submitting || confirming}>
                       {submitting ? "Проверяем..." : "Проверить условия"}
@@ -484,15 +420,7 @@ export default function SellerRequestsPage() {
                   )}
                 </form>
               ) : (
-                <div className="demand-actions demand-actions--proposal">
-                  <button
-                    type="button"
-                    className="btn btn-secondary btn-sm"
-                    disabled={explainingId === need.id}
-                    onClick={() => void handleExplain(need)}
-                  >
-                    {explainingId === need.id ? "Проверяю..." : "Почему подходит?"}
-                  </button>
+                <div className="demand-actions">
                   <button type="button" className="btn btn-primary btn-sm" disabled={draftingId !== null || submitting || confirming} onClick={() => void handlePrepareDraft(need)}>
                     {draftingId === need.id ? "Заполняем условия..." : "Предложить условия"}
                   </button>

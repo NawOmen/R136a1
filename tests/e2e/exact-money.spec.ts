@@ -1,5 +1,5 @@
 import { expect, test } from "@playwright/test";
-import { displayMoney, lineAmount, previewLineAmount, scaledMoney } from "../../apps/web/app/lib/money";
+import { displayMoney, lineAmount, previewLineAmount, scaledMoney, moneyInputValue } from "../../apps/web/app/lib/money";
 import { marketplace } from "../../apps/web/app/lib/marketplace";
 import type { Product } from "../../apps/web/app/lib/marketplace";
 import { emptyCatalogFilters, filterCatalog, readCatalogLocation, validateCatalogFilters, writeCatalogLocation } from "../../apps/web/app/lib/catalogFilters";
@@ -63,4 +63,19 @@ test("catalogue validation rejects invalid ranges and URL state retains the sear
   expect(new URLSearchParams(reset).get("q")).toBe("коробка");
   expect(new URLSearchParams(reset).has("price_from")).toBe(false);
   expect(readCatalogLocation("?sort=not-a-sort").sort).toBe("popular");
+});
+
+
+test("new money input rounds decimal strings to kopecks without losing large integer digits", () => {
+  for (const [input, expected] of [
+    ["", ""], ["1.", "1."], ["1.20", "1.20"], ["1,25", "1.25"],
+    ["2.675", "2.68"], ["4.123456789012", "4.12"], ["9.999", "10.00"],
+    ["0.005", "0.01"], ["-2.675", "-2.68"],
+    ["9007199254740993.995", "9007199254740994.00"],
+  ]) expect(moneyInputValue(input)).toBe(expected);
+  expect(moneyInputValue(null)).toBe("");
+  // Formatting a copy must not mutate a saved price or change exact API arithmetic.
+  const original = "4.123456789012";
+  expect(moneyInputValue(original)).toBe("4.12");
+  expect(scaledMoney(original)).toBe(BigInt("4123456789012"));
 });

@@ -1,4 +1,5 @@
 "use client";
+import MoneyInput from "./MoneyInput";
 import { CharacteristicValue } from "./CharacteristicValue";
 import { DateInput } from "./DateInput";
 
@@ -92,7 +93,7 @@ export default function NeedDraftEditor({ need, onSaved, editing: controlledEdit
       </div>)}
       <button type="button" className="btn btn-secondary btn-sm" onClick={() => setRows([...rows, { key: "", value: "", original: "" }])}>Добавить характеристику</button>
       <div className="field"><label htmlFor="edit-quantity">Количество единиц</label><input id="edit-quantity" required type="number" min="0.000001" step="any" value={quantity} onChange={e => setQuantity(e.target.value)} /></div>
-      <div className="field"><label htmlFor="edit-budget">Бюджет, ₽</label><input id="edit-budget" type="number" min="0.01" step="0.01" value={budget} onChange={e => setBudget(e.target.value)} /></div>
+      <div className="field"><label htmlFor="edit-budget">Бюджет, ₽</label><MoneyInput id="edit-budget" min="0.01" value={budget} onChange={e => setBudget(e.target.value)} /></div>
       <div className="field"><label htmlFor="edit-deadline">Срок поставки</label><DateInput id="edit-deadline" required value={deadline} onValueChange={e => setDeadline(e)} /></div>
       <div className="field"><label htmlFor="edit-valid">Актуально до</label><DateInput id="edit-valid" required value={validUntil} onValueChange={e => setValidUntil(e)} /></div>
       <div className="field"><label htmlFor="edit-address">Адрес доставки</label><select id="edit-address" value={address} onChange={e => setAddress(e.target.value)}><option value="">Не указан</option>{addresses.map(item => <option key={item.id} value={item.id}>{item.address}</option>)}</select></div>

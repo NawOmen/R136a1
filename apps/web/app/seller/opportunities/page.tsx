@@ -1,4 +1,5 @@
 "use client";
+import MoneyInput from "../../components/MoneyInput";
 import { displayValue } from "../../lib/presentation";
 import { DateInput } from "../../components/DateInput";
 import { russianMessage } from "../../lib/russianMessages";
@@ -242,7 +243,7 @@ export default function MarketOpportunitiesPage() {
             Черновик создан без цены и публикации. Заполните условия и подтвердите их вручную.
           </p>
           <div className="form-grid">
-            <div className="field"><label>Цена за единицу, ₽</label><input type="number" step="any" min="0.000000000001" required value={unitPrice} onChange={(e) => setUnitPrice(e.target.value)} /></div>
+            <div className="field"><label>Цена за единицу, ₽</label><MoneyInput min="0.01" required value={unitPrice} onChange={(e) => setUnitPrice(e.target.value)} /></div>
             <div className="field"><label>Подтверждённая мощность, {russianUnit(draftCoalition.unit)}</label><input type="number" min="1" required value={capacity} onChange={(e) => setCapacity(e.target.value)} /></div>
             <div className="field"><label>Окончание набора</label><DateInput required value={fillDeadline} onValueChange={(e) => setFillDeadline(e)} /></div>
             <div className="field"><label>Начало производства</label><DateInput required value={productionStart} onValueChange={(e) => setProductionStart(e)} /></div>
@@ -261,7 +262,7 @@ export default function MarketOpportunitiesPage() {
               </div>
             </div>
           ))}
-          <label>Общие расходы на запуск партии, ₽<input type="number" min="0" step="0.01" required value={sharedCost} onChange={event=>setSharedCost(event.target.value)}/></label>
+          <label>Общие расходы на запуск партии, ₽<MoneyInput min="0" required value={sharedCost} onChange={event=>setSharedCost(event.target.value)}/></label>
           <p className="hint">Итого партии: {formatUnits(draftCoalition.combined_volume_units, draftCoalition.unit)}. Цена, логистика и выгода будут проверены отдельно для каждого участника обычным кодом.</p>
           <div className="actions">
             <button type="submit" className="btn btn-success" disabled={working}>Проверить и направить участникам</button>

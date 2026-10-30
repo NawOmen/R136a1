@@ -1,8 +1,9 @@
 "use client";
+import MoneyInput from "../../components/MoneyInput";
 import { canonicalCharacteristicKey } from "../../lib/categoryProfiles";
 import { russianMessage } from "../../lib/russianMessages";
 import { displayValue, fieldName } from "../../lib/presentation";
-import { lineAmount, previewLineAmount } from "../../lib/money";
+import { lineAmount, previewLineAmount, moneyInputValue } from "../../lib/money";
 
 // Товары компании (GET/POST /companies/{id}/products): список, форма создания,
 // публикация/снятие с публикации (POST /products/{id}/publish).
@@ -386,11 +387,9 @@ export default function SellerProductsPage() {
             <label htmlFor="product_price">
               Цена за единицу, ₽<span className="req">*</span>
             </label>
-            <input
+            <MoneyInput
               id="product_price"
-              type="number"
-              min="0"
-              step="any"
+              min="0.01"
               value={price}
               onChange={(event) => setPrice(event.target.value)}
               placeholder="Например, 11.2"
@@ -403,14 +402,14 @@ export default function SellerProductsPage() {
               <div className="char-row" key={index}>
                 <input type="number" min="0.000001" step="any" value={tier.min_units} aria-label="Объём ступени"
                   onChange={(event) => setTiers((current) => current.map((item, i) => i === index ? {...item, min_units: Number(event.target.value)} : item))} />
-                <input type="number" min="0.000000000001" step="any" value={tier.unit_price_rub} aria-label="Цена ступени"
+                <MoneyInput min="0.01" value={tier.unit_price_rub} aria-label="Цена ступени"
                   onChange={(event) => setTiers((current) => current.map((item, i) => i === index ? {...item, unit_price_rub: String(event.target.value)} : item))} />
                 <span className="company-meta">{formatRub(previewLineAmount(tier.unit_price_rub, tier.min_units))} за партию</span>
                 <button type="button" className="btn btn-secondary btn-sm" onClick={() => setTiers((current) => current.filter((_, i) => i !== index))}>Удалить</button>
               </div>
             ))}
             <button type="button" className="btn btn-secondary btn-sm" disabled={tiers.length >= 10}
-              onClick={() => setTiers((current) => [...current, {min_units: Number(moq) || 1, unit_price_rub: String(price) || 1}])}>
+              onClick={() => setTiers((current) => [...current, {min_units: Number(moq) || 1, unit_price_rub: moneyInputValue(price) || "1"}])}>
               + Добавить ценовую ступень
             </button>
           </div>

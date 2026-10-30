@@ -1,4 +1,5 @@
 "use client";
+import MoneyInput from "./MoneyInput";
 import { useEffect, useRef, useState } from "react";
 import { DateInput } from "./DateInput";
 import { Icon } from "./Icon";
@@ -106,7 +107,7 @@ export function NeedEditDialog({ need, onSaved, onClose }: {
       </div>
       <div className="need-form-grid need-commercial">
         <div className="field"><label htmlFor="edit-volume">Количество</label><input id="edit-volume" type="number" min="0.000001" step="any" value={volumeUnits} disabled={busy} onChange={event => setVolumeUnits(event.target.value)} required /></div>
-        <div className="field"><label htmlFor="edit-budget">Бюджет, ₽</label><input id="edit-budget" type="number" min="0.01" step="0.01" value={budgetRub} disabled={busy} onChange={event => setBudgetRub(event.target.value)} /></div>
+        <div className="field"><label htmlFor="edit-budget">Бюджет, ₽</label><MoneyInput id="edit-budget" min="0.01" value={budgetRub} disabled={busy} onChange={event => setBudgetRub(event.target.value)} /></div>
         <div className="field"><label htmlFor="edit-deadline">Получить до</label><DateInput id="edit-deadline" value={deadlineDate} disabled={busy} onValueChange={setDeadlineDate} required /></div>
         <div className="field"><label htmlFor="edit-valid">Карточка актуальна до</label><DateInput id="edit-valid" value={validUntil} disabled={busy} onValueChange={setValidUntil} /></div>
       </div>

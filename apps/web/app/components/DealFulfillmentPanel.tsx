@@ -1,4 +1,5 @@
 "use client";
+import MoneyInput from "./MoneyInput";
 import { DateInput } from "./DateInput";
 import { formatDate, formatDateTime } from "../lib/dates";
 
@@ -95,7 +96,7 @@ export default function DealFulfillmentPanel({ dealId, companyId, isBuyer, canMa
       link.href = url; link.download = "Материал сделки"; link.click(); URL.revokeObjectURL(url); });
   }
   const files = (record: FulfillmentRecord) => record.attachments?.map((id, i) => <button type="button" className="btn btn-secondary btn-sm" key={id} disabled={pending} onClick={() => void download(id)}>Материал {i + 1}</button>);
-  const input = (key: string, label: string, type = "text", required = true) => <div className="field"><label htmlFor={`fulfillment-${key}`}>{label}</label>{type === "date" ? <DateInput id={`fulfillment-${key}`} required={required} value={f(key)} onValueChange={value => change(key, value)} /> : <input id={`fulfillment-${key}`} type={type} required={required} value={f(key)} min={type === "number" ? "0" : undefined} step={type === "number" ? "any" : undefined} maxLength={type === "text" ? 500 : undefined} onChange={e => change(key, e.target.value)} />}</div>;
+  const input = (key: string, label: string, type = "text", required = true) => <div className="field"><label htmlFor={`fulfillment-${key}`}>{label}</label>{type === "date" ? <DateInput id={`fulfillment-${key}`} required={required} value={f(key)} onValueChange={value => change(key, value)} /> : key === "cost" ? <MoneyInput id={`fulfillment-${key}`} required={required} value={f(key)} min="0" onChange={e => change(key, e.target.value)} /> : <input id={`fulfillment-${key}`} type={type} required={required} value={f(key)} min={type === "number" ? "0" : undefined} step={type === "number" ? "any" : undefined} maxLength={type === "text" ? 500 : undefined} onChange={e => change(key, e.target.value)} />}</div>;
   const options = data ? ["message", ...(canManage ? [!isBuyer && !data.dispatch && !data.batches.length && "prepare", !isBuyer && data.stages.prepare && !data.stages.production && "production",
     isBuyer && !data.logistics && "logistics", !isBuyer && data.stages.production && data.logistics?.confirmed && data.totals.unshipped_units > 0 && "shipment",
     isBuyer && data.batches.some(b => b.units > b.received + b.missing) && "receipt", isBuyer && data.batches.some(b => b.received > b.inspected) && "inspection",

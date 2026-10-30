@@ -1,4 +1,5 @@
 "use client";
+import { moneyInputValue } from "../../lib/money";
 import { russianMessage } from "../../lib/russianMessages";
 import { russianLabel } from "../../lib/presentation";
 import CommercialTermsFields, { emptyCommercialTerms } from "../../components/CommercialTermsFields";
@@ -28,15 +29,23 @@ export default function SellerReservesPage() {
   async function decide(item: ReserveCommitment, decision: "approved" | "rejected") {
     const token = getToken(); if (!token || !companyId) return;
     const ask = (label: string, value: string | number | null) => window.prompt(label, value === null ? "" : String(value));
+    const askMoney = (label: string, value: string | number | null) => {
+      const answer = window.prompt(label, moneyInputValue(value));
+      return answer == null ? null : moneyInputValue(answer);
+    };
     const capacity = decision === "approved" ? ask("Подтверждённая мощность, ед.:", item.proposed_capacity_units) : null;
     const moq = decision === "approved" ? ask("минимальный заказ, ед.:", item.proposed_moq_units) : null;
-    const price = decision === "approved" ? ask("Цена за единицу, ₽:", item.proposed_unit_price_rub) : null;
+    const price = decision === "approved" ? askMoney("Цена за единицу, ₽:", item.proposed_unit_price_rub) : null;
     const terms = commercialTerms[item.id]??emptyCommercialTerms;
-    const delivery = ["included","self_pickup"].includes(terms.delivery_method) ? "0" : decision === "approved" ? ask("Логистика, ₽:", item.proposed_delivery_cost_rub) : null;
+    const delivery = ["included","self_pickup"].includes(terms.delivery_method) ? "0" : decision === "approved" ? askMoney("Логистика, ₽:", item.proposed_delivery_cost_rub) : null;
     const lead = decision === "approved" ? ask("Срок, дней:", item.proposed_lead_time_days) : null;
     const heldUntil = decision === "approved" ? window.prompt("Удерживать мощность до (ГГГГ-ММ-ДД):") : null;
     const switchover = decision === "approved" ? window.prompt("Переключение за, дней (пусто — не указано):", "") : null;
     if (decision === "approved" && [capacity, moq, price, delivery, lead, heldUntil].some((value) => !value)) return;
+    if (decision === "approved" && (!/^\d+(?:\.\d{0,2})?$/.test(price!) || !/^\d+(?:\.\d{0,2})?$/.test(delivery!))) {
+      setError("Введите цену и логистику в рублях, максимум два знака после запятой.");
+      return;
+    }
     const proposed = decision === "approved" ? {
       company_id: companyId, decision,
       commercial_terms: commercialTerms[item.id]??emptyCommercialTerms,
@@ -45,7 +54,7 @@ export default function SellerReservesPage() {
       held_until: heldUntil,
       ...(switchover && switchover.trim() ? { switchover_days: Number(switchover) } : {}),
     } : { company_id: companyId, decision };
-    if (!window.confirm(decision === "approved" ? "Подтвердить цену и удержание мощности?" : "Отклонить приглашение?")) return;
+    if (!window.confirm(decision === "approved" ? `Подтвердить цену ${formatRub(price)} за единицу, логистику ${formatRub(delivery)} и удержание мощности?` : "Отклонить приглашение?")) return;
     setWorking(item.id);
     try { await marketplace.decideReserve(token, item.id, proposed); await reload(); }
     catch (err) { setError(err instanceof ApiError ? russianMessage(err.message) : "Решение не сохранено."); }

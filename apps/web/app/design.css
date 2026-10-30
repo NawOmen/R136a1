@@ -6,7 +6,6 @@
 .btn-danger { color: var(--danger); background: var(--danger-soft); }.btn-success { color: var(--success); background: var(--success-soft); }.btn:active:not(:disabled) { transform: translateY(1px) scale(.98); transition-duration: 100ms; }.btn:disabled { opacity: .5; cursor: not-allowed; box-shadow: none; }
 .btn-sm { min-height: 38px; padding: 8px 13px; font-size: 12px; }.btn-lg { min-height: 50px; padding: 14px 22px; }.text-link { display: inline-flex; align-items: center; gap: 10px; font-size: 14px; font-weight: 650; }
 .demand-actions > .btn-primary { grid-column: 1 / -1; }
-.demand-actions--proposal { grid-template-columns: 1fr; }
 .demand-card--editing { grid-column: 1 / -1; }
 .demand-card--editing h2,.demand-card--editing .demand-description { min-height: 0; }
 .seller-offer { margin-top: 24px; }
@@ -21,9 +20,6 @@
 .seller-offer__fields label:has(> input),.seller-offer__fields label:has(> select) { display: flex; flex-direction: column; gap: 8px; }
 .seller-offer__fields input,.seller-offer__fields select { width: 100%; max-width: 100%; min-width: 0; font-size: 16px !important; }
 .seller-offer__wide { margin-top: 20px; }
-.offer-sources { margin: 20px 0 0; padding-block: 12px; border-block: 1px solid var(--border); }
-.offer-sources > summary { color: var(--text-muted); font-size: 14px; cursor: pointer; }
-.offer-sources .draft-fields { margin-top: 12px; }
 @media (max-width: 700px) {
   .seller-offer__fields,.seller-offer__fields .form-grid { grid-template-columns: minmax(0,1fr); }
   .seller-offer .actions > .btn { flex: 1 1 100%; }

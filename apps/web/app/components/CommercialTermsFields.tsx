@@ -1,4 +1,5 @@
 "use client";
+import MoneyInput from "./MoneyInput";
 import type { CommercialTerms } from '../lib/marketplace';
 export const emptyCommercialTerms: CommercialTerms = {delivery_method:'unknown',tax_basis:'unknown',vat_rate_pct:null,expenses:[]};
 export default function CommercialTermsFields({value,onChange,disabled=false}:{value:CommercialTerms;onChange:(value:CommercialTerms)=>void;disabled?:boolean}) {
@@ -18,7 +19,7 @@ export default function CommercialTermsFields({value,onChange,disabled=false}:{v
     {(value.expenses??[]).map((expense,index)=><div className="form-grid" key={index}>
       <label>Статья<select value={expense.code} onChange={event=>onChange({...value,expenses:value.expenses!.map((row,i)=>i===index?{...row,code:event.target.value as typeof expense.code}:row)})}><option value="individual_operations">Индивидуальные операции</option><option value="reserve_holding">Удержание резерва</option><option value="switching">При переключении поставщика</option><option value="other">Другой расход</option></select></label>
       <label>Название<input required value={expense.title} onChange={event=>onChange({...value,expenses:value.expenses!.map((row,i)=>i===index?{...row,title:event.target.value}:row)})}/></label>
-      <label>Сумма, ₽<input type="number" min="0" step="0.01" value={expense.amount_rub??''} onChange={event=>onChange({...value,expenses:value.expenses!.map((row,i)=>i===index?{...row,amount_rub:event.target.value||null}:row)})}/></label>
+      <label>Сумма, ₽<MoneyInput min="0" value={expense.amount_rub??''} onChange={event=>onChange({...value,expenses:value.expenses!.map((row,i)=>i===index?{...row,amount_rub:event.target.value||null}:row)})}/></label>
       <label>Источник тарифа<input required value={expense.source} onChange={event=>onChange({...value,expenses:value.expenses!.map((row,i)=>i===index?{...row,source:event.target.value}:row)})}/></label>
       <label>Версия тарифа<input required value={expense.version} onChange={event=>onChange({...value,expenses:value.expenses!.map((row,i)=>i===index?{...row,version:event.target.value}:row)})}/></label>
       <button type="button" className="btn btn-secondary" onClick={()=>onChange({...value,expenses:value.expenses!.filter((_,i)=>i!==index)})}>Удалить статью</button>
