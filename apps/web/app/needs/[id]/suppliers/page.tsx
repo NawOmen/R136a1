@@ -66,10 +66,10 @@ export default function SupplierSelectionPage() {
   const [tab, setTab] = useState<TabKey>("suppliers");
   const [openConversation, setOpenConversation] = useState<string | null>(null);
 
-  async function load() {
+  async function load(background = false) {
     const token = getToken();
     if (!token || !needId) return;
-    setLoading(true);
+    if (!background) setLoading(true);
     setError(null);
     try {
       const current = await marketplace.getNeed(token, needId);
@@ -86,7 +86,7 @@ export default function SupplierSelectionPage() {
     } catch (err: unknown) {
       setError(err instanceof Error ? russianMessage(err.message) : "Не удалось загрузить подбор поставщиков.");
     } finally {
-      setLoading(false);
+      if (!background) setLoading(false);
     }
   }
 
@@ -197,12 +197,12 @@ export default function SupplierSelectionPage() {
                   <div className="supplier-tile__actions">
                     <Link className="btn btn-secondary btn-sm" href={`/producers/${item.company_id}`}>О поставщике</Link>
                     {request
-                      ? <button type="button" className="btn btn-primary btn-sm" aria-expanded={openConversation === request.id} onClick={() => setOpenConversation(openConversation === request.id ? null : request.id)}>{openConversation === request.id ? "Скрыть переписку" : "Переписка"}</button>
+                      ? <button type="button" className="btn btn-primary btn-sm" aria-expanded={openConversation === request.id} onClick={() => setOpenConversation(openConversation === request.id ? null : request.id)}>{openConversation === request.id ? "Скрыть чат" : "Чат"}</button>
                       : canManage && <button type="button" className="btn btn-primary btn-sm" disabled={busy === item.company_id} onClick={() => void askQuote(item.company_id)}>{busy === item.company_id ? "Отправляем…" : "Запросить КП"}</button>}
                   </div>
 
                   {request && openConversation === request.id && companyId && <div className="supplier-tile__conversation">
-                    <SupplierConversation key={`${request.id}:${request.revision}`} row={request} companyId={companyId} canManage={canManage} onChanged={load} />
+                    <SupplierConversation key={`${request.id}:${companyId}`} row={request} companyId={companyId} canManage={canManage} onChanged={() => load(true)} />
                   </div>}
                 </li>;
               })}

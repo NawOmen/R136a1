@@ -1,8 +1,6 @@
 "use client";
 import { useEffect, useRef, useState, type DragEvent } from "react";
 import { getToken } from "../lib/api";
-import { formatRub } from "../lib/marketplace";
-import { formatDate } from "../lib/dates";
 import { russianMessage } from "../lib/russianMessages";
 import { supplierWorkflow as api, SUPPLIER_STATUS, updateValues, type SupplierCandidate, type SupplierRequest, type SupplierStatus } from "../lib/supplierWorkflow";
 import SupplierConversation from "./SupplierConversation";
@@ -44,7 +42,7 @@ export default function SupplierBoard({ needId, companyId, needRevision, canMana
   }
   function card(row: SupplierRequest) {
     return <article key={row.id} className={`supplier-card${selectedId === row.id ? " supplier-card--active" : ""}`} draggable={canManage && !busy && row.status !== "draft"} onDragStart={e => { e.dataTransfer.setData("application/x-porukam-supplier-request", row.id); e.dataTransfer.effectAllowed = "move"; }} onDragEnd={() => setDragStatus(null)}>
-      <button type="button" className="supplier-card__open" aria-pressed={selectedId === row.id} onClick={() => setSelectedId(row.id)}><strong>{row.seller_name}</strong><span>{row.quoted_price_rub == null ? "Цена не указана" : `${formatRub(row.quoted_price_rub)}${row.price_basis === "unit" ? " / ед." : row.price_basis === "total" ? " за запрос" : " · уточнить основу"}`}</span>{row.delivery_date ? <small>Поставка {formatDate(row.delivery_date)}</small> : row.lead_time_days != null ? <small>Срок: {row.lead_time_days} дн.</small> : null}{row.need_revision !== needRevision && <small>Предыдущая версия требований</small>}</button>
+      <button type="button" className="supplier-card__open" aria-pressed={selectedId === row.id} onClick={() => setSelectedId(row.id)}><strong>{row.seller_name}</strong><span>Открыть чат</span>{row.need_revision !== needRevision && <small>Предыдущая версия требований</small>}</button>
       {row.status !== "draft" && canManage && <label className="supplier-card__status">Этап<select aria-label={`Этап: ${row.seller_name}`} value={row.status} disabled={busy} onChange={e => move(row, e.target.value as SupplierStatus)}>{columns.map(c => <option key={c} value={c}>{SUPPLIER_STATUS[c]}</option>)}</select></label>}
     </article>;
   }
@@ -58,7 +56,7 @@ export default function SupplierBoard({ needId, companyId, needRevision, canMana
       {canManage && !candidates.length && <p className="hint">Проверенных поставщиков пока нет. Вернитесь к доске позже.</p>}
       {!!drafts.length && <details className="supplier-drafts" open><summary>Черновики запросов ({drafts.length})</summary><div>{drafts.map(card)}</div></details>}
       <div className="supplier-board__columns">{columns.map(status => <section key={status} className={`supplier-lane${dragStatus === status ? " supplier-lane--over" : ""}`} aria-label={SUPPLIER_STATUS[status]} onDragOver={e => { if (canManage && !busy) { e.preventDefault(); setDragStatus(status); } }} onDragLeave={e => { if (!e.currentTarget.contains(e.relatedTarget as Node)) setDragStatus(null); }} onDrop={e => drop(e, status)}><h3>{SUPPLIER_STATUS[status]} <span>{rows.filter(r => r.status === status).length}</span></h3>{rows.filter(r => r.status === status).map(card)}{!rows.some(r => r.status === status) && <p className="hint">Пока пусто</p>}</section>)}</div>
-      {selected ? <SupplierConversation key={`${selected.id}:${companyId}`} row={selected} companyId={companyId} canManage={canManage} onChanged={reload} /> : !!rows.length && <p className="hint">Откройте поставщика, чтобы увидеть переписку и приложить ответ.</p>}
+      {selected ? <SupplierConversation key={`${selected.id}:${companyId}`} row={selected} companyId={companyId} canManage={canManage} onChanged={reload} /> : !!rows.length && <p className="hint">Откройте поставщика, чтобы перейти в чат.</p>}
     </>}
   </section>;
 }
