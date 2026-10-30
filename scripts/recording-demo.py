@@ -28,9 +28,11 @@ def private_write(path: Path, content: bytes) -> None:
 def initialize() -> None:
     values = {key: secrets.token_urlsafe(48) for key in (
         "JWT_SECRET", "OPTIMIZER_TOKEN", "POSTGRES_PASSWORD", "MINIO_ROOT_PASSWORD",
-        "PGADMIN_DEFAULT_PASSWORD", "SEED_ADMIN_PASSWORD", "SEED_DEMO_PASSWORD", "SEED_SELLER_PASSWORD")}
+        "PGADMIN_DEFAULT_PASSWORD", "SEED_ADMIN_PASSWORD", "SEED_DEMO_PASSWORD", "SEED_SELLER_PASSWORD",
+        "SEED_SELLER2_PASSWORD")}
     values.update(POSTGRES_USER="sborka", POSTGRES_DB=DATABASE, ENABLE_DEMO_SEED="true",
                   SEED_DEMO_EMAIL="buyer@show.porukam.ru", SEED_SELLER_EMAIL="seller@show.porukam.ru",
+                  SEED_SELLER2_EMAIL="supplier@demo.ru",
                   SEED_ADMIN_EMAIL="admin@show.porukam.ru", BUYER_TRIAL_ENABLED="false",
                   SEED_SELLER_STORIES="false",
                   MINIO_ROOT_USER="porukam", MINIO_ACCESS_KEY="porukam",

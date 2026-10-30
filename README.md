@@ -18,7 +18,7 @@
 - [Бизнес-потребности](#business-needs), [автоматизация поставщика и действия пользователя](#working-prototype).
 - [Архитектура](#platform-architecture), [безопасность и доверие](#safety-and-evaluation).
 - [Проверяемый охват и конкурсные материалы](#verification).
-- [Локальный запуск через Docker](#docker-start), [сервер и сопровождение](#secure-deployment).
+- [Локальное развёртывание](#local-start), [сервер и сопровождение](#secure-deployment).
 - [API](#api-contracts), [коммерческие метрики](#commercial-metrics).
 - [Условия приёмки](#acceptance), [источники и файлы проекта](#documentation).
 
@@ -432,120 +432,51 @@ CI проверяет сервисы, миграции, интерфейс и с
 при необходимости. README раскрывает продукт, а готовность пакета подтверждается самими материалами.
 
 <a id="docker-start"></a>
-## Запуск через Docker
+<a id="local-start"></a>
+## Локальное развёртывание
 
-Локальный запуск на macOS: сервисы приложения работают в Docker Desktop, Ollama —
-на самом ноутбуке с доступом к Apple GPU. Нужны Docker Desktop с Compose, Ollama и Git.
-Для размещения на сервере см. [DEPLOYMENT.md](DEPLOYMENT.md).
-
-### 1. Запустить локальную модель
-
-Модель не работает в контейнере: текст разбирает обученная модель на Apple Silicon,
-поднятая на хосте, а Compose ходит к ней по `MLX_BASE_URL`. Получите базовые веса
-`mlx-community/Qwen3.5-9B-4bit` (revision из `infra/models.lock.json`) и каталог адаптера
-`porukam-trained-current` с файлом `adapters.safetensors`, укажите пути в `.env` и запустите
-сервер одной командой — она сверяет SHA256 адаптера и весов, слушает только loopback и
-пишет журнал в `~/Library/Logs/PoRukam-LLM/`:
+Из корня скачанного репозитория выполните одну команду:
 
 ```bash
-pip install -r ml/training/porukam-trained-current/requirements-serving.txt
+python3 scripts/deploy-local.py
 ```
 
-```dotenv
-MLX_MODEL_DIR=/path/to/model-9b-4bit
-MLX_ADAPTER_DIR=/path/to/porukam-trained-current
-MLX_SERVE_PYTHON=/path/to/mlx-python
-```
+Полный автоматический запуск рассчитан на **Mac с Apple Silicon и macOS 14+**.
+Для команды нужен Python 3.9+; отдельный Python 3.13 для MLX скрипт установит сам.
+Нужны интернет для первой установки и место для весов и контейнеров
+(рекомендуем не менее 40 ГБ). Две модели и сервисы используют общую память Mac:
+при нехватке памяти закройте лишние приложения и уменьшите выделение памяти Docker.
+На Linux, Windows и Intel Mac текущая обученная MLX-модель не запускается,
+установщик сообщает об этом до установки и не заменяет её базовой Qwen.
 
-```bash
-python3 scripts/local_model.py start         # поднять модель вне Docker
-python3 scripts/local_model.py status        # адрес, процесс, модель, автозапуск
-python3 scripts/local_model.py install-agent # поднимать при входе в систему
-```
+[Скрипт](scripts/deploy-local.py) скачивает [Docker Desktop](https://docs.docker.com/desktop/setup/install/mac-install/), если его нет, открывает его,
+устанавливает отдельное окружение MLX и проверенный LoRA-адаптер из Release,
+базовые веса фиксированной ревизии и Ollama с `qwen3.5:9b`.
+Сайт, база, хранилище, оптимизатор и API работают в контейнерах, **MLX и Ollama —
+на хосте вне Docker**. Скрипт также загружает локальный Whisper для аудио,
+применяет миграции, наполняет каталог и подготавливает товар для записи маршрута.
+При первом запуске Docker Desktop подтвердите лицензию в открывшемся системном окне.
+Остальные этапы выполняются автоматически, первая сборка и загрузка весов могут быть долгими.
 
-В `.env` также задайте `LOCAL_LLM_BACKEND=mlx` и `MLX_BASE_URL=http://host.docker.internal:8080`.
-Если адаптер не найден или контрольные суммы не совпали, ИИ-функции вернут понятную
-ошибку 503 и не подменят модель молча. Подробнее: [docs/ml-trained-deployment.md](docs/ml-trained-deployment.md).
+После проверки сервисов и входа каждого пользователя скрипт выведет адрес
+[http://localhost:3000/login](http://localhost:3000/login), логины и случайные пароли
+покупателя, двух поставщиков и администратора. Они сохраняются в локальной
+`.env.recording` с правами 0600. Вывод с паролями не публикуйте.
 
-Ollama нужна отдельно и всегда: через неё распознаются изображения и речь. Откройте
-приложение Ollama или выполните `ollama serve` в отдельном терминале и один раз загрузите
-модель:
+Повторите ту же команду для запуска после остановки или обновления кода.
+Она сохраняет пароли и данные, использует только проект `r136-recording` и базу
+`porukam_recording`, не меняет обычную `.env` и не сбрасывает начатые закупки.
+Если стандартный порт занят другим стендом, скрипт остановится и назовёт порт,
+не завершая чужие процессы. При потере `.env.recording` восстановите исходный файл:
+генерировать новые пароли поверх существующей базы установщик откажется.
 
-```bash
-ollama pull qwen3.5:9b
-```
+Повторно проверить входы и показать пароли: `python3 scripts/deploy-local.py --credentials`.
+Проверить только совместимость платформы: `python3 scripts/deploy-local.py --check`.
+Проверка генерации при установке не заменяет [сквозную репетицию](docs/contest/final-demo.md).
+Для серверного размещения см. [DEPLOYMENT.md](DEPLOYMENT.md), для управления моделью —
+[docs/ml-trained-deployment.md](docs/ml-trained-deployment.md).
 
-### 2. Подготовить настройки
-
-Из корня репозитория создайте `.env` со случайными паролями:
-
-```bash
-docker run --rm --user "$(id -u):$(id -g)" \
-  -v "$PWD:/workspace" -w /workspace \
-  python:3.14-slim python scripts/init-local-env.py
-```
-
-Команду выполняют один раз для нового окружения; существующий `.env` она не меняет.
-Добавьте или измените в нём следующие значения:
-
-```dotenv
-OLLAMA_DOCKER_BASE_URL=http://host.docker.internal:11434
-OLLAMA_MODEL=qwen3.5:9b
-OLLAMA_VISION_MODEL=qwen3.5:9b
-LOCAL_LLM_BACKEND=mlx
-MLX_BASE_URL=http://host.docker.internal:8080
-ENABLE_DEMO_SEED=true
-```
-
-`LOCAL_LLM_BACKEND=mlx` — рабочий режим с обученной моделью. `ollama` допустим только
-как технический обход на машине без Apple Silicon; для показа он не используется.
-
-`ENABLE_DEMO_SEED=true` включает синтетические компании, аккаунты и каталог для
-локальной работы. Пароли аккаунтов уже созданы в `.env`; файл не добавлять в Git.
-Для существующей базы сохраните прежний `.env` и следуйте
-[порядку обновления без удаления данных](#secure-deployment).
-
-### 3. Запустить проект
-
-```bash
-docker compose --project-name infra --env-file .env -f infra/docker-compose.yml up -d --build
-```
-
-Миграции и включённое наполнение выполняются при старте. Первая сборка MinIO
-загружает Go-модули; происхождение образа описано в [infra/minio/README.md](infra/minio/README.md).
-LLM Gateway обращается к Ollama через `host.docker.internal`; контейнер модели не нужен.
-
-Для распознавания аудио один раз загрузите Whisper `small` в кеш контейнера:
-
-```bash
-docker compose --project-name infra --env-file .env -f infra/docker-compose.yml exec llm-gateway python -c 'from faster_whisper.utils import download_model; download_model("small")'
-```
-
-Текст, PDF, изображения и аудио обрабатываются локально. Запросы ИИ проходят через
-LLM Gateway; подтверждение требований и коммерческих действий остаётся за человеком.
-
-### 4. Открыть приложение
-
-Сайт: [http://localhost:3000](http://localhost:3000).
-
-| Аккаунт | Email | Пароль из `.env` |
-|---|---|---|
-| Покупатель и продавец | `demo@demo.ru` | `SEED_DEMO_PASSWORD` |
-| Производитель | `seller@demo.ru` | `SEED_SELLER_PASSWORD` |
-| Администратор | `admin@demo.ru` | `SEED_ADMIN_PASSWORD` |
-
-Служебные адреса: Auth — `localhost:8001`, Marketplace — `localhost:8002`,
-LLM Gateway — `localhost:8003` (OpenAPI: `/docs`); MinIO — `localhost:9000`,
-консоль — `localhost:9001`; pgAdmin — `localhost:5050`; PostgreSQL — `localhost:5433`.
-Optimizer доступен только внутри Docker-сети. Пароли MinIO и pgAdmin находятся в `.env`.
-
-Остановить проект с сохранением данных:
-
-```bash
-docker compose --project-name infra --env-file .env -f infra/docker-compose.yml stop
-```
-
-### 5. Открыть с других устройств в локальной сети
+### Доступ с других устройств в локальной сети
 
 Порты базового Compose привязаны к loopback: с телефона или второго ноутбука по ним
 сайт недоступен. Для работы в одной сети поднимается HTTPS-профиль — он добавляет
@@ -558,14 +489,14 @@ edge на порты 80/443, остальные сервисы остаются 
 python3 scripts/lan-tls.py --directory "$HOME/Library/Application Support/PoRukam-LLM/tls"
 ```
 
-Укажите этот каталог в `.env` и запустите проект вместе с профилем:
+Укажите этот каталог в `.env.recording` и запустите проект вместе с профилем:
 
 ```dotenv
 TLS_CERT_DIR="/Users/ваш-пользователь/Library/Application Support/PoRukam-LLM/tls"
 ```
 
 ```bash
-docker compose --project-name infra --env-file .env \
+docker compose --project-name r136-recording --env-file .env.recording \
   -f infra/docker-compose.yml -f infra/docker-compose.https.yml up -d
 python3 scripts/print-access-url.py
 ```
