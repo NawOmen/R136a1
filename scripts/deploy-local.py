@@ -589,6 +589,11 @@ def lan_addresses():
 
 
 def check_lan_ports():
+    # Повторный запуск поднимает edge того же проекта: его порты 80/443 уже заняты им самим.
+    owned = recording.compose("ps", "--status", "running", "--services",
+                              capture_output=True, text=True).stdout.split()
+    if "edge" in owned:
+        return
     for port in (80, 443):
         with socket.socket() as sock:
             if sock.connect_ex(("127.0.0.1", port)) == 0:
