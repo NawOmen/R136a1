@@ -10,7 +10,7 @@ import type { CommercialTerms } from "../../lib/marketplace";
 // POST /needs/{id}/offers.
 
 import Link from "next/link";
-import { FormEvent, useEffect, useState } from "react";
+import { FormEvent, useEffect, useRef, useState } from "react";
 import { getToken } from "../../lib/api";
 import { agents, FactValue } from "../../lib/agents";
 import {
@@ -60,6 +60,9 @@ export default function SellerRequestsPage() {
   const [requestKeys, setRequestKeys] = useState<Record<string, string>>({});
   const [checks, setChecks] = useState<Record<string, { inputKey: string; blockers: string[]; warnings: string[]; missing: string[] }>>({});
   const [confirming, setConfirming] = useState(false);
+  const [draftAttached, setDraftAttached] = useState(false);
+  // A response for a closed form or another company must never reopen it.
+  const formGeneration = useRef(0);
 
   function offerInput(need: NeedFeedItem) {
     return {
@@ -70,15 +73,24 @@ export default function SellerRequestsPage() {
       lead_time_days: Number(leadTime),
       delivery_cost_rub: commercialTerms.delivery_method === "separate" ? (deliveryCost || null) : commercialTerms.delivery_method === "unknown" ? null : "0",
       moq_units: Number(moq || 1),
-      draft_id: drafts[need.id]?.id,
+      draft_id: draftAttached ? drafts[need.id]?.id : undefined,
       resource_kind: resourceKind,
       product_id: productId || undefined,
-      price_tiers: drafts[need.id]?.payload.price_tiers ?? [],
+      // The displayed, editable price is the fixed price of this proposal.
+      // Hidden catalog tiers must not override a seller's counteroffer.
+      price_tiers: [],
     };
   }
 
   useEffect(() => {
     setQuery(new URLSearchParams(window.location.search).get("q") ?? "");
+    formGeneration.current += 1;
+    setDraftingId(null);
+    setSubmitting(false);
+    setConfirming(false);
+    setChecks({});
+    setRequestKeys({});
+    setDraftAttached(false);
     const token = getToken();
     if (!token || !companyId) return;
     let cancelled = false;
@@ -101,24 +113,38 @@ export default function SellerRequestsPage() {
       });
     return () => {
       cancelled = true;
+      formGeneration.current += 1;
     };
   }, [companyId]);
 
-  function toggleForm(needId: string) {
-    const draft = drafts[needId];
-    setRequestKeys((current) => current[needId] ? current : { ...current, [needId]: crypto.randomUUID() });
+  function closeForm() {
+    formGeneration.current += 1;
+    setOpenFormId(null);
+    setDraftingId(null);
+    setError(null);
+  }
+
+  function fillForm(need: NeedFeedItem, draft?: OfferDraft) {
+    setDraftAttached(Boolean(draft));
     setResourceKind(draft?.payload.resource_kind ?? "capacity");
     setProductId(draft?.payload.product_id ?? "");
-    setCommercialTerms(emptyCommercialTerms);
-    setOpenFormId((current) => (current === needId ? null : needId));
+    setCommercialTerms({ ...emptyCommercialTerms, expenses: [] });
     setPrice(draft?.payload.price_rub != null ? String(draft.payload.price_rub) : "");
-    setUnits(draft?.payload.available_units != null ? String(draft.payload.available_units) : "");
+    // Start with the buyer's requested quantity. A shortage must be explicit,
+    // never silently converted into agreement to supply only part of the need.
+    setUnits(String(need.volume_units));
     setLeadTime(draft?.payload.lead_time_days != null ? String(draft.payload.lead_time_days) : "");
-    setDeliveryCost(
-      draft?.payload.delivery_cost_rub != null ? String(draft.payload.delivery_cost_rub) : "",
-    );
+    setDeliveryCost(draft?.payload.delivery_cost_rub != null ? String(draft.payload.delivery_cost_rub) : "");
     setMoq(draft?.payload.moq_units != null ? String(draft.payload.moq_units) : "");
-    setError(null);
+    setRequestKeys((current) => ({ ...current, [need.id]: crypto.randomUUID() }));
+    setChecks((current) => { const rest = { ...current }; delete rest[need.id]; return rest; });
+    setOpenFormId(need.id);
+  }
+
+  function detachDraft() {
+    // The server binds an attached draft to its original product and resource.
+    // A manually selected source is a new proposal, checked independently.
+    setDraftAttached(false);
   }
 
   function inputKey(need: NeedFeedItem): string {
@@ -128,70 +154,73 @@ export default function SellerRequestsPage() {
   async function handleOffer(event: FormEvent<HTMLFormElement>, need: NeedFeedItem) {
     event.preventDefault();
     const token = getToken();
-    if (!token || !company) return;
+    if (!token || !company || submitting || confirming) return;
     const requestKey = requestKeys[need.id] ?? crypto.randomUUID();
     setRequestKeys((current) => current[need.id] ? current : { ...current, [need.id]: requestKey });
+    const generation = formGeneration.current;
     setSubmitting(true);
     setError(null);
     try {
       const preview = await marketplace.previewOfferSend(token, need.id, { ...offerInput(need), request_key: requestKey });
+      if (generation !== formGeneration.current) return;
       setChecks((current) => ({ ...current, [need.id]: { inputKey: inputKey(need), ...preview } }));
       if (preview.blockers.length > 0) {
         setError(`Отправка заблокирована: ${preview.blockers.join("; ")}`);
       }
     } catch (err) {
-      setError(err instanceof ApiError ? russianMessage(err.message) : "Не удалось проверить условия.");
+      if (generation === formGeneration.current) setError(err instanceof ApiError ? russianMessage(err.message) : "Не удалось проверить условия.");
     } finally {
-      setSubmitting(false);
+      if (generation === formGeneration.current) setSubmitting(false);
     }
   }
 
   async function handleConfirmOffer(need: NeedFeedItem) {
     const token = getToken();
-    if (!token || !company) return;
+    if (!token || !company || submitting || confirming) return;
+    const check = checks[need.id];
+    if (!check || check.blockers.length || check.inputKey !== inputKey(need)) return;
+    const generation = formGeneration.current;
     const requestKey = requestKeys[need.id] ?? crypto.randomUUID();
     setRequestKeys((current) => current[need.id] ? current : { ...current, [need.id]: requestKey });
     setConfirming(true);
     setError(null);
     try {
       const sent = await marketplace.createOffer(token, need.id, { ...offerInput(need), request_key: requestKey });
+      if (generation !== formGeneration.current) return;
       const warnings = sent.sending_warnings ?? [];
+      setSubmittedIds((current) => new Set(current).add(need.id));
+      setOpenFormId(null);
+      setChecks((current) => { const rest = { ...current }; delete rest[need.id]; return rest; });
       if (warnings.length > 0) {
         setError(`Предложение отправлено, но проверьте недостающее: ${warnings.join("; ")}. Допуск подтвердят при выборе покупателем.`);
-      } else {
-        setSubmittedIds((current) => new Set(current).add(need.id));
-        setOpenFormId(null);
-        setChecks((current) => { const rest = { ...current }; delete rest[need.id]; return rest; });
       }
     } catch (err) {
-      setError(err instanceof ApiError ? russianMessage(err.message) : "Не удалось отправить предложение.");
+      if (generation === formGeneration.current) setError(err instanceof ApiError ? russianMessage(err.message) : "Не удалось отправить предложение.");
     } finally {
-      setConfirming(false);
+      if (generation === formGeneration.current) setConfirming(false);
     }
   }
 
   async function handlePrepareDraft(need: NeedFeedItem) {
     const token = getToken();
-    if (!token || !company) return;
+    if (!token || !company || submitting || confirming || draftingId !== null) return;
+    const generation = ++formGeneration.current;
+    setOpenFormId(null);
     setDraftingId(need.id);
     setError(null);
     try {
       const draft = await marketplace.prepareOfferDraft(token, need.id, company.id);
+      if (generation !== formGeneration.current) return;
       setDrafts((current) => ({ ...current, [need.id]: draft }));
-      setRequestKeys((current) => current[need.id] ? current : { ...current, [need.id]: crypto.randomUUID() });
-      // Черновик заполняет форму, но человек проверяет и при необходимости правит значения.
-      setOpenFormId(need.id);
-      setResourceKind(draft.payload.resource_kind);
-      setProductId(draft.payload.product_id ?? "");
-      setPrice(draft.payload.price_rub != null ? String(draft.payload.price_rub) : "");
-      setUnits(draft.payload.available_units != null ? String(draft.payload.available_units) : "");
-      setMoq(draft.payload.moq_units != null ? String(draft.payload.moq_units) : "");
-      setLeadTime(draft.payload.lead_time_days != null ? String(draft.payload.lead_time_days) : "");
-      setDeliveryCost(draft.payload.delivery_cost_rub != null ? String(draft.payload.delivery_cost_rub) : "");
+      fillForm(need, draft);
     } catch (err) {
-      setError(err instanceof ApiError ? russianMessage(err.message) : "Не удалось подготовить черновик.");
+      if (generation !== formGeneration.current) return;
+      // The manual path remains available when automatic preparation fails.
+      setDrafts((current) => { const rest = { ...current }; delete rest[need.id]; return rest; });
+      fillForm(need);
+      setError(err instanceof ApiError ? russianMessage(err.message) : "Не удалось заполнить предложение. Укажите условия вручную.");
     } finally {
-      setDraftingId(null);
+      if (generation === formGeneration.current) setDraftingId(null);
     }
   }
 
@@ -279,7 +308,7 @@ export default function SellerRequestsPage() {
       {available.length > 1 && (
         <div className="field">
           <label htmlFor="seller_company">Компания</label>
-          <select id="seller_company" value={companyId} onChange={(event) => setCompanyId(event.target.value)}>
+          <select id="seller_company" disabled={submitting || confirming} value={companyId} onChange={(event) => setCompanyId(event.target.value)}>
             {available.map((item) => (
               <option key={item.id} value={item.id}>
                 {item.display_name}
@@ -289,7 +318,7 @@ export default function SellerRequestsPage() {
         </div>
       )}
 
-      {error && <div className="alert alert-error">{error}</div>}
+      {error && <div role="alert" className="alert alert-error">{error}</div>}
 
       {!loaded ? (
         <p className="hint">Загрузка запросов...</p>
@@ -298,7 +327,7 @@ export default function SellerRequestsPage() {
       ) : (
         <ul className="demand-grid">
           {openNeeds.map((need) => (
-            <li key={need.id} className="demand-card" data-need-id={need.id}>
+            <li key={need.id} className={`demand-card${openFormId === need.id ? " demand-card--editing" : ""}`} data-need-id={need.id}>
               <div className="demand-card__top"><span className="demand-kind">Производство</span><span className="demand-deadline">до {formatDate(need.deadline_date)}</span></div>
               <h2>{need.category}</h2>
               <p className="demand-description">{formatCharacteristics(need.characteristics, need.category_profile)}</p>
@@ -308,39 +337,37 @@ export default function SellerRequestsPage() {
                 <p className="match-explanation"><b>Почему подходит</b>{explanations[need.id]}</p>
               )}
 
-              {drafts[need.id] && (
-                <div className="draft-panel">
-                  <p className="draft-panel__title">
-                    Черновик КП подготовлен агентом — проверьте значения и подтвердите отправку
-                  </p>
+              {openFormId === need.id && drafts[need.id] && (
+                <details className="offer-sources">
+                  <summary>Откуда взяты условия</summary>
                   <ul className="draft-fields">
                     {drafts[need.id].fields.map((field) => (
                       <li key={field.name}>
                         <b>{field.label}:</b>{" "}
                         {field.value != null ? String(field.value) : "нужно указать"}
-                        <span className="draft-source"> источник: {russianLabel(field.source, "Данные предложения")}</span>
+                        <span className="draft-source"> исходный источник: {russianLabel(field.source, "Данные предложения")}</span>
                         {!field.confirmed && <span className="draft-manual"> решение человека</span>}
                         {field.note && <span className="draft-note"> {field.note}</span>}
                       </li>
                     ))}
                   </ul>
-                  {drafts[need.id].missing.length > 0 && (
-                    <p className="draft-missing">
-                      Заполните перед отправкой: {drafts[need.id].missing.join("; ")}
-                    </p>
-                  )}
-                  {drafts[need.id].warnings.map((warning) => (
-                    <p className="draft-warning" key={warning}>
-                      {warning}
-                    </p>
-                  ))}
-                </div>
+                  {!draftAttached && <p className="hint">Источник объёма изменён вручную. Система проверит выбранный ресурс заново.</p>}
+                </details>
               )}
 
               {submittedIds.has(need.id) ? (
                 <p className="hint mode-hint">Предложение отправлено. Ожидайте решения покупателя.</p>
               ) : openFormId === need.id ? (
-                <form className="inline-offer" onSubmit={(event) => void handleOffer(event, need)}>
+                <form className="inline-offer seller-offer" onSubmit={(event) => void handleOffer(event, need)}>
+                  <div className="seller-offer__intro">
+                    <h3>Условия предложения</h3>
+                    <p>Оставьте подходящие условия или измените любой пункт. Покупатель получит предложение только после вашего подтверждения.</p>
+                    <p className="hint">Объём — из запроса покупателя. Цена, минимальная партия и срок — из каталога продавца. Указанная цена фиксирована для этого предложения.</p>
+                  </div>
+                  {drafts[need.id] && !draftAttached && <p className="alert alert-warning seller-offer__wide">Источник объёма изменён. Проверьте цену, срок и минимальную партию для выбранного товара.</p>}
+                  {drafts[need.id]?.warnings.map((warning) => <p className="alert alert-warning seller-offer__wide" key={warning}>{warning}</p>)}
+                  <fieldset className="seller-offer__fields" disabled={submitting || confirming}>
+                  <legend className="visually-hidden">Редактируемые условия предложения</legend>
                   <div className="field">
                     <label htmlFor={`offer_price_${need.id}`}>
                       Цена за единицу, ₽<span className="req">*</span>
@@ -356,11 +383,9 @@ export default function SellerRequestsPage() {
                       required
                     />
                   </div>
-                  <div className="field"><label htmlFor={`offer_resource_${need.id}`}>Источник доступного объёма</label><select id={`offer_resource_${need.id}`} value={resourceKind} disabled={Boolean(drafts[need.id])} onChange={e=>setResourceKind(e.target.value as "stock" | "capacity")}><option value="capacity">Календарь производства</option><option value="stock">Остаток конкретного товара</option></select><p className="hint">Система проверит свободный ресурс при подтверждении сделки. Объём, уже занятый другими заказами или резервом, недоступен.</p></div>
-                  {resourceKind === "stock" && <div className="field"><label htmlFor={`offer_product_${need.id}`}>Товар на складе</label><select id={`offer_product_${need.id}`} required value={productId} disabled={Boolean(drafts[need.id])} onChange={e=>setProductId(e.target.value)}><option value="">Выберите товар</option>{products.map(product=><option key={product.id} value={product.id}>{product.name}</option>)}</select></div>}
                   <div className="field">
                     <label htmlFor={`offer_units_${need.id}`}>
-                      Доступный объём, {itemUnit(need.characteristics)}<span className="req">*</span>
+                      Объём предложения, {itemUnit(need.characteristics)}<span className="req">*</span>
                     </label>
                     <input
                       id={`offer_units_${need.id}`}
@@ -374,7 +399,7 @@ export default function SellerRequestsPage() {
                   </div>
                   <div className="field">
                     <label htmlFor={`offer_moq_${need.id}`}>
-                      минимальный заказ предложения, {itemUnit(need.characteristics)}<span className="req">*</span>
+                      Минимальная партия, {itemUnit(need.characteristics)}<span className="req">*</span>
                     </label>
                     <input
                       id={`offer_moq_${need.id}`}
@@ -383,22 +408,6 @@ export default function SellerRequestsPage() {
                       value={moq}
                       onChange={(event) => setMoq(event.target.value)}
                       placeholder="Например, 5000"
-                      required
-                    />
-                  </div>
-                  <CommercialTermsFields value={commercialTerms} onChange={setCommercialTerms} disabled={submitting} />
-                  <div className="field">
-                    <label htmlFor={`offer_delivery_${need.id}`}>
-                      Отдельная доставка, ₽<span className="req">*</span>
-                    </label>
-                    <input
-                      id={`offer_delivery_${need.id}`}
-                      type="number"
-                      min="0"
-                      step="0.01"
-                      disabled={commercialTerms.delivery_method !== "separate"}
-                      value={deliveryCost}
-                      onChange={(event) => setDeliveryCost(event.target.value)}
                       required
                     />
                   </div>
@@ -416,21 +425,43 @@ export default function SellerRequestsPage() {
                       required
                     />
                   </div>
-                  <div className="actions">
-                    <button type="submit" className="btn btn-primary" disabled={submitting}>
+                  <div className="field"><label htmlFor={`offer_resource_${need.id}`}>Источник доступного объёма</label><select id={`offer_resource_${need.id}`} value={resourceKind} onChange={e=>{if (e.target.value !== resourceKind) detachDraft(); setResourceKind(e.target.value as "stock" | "capacity");}}><option value="capacity">Календарь производства</option><option value="stock">Остаток конкретного товара</option></select><p className="hint">Система проверит свободный ресурс при подтверждении сделки. Объём, уже занятый другими заказами или резервом, недоступен.</p></div>
+                  {resourceKind === "stock" && <div className="field"><label htmlFor={`offer_product_${need.id}`}>Товар на складе</label><select id={`offer_product_${need.id}`} required value={productId} onChange={e=>{if (e.target.value !== productId) detachDraft(); setProductId(e.target.value);}}><option value="">Выберите товар</option>{products.map(product=><option key={product.id} value={product.id}>{product.name}</option>)}</select></div>}
+                  <CommercialTermsFields value={commercialTerms} onChange={setCommercialTerms} disabled={submitting || confirming} />
+                  <div className="field">
+                    <label htmlFor={`offer_delivery_${need.id}`}>
+                      Отдельная доставка, ₽<span className="req">*</span>
+                    </label>
+                    <input
+                      id={`offer_delivery_${need.id}`}
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      disabled={commercialTerms.delivery_method !== "separate"}
+                      value={deliveryCost}
+                      onChange={(event) => setDeliveryCost(event.target.value)}
+                      required
+                    />
+                  </div>
+                  </fieldset>
+                  <p className="hint seller-offer__wide">Неизвестные условия не подставляются: уточните доставку и НДС. Характеристики товара должны соответствовать запросу покупателя.</p>
+                  <div className="actions seller-offer__wide">
+                    <button type="submit" className="btn btn-primary" disabled={submitting || confirming}>
                       {submitting ? "Проверяем..." : "Проверить условия"}
                     </button>
                     <button
                       type="button"
                       className="btn btn-secondary"
-                      onClick={() => toggleForm(need.id)}
+                      disabled={submitting || confirming}
+                      onClick={closeForm}
                     >
                       Отмена
                     </button>
                   </div>
                   {checks[need.id] && (
-                    <div className="card">
+                    <div className="card seller-offer__wide">
                       <h3>Проверка перед отправкой</h3>
+                      <p className="hint">Если условия подходят, подтвердите отправку. Для встречного предложения измените нужные поля выше и проверьте их заново.</p>
                       {checks[need.id].missing.length > 0 && <>
                         <p className="hint">Не заполнено в черновике:</p>
                         <ul>{checks[need.id].missing.map((item) => <li key={item}>{item}</li>)}</ul>
@@ -453,7 +484,7 @@ export default function SellerRequestsPage() {
                   )}
                 </form>
               ) : (
-                <div className="demand-actions">
+                <div className="demand-actions demand-actions--proposal">
                   <button
                     type="button"
                     className="btn btn-secondary btn-sm"
@@ -462,16 +493,8 @@ export default function SellerRequestsPage() {
                   >
                     {explainingId === need.id ? "Проверяю..." : "Почему подходит?"}
                   </button>
-                  <button
-                    type="button"
-                    className="btn btn-secondary btn-sm"
-                    disabled={draftingId === need.id}
-                    onClick={() => void handlePrepareDraft(need)}
-                  >
-                    {draftingId === need.id ? "Готовлю..." : "Подготовить черновик КП"}
-                  </button>
-                  <button type="button" className="btn btn-primary btn-sm" onClick={() => toggleForm(need.id)}>
-                    Предложить условия
+                  <button type="button" className="btn btn-primary btn-sm" disabled={draftingId !== null || submitting || confirming} onClick={() => void handlePrepareDraft(need)}>
+                    {draftingId === need.id ? "Заполняем условия..." : "Предложить условия"}
                   </button>
                 </div>
               )}
