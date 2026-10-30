@@ -23,6 +23,7 @@ import sys
 import tempfile
 from pathlib import Path
 
+REPO = Path(__file__).resolve().parents[1]
 DEFAULT_HOSTNAME = "porukam.local"
 RENEW_BEFORE_DAYS = 30
 
@@ -148,8 +149,12 @@ def ensure_certificate(directory: Path, ca_key: Path, ca_pem: Path, entries: lis
 def prepare(directory: Path, addresses: list[str], hostname: str = DEFAULT_HOSTNAME,
             days: int = 397, ca_days: int = 3650, out=print) -> Path:
     directory = directory.resolve()
-    if any((parent / ".git").exists() for parent in (directory, *directory.parents)):
-        raise ValueError("Ключи TLS должны лежать вне Git-репозитория. Выберите другой каталог.")
+    # Ключи не должны попасть в репозиторий проекта. Проверять любой внешний Git
+    # нельзя: у многих домашний каталог сам является репозиторием (dotfiles),
+    # и тогда установка по локальной сети падала бы на ровном месте.
+    repository = REPO.resolve()
+    if directory == repository or repository in directory.parents:
+        raise ValueError("Ключи TLS должны лежать вне репозитория проекта. Выберите другой каталог.")
     directory.mkdir(parents=True, exist_ok=True)
     os.chmod(directory, 0o700)
     entries = san_entries(addresses, hostname)

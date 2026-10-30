@@ -58,14 +58,15 @@ def configuration() -> dict[str, str]:
     return values
 
 
-def compose(*args: str, **kwargs):
+def compose(*args: str, files: tuple[Path, ...] = (), **kwargs):
     # Переменные shell не должны переопределить отдельную конфигурацию через Compose.
     values = configuration()
     env = {key: value for key, value in os.environ.items()
            if key not in values and not key.startswith("COMPOSE_")}
     prefix = ["sudo"] if values.get("LOCAL_DOCKER_SUDO") == "true" and os.geteuid() != 0 else []
+    profiles = [item for path in files for item in ("-f", str(path))]
     return subprocess.run([*prefix, "docker", "compose", "--project-name", PROJECT, "--env-file", str(ENV),
-                           "-f", str(ROOT / "infra/docker-compose.yml"), *args],
+                           "-f", str(ROOT / "infra/docker-compose.yml"), *profiles, *args],
                           cwd=ROOT, env=env, check=True, **kwargs)
 
 

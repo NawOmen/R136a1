@@ -38,6 +38,8 @@ DOCKER_DMG = "https://desktop.docker.com/mac/main/arm64/Docker.dmg"
 OLLAMA_ZIP = "https://ollama.com/download/Ollama-darwin.zip"
 UV_VERSION = "0.13.6"
 MODEL = "qwen3.5:9b"
+LAN_DIR = SUPPORT / "tls"
+EDGE_FILES = (ROOT / "infra/docker-compose.https.yml",)
 DOCKER_SUDO = False
 SUDO_REFRESH = False
 ACCOUNTS = (("Покупатель", "DEMO", "buyer@show.porukam.ru"),
@@ -575,6 +577,78 @@ def check_ports():
                 raise DeployError(f"Порт {port} занят другим приложением. Остановите его с сохранением данных.")
 
 
+def lan_module():
+    return load("porukam_lan_deploy", ROOT / "scripts/lan-tls.py")
+
+
+def lan_addresses():
+    try:
+        return lan_module().detect_addresses()
+    except (OSError, AttributeError):
+        return []
+
+
+def check_lan_ports():
+    for port in (80, 443):
+        with socket.socket() as sock:
+            if sock.connect_ex(("127.0.0.1", port)) == 0:
+                raise DeployError(f"Порт {port} занят другим приложением: закройте его и повторите команду")
+
+
+def ensure_lan(values, *, enabled=True, out=print):
+    """Сайт для всех устройств в локальной сети: сертификат на адрес машины и edge на 80/443."""
+    if not enabled:
+        out("Доступ из локальной сети отключён флагом --no-lan: сайт открыт только на этом компьютере.")
+        return None
+    addresses = lan_addresses()
+    if not addresses:
+        out("Адрес в локальной сети не найден: сайт открыт только на этом компьютере.")
+        return None
+    check_lan_ports()
+    lan = lan_module()
+    lan.prepare(LAN_DIR, addresses, out=out)
+    if values.get("TLS_CERT_DIR") != str(LAN_DIR):
+        values["TLS_CERT_DIR"] = str(LAN_DIR)
+        save_configuration(values)
+    out("Поднимаю HTTPS-шлюз для локальной сети…", flush=True)
+    recording.compose("up", "-d", "--wait", "--wait-timeout", "300", "edge", files=EDGE_FILES)
+    address = addresses[0]
+    verify_lan(address)
+    out(f"\nСайт в локальной сети: https://{address}")
+    out(f"Сертификат для установки на устройство: {LAN_DIR / 'ca.pem'}")
+    out("Остальные порты и база остаются на loopback; HTTP на шлюзе отклоняется.")
+    return address
+
+
+def verify_lan(address: str, *, timeout: float = 20.0):
+    ca = LAN_DIR / "ca.pem"
+    context = ssl_context(ca)
+    opener = urllib.request.build_opener(urllib.request.HTTPSHandler(context=context),
+                                         urllib.request.ProxyHandler({}))
+    try:
+        with opener.open(f"https://{address}/login", timeout=timeout) as response:
+            if response.status != 200:
+                raise DeployError(f"HTTPS-шлюз по адресу {address} ответил {response.status}")
+            page = response.read(64 * 1024).decode("utf-8", "replace")
+    except (OSError, ValueError) as exc:
+        raise DeployError(f"Сайт по адресу https://{address} недоступен: {exc}") from exc
+    if "ПоРукам" not in page:
+        raise DeployError(f"По адресу https://{address} отвечает не приложение ПоРукам")
+    # Проверяем, что через этот адрес работает API того же источника.
+    api = urllib.request.Request(f"https://{address}/llm/health")
+    with opener.open(api, timeout=timeout) as response:
+        health = json.loads(response.read(8 * 1024))
+    if health.get("status") != "ok":
+        raise DeployError("API по адресу локальной сети не подтвердил готовность")
+
+
+def ssl_context(ca: Path):
+    import ssl
+
+    context = ssl.create_default_context(cafile=str(ca))
+    return context
+
+
 def verify_accounts(values, *, show=False):
     address = recording.compose("port", "gateway-auth", "8001", capture_output=True, text=True).stdout.strip()
     if address != "127.0.0.1:8001":
@@ -618,7 +692,7 @@ def prepare_once():
     atomic_private(marker, json.dumps({"project": recording.PROJECT, "database": recording.DATABASE, "instance": instance}).encode())
 
 
-def deploy():
+def deploy(args):
     supported_host()
     print("Полный запуск: приложение в Docker, MLX/LoRA и Ollama на хосте.\n"
           "Нужны интернет, место для моделей и образов (рекомендуем 40 ГБ) и запас памяти для двух моделей.", flush=True)
@@ -652,6 +726,7 @@ def deploy():
                       'urllib.request.urlopen("http://host.docker.internal:11434/api/tags", timeout=20).read()')
     run([sys.executable, ROOT / "scripts/check-final-demo.py"])
     verify_accounts(values, show=True)
+    ensure_lan(values, enabled=not args.no_lan)
     print("\nСервисы, каталог, входы и генерация моделей проверены. Сквозная закупка автоматически не создавалась.")
 
 
@@ -660,6 +735,8 @@ def main():
     group = parser.add_mutually_exclusive_group()
     group.add_argument("--credentials", action="store_true", help="Повторно проверить входы и вывести пароли локального стенда")
     group.add_argument("--check", action="store_true", help="Только проверить совместимость платформы, без установки")
+    parser.add_argument("--no-lan", action="store_true",
+                        help="Не открывать сайт для других устройств локальной сети")
     parser.add_argument("--host-proxy", help=argparse.SUPPRESS)
     args = parser.parse_args()
     if args.host_proxy:
@@ -677,7 +754,7 @@ def main():
             recording.configuration()
             verify_accounts(values, show=True)
         else:
-            deploy()
+            deploy(args)
 
 
 if __name__ == "__main__":
