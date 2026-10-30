@@ -490,7 +490,7 @@ async def create_offer(
         explanation='Уполномоченный продавец направил конкретную версию КП; предварительная неполная смета не разрешает согласование')
     await run_market_rematch(db, "offer_created", offer.id, {"need_id": str(need.id)})
     if need.created_by_user_id:
-        await notify(db, need.created_by_user_id, "По вашей потребности поступило новое предложение", "offer_received")
+        await notify(db, need.created_by_user_id, "По вашей потребности поступило новое предложение", "offer_received", href=f"/needs/{need.id}")
     await db.commit()
     await db.refresh(offer)
     offer.sending_warnings = sending_warnings
@@ -732,7 +732,7 @@ async def select_offer(
     )
     await run_market_rematch(db, "offer_selected", offer.id, {"need_id": str(need.id)})
     if offer.created_by_user_id:
-        await notify(db, offer.created_by_user_id, "Ваше предложение выбрано покупателем", "offer_selected")
+        await notify(db, offer.created_by_user_id, "Ваше предложение выбрано покупателем", "offer_selected", href=f"/deals?deal={deal.id}")
     await db.commit()
     await db.refresh(deal)
     return deal

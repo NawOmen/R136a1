@@ -62,7 +62,7 @@ async def _notify_company(db: AsyncSession, company_id: uuid.UUID, message: str)
         )
     ).scalars().all()
     for user_id in user_ids:
-        await notify(db, user_id, message, "document_verification_changed")
+        await notify(db, user_id, message, "document_verification_changed", href=f"/company/{company_id}")
 
 
 async def _notify_affected_deals(

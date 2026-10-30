@@ -325,9 +325,7 @@ test("support chat preserves failed text and notification bell opens full messag
   await expect(page.getByRole("log")).toContainText("Доставка и получение");
   await expect(page.getByLabel("Сообщение поддержке", { exact:true })).toHaveValue("");
   await page.getByRole("button", { name:/Уведомления, новых/ }).click();
-  await page.getByRole("button", { name:notification.message, exact:true }).click();
-  await expect(page.locator(".notification-detail")).toContainText(notification.message);
-  await expect(page.locator(".notification-detail a")).toHaveAttribute("href", "/support");
+  await expect(page.getByRole("link", { name:notification.message, exact:true })).toHaveAttribute("href", "/support");
   await page.keyboard.press("Escape");
   await expect(page.locator(".notification-popover")).toHaveCount(0);
   await expect(page.getByRole("button", { name:/Уведомления/ })).toBeFocused();
@@ -362,8 +360,7 @@ test("a new support message notification directs staff to the support queue", as
   });
   await page.goto("/");
   await page.getByRole("button", { name: "Уведомления", exact: true }).click();
-  await page.getByRole("button", { name: notification.message, exact: true }).click();
-  await expect(page.locator(".notification-detail a")).toHaveAttribute("href", "/admin#tickets");
+  await expect(page.getByRole("link", { name: notification.message, exact: true })).toHaveAttribute("href", "/admin#tickets");
 });
 
 test("AI fills a single review card with compact decimals and stale confirmation cannot publish", async ({ page }) => {

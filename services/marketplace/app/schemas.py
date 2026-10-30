@@ -1061,6 +1061,7 @@ class NotificationOut(BaseModel):
     user_id: uuid.UUID
     message: str
     type: str
+    href: str | None = None
     is_read: bool
 
 

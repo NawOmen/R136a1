@@ -547,10 +547,12 @@ html { --page-gutter:clamp(35px,2.73vw,44px); --header-gutter:clamp(32px,2.73vw,
 .notification-popover h2 { font-size:18px; margin:0; }
 .notification-popover ul { list-style:none; padding:0; margin:12px 0; }
 .notification-popover li + li { border-top:1px solid var(--border); }
-.notification-popover li button { width:100%; padding:14px 10px; text-align:left; background:transparent; border:0; color:var(--text); border-radius:10px; cursor:pointer; line-height:1.5; }
-.notification-popover li button.unread { font-weight:700; background:var(--surface-raised); }
+.notification-popover li > a { display:block; text-decoration:none; width:100%; padding:14px 10px; text-align:left; background:transparent; border:0; color:var(--text); border-radius:10px; cursor:pointer; line-height:1.5; }
+.notification-popover li > a.unread { font-weight:700; background:var(--surface-raised); }
 .notification-all { display:block; padding:12px 0 0; border-top:1px solid var(--border); }
-.notification-detail p { white-space:pre-wrap; overflow-wrap:anywhere; }
+.notification-popover li > a:hover { background:var(--primary-soft); }
+.notification-message { display:block; margin-top:12px; padding-block:6px; white-space:pre-wrap; overflow-wrap:anywhere; color:var(--text); }
+.notification-message:hover { color:var(--primary); }
 .support-chat-page { max-width:960px; margin:0 auto; }
 .support-chat { padding:0; overflow:hidden; }
 .support-chat__header { padding:22px 24px; display:flex; align-items:center; gap:14px; border-bottom:1px solid var(--border); }
@@ -796,3 +798,5 @@ html { --page-gutter:clamp(35px,2.73vw,44px); --header-gutter:clamp(32px,2.73vw,
 .supplier-empty { display:flex; gap:12px; align-items:center; padding:28px; border:1px dashed var(--border); border-radius:18px; color:var(--text-muted); }
 .supplier-empty p { margin:0; }
 @media (max-width:720px) { .supplier-selection__head { flex-direction:column; }.supplier-grid { grid-template-columns:1fr; }.supplier-filters { grid-template-columns:1fr; }.supplier-filters__check { padding-bottom:0; }.supplier-tile__actions > .btn { flex:1 1 auto; } }
+
+.error-focus-target:focus { outline:2px solid var(--danger); outline-offset:4px; }

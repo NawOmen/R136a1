@@ -1,7 +1,8 @@
 "use client";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import CommercialEstimate from "../components/CommercialEstimate";
 import DealExecutionPanel from "../components/DealExecutionPanel";
 import DealFulfillmentPanel from "../components/DealFulfillmentPanel";
@@ -11,6 +12,11 @@ import { Deal, formatRub, formatUnits, marketplace } from "../lib/marketplace";
 
 
 export default function DealsPage() {
+  return <Suspense fallback={<p role="status">Загружаем сделки…</p>}><DealsContent /></Suspense>;
+}
+
+function DealsContent() {
+  const requested = useSearchParams().get("deal");
   const [companies, setCompanies] = useState<Company[]>([]);
   const [deals, setDeals] = useState<Deal[]>([]);
   const [selected, setSelected] = useState<Deal | null>(null);
@@ -29,12 +35,13 @@ export default function DealsPage() {
     Promise.all([api.me(token), marketplace.getMyDeals(token)]).then(([me, list]) => {
       if (!alive) return;
       setCompanies(me.companies); setDeals(list);
-      const requested = new URLSearchParams(window.location.search).get("deal");
-      setSelected(list.find(item => item.id === requested) ?? list[0] ?? null);
+      const found = requested ? list.find(item => item.id === requested) : list[0];
+      setSelected(found ?? null);
+      if (requested && !found) setError("Заказ не найден или недоступен этому аккаунту.");
     }).catch((e: Error) => { if (alive) setError(e.message); })
       .finally(() => { if (alive) setLoading(false); });
     return () => { alive = false; };
-  }, [retry]);
+  }, [retry, requested]);
 
   return <div><div className="company-row"><h1>Сделки и сообщения</h1><Link href="/dashboard" className="btn btn-secondary">В личный кабинет</Link></div><p className="subtitle">Переписка, организация получения и контрольные точки</p>
     {error && <div className="alert alert-error">{error} <button type="button" className="btn btn-secondary btn-sm" disabled={loading} onClick={() => setRetry(n => n + 1)}>Повторить загрузку</button></div>}

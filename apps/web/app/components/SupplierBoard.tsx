@@ -6,7 +6,7 @@ import { supplierWorkflow as api, SUPPLIER_STATUS, updateValues, type SupplierCa
 import SupplierConversation from "./SupplierConversation";
 
 const columns: SupplierStatus[] = ["sent", "replied", "selected"];
-export default function SupplierBoard({ needId, companyId, needRevision, canManage }: { needId: string; companyId: string; needRevision: number; canManage: boolean }) {
+export default function SupplierBoard({ needId, companyId, needRevision, canManage, initialRequestId = "" }: { needId: string; companyId: string; needRevision: number; canManage: boolean; initialRequestId?: string }) {
   const [rows, setRows] = useState<SupplierRequest[]>([]), [candidates, setCandidates] = useState<SupplierCandidate[]>([]);
   const [supplierId, setSupplierId] = useState(""), [selectedId, setSelectedId] = useState(""), [loading, setLoading] = useState(true), [busy, setBusy] = useState(false), [error, setError] = useState("");
   const [dragStatus, setDragStatus] = useState<SupplierStatus | null>(null);
@@ -20,9 +20,10 @@ export default function SupplierBoard({ needId, companyId, needRevision, canMana
   }
   useEffect(() => {
     setLoading(true);
+    setSelectedId(initialRequestId);
     void reload().catch(e => setError(russianMessage(e.message))).finally(() => setLoading(false));
     return () => { generation.current++; };
-  }, [needId, companyId, needRevision]);
+  }, [needId, companyId, needRevision, initialRequestId]);
   async function perform(action: (token: string) => Promise<void>) {
     const token = getToken(); if (!token || busy) return;
     setBusy(true); setError("");
@@ -56,7 +57,7 @@ export default function SupplierBoard({ needId, companyId, needRevision, canMana
       {canManage && !candidates.length && <p className="hint">Проверенных поставщиков пока нет. Вернитесь к доске позже.</p>}
       {!!drafts.length && <details className="supplier-drafts" open><summary>Черновики запросов ({drafts.length})</summary><div>{drafts.map(card)}</div></details>}
       <div className="supplier-board__columns">{columns.map(status => <section key={status} className={`supplier-lane${dragStatus === status ? " supplier-lane--over" : ""}`} aria-label={SUPPLIER_STATUS[status]} onDragOver={e => { if (canManage && !busy) { e.preventDefault(); setDragStatus(status); } }} onDragLeave={e => { if (!e.currentTarget.contains(e.relatedTarget as Node)) setDragStatus(null); }} onDrop={e => drop(e, status)}><h3>{SUPPLIER_STATUS[status]} <span>{rows.filter(r => r.status === status).length}</span></h3>{rows.filter(r => r.status === status).map(card)}{!rows.some(r => r.status === status) && <p className="hint">Пока пусто</p>}</section>)}</div>
-      {selected ? <SupplierConversation key={`${selected.id}:${companyId}`} row={selected} companyId={companyId} canManage={canManage} onChanged={reload} /> : !!rows.length && <p className="hint">Откройте поставщика, чтобы перейти в чат.</p>}
+      {selected ? <SupplierConversation key={`${selected.id}:${companyId}`} row={selected} companyId={companyId} canManage={canManage} onChanged={reload} /> : initialRequestId ? <p role="alert">Запрос не найден или недоступен этой компании.</p> : !!rows.length && <p className="hint">Откройте поставщика, чтобы перейти в чат.</p>}
     </>}
   </section>;
 }

@@ -47,3 +47,13 @@ test("availability needs fresh seller stock, not publication or verification", (
   }
   expect(productAvailability({ stock_units: null, stock_updated_at: "2026-10-20T09:00:00Z" }, now).available).toBe(false);
 });
+
+
+test("notification destinations are internal and legacy notifications retain a usable link", async () => {
+  const { notificationHref } = await import("../../apps/web/app/lib/notifications");
+  const item = { id: "notice", user_id: "user", type: "offer_received", message: "Получено КП", is_read: false };
+  expect(notificationHref({ ...item, href: "/needs/exact-need" })).toBe("/needs/exact-need");
+  expect(notificationHref(item)).toBe("/needs");
+  for (const href of ["https://example.test", "//example.test", "/\\example.test", "javascript:alert(1)", "/needs\nother"]) expect(notificationHref({ ...item, href })).toBe("/needs");
+  expect(notificationHref({ ...item, type: "unknown" })).toBe("/notifications#notification-notice");
+});

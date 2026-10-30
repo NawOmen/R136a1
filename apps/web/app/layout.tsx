@@ -1,3 +1,4 @@
+import ErrorFocus from "./components/ErrorFocus";
 import type { Metadata, Viewport } from "next";
 import type { ReactNode } from "react";
 import "./globals.css";
@@ -40,7 +41,7 @@ export default function RootLayout({ children }: Readonly<{ children: ReactNode 
             <AccountDrawer />
           </div>
         </header>
-        <main id="main-content" tabIndex={-1} className="container main"><PageSurface>{children}</PageSurface></main>
+        <main id="main-content" tabIndex={-1} className="container main"><PageSurface>{children}</PageSurface><ErrorFocus /></main>
         <footer className="site-footer">
           <div className="container footer-grid">
             <Link className="site-header__logo" href="/"><img src="/icon.png" alt="" width="42" height="32" /><span>ПоРукам</span></Link>

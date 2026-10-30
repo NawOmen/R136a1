@@ -126,11 +126,14 @@ async def require_marketplace_admin(user: CurrentUser, db: AsyncSession) -> None
         raise HTTPException(status.HTTP_403_FORBIDDEN, detail="Требуются права администратора площадки")
 
 
-async def notify(db: AsyncSession, user_id: uuid.UUID, message: str, type_: str = "info") -> None:
+async def notify(db: AsyncSession, user_id: uuid.UUID, message: str, type_: str = "info", *, href: str | None = None) -> None:
     """Создать внутреннее уведомление для пользователя."""
     from .models import Notification
 
-    db.add(Notification(user_id=user_id, message=message, type=type_))
+    from .notification_links import default_notification_href, internal_notification_href
+
+    destination = internal_notification_href(href or default_notification_href(type_))
+    db.add(Notification(user_id=user_id, message=message, type=type_, href=destination))
 
 
 async def require_category_editor(user: CurrentUser, db: AsyncSession) -> None:

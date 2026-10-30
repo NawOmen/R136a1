@@ -4,17 +4,17 @@ import { useEffect, useRef, useState } from "react";
 import { usePathname } from "next/navigation";
 import { getToken } from "../lib/api";
 import { marketplace, Notification } from "../lib/marketplace";
+import { notificationHref } from "../lib/notifications";
 import { Icon } from "./Icon";
 
 export function NotificationBell() {
   const [open, setOpen] = useState(false);
   const [items, setItems] = useState<Notification[]>([]);
-  const [selected, setSelected] = useState<Notification | null>(null);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(true);
   const root = useRef<HTMLDivElement>(null), trigger = useRef<HTMLButtonElement>(null);
   const pathname = usePathname();
-  useEffect(() => { setOpen(false); setSelected(null); }, [pathname]);
+  useEffect(() => { setOpen(false); }, [pathname]);
   useEffect(() => {
     let active = true;
     const refresh = () => {
@@ -34,7 +34,6 @@ export function NotificationBell() {
     return () => { document.removeEventListener("pointerdown", click); document.removeEventListener("keydown", key); };
   }, [open]);
   async function view(item: Notification) {
-    setSelected(item);
     const token = getToken(); if (!token || item.is_read) return;
     try { await marketplace.markNotificationRead(token, item.id); setItems(value => value.map(n => n.id === item.id ? { ...n, is_read: true } : n)); }
     catch { setError("Не удалось отметить прочитанным. Откройте уведомление повторно."); }
@@ -45,7 +44,7 @@ export function NotificationBell() {
     {open && <section id="header-notifications" className="notification-popover" aria-label="Уведомления">
       <div className="company-row"><h2>Уведомления</h2><button className="icon-button" aria-label="Закрыть уведомления" onClick={() => { setOpen(false); trigger.current?.focus(); }}><Icon name="close" /></button></div>
       {error && <p role="alert">{error}</p>}
-      {selected ? <div className="notification-detail"><button className="btn btn-secondary btn-sm" onClick={() => setSelected(null)}>← К списку</button><p>{selected.message}</p>{selected.type === "support_ticket_created" ? <Link href="/admin#tickets">Открыть сообщения поддержки →</Link> : selected.type.startsWith("support_") && <Link href="/support">Открыть чат поддержки →</Link>}</div> : loading ? <p role="status">Загружаем…</p> : items.length ? <ul>{items.slice(0, 8).map(item => <li key={item.id}><button className={item.is_read ? "" : "unread"} onClick={() => void view(item)}>{item.message}</button></li>)}</ul> : <p className="hint">Новых событий пока нет.</p>}
+      {loading ? <p role="status">Загружаем…</p> : items.length ? <ul>{items.slice(0, 8).map(item => <li key={item.id}><a href={notificationHref(item)} className={item.is_read ? "" : "unread"} onClick={() => { void view(item); setOpen(false); }}>{item.message}</a></li>)}</ul> : <p className="hint">Новых событий пока нет.</p>}
       <Link className="notification-all" href="/notifications">Все уведомления →</Link>
     </section>}
   </div>;

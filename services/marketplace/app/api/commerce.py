@@ -233,7 +233,7 @@ async def create_event(deal_id: uuid.UUID, data: ExecutionIn, user: CurrentUser 
             await notify(db, other_user_id,
                          f"Требуется решение: {KIND_RU.get(event.kind, event.kind)} {event.units} {unit} "
                          f"по сделке {deal.id} (запрос {event.id} от {actor_name}).",
-                         "deal_execution_requested")
+                         "deal_execution_requested", href=f"/deals?deal={deal.id}")
     await db.commit()
     return event
 
@@ -297,7 +297,7 @@ async def decide_event(deal_id: uuid.UUID, event_id: uuid.UUID, data: DecisionIn
         await notify(db, requester_id,
                      f"Решение принято: {KIND_RU.get(event.kind, event.kind)} {event.units} {unit} "
                      f"по сделке {deal.id} (запрос {event.id}) — {verdict}.",
-                     "deal_execution_decided")
+                     "deal_execution_decided", href=f"/deals?deal={deal.id}")
     await db.commit()
     return event
 

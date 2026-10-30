@@ -530,6 +530,7 @@ export interface PrimaryObligation {
 export interface Notification {
   id: string;
   user_id: string;
+  href?: string | null;
   message: string;
   type: string;
   is_read: boolean;
@@ -1644,7 +1645,8 @@ export const marketplace = {
   },
 
   markNotificationRead(token: string, notificationId: string): Promise<Notification> {
-    return marketplaceFetch(`/api/v1/notifications/${notificationId}/read`, { method: "POST", token });
+    // Navigation must not cancel this small, non-critical read receipt.
+    return marketplaceFetch(`/api/v1/notifications/${notificationId}/read`, { method: "POST", token, keepalive: true });
   },
 
   markAllNotificationsRead(token: string): Promise<void> {

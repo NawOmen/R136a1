@@ -7,6 +7,7 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { getToken } from "../lib/api";
 import { ApiError, marketplace, Notification } from "../lib/marketplace";
+import { notificationHref } from "../lib/notifications";
 import { useMe } from "../lib/useMe";
 
 export default function NotificationsPage() {
@@ -34,7 +35,7 @@ export default function NotificationsPage() {
 
   async function handleRead(notification: Notification) {
     const token = getToken();
-    if (!token) return;
+    if (!token || notification.is_read) return;
     setBusyId(notification.id);
     setError(null);
     try {
@@ -99,7 +100,7 @@ export default function NotificationsPage() {
       ) : (
         <ul className="company-list">
           {notifications.map((notification) => (
-            <li key={notification.id} className="card">
+            <li key={notification.id} id={`notification-${notification.id}`} className="card">
               <div className="company-row">
                 <span className={`badge ${notification.is_read ? "badge-read" : "badge-unread"}`}>
                   {notification.is_read ? "Прочитано" : "Новое"}
@@ -115,7 +116,7 @@ export default function NotificationsPage() {
                   </button>
                 )}
               </div>
-              <p style={{ margin: "10px 0 0" }}>{notification.message}</p>
+              <a className="notification-message" href={notificationHref(notification)} onClick={() => void handleRead(notification)}>{notification.message}<span aria-hidden="true"> →</span></a>
 
             </li>
           ))}

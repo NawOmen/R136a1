@@ -1,7 +1,7 @@
 "use client";
 import Link from "next/link";
-import { useParams } from "next/navigation";
-import { useEffect, useMemo, useState } from "react";
+import { useParams, useSearchParams } from "next/navigation";
+import { Suspense, useEffect, useMemo, useState } from "react";
 import SupplierBoard from "../../../components/SupplierBoard";
 import SupplierConversation from "../../../components/SupplierConversation";
 import { Icon } from "../../../components/Icon";
@@ -50,6 +50,11 @@ function requestOf(supplier: string, requests: SupplierRequest[]) {
 }
 
 export default function SupplierSelectionPage() {
+  return <Suspense fallback={<p role="status">Загружаем переписку…</p>}><SupplierSelectionContent /></Suspense>;
+}
+
+function SupplierSelectionContent() {
+  const requested = useSearchParams().get("request") ?? "";
   useMe();
   const params = useParams();
   const needId = typeof params.id === "string" ? params.id : "";
@@ -90,7 +95,7 @@ export default function SupplierSelectionPage() {
     }
   }
 
-  useEffect(() => { void load(); }, [needId]);
+  useEffect(() => { if (requested) setTab("board"); void load(); }, [needId, requested]);
 
   const companyId = need && "company_id" in need ? need.company_id : null;
   const canManage = Boolean(companyId && need && !["cancelled", "expired", "matched"].includes(need.status));
@@ -209,7 +214,7 @@ export default function SupplierSelectionPage() {
             </ul>}
     </> : (
       companyId
-        ? <SupplierBoard key={`${needId}:${companyId}:${need?.revision ?? 0}`} needId={needId} companyId={companyId} needRevision={need?.revision ?? 1} canManage={canManage} />
+        ? <SupplierBoard key={`${needId}:${companyId}:${need?.revision ?? 0}`} needId={needId} companyId={companyId} needRevision={need?.revision ?? 1} canManage={canManage} initialRequestId={requested} />
         : <p className="hint">Доска запросов доступна покупателю этой потребности.</p>
     )}
   </div>;
