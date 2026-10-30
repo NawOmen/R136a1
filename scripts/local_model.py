@@ -476,6 +476,11 @@ def probe_generation(settings: Settings, timeout: float | None = None) -> str | 
     choices = payload.get("choices")
     if not isinstance(choices, list) or not choices:
         return "в ответе нет генерации"
+    choice = choices[0]
+    message = choice.get("message") if isinstance(choice, dict) else None
+    content = message.get("content") if isinstance(message, dict) else None
+    if not isinstance(content, str) or not content.strip():
+        return "модель не вернула текст ответа"
     return None
 
 

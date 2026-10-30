@@ -14,7 +14,11 @@ export default function ErrorFocus() {
     let alive = true;
     const reveal = () => {
       if (!alive || !armed) return;
-      const target = Array.from(main.querySelectorAll<HTMLElement>('.alert-error,[role="alert"]'))
+      // A modal makes the rest of the page inert: its error must win over
+      // an older page banner, which cannot receive focus while the dialog is open.
+      const modal = main.querySelector<HTMLDialogElement>("dialog[open]");
+      const scope = modal ?? main;
+      const target = Array.from(scope.querySelectorAll<HTMLElement>('.alert-error,[role="alert"]'))
         .find(node => node.textContent?.trim() && node.getClientRects().length && !node.closest('[hidden],[aria-hidden="true"]'));
       if (!target) return;
       armed = false;
@@ -22,7 +26,7 @@ export default function ErrorFocus() {
       target.setAttribute("role", "alert");
       target.tabIndex = -1;
       const header = document.querySelector(".site-header")?.getBoundingClientRect();
-      target.style.scrollMarginTop = `${Math.max(0, header?.bottom ?? 0) + 20}px`;
+      target.style.scrollMarginTop = `${modal ? 20 : Math.max(0, header?.bottom ?? 0) + 20}px`;
       target.focus({ preventScroll: true });
       target.scrollIntoView({ block: "start", behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "instant" : "smooth" });
     };

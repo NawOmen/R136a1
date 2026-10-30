@@ -7,7 +7,7 @@ const seller={...buyer,id:sellerId,display_name:sellerName,full_name:sellerName,
 const need={id:needId,company_id:buyerId,category:"Упаковка и тара",subcategory:"Бумажные стаканы",status:"open_for_offers",visibility:"open_anonymized",revision:1,volume_units:100,budget_rub:"5000.00",deadline_date:"2026-11-20",valid_until:"2026-11-19",delivery_address_id:null,characteristics:{unit:"шт",material:"бумага"},files:[],requirements_evidence:null};
 const draftText=`Здравствуйте, ${sellerName}! Просим КП на 100 бумажных стаканов. Укажите цену в рублях, НДС и срок поставки.`;
 
-async function prepare(page: Page, options: {empty?:boolean; draftFailure?:boolean; sendFailure?:boolean; closed?:boolean}={}) {
+async function prepare(page: Page, options: {quote?:Record<string,unknown>; empty?:boolean; draftFailure?:boolean; sendFailure?:boolean; closed?:boolean}={}) {
   let row={id:requestId,need_id:needId,need_revision:1,buyer_company_id:buyerId,seller_company_id:sellerId,buyer_name:buyer.display_name,seller_name:sellerName,specification:{category:need.category,subcategory:need.subcategory,characteristics:need.characteristics,quantity:100,unit:"шт",deadline_date:need.deadline_date},status:"sent",revision:1,quoted_price_rub:null as string|null,price_basis:"unknown",lead_time_days:null as number|null,delivery_date:null as string|null,note:"",sent_at:"2026-10-26T01:00:00Z",updated_at:"2026-10-26T01:00:00Z"};
   let rows=options.empty?[]:[row]; const messages: unknown[]=[]; let sendAttempts=0;
   const updates: Record<string,unknown>[]=[];const sends: Record<string,unknown>[]=[];const removedPanelRequests: string[]=[];
@@ -21,6 +21,7 @@ async function prepare(page: Page, options: {empty?:boolean; draftFailure?:boole
     else if(path.endsWith("/next-step"))json={title:"Потребности",description:"",href:"/needs"};
     else if(path.endsWith(`/needs/${needId}`))json={...need,visibility:options.closed?"closed":need.visibility};
     else if(path.endsWith("/needs/mine"))json=[need];
+    else if(path.endsWith("/offers"))json=options.quote?[options.quote]:[];
     else if(path.endsWith(`/needs/${needId}/suppliers`))json=[{company_id:sellerId,company_name:sellerName,specialization:[need.category],relevant:true,products:["Бумажный стакан"]}];
     else if(path.endsWith("/suppliers"))json=[{company_id:sellerId,company_name:sellerName,specialization:[need.category],relevant:true,products:["Бумажный стакан"]}];
     else if(path.endsWith("/specification.csv"))return route.fulfill({contentType:"text/csv",headers:{"Content-Disposition":"attachment; filename=spec.csv"},body:"Категория;Количество\nУпаковка;100"});
@@ -171,4 +172,15 @@ test('matched need keeps the next step to orders after reload', async ({page}, t
   if (['desktop-chromium','iphone-webkit'].includes(testInfo.project.name)) await page.locator('section.card').filter({has:page.getByRole('heading',{name:'Предложение выбрано',exact:true})}).screenshot({path:`output/procurement-qa/final-next-step-${testInfo.project.name}.png`,style:'.site-header,.skip-link{visibility:hidden!important}'});
   await page.reload();
   await expect(page.getByRole('link',{name:'Перейти к заказам',exact:true})).toBeVisible();
+});
+
+
+for(const stale of [false,true])test(`supplier totals use the frozen quote and never recalculate stale terms: ${stale}`,async({page})=>{
+ const quote={id:'quote',company_id:sellerId,status:'sent',revision:2,price_rub:'12',available_units:100,moq_units:10,lead_time_days:2,
+  price_tiers:[{min_units:100,unit_price_rub:'9.50'}],commercial_quote:{schema_version:1,need:{id:needId,revision:stale?0:1,units:100},offer:{id:'quote',revision:2},
+   estimate:{units:100,unit_price_rub:'9.50',complete:true,lines:[{code:'goods',amount_rub:'950.00',conditional:false}],missing:[],total_rub:'950.00',known_total_rub:'950.00',terms:{tax_basis:'no_vat'}}}};
+ await prepare(page,{quote});await page.goto(`/needs/${needId}/suppliers`);
+ const tile=page.locator('.supplier-tile');
+ if(stale){await expect(tile.locator('.supplier-tile__total')).toHaveCount(0);await expect(tile).toContainText('Условия КП требуют обновления');}
+ else {await expect(tile.locator('.supplier-tile__price strong')).toHaveText('9,5 ₽');await expect(tile.locator('.supplier-tile__total strong')).toHaveText('950 ₽');}
 });

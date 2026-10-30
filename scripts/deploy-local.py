@@ -600,13 +600,23 @@ def check_lan_ports():
                 raise DeployError(f"Порт {port} занят другим приложением: закройте его и повторите команду")
 
 
+def stop_lan_gateway():
+    """Остановить ранее включённый шлюз только этого Compose-проекта."""
+    owned = recording.compose("ps", "--status", "running", "--services",
+                              capture_output=True, text=True).stdout.split()
+    if "edge" in owned:
+        recording.compose("stop", "edge", files=EDGE_FILES)
+
+
 def ensure_lan(values, *, enabled=True, out=print):
     """Сайт для всех устройств в локальной сети: сертификат на адрес машины и edge на 80/443."""
     if not enabled:
+        stop_lan_gateway()
         out("Доступ из локальной сети отключён флагом --no-lan: сайт открыт только на этом компьютере.")
         return None
     addresses = lan_addresses()
     if not addresses:
+        stop_lan_gateway()
         out("Адрес в локальной сети не найден: сайт открыт только на этом компьютере.")
         return None
     check_lan_ports()

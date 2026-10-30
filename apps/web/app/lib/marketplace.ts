@@ -1724,8 +1724,8 @@ export interface CommercialTerms {
   exceptions?: string;
   expenses?: {code:"individual_operations"|"reserve_holding"|"switching"|"other";title:string;amount_rub:Money|null;required:boolean;source:string;version:string}[];
 }
-export interface CommercialEstimate {schema_version:number;complete:boolean;missing:string[];total_rub:Money|null;known_total_rub:Money;lines:{code:string;title:string;amount_rub:Money|null;conditional:boolean;source:unknown;tax_basis:string}[];terms:CommercialTerms;benefit_rub?:Money|null;baseline_comparable?:boolean}
-export interface CommercialSnapshot {schema_version:number;estimate:CommercialEstimate;need:{id:string;revision:number};offer:{id:string;revision:number}|null}
+export interface CommercialEstimate {unit_price_rub?:Money;schema_version:number;complete:boolean;missing:string[];total_rub:Money|null;known_total_rub:Money;lines:{code:string;title:string;amount_rub:Money|null;conditional:boolean;source:unknown;tax_basis:string}[];terms:CommercialTerms;benefit_rub?:Money|null;baseline_comparable?:boolean}
+export interface CommercialSnapshot {schema_version:number;estimate:CommercialEstimate;need:{id:string;revision:number;units?:number};offer:{id:string;revision:number}|null}
 
 
 export interface FulfillmentRecord {

@@ -196,6 +196,25 @@ class DeployLocalTests(unittest.TestCase):
                 deploy.verify_accounts({})
             request.assert_not_called()
 
+    def test_disabling_lan_stops_only_the_existing_project_gateway(self):
+        with mock.patch.object(deploy.recording, "compose", return_value=subprocess.CompletedProcess([],0,stdout="postgres\nweb\nedge\n")) as compose, \
+                mock.patch.object(deploy, "lan_addresses") as addresses:
+            deploy.ensure_lan({},enabled=False,out=lambda *_args,**_kwargs:None)
+            self.assertEqual(compose.call_args_list[-1],mock.call("stop","edge",files=deploy.EDGE_FILES))
+            addresses.assert_not_called()
+
+    def test_disabling_lan_without_gateway_does_not_require_tls_settings(self):
+        with mock.patch.object(deploy.recording, "compose", return_value=subprocess.CompletedProcess([],0,stdout="web\n")) as compose:
+            deploy.ensure_lan({},enabled=False,out=lambda *_args,**_kwargs:None)
+            self.assertEqual(compose.call_count,1)
+            self.assertEqual(compose.call_args.args,("ps","--status","running","--services"))
+
+    def test_missing_lan_address_also_stops_the_previous_gateway(self):
+        with mock.patch.object(deploy.recording, "compose", return_value=subprocess.CompletedProcess([],0,stdout="edge\n")) as compose, \
+                mock.patch.object(deploy,"lan_addresses",return_value=[]):
+            deploy.ensure_lan({},out=lambda *_args,**_kwargs:None)
+            self.assertEqual(compose.call_args_list[-1],mock.call("stop","edge",files=deploy.EDGE_FILES))
+
     def test_private_atomic_update_and_symlink_refusal(self):
         with tempfile.TemporaryDirectory() as tmp:
             path = Path(tmp) / "secret"

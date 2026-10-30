@@ -41,3 +41,16 @@ test("edit preview shows readable Russian dates",async({page})=>{
   await page.getByRole("button",{name:"Проверить изменения",exact:true}).click();
   await expect(page.getByRole("dialog")).toContainText("было — 20.11.26; станет — 21.11.26");
 });
+
+
+test('an error inside the edit dialog receives focus even when the page already has an error',async({page})=>{
+ await prepare(page);let calls=0;
+ await page.route('**/edit-preview',route=>route.fulfill({status:409,json:{detail:++calls===1?'Публикацию изменить нельзя':'Количество требует уточнения'}}));
+ await page.getByRole('button',{name:'Скрыть из публикации',exact:true}).click();
+ await expect(page.locator('main > .page-surface .alert-error').first()).toContainText('Публикацию изменить нельзя');
+ await page.getByRole('button',{name:'Изменить',exact:true}).click();
+ const dialog=page.getByRole('dialog');await dialog.getByLabel('Количество',{exact:true}).fill('30000');
+ await dialog.getByRole('button',{name:'Проверить изменения',exact:true}).click();
+ const error=dialog.getByRole('alert');await expect(error).toContainText('Количество требует уточнения');
+ await expect(error).toBeFocused();
+});

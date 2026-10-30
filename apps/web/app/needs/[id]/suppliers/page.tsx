@@ -20,6 +20,8 @@ import {
 import { russianMessage } from "../../../lib/russianMessages";
 import { supplierWorkflow as api, type SupplierCandidate, type SupplierRequest } from "../../../lib/supplierWorkflow";
 import { useMe } from "../../../lib/useMe";
+import { supplierQuote } from "../../../lib/supplierQuote";
+import { scaledMoney } from "../../../lib/money";
 
 // Подбор поставщиков — отдельная страница вместо блока «Поставщики и ответы».
 // Две вкладки: карточки подходящих поставщиков и доска запросов с перепиской.
@@ -123,19 +125,24 @@ function SupplierSelectionContent() {
       .filter(item => !text || `${item.company_name} ${item.specialization.join(" ")} ${item.products.join(" ")}`.toLocaleLowerCase("ru").includes(text));
     const price = (item: SupplierCandidate) => {
       const offer = offerOf(item.company_id, offers);
-      return offer ? Number(offer.price_rub) : Number.POSITIVE_INFINITY;
+      return supplierQuote(offer, need)?.unitPrice ?? null;
     };
     const lead = (item: SupplierCandidate) => {
       const offer = offerOf(item.company_id, offers);
       return offer ? offer.lead_time_days : Number.POSITIVE_INFINITY;
     };
     return [...rows].sort((left, right) => {
-      if (sort === "price") return price(left) - price(right);
+      if (sort === "price") {
+        const a = price(left), b = price(right);
+        if (a === null) return b === null ? 0 : 1;
+        if (b === null) return -1;
+        return scaledMoney(a) < scaledMoney(b) ? -1 : scaledMoney(a) > scaledMoney(b) ? 1 : 0;
+      }
       if (sort === "lead") return lead(left) - lead(right);
       const byOffer = (offerOf(left.company_id, offers) ? 0 : 1) - (offerOf(right.company_id, offers) ? 0 : 1);
       return byOffer || Number(right.relevant) - Number(left.relevant) || left.company_name.localeCompare(right.company_name, "ru");
     });
-  }, [candidates, offers, onlyRelevant, query, sort]);
+  }, [candidates, offers, need, onlyRelevant, query, sort]);
 
   const unit = need ? itemUnit(need.characteristics) : "шт.";
   const withOffer = candidates.filter(item => offerOf(item.company_id, offers)).length;
@@ -172,7 +179,7 @@ function SupplierSelectionContent() {
               {visible.map(item => {
                 const offer = offerOf(item.company_id, offers);
                 const request = requestOf(item.company_id, requests);
-                const total = offer ? Number(offer.price_rub) * Number(need?.volume_units ?? 0) : null;
+                const quote = supplierQuote(offer, need);
                 return <li key={item.company_id} className="supplier-tile">
                   <div className="supplier-tile__top">
                     <div className="supplier-tile__name">
@@ -184,20 +191,21 @@ function SupplierSelectionContent() {
                       </div>
                     </div>
                     <div className="supplier-tile__price">
-                      <strong>{offer ? formatRub(offer.price_rub) : "—"}</strong>
+                      <strong>{offer ? formatRub(quote?.unitPrice ?? offer.price_rub) : "—"}</strong>
                       <small>{offer ? `за ${unit}` : "цена по запросу"}</small>
                     </div>
                   </div>
 
                   <dl className="supplier-tile__facts">
                     <div><dt>Срок</dt><dd>{offer ? `${offer.lead_time_days} дн.` : "—"}</dd></div>
-                    <div><dt>Остаток</dt><dd>{offer ? formatUnits(offer.available_units, unit) : "—"}</dd></div>
+                    <div><dt>Объём КП</dt><dd>{offer ? formatUnits(offer.available_units, unit) : "—"}</dd></div>
                     <div><dt>Мин. заказ</dt><dd>{offer ? formatUnits(offer.moq_units, unit) : "—"}</dd></div>
                   </dl>
 
                   {item.products.length > 0 && <div className="supplier-tile__products" title={item.products.join(", ")}>{item.products.slice(0, 3).map(product => <span key={product} className="product-chip">{product}</span>)}{item.products.length > 3 && <span className="product-chip product-chip--more">+{item.products.length - 3}</span>}</div>}
 
-                  {total !== null && <p className="supplier-tile__total">Товар за весь объём: <strong>{formatRub(total)}</strong>. Доставка и расходы — в смете КП.</p>}
+                  {quote && <p className="supplier-tile__total">Товар за весь объём: <strong>{formatRub(quote.goodsTotal)}</strong>. Доставка и расходы — в смете КП.</p>}
+                  {offer && !quote && <p className="hint">Условия КП требуют обновления.</p>}
 
                   <div className="supplier-tile__actions">
                     <Link className="btn btn-secondary btn-sm" href={`/producers/${item.company_id}`}>О поставщике</Link>
