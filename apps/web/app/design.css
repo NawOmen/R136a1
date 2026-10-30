@@ -5,6 +5,7 @@
 .btn-outline-primary { color: var(--primary); border-color: var(--border); background: transparent; }.btn-outline-primary:hover { color: var(--on-primary); background: var(--primary); border-color: var(--primary); }
 .btn-danger { color: var(--danger); background: var(--danger-soft); }.btn-success { color: var(--success); background: var(--success-soft); }.btn:active:not(:disabled) { transform: translateY(1px) scale(.98); transition-duration: 100ms; }.btn:disabled { opacity: .5; cursor: not-allowed; box-shadow: none; }
 .btn-sm { min-height: 38px; padding: 8px 13px; font-size: 12px; }.btn-lg { min-height: 50px; padding: 14px 22px; }.text-link { display: inline-flex; align-items: center; gap: 10px; font-size: 14px; font-weight: 650; }
+.demand-actions > .btn-primary { grid-column: 1 / -1; }
 .page-title { font-size: clamp(28px,3vw,40px); font-weight: 550; }.subtitle { max-width: 70ch; color: var(--text-muted); font-size: var(--type-prose); line-height: 1.65; }
 .eyebrow { font-size: 12px; text-transform: none; letter-spacing: 0; color: var(--text-muted); }.auth-aside .eyebrow,.auth-page>.eyebrow,.hero>.eyebrow,.route-state>.eyebrow { display: none; }
 .card,.workspace-card,.demand-card,.route-state,.product-buybox { border-color: var(--border); border-radius: 16px; box-shadow: none; background: var(--surface); }.card { padding: 26px; }
