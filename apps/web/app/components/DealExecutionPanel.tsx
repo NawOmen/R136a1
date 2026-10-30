@@ -51,7 +51,7 @@ export default function DealExecutionPanel({ dealId, companyId, isBuyer, canMana
     void perform(async () => { await marketplace.saveDealCosts(token, dealId, { company_id: companyId, expected_revision: data.cost_revision ?? 0, unit_cost_rub: unitCost === "" ? null : unitCost, attributable_expenses_rub: expenses === "" ? null : expenses, tax_basis: taxBasis, note: costNote.trim() }); setCostApproved(false); }, "Затраты сохранены. Отчёт пересчитан.");
   }
   const max = kind === "return" ? data?.net_units : kind === "shipment" ? data?.unshipped_units : data?.open_units;
-  return <section className="card" aria-busy={busy}>
+  return <section className="card deal-finance" aria-busy={busy}>
     <h2>Исполнение и расчёты</h2>
     {error && <div className="alert alert-error" role="alert">{error}<button type="button" className="btn btn-secondary" disabled={busy} onClick={() => void perform(reload, "Данные обновлены.")}>Обновить данные</button></div>}
     {notice && <p className="alert alert-success" role="status">{notice}</p>}

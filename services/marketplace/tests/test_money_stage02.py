@@ -60,11 +60,13 @@ async def test_v3_exact_large_batch_complete_consent_and_immutable_snapshot(clie
     payload={'company_id':str(seller),'resource_kind':'stock','product_id':product['id'],'price_rub':raw['price_rub'],
              'available_units':1_000_000_000,'lead_time_days':1,'moq_units':1,'delivery_cost_rub':None}
     response=await client.post(f"/api/v3/needs/{need['id']}/offers",headers=headers(seller_user),json=payload)
+    assert response.status_code==409,response.text
+    assert 'доставки' in response.json()['detail']
+    payload['commercial_terms']={**confirmed_quote_terms(),'delivery_method':'included'}
+    response=await client.post(f"/api/v3/needs/{need['id']}/offers",headers=headers(seller_user),json=payload)
     assert response.status_code==201,response.text
     quote=response.json()
-    assert quote['delivery_cost_rub'] is None and not quote['commercial_quote']['estimate']['complete']
-    selected=await client.post(f"/api/v3/offers/{quote['id']}/select",headers=headers(buyer_user),json={'human_approved':True,'expected_revision':1})
-    assert selected.status_code==409 and 'согласование' in selected.json()['detail']
+    assert Decimal(quote['delivery_cost_rub'])==0 and quote['commercial_quote']['estimate']['complete']
     complete=await client.patch(f"/api/v3/offers/{quote['id']}",headers=headers(seller_user),json={
         'expected_revision':1,'commercial_terms':{**confirmed_quote_terms(),'delivery_method':'included'}})
     assert complete.status_code==200,complete.text

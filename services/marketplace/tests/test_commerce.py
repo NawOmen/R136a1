@@ -1,12 +1,12 @@
 from conftest import confirmed_quote_terms
 import uuid
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta, timezone
 from decimal import Decimal
 
 import pytest
 from sqlalchemy import select
 from app.models import Deal, DealCheckpoint, DealExecutionEvent, DeliveryAddress, DeliveryArrangement, Need, Notification, Offer, Product
-from conftest import make_company, make_token, make_user
+from conftest import grant_capacity, make_company, make_token, make_user
 
 
 @pytest.fixture
@@ -146,6 +146,7 @@ async def test_stock_offer_requires_matching_product_on_send_and_selection(clien
     endpoint = f"/api/v1/needs/{need.id}/offers"
     mismatch = await client.post(endpoint, headers=seller_headers, json=payload)
     assert mismatch.status_code == 409
+    product.stock_updated_at = datetime.now(timezone.utc)
     product.category = "Мебель"
     await db_session.commit()
     sent = await client.post(endpoint, headers=seller_headers, json=payload)
@@ -198,6 +199,8 @@ async def test_offer_revision_prevents_stale_purchase_and_update(client, order, 
     offer = await db_session.get(Offer, deal.offer_id)
     need = await db_session.get(Need, deal.need_id)
     offer.status = "sent"; need.status = "open_for_offers"
+    offer.commercial_terms = confirmed_quote_terms()
+    await grant_capacity(db_session, seller, 10, category_id="business-supplies.furniture")
     # Keep an existing deal to exercise repeat selection after the version checks.
     await db_session.commit()
     response = await client.patch(f"/api/v1/offers/{offer.id}", headers=sh, json={"expected_revision":1,"price_rub":1100})
@@ -211,7 +214,7 @@ async def test_offer_revision_prevents_stale_purchase_and_update(client, order, 
 
 
 async def test_need_draft_edit_revision_and_publication_guard(client, db_session):
-    from datetime import date, timedelta
+    from datetime import date, datetime, timedelta, timezone
     from conftest import make_user, make_company, make_token
     user = await make_user(db_session)
     company = await make_company(db_session, user, can_buy=True, can_sell=False)

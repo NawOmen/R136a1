@@ -7,7 +7,7 @@ from conftest import confirmed_quote_terms
 
 from datetime import date, timedelta
 
-from conftest import grant_packaging_documents, make_company, make_token, make_user
+from conftest import grant_capacity, grant_packaging_documents, make_company, make_token, make_user
 
 from test_category_admission import _auth, _seller_with_product
 
@@ -51,6 +51,7 @@ async def test_cups_deal_without_documents_must_not_be_created(client, db_sessio
     need_id = need.json()['id']
     published = await client.post(f'/api/v1/needs/{need_id}/publish', headers=buyer_headers)
     assert published.status_code == 200, published.text
+    await grant_capacity(db_session, seller_company, 120_000)
     offer = await client.post(f'/api/v1/needs/{need_id}/offers', headers=_auth(make_token(seller)), json={'commercial_terms': confirmed_quote_terms(),
         'company_id': str(seller_company), 'price_rub': 11.0, 'available_units': 120000,
         'lead_time_days': 9, 'delivery_cost_rub': 10000,

@@ -21,18 +21,23 @@ const product = {
   price_tiers: [{ min_units: 10000, unit_price_rub: "4.80" }], images: [], sources: [], is_published: true,
 };
 
-async function prepare(page: Page, options: { available?: number; sparse?: boolean; failure?: boolean; delayed?: boolean; warnings?: boolean; price?: string } = {}) {
+async function prepare(page: Page, options: { initialPath?: string; available?: number; sparse?: boolean; failure?: boolean; delayed?: boolean; warnings?: boolean; price?: string; existing?: boolean; tiered?: boolean; employee?: boolean; stale?: boolean; conflict?: boolean } = {}) {
   const drafts: Record<string, unknown>[] = [], previews: Record<string, unknown>[] = [], sends: Record<string, unknown>[] = [];
+  const edits: Record<string, unknown>[] = [];
+  let existing: Record<string, unknown> | null = options.existing ? { id: "30000000-0000-4000-8000-000000000007", need_id: needId, company_id: companyId, price_rub: options.price ?? "4.80", available_units: 20000, moq_units: 1000, lead_time_days: 2, delivery_cost_rub: "0", resource_kind: "stock", product_id: productId, revision: 3, status: "sent", price_tiers: options.tiered ? [{min_units:10000,unit_price_rub:"4.00"}] : [], commercial_terms: {delivery_method:"included",tax_basis:"no_vat",delivery_conditions:"Доставка в Москву",expenses:[]} } : null;
   const comparisons: string[] = [];
   let releaseDraft: (() => void) | undefined;
   const draftGate = new Promise<void>(resolve => { releaseDraft = resolve; });
-  const seller = (id: string) => ({ id, display_name: `Синтетический поставщик ${id === companyId ? "А" : "Б"}`, full_name: "Синтетический поставщик", country: "RU", legal_form: "ООО", verification_status: "verified", membership: { can_buy: false, can_sell: true, is_admin: true } });
+  const seller = (id: string) => ({ id, display_name: `Синтетический поставщик ${id === companyId ? "А" : "Б"}`, full_name: "Синтетический поставщик", country: "RU", legal_form: "ООО", verification_status: "verified", membership: { can_buy: false, can_sell: true, is_admin: !options.employee } });
   await page.addInitScript(() => localStorage.setItem("token", "synthetic-offer-browser"));
   page.on("pageerror", error => { throw error; });
   await page.route("**/api/**", async route => {
     const request = route.request(), path = new URL(request.url()).pathname;
     if (path.endsWith("/categories/profiles")) return route.fulfill({ json: registry });
     if (path.endsWith("/auth/me")) return route.fulfill({ json: { user: { id: "synthetic-user", first_name: "Тест", last_name: "Продавец", account_status: "active" }, companies: [seller(companyId), seller(secondCompanyId)] } });
+    if (path.endsWith("/offers/mine") || (path.endsWith("/offers") && request.method() === "GET")) return route.fulfill({json: existing ? [existing] : []});
+    if (path.endsWith("/offer-resource")) return route.fulfill({json: { resource_kind: new URL(request.url()).searchParams.get("resource_kind"), free_units: options.available ?? 40000, unit:"шт", deadline_date:need.deadline_date, stock_updated_at: options.stale ? "2026-09-01T00:00:00Z" : new Date().toISOString(), fresh: !options.stale, blockers: options.stale ? ["Остаток склада не подтверждён за последние 7 дней"] : [] }});
+    if (request.method() === "PATCH" && path.includes("/offers/")) { const body=request.postDataJSON(); edits.push(body); if(options.conflict) return route.fulfill({status:409,json:{detail:"Предложение изменилось. Обновите условия перед подтверждением"}}); existing={...existing,...body,revision:4}; return route.fulfill({json:existing}); }
     if (path.includes("explain-seller-match")) comparisons.push(path);
     if (path.endsWith("/offer-draft")) {
       const body = request.postDataJSON(); drafts.push(body);
@@ -52,27 +57,27 @@ async function prepare(page: Page, options: { available?: number; sparse?: boole
       const blockers = options.available && body.available_units > options.available ? ["Недостаточно свободного ресурса"] : [];
       return route.fulfill({ json: { blockers, warnings: [], missing: [], can_send: blockers.length === 0 } });
     }
-    if (path.endsWith("/offers") && request.method() === "POST") { sends.push(request.postDataJSON()); return route.fulfill({ status: 201, json: { id: "synthetic-offer", sending_warnings: options.warnings ? ["Проверьте подтверждения"] : [] } }); }
+    if (path.endsWith("/offers") && request.method() === "POST") { sends.push(request.postDataJSON()); existing={...request.postDataJSON(),id:"synthetic-offer",need_id:needId,status:"sent",revision:1}; return route.fulfill({ status: 201, json: { ...existing, sending_warnings: options.warnings ? ["Проверьте подтверждения"] : [] } }); }
     if (path.endsWith("/category-profile")) return route.fulfill({ json: { state: "current", current: null, previous: null, changes: [] } });
     if (path.endsWith("/products")) return route.fulfill({ json: [{ ...product, price_rub: options.price ?? product.price_rub }, { ...product, id: otherProductId, name: "Болт М8×40, другая партия" }] });
     if (path.endsWith("/needs")) return route.fulfill({ json: [need] });
     return route.fulfill({ json: [] });
   });
-  await page.goto("/seller/requests");
+  await page.goto(options.initialPath ?? "/seller/requests");
   const card = page.locator(`[data-need-id="${needId}"]`);
-  await expect(card).toBeVisible();
-  return { card, drafts, previews, sends, comparisons, releaseDraft: () => releaseDraft!() };
+  if (!options.initialPath) await expect(card).toBeVisible();
+  return { card, drafts, previews, sends, edits, comparisons, releaseDraft: () => releaseDraft!() };
 }
 
 async function open(page: Page, state: Awaited<ReturnType<typeof prepare>>) {
-  await state.card.getByRole("button", { name: "Предложить условия", exact: true }).click();
+  await state.card.getByRole("button", { name: /^(Предложить|Изменить) условия$/ }).click();
   await expect(page.locator(`#offer_units_${needId}`)).toBeVisible();
 }
 
 async function deliveryAndTax(card: ReturnType<Page["locator"]>) {
   await card.getByRole("combobox", { name: /^Условия доставки/ }).selectOption("included");
   await card.getByRole("combobox", { name: /^Налоговая база/ }).selectOption("no_vat");
-  await card.getByLabel("Условия и место получения", { exact: true }).fill("Доставка в Москву");
+  await card.getByLabel(/^Условия и место получения/).fill("Доставка в Москву");
 }
 
 test("proposal opens prefilled, accepts unchanged values and sends only after human confirmation", async ({ page }, testInfo) => {
@@ -108,7 +113,7 @@ test("proposal opens prefilled, accepts unchanged values and sends only after hu
   await expect(state.card.getByRole("button", { name: "Подтвердить отправку КП", exact: true })).toBeVisible();
   expect(state.sends).toHaveLength(0);
   await state.card.getByRole("button", { name: "Подтвердить отправку КП", exact: true }).click();
-  await expect(state.card.getByText("Предложение отправлено. Ожидайте решения покупателя.", { exact: true })).toBeVisible();
+  await expect(state.card.getByText(/Предложение отправлено. Версия/)).toBeVisible();
   expect(state.sends).toHaveLength(1);
   expect(state.sends[0]).toMatchObject({ draft_id: draftId, price_rub: "4.80", available_units: 20000, moq_units: 1000, lead_time_days: 2, delivery_cost_rub: "0", resource_kind: "stock", product_id: productId, price_tiers: [] });
 });
@@ -151,7 +156,7 @@ test("changing the source or SKU sends the chosen source rather than the origina
   await page.locator(`#offer_product_${needId}`).selectOption(otherProductId);
   await state.card.getByRole("button", { name: "Проверить условия", exact: true }).click();
   await state.card.getByRole("button", { name: "Подтвердить отправку КП", exact: true }).click();
-  await expect(state.card.getByText("Предложение отправлено. Ожидайте решения покупателя.", { exact: true })).toBeVisible();
+  await expect(state.card.getByText(/Предложение отправлено. Версия/)).toBeVisible();
   expect(state.sends[0]).toMatchObject({ resource_kind: "stock", product_id: otherProductId, price_tiers: [] });
   expect(state.sends[0]).not.toHaveProperty("draft_id");
   await expect(state.card.getByRole("button", { name: "Подтвердить отправку КП", exact: true })).toHaveCount(0);
@@ -163,8 +168,8 @@ test("resource shortage stays explicit, does not silently reduce the buyer quant
   await expect(page.locator(`#offer_units_${needId}`)).toHaveValue("20000");
   await expect(state.card.locator(".alert-warning")).toHaveCount(0);
   await deliveryAndTax(state.card);
-  await state.card.getByRole("button", { name: "Проверить условия", exact: true }).click();
-  await expect(page.getByRole("alert").filter({ hasText: "Недостаточно свободного ресурса" })).toBeVisible();
+  await expect(state.card.getByRole("button", { name: "Проверить условия", exact: true })).toBeDisabled();
+  await expect(state.card.getByText(/Не хватает/)).toBeVisible();
   await expect(state.card.getByRole("button", { name: "Подтвердить отправку КП", exact: true })).toHaveCount(0);
   expect(state.sends).toHaveLength(0);
 });
@@ -227,8 +232,7 @@ test("prefilled new quotes and new delivery entries use at most two decimal plac
 });
 
 test("catalogue price and tiers share kopeck input while quantities retain their precision", async ({ page }) => {
-  await prepare(page);
-  await page.goto("/seller/products");
+  await prepare(page, { initialPath: "/seller/products" });
   const price = page.locator("#product_price");
   await expect(price).toBeVisible();
   await price.fill("12.345");
@@ -245,8 +249,7 @@ test("catalogue price and tiers share kopeck input while quantities retain their
 
 
 test("showing a saved subkopeck catalogue price does not force a new price", async ({ page }) => {
-  await prepare(page, { price: "0.0001" });
-  await page.goto("/seller/products");
+  await prepare(page, { price: "0.0001", initialPath: "/seller/products" });
   await page.getByRole("button", { name: "Редактировать", exact: true }).first().click();
   const price = page.locator("#product_price");
   await expect(price).toHaveValue("0.00");
@@ -255,4 +258,76 @@ test("showing a saved subkopeck catalogue price does not force a new price", asy
   await price.fill("1.235");
   await expect(price).toHaveValue("1.24");
   await expect(price).toHaveAttribute("min", "0.01");
+});
+
+
+test("sent proposal edits preserve the revision and never create a duplicate", async ({page}) => {
+ const state=await prepare(page,{existing:true}); await open(page,state);
+ await expect(page.locator(`#offer_price_${needId}`)).toHaveValue("4.80");
+ await page.locator(`#offer_price_${needId}`).fill("4.90");
+ await state.card.getByRole("button",{name:"Проверить условия",exact:true}).click();
+ expect(state.previews[0]).toMatchObject({offer_id:"30000000-0000-4000-8000-000000000007",expected_revision:3});
+ await state.card.getByRole("button",{name:"Подтвердить изменение КП",exact:true}).click();
+ await expect.poll(()=>state.edits.length).toBe(1);
+ expect(state.edits[0]).toMatchObject({price_rub:"4.90",expected_revision:3,resource_kind:"stock",product_id:productId});
+ expect(state.sends).toHaveLength(0); expect(state.drafts).toHaveLength(0);
+ await expect(state.card.getByText(/Версия 4/)).toBeVisible();
+});
+
+test("stale stock blocks sending and points to stock editing", async ({page}) => {
+ const state=await prepare(page,{stale:true});await open(page,state); await deliveryAndTax(state.card);
+ await expect(state.card.getByRole("button",{name:"Проверить условия",exact:true})).toBeDisabled();
+ await expect(state.card.getByText(/Остаток склада не подтверждён/)).toBeVisible();
+ await expect(state.card.getByRole("link",{name:/Обновить наличие/})).toHaveAttribute("href","/seller/products");
+ expect(state.sends).toHaveLength(0);
+});
+
+test("receipt conditions are required before a proposal preview", async ({page}) => {
+ const state=await prepare(page);await open(page,state);
+ await state.card.getByRole("combobox",{name:/^Условия доставки/}).selectOption("self_pickup");
+ await state.card.getByRole("combobox",{name:/^Налоговая база/}).selectOption("no_vat");
+ const receipt=state.card.getByLabel(/^Условия и место получения/);await expect(receipt).toHaveAttribute("required","");
+ await state.card.getByRole("button",{name:"Проверить условия",exact:true}).click();
+ expect(state.previews).toHaveLength(0);expect(state.sends).toHaveLength(0);
+});
+
+test("editing a stale revision keeps the form and never retries as a new proposal",async({page})=>{
+ const state=await prepare(page,{existing:true,conflict:true});await open(page,state);
+ await page.locator(`#offer_price_${needId}`).fill("4.90");
+ await state.card.getByRole("button",{name:"Проверить условия",exact:true}).click();
+ await state.card.getByRole("button",{name:"Подтвердить изменение КП",exact:true}).click();
+ await expect(page.getByRole("alert").filter({hasText:"Предложение изменилось"})).toBeVisible();
+ await expect(page.locator(`#offer_price_${needId}`)).toHaveValue("4.90");
+ await expect(state.card.getByRole("button",{name:"Загрузить актуальную версию КП",exact:true})).toBeEnabled();
+ expect(state.edits).toHaveLength(1);expect(state.sends).toHaveLength(0);
+});
+
+
+test("zero free production capacity blocks the proposal and links to the matching leaf calendar",async({page})=>{
+ const state=await prepare(page,{available:0});await open(page,state);
+ await page.locator(`#offer_resource_${needId}`).selectOption("capacity");
+ await expect(state.card.getByRole("region",{name:"Проверка доступного ресурса"})).toContainText("Свободная мощность на срок");
+ await expect(state.card.getByText(/Не хватает/)).toBeVisible();
+ await expect(state.card.getByRole("button",{name:"Проверить условия",exact:true})).toBeDisabled();
+ const href=await state.card.getByRole("link",{name:/Календарь мощностей/}).getAttribute("href");
+ expect(href).toContain("category=construction.fasteners");expect(href).toContain(`company=${companyId}`);
+ expect(state.sends).toHaveLength(0);
+});
+
+test("editing receipt terms does not reprice a previously saved exact quote",async({page})=>{
+ const state=await prepare(page,{existing:true,tiered:true,price:"4.123456789012"});await open(page,state);
+ await expect(page.locator(`#offer_price_${needId}`)).toHaveValue("4.12");
+ await state.card.getByLabel(/^Условия и место получения/).fill("Москва, склад 2");
+ await state.card.getByRole("button",{name:"Проверить условия",exact:true}).click();
+ await state.card.getByRole("button",{name:"Подтвердить изменение КП",exact:true}).click();
+ await expect.poll(()=>state.edits.length).toBe(1);expect(state.edits[0].price_rub).toBe("4.123456789012");
+ expect(state.edits[0].price_tiers).toEqual([{min_units:10000,unit_price_rub:"4.00"}]);
+});
+
+
+test("only a company administrator can edit a sent proposal",async({page})=>{
+ const state=await prepare(page,{existing:true,employee:true});
+ await expect(state.card.getByRole("button",{name:"Изменить условия",exact:true})).toBeDisabled();
+ await expect(state.card.getByText("Изменить отправленное КП может администратор компании.")).toBeVisible();
+ expect(state.edits).toHaveLength(0);
 });

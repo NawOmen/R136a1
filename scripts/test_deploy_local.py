@@ -31,7 +31,7 @@ class DeployLocalTests(unittest.TestCase):
         with mock.patch.object(deploy.platform, "system", return_value="Windows"), \
                 mock.patch.object(deploy, "ensure_docker") as docker:
             with self.assertRaisesRegex(deploy.DeployError, "Поддерживаются"):
-                deploy.deploy()
+                deploy.deploy(mock.Mock(no_lan=False))
             docker.assert_not_called()
 
     def test_apple_silicon_is_supported(self):

@@ -4,6 +4,7 @@ import subprocess
 import sys
 import tempfile
 import unittest
+from unittest import mock
 from pathlib import Path
 
 spec = importlib.util.spec_from_file_location("lan_tls", Path(__file__).with_name("lan-tls.py"))
@@ -56,8 +57,9 @@ class CertificateTest(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
             (root / ".git").mkdir()
-            with self.assertRaisesRegex(ValueError, "вне Git"):
-                self.prepare(root / "tls")
+            with mock.patch.object(module, "REPO", root):
+                with self.assertRaisesRegex(ValueError, "вне репозитория проекта"):
+                    self.prepare(root / "tls")
             self.assertFalse((root / "tls").exists())
 
     def test_missing_ca_key_does_not_silently_replace_device_trust(self):

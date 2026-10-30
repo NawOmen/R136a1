@@ -8,6 +8,7 @@ from ..database import get_db
 from ..deps import CurrentUser, get_current_user
 from ..models import Notification
 from ..schemas import NotificationOut
+from ..notification_links import resolved_notification_href
 
 router = APIRouter(tags=["notifications"])
 
@@ -20,7 +21,12 @@ async def list_notifications(
     result = await db.execute(
         select(Notification).where(Notification.user_id == user.id).order_by(Notification.created_at.desc()).limit(100)
     )
-    return result.scalars().all()
+    output = []
+    for item in result.scalars().all():
+        value = NotificationOut.model_validate(item)
+        value.href = await resolved_notification_href(db, item)
+        output.append(value)
+    return output
 
 
 @router.post("/notifications/{notification_id}/read", response_model=NotificationOut)

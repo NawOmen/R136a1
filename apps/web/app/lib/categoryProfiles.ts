@@ -91,3 +91,7 @@ export function canonicalCharacteristicKey(value: string, category = "", subcate
   if (wanted === "product_type" && categoryProfile(category, subcategory)?.fields.includes("product_kind")) return "product_kind";
   return Object.entries(fields).find(([name, field]) => [name, field.label, ...field.aliases].some(alias => normalize(alias) === wanted))?.[0] ?? value;
 }
+
+export function categoryLeafId(category: string, subcategory: string): string | undefined {
+  return ids[category]?.[subcategory];
+}

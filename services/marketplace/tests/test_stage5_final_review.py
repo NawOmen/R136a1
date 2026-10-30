@@ -166,10 +166,11 @@ async def test_unknown_capacity_remains_unknown(client, db_session):
     _, _, _, need_id = await _buyer_with_published_need(client, db_session, volume=6)
     payload = offer_payload(company)
     shown = await client.post(f'/api/v1/needs/{need_id}/offers/preview', json=payload, headers=_auth(token))
-    assert shown.status_code == 200 and shown.json()['can_send'] is True, shown.text
+    assert shown.status_code == 200 and shown.json()['can_send'] is False, shown.text
     assert await db_session.scalar(select(func.count(Offer.id))) == 0
     sent = await client.post(f'/api/v1/needs/{need_id}/offers', json=payload, headers=_auth(token))
-    assert sent.status_code == 201, sent.text
+    assert sent.status_code == 409 and "мощность" in sent.text
+    assert await db_session.scalar(select(func.count(Offer.id))) == 0
 
 @pytest.mark.parametrize('change,expected_status', [({'request_key': None}, 409), ({'price_rub': 12}, 409), ({'moq_units': 7}, 422), ({'valid_until': str(date.today() - timedelta(days=1))}, 422), ({'draft_id': str(uuid.uuid4())}, 404)])
 async def test_preview_retry_preserves_request_checks(client, db_session, change, expected_status):

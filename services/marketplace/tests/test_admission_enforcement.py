@@ -503,6 +503,7 @@ async def test_evidence_change_notifies_active_deal(client, db_session):
         headers=_auth(buyer_token),
     )
     await client.post(f"/api/v1/needs/{need.json()['id']}/publish", headers=_auth(buyer_token))
+    await grant_capacity(db_session, seller_company, 1_000)
     offer = await client.post(
         f"/api/v1/needs/{need.json()['id']}/offers",
         json={'commercial_terms': confirmed_quote_terms(),
@@ -517,7 +518,6 @@ async def test_evidence_change_notifies_active_deal(client, db_session):
         headers=_auth(seller_token),
     )
     assert offer.status_code == 201, offer.text
-    await grant_capacity(db_session, seller_company, 1_000)
     deal = await client.post(f"/api/v1/offers/{offer.json()['id']}/select", headers=_auth(buyer_token), json={"expected_revision": 1, "human_approved": True})
     assert deal.status_code == 201, deal.text
 

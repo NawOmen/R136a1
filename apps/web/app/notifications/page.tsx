@@ -100,24 +100,12 @@ export default function NotificationsPage() {
       ) : (
         <ul className="company-list">
           {notifications.map((notification) => (
-            <li key={notification.id} id={`notification-${notification.id}`} className="card">
-              <div className="company-row">
-                <span className={`badge ${notification.is_read ? "badge-read" : "badge-unread"}`}>
-                  {notification.is_read ? "Прочитано" : "Новое"}
-                </span>
-                {!notification.is_read && (
-                  <button
-                    type="button"
-                    className="btn btn-secondary btn-sm"
-                    disabled={busyId !== null || markingAll}
-                    onClick={() => void handleRead(notification)}
-                  >
-                    {busyId === notification.id ? "..." : "Отметить прочитанным"}
-                  </button>
-                )}
-              </div>
-              <a className="notification-message" href={notificationHref(notification)} onClick={() => void handleRead(notification)}>{notification.message}<span aria-hidden="true"> →</span></a>
-
+            <li key={notification.id} id={`notification-${notification.id}`}>
+              <a className="card notification-card" href={notificationHref(notification)} onClick={() => void handleRead(notification)}>
+                <span className={`badge ${notification.is_read ? "badge-read" : "badge-unread"}`}>{notification.is_read ? "Прочитано" : "Новое"}</span>
+                <span className="notification-message">{notification.message}</span>
+                <span className="notification-card__open">Открыть событие <span aria-hidden="true">→</span></span>
+              </a>
             </li>
           ))}
         </ul>

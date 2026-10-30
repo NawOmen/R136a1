@@ -99,3 +99,38 @@ async def test_notification_link_migration_roundtrip_keeps_legacy_messages():
                 await transaction.rollback()
     finally:
         await engine.dispose()
+
+@pytest.mark.asyncio
+async def test_legacy_supplier_chat_recovers_exact_recipient_not_the_notifications_list():
+    from datetime import datetime, timezone
+    from app.notification_links import resolved_notification_href
+    buyer, seller, need, request = (uuid.uuid4() for _ in range(4))
+    row = (request, need, buyer, seller, seller)
+    class DB:
+        async def execute(self, statement, args):
+            assert 'm.user_id=:uid' in str(statement)
+            return SimpleNamespace(all=lambda: [row])
+    item = SimpleNamespace(type='info', href='/notifications', message='Новое сообщение по запросу КП: Крепёж',
+        created_at=datetime.now(timezone.utc), user_id=uuid.uuid4())
+    assert await resolved_notification_href(DB(), item) == f'/seller/inquiries?company={seller}&request={request}'
+
+
+@pytest.mark.asyncio
+async def test_ambiguous_legacy_offer_does_not_open_another_order():
+    from datetime import datetime, timezone
+    from app.notification_links import resolved_notification_href, message_notification_href
+    class DB:
+        async def execute(self, *_): return SimpleNamespace(all=lambda: [(uuid.uuid4(),uuid.uuid4()),(uuid.uuid4(),uuid.uuid4())])
+    item = SimpleNamespace(type='offer_received',href=None,message='Новое КП',created_at=datetime.now(timezone.utc),user_id=uuid.uuid4())
+    assert await resolved_notification_href(DB(), item) == '/needs'
+    deal = uuid.uuid4()
+    assert message_notification_href(f'Подтверждено по сделке {deal} (запрос {uuid.uuid4()})') == f'/deals?deal={deal}'
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("href", ["/notifications", "/notifications?read=1", "/notifications#notice", "/deals"])
+async def test_legacy_self_link_cannot_hide_an_explicit_related_deal(href):
+    from app.notification_links import resolved_notification_href
+    identifier=uuid.uuid4()
+    item=SimpleNamespace(href=href,message=f"Обновлена сделка {identifier}",type="deal_fulfillment_updated")
+    assert await resolved_notification_href(None,item)==f"/deals?deal={identifier}"

@@ -26,7 +26,9 @@ async function prepare(page: Page, options: { href?: string; type?: string; sell
       return route.fulfill({ json: item });
     }
     if (path.endsWith(`/needs/${needId}`)) return route.fulfill({ json: need });
-    if (path.endsWith(`/needs/${needId}/offers`)) return route.fulfill({ json: [{ id: "offer", company_id: seller, status: "sent", price_rub: "4.80", available_units: 20000, lead_time_days: 2, moq_units: 1000, revision: 1, commercial_quote: null }] });
+    if (path.endsWith(`/needs/${needId}/optimize`)) return route.fulfill({status:409,json:{detail:"Нет КП с подтверждённой полной сметой, доставкой и налоговой базой"}});
+    if (path.endsWith(`/needs/${needId}/offers`)) return route.fulfill({ json: Array.from({length: options.many ? 25 : 1},(_,index)=>({ id: options.many ? `offer-${index}` : "offer", company_id: seller, status: "sent", price_rub: "4.80", available_units: 20000, lead_time_days: 2, moq_units: 1000, revision: 1, commercial_quote: options.many ? {estimate:{complete:true,terms:{tax_basis:"no_vat",delivery_conditions:"Москва"},lines:[],total_rub:"96000",missing:[]}} : null })) });
+    if (/\/offers\/offer-\d+\/select$/.test(path)) return route.fulfill({status:409,json:{detail:"Нет КП с подтверждённой полной сметой, доставкой и налоговой базой"}});
     if (path.endsWith("/needs/mine")) return route.fulfill({ json: [need] });
     if (path.endsWith("/deals/mine")) {
       dealLoads++;
@@ -62,7 +64,7 @@ test("buyer opens the exact need directly from the bell even if read receipt fai
 test("full notification list links to the specific deal and a new event refreshes an open deal page", async ({ page }) => {
   const state = await prepare(page, { href: `/deals?deal=${dealId}`, type: "offer_selected" });
   await page.goto("/notifications");
-  await page.locator(".notification-message").click();
+  await page.locator(".notification-card").click();
   await expect(page).toHaveURL(new RegExp(`deal=${dealId}`));
   await expect(page.locator(`[data-deal-id="${dealId}"]`)).toHaveAttribute("aria-pressed", "true");
   const loaded = state.dealLoads();
@@ -75,8 +77,8 @@ test("full notification list links to the specific deal and a new event refreshe
 test("legacy notifications still have a useful internal destination", async ({ page }) => {
   const state = await prepare(page);
   await page.goto("/notifications");
-  await expect(page.locator(".notification-message")).toHaveAttribute("href", "/needs");
-  await page.locator(".notification-message").click();
+  await expect(page.locator(".notification-card")).toHaveAttribute("href", "/needs");
+  await page.locator(".notification-card").click();
   await expect(page).toHaveURL(/\/needs$/);
   await expect.poll(state.reads).toBe(1);
 });
@@ -84,7 +86,7 @@ test("legacy notifications still have a useful internal destination", async ({ p
 test("seller notification selects the addressed company and the requested conversation", async ({ page }) => {
   await prepare(page, { seller: true, href: `/seller/inquiries?company=${otherSeller}&request=${requestId}`, type: "supplier_message_received" });
   await page.goto("/notifications");
-  await page.locator(".notification-message").click();
+  await page.locator(".notification-card").click();
   await expect(page.locator(".supplier-inbox__item[aria-pressed=true]")).toContainText(request.buyer_name);
   await expect(page.getByRole("region", { name: "Работа с поставщиком" })).toContainText(request.specification.category);
   await expect(page.getByLabel("Компания", { exact: true })).toHaveValue(otherSeller);
@@ -93,7 +95,7 @@ test("seller notification selects the addressed company and the requested conver
 test("buyer notification opens the exact chat on the supplier board", async ({ page }) => {
   await prepare(page, { href: `/needs/${needId}/suppliers?request=${requestId}`, type: "supplier_message_received" });
   await page.goto("/notifications");
-  await page.locator(".notification-message").click();
+  await page.locator(".notification-card").click();
   await expect(page.getByRole("tab", { name: /Доска запросов/ })).toHaveAttribute("aria-selected", "true");
   await expect(page.getByRole("region", { name: "Работа с поставщиком" })).toContainText(request.specification.category);
 });
@@ -101,20 +103,24 @@ test("buyer notification opens the exact chat on the supplier board", async ({ p
 test("failed action below the fold reveals and focuses its red error, including the same error again", async ({ page }) => {
   await page.emulateMedia({ reducedMotion: "reduce" });
   const state = await prepare(page, { many: true, readFailure: true });
-  await page.goto("/notifications");
-  const last = page.getByRole("button", { name: "Отметить прочитанным", exact: true }).last();
+  page.on("dialog", dialog => dialog.accept());
+  await page.goto(`/needs/${needId}`);
+  const last = page.getByRole("button", { name: "Выбрать предложение", exact: true }).last();
   const error = page.locator("main .alert-error");
   for (let attempt = 1; attempt <= 2; attempt++) {
     await last.scrollIntoViewIfNeeded();
-    expect(await page.evaluate(() => scrollY)).toBeGreaterThan(500);
+    expect(await page.evaluate(() => scrollY)).toBeGreaterThan(100);
     if (attempt === 1) await last.click(); else await last.press("Enter");
-    await expect(error).toContainText("Не удалось сохранить прочтение");
-    await expect(error).toBeFocused();
+    await expect(error).toContainText("Нет КП с подтверждённой полной сметой");
+    await expect(error, `attempt ${attempt}`).toBeFocused();
     await expect.poll(() => error.evaluate(node => {
       const top = node.getBoundingClientRect().top;
       const header = document.querySelector(".site-header")!.getBoundingClientRect().bottom;
       return top >= header && top < innerHeight;
     })).toBe(true);
   }
-  expect(state.reads()).toBe(2);
+  const proposal = page.locator(".need-offer").last();
+  await expect(proposal).toContainText("Нет КП с подтверждённой полной сметой");
+  await expect(proposal.getByRole("button", {name: "Запросить условия у продавца", exact: true})).toBeEnabled();
+  expect(state.writes.filter(path=>path.endsWith("/select"))).toHaveLength(2);
 });
