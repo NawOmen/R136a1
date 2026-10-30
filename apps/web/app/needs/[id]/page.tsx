@@ -14,7 +14,7 @@ import NeedDraftEditor from "../../components/NeedDraftEditor";
 import NeedRequirements from "../../components/NeedRequirements";
 import OrderExport from "../../components/OrderExport";
 import { useParams } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { getToken } from "../../lib/api";
 import {
   ApiError,
@@ -51,6 +51,8 @@ export default function NeedDetailPage() {
   const [selectingId, setSelectingId] = useState<string | null>(null);
   const [downloadingId, setDownloadingId] = useState<string | null>(null);
   const [publishing, setPublishing] = useState(false);
+  const [editingNeed, setEditingNeed] = useState(false);
+  const editButton = useRef<HTMLButtonElement>(null);
   const [optimizing, setOptimizing] = useState(false);
   const [variants, setVariants] = useState<OptimizationVariant[]>([]);
   const [preparingResilience, setPreparingResilience] = useState<string | null>(null);
@@ -79,6 +81,7 @@ export default function NeedDetailPage() {
     let cancelled = false;
     setLoading(true); setError(null); setNotFound(false);
     setNeed(null); setOffers([]); setDeal(null); setVariants([]);
+    setEditingNeed(false);
     Promise.all([marketplace.getNeed(token, needId), marketplace.getOffers(token, needId)])
       .then(([needData, offersData]) => {
         if (cancelled) return;
@@ -229,24 +232,42 @@ export default function NeedDetailPage() {
   }
 
   const deliveryAddress = addresses.find(item => item.id === ownedNeed?.delivery_address_id);
+  const canEditNeed = isBuyer && ownedNeed && buyerCompany?.membership?.is_admin &&
+    ["draft", "open_for_offers", "waiting_for_match", "coalition_candidate", "awaiting_approvals"].includes(need.status);
 
   return (
     <div>
-      <div className="need-heading">
-        <h1 className="page-title">{need.category}</h1>
-        {need.subcategory && <p className="hint">Подкатегория: {need.subcategory}</p>}
-        <div className="actions">
+      <header className="need-heading">
+        <div className="need-heading__statuses" aria-label="Статус и видимость потребности">
           <span className={`badge badge-${need.status}`}>{NEED_STATUS_LABELS[need.status]}</span>
           <span className={`badge badge-${need.visibility}`}>{NEED_VISIBILITY_LABELS[need.visibility]}</span>
-          {isBuyer && ownedNeed && <Link href={`/needs/${need.id}/suppliers`} className="btn btn-primary btn-sm">Подбор поставщиков</Link>}
+        </div>
+        <div className="need-heading__identity">
+          <h1 className="page-title">{need.category}</h1>
+          {need.subcategory && <p className="hint">Подкатегория: {need.subcategory}</p>}
+        </div>
+        <div className="need-heading__actions" role="group" aria-label="Действия с потребностью">
+          {canEditNeed && <button ref={editButton} type="button" className="btn btn-secondary btn-sm" aria-expanded={editingNeed} aria-controls="need-specification-editor" onClick={() => setEditingNeed(value => !value)}>{need.status === "draft" ? "Изменить черновик" : "Изменить спецификацию"}</button>}
+          {isBuyer && ownedNeed && <OrderExport id={need.id} companyId={ownedNeed.company_id} specification />}
           <Link href="/needs" className="btn btn-secondary btn-sm">
             Мои потребности
           </Link>
-          {isBuyer && ownedNeed && <OrderExport id={need.id} companyId={ownedNeed.company_id} specification />}
+          {isBuyer && ownedNeed && <Link href={`/needs/${need.id}/suppliers`} className="btn btn-primary btn-sm">Подбор поставщиков<Icon name="arrow" size={16} /></Link>}
         </div>
-      </div>
+      </header>
 
       {error && <div className="alert alert-error">{error}</div>}
+
+      {canEditNeed && ownedNeed && editingNeed && <section id="need-specification-editor" className="card need-edit-action" aria-label="Изменение спецификации">
+        <NeedDraftEditor key={`${need.id}:${need.revision}`} need={ownedNeed} editing={editingNeed} onEditingChange={value => {
+          setEditingNeed(value);
+          if (!value) editButton.current?.focus();
+        }} onSaved={value => {
+          setNeed(value);
+          const token = getToken();
+          if (token) void marketplace.getOffers(token, value.id).then(setOffers).catch(() => setError("Изменения сохранены, но не удалось обновить предложения. Обновите страницу."));
+        }} />
+      </section>}
 
       <section className="card need-summary" aria-label="Основное о закупке">
         <dl className="need-summary__facts">
@@ -266,13 +287,9 @@ export default function NeedDetailPage() {
 
       {!isBuyer && !!need.requirement_decisions?.length && <section className="card"><h2>Уточнения покупателя</h2><p>В текущей версии покупатель разрешил противоречия в этих требованиях:</p>{need.requirement_decisions.map(item => <p key={item.field}>{formatCharacteristics({ [item.field]: item.confirmed_value }, need.category_profile)}</p>)}</section>}
       {isBuyer && ownedNeed && <details className="card need-disclosure"><summary>Требования, источники и история</summary><NeedRequirements key={`${need.id}:${need.revision}`} need={ownedNeed} addresses={addresses} /></details>}
-      {isBuyer && ownedNeed && buyerCompany?.membership?.is_admin && ["open_for_offers", "waiting_for_match", "coalition_candidate", "awaiting_approvals"].includes(need.status) && (
-        <div className="card need-edit-action"><NeedDraftEditor key={`${need.id}:${need.revision}`} need={ownedNeed} onSaved={async value => { setNeed(value); const token = getToken(); if (token) setOffers(await marketplace.getOffers(token, value.id)); }} /></div>
-      )}
       {isBuyer && ownedNeed && need.status === "draft" && (
         <section className="card">
           <h2>Черновик потребности</h2>
-          {ownedNeed && buyerCompany?.membership?.is_admin && <NeedDraftEditor key={`${need.id}:${need.revision}`} need={ownedNeed} onSaved={setNeed} />}
           {ownedNeed && buyerCompany?.membership?.is_admin && <ProfileRevisionPanel kind="needs" id={need.id} revision={need.revision} draft={need.status === "draft"} onAdopted={async () => { const token = getToken(); if (token) setNeed(await marketplace.getNeed(token, need.id)); }} />}
           {buyerCompany?.membership?.is_admin && (
             <div className="actions">
