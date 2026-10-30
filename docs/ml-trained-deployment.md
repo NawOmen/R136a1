@@ -10,7 +10,12 @@ MLX API внутри использует `default_model`: это имя мод�
 
 ## Локальный запуск
 
-Сайт и сервисы работают в Docker Compose. MLX запускается нативно на хосте с Apple Silicon; порт не публикуется в интернете. Gateway обращается к нему через приватный адрес хоста:
+Автоматическая установка на macOS и Linux: `python3 scripts/deploy-local.py`.
+На Linux используется официальный MLX CPU-бэкенд, на Apple Silicon — Metal.
+CPU-генерация медленнее; установщик увеличивает время ожидания Gateway до 30 минут.
+Для Docker на Linux могут потребоваться права sudo. Далее описано ручное управление.
+
+Сайт и сервисы работают в Docker Compose. MLX запускается нативно: Metal на Apple Silicon, CPU на Linux; веса и LoRA одинаковые. Порт не публикуется в интернете. Gateway обращается к нему через приватный адрес хоста:
 
 ```dotenv
 LOCAL_LLM_BACKEND=mlx
@@ -23,9 +28,9 @@ OLLAMA_VISION_MODEL=qwen3.5:9b
 ### Модель работает вне Docker
 
 Compose не содержит контейнера с моделью: ни MLX, ни Ollama не упакованы в образ. Веса,
-адаптер и вычислительный процесс живут на хосте с Apple Silicon, а контейнерный LLM Gateway
-обращается к ним по `MLX_BASE_URL` и `OLLAMA_DOCKER_BASE_URL`. Так металлическое ядро не
-делится с виртуальной машиной Docker, а модель переживает перезапуск и пересборку контейнеров.
+адаптер и вычислительный процесс живут на хосте macOS или Linux, а контейнерный LLM Gateway
+обращается к ним по `MLX_BASE_URL` и `OLLAMA_DOCKER_BASE_URL`. На Linux установщик
+поднимает приватный TCP-прокси с Docker bridge на loopback. Модель переживает перезапуск контейнеров.
 
 Модель на диске: базовые веса вместе с адаптером; в Ollama и GGUF они не преобразуются.
 Пути, интерпретатор с MLX-LM и порт берутся из `.env`:
@@ -111,10 +116,9 @@ Gateway (`up -d --force-recreate llm-gateway`; обычный `restart` новы
 | Режим | Настройки | Что разбирает текст | Что распознаёт изображения |
 | --- | --- | --- | --- |
 | Обученная модель, по умолчанию | `LOCAL_LLM_BACKEND=mlx`, `MLX_BASE_URL` | адаптер `porukam-buyer-qwen3.5` в MLX | `OLLAMA_VISION_MODEL` через Ollama |
-| Технический обход без Apple Silicon | `LOCAL_LLM_BACKEND=ollama` | `qwen3.5:9b` через Ollama | `OLLAMA_VISION_MODEL` через Ollama |
+| Технический режим без адаптера | `LOCAL_LLM_BACKEND=ollama` | `qwen3.5:9b` через Ollama | `OLLAMA_VISION_MODEL` через Ollama |
 
-Режим `ollama` нужен только для стендов без Apple Silicon и для отладки; рабочим режимом
-показа он не является.
+Режим `ollama` нужен только для отладки; на обеих платформах обученная модель использует `mlx`.
 
 Каталог адаптера `ml/training/porukam-trained-current` содержит конфигурацию, манифест и
 служебный сервер, но не веса: файл `adapters.safetensors` оператор получает из опубликованного

@@ -159,10 +159,16 @@ class PlistTest(unittest.TestCase):
 
 
 class LaunchdTest(unittest.TestCase):
+    def test_linux_never_invokes_launchctl(self):
+        with mock.patch.object(module.sys, "platform", "linux"), mock.patch.object(module.subprocess, "run") as run:
+            self.assertIsNone(module.agent_pid())
+            self.assertFalse(module.agent_loaded())
+            run.assert_not_called()
+
     def test_agent_pid_is_read_from_launchctl(self):
         output = "gui/501/ru.porukam.mlx-server = {\n\tactive count = 1\n\tpid = 4242\n}\n"
         finished = subprocess.CompletedProcess(args=[], returncode=0, stdout=output, stderr="")
-        with mock.patch.object(module.subprocess, "run", return_value=finished):
+        with mock.patch.object(module.sys, "platform", "darwin"), mock.patch.object(module.subprocess, "run", return_value=finished):
             self.assertEqual(module.agent_pid(), 4242)
 
     def test_unloaded_agent_has_no_pid(self):

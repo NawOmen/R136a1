@@ -14,6 +14,25 @@ ADAPTER_SHA256 = "b2cf30b111109ee10439b4308cb97058ab00a85115eedd36118bbc534e52b6
 ADAPTER_CONFIG_SHA256 = "f715c2cac7c67a67b59f3bc0d178df986bd766d34aa9e68d809d2cd2d6b01262"
 BASE_REVISION = "8b2b98c00a6b4d291155e4890773ca8f769aee53"
 
+def configure_runtime(mx, server) -> None:
+    if mx.metal.is_available():
+        mx.set_memory_limit(9 * 1024**3)
+    elif not mx.is_available(mx.gpu):
+        mx.set_default_device(mx.cpu)
+    mx.disable_compile()
+    # MLX-LM 0.32 запрашивает GPU device_info даже на CPU-бэкенде Linux.
+    if mx.default_device() == mx.cpu:
+        server.get_system_fingerprint = lambda: f"mlx-{mx.__version__}-cpu"
+        original_load = server.load
+        def load_on_cpu(*args, **kwargs):
+            model, tokenizer = original_load(*args, **kwargs)
+            # CPU считает bf16 программно. Float32 ускоряет вычисления; упакованные
+            # целочисленные 4-битные веса и исходный LoRA-файл не меняются.
+            model.set_dtype(mx.float32)
+            mx.eval(model.parameters())
+            return model, tokenizer
+        server.load = load_on_cpu
+
 def digest(path: Path) -> str:
     h = hashlib.sha256()
     with path.open("rb") as f:
@@ -60,13 +79,12 @@ def main() -> None:
     os.environ["MLX_MAX_OPS_PER_BUFFER"] = "1"
     os.environ["MLX_MAX_MB_PER_BUFFER"] = "10"
     import mlx.core as mx
-    mx.set_memory_limit(9 * 1024**3)
-    mx.disable_compile()
-    from mlx_lm.server import main as serve
+    from mlx_lm import server
+    configure_runtime(mx, server)
     sys.argv = ["mlx_lm.server", "--model", str(a.base.resolve()),
                 "--adapter-path", str(a.adapter.resolve()), "--host", a.host,
                 "--port", str(a.port), "--chat-template-args", '{"enable_thinking":false}']
-    serve()
+    server.main()
 
 if __name__ == "__main__":
     main()

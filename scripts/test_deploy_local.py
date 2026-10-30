@@ -5,10 +5,13 @@ import json
 import os
 from pathlib import Path
 import subprocess
+import socket
+import socketserver
 import sys
 import tarfile
 import tempfile
 import unittest
+import threading
 from unittest import mock
 
 spec = importlib.util.spec_from_file_location("deploy_local_tested", Path(__file__).with_name("deploy-local.py"))
@@ -18,10 +21,16 @@ spec.loader.exec_module(deploy)
 
 
 class DeployLocalTests(unittest.TestCase):
+    def setUp(self):
+        for key, value in (("DOCKER_SUDO", False), ("SUDO_REFRESH", True)):
+            patch = mock.patch.object(deploy, key, value)
+            patch.start()
+            self.addCleanup(patch.stop)
+
     def test_unsupported_host_fails_before_installation(self):
-        with mock.patch.object(deploy.platform, "system", return_value="Linux"), \
+        with mock.patch.object(deploy.platform, "system", return_value="Windows"), \
                 mock.patch.object(deploy, "ensure_docker") as docker:
-            with self.assertRaisesRegex(deploy.DeployError, "Apple Silicon"):
+            with self.assertRaisesRegex(deploy.DeployError, "Поддерживаются"):
                 deploy.deploy()
             docker.assert_not_called()
 
@@ -31,6 +40,102 @@ class DeployLocalTests(unittest.TestCase):
                 mock.patch.object(deploy.platform, "mac_ver", return_value=("15.0", (), "")):
             deploy.supported_host()
 
+    def test_linux_x86_and_arm_are_supported_with_same_trained_model(self):
+        for arch in ("x86_64", "aarch64"):
+            with self.subTest(arch=arch), mock.patch.object(deploy.platform, "system", return_value="Linux"), \
+                    mock.patch.object(deploy.platform, "machine", return_value=arch), \
+                    mock.patch.object(deploy.platform, "libc_ver", return_value=("glibc", "2.35")):
+                deploy.supported_host()
+
+    def test_linux_old_libc_has_clear_error_before_install(self):
+        with mock.patch.object(deploy.platform, "system", return_value="Linux"), \
+                mock.patch.object(deploy.platform, "machine", return_value="x86_64"), \
+                mock.patch.object(deploy.platform, "libc_ver", return_value=("glibc", "2.31")):
+            with self.assertRaisesRegex(deploy.DeployError, "glibc 2.35"):
+                deploy.supported_host()
+
+    def test_linux_docker_daemon_is_started_without_overwriting_existing_engine(self):
+        def result(args, **kwargs):
+            if "info" in args:
+                return subprocess.CompletedProcess(args, 1)
+            return subprocess.CompletedProcess(args, 0, stdout="unix:///var/run/docker.sock")
+        with mock.patch.object(deploy.shutil, "which", return_value="/usr/bin/docker"), \
+                mock.patch.object(deploy, "run", side_effect=result), \
+                mock.patch.object(deploy, "as_root") as privileged, \
+                mock.patch.object(deploy, "download") as download, mock.patch("builtins.print"), \
+                mock.patch.object(deploy.os, "geteuid", return_value=1000):
+            deploy.ensure_linux_docker()
+            self.assertEqual(privileged.call_args_list[-1].args[0], ["docker", "info"])
+            self.assertTrue(deploy.DOCKER_SUDO)
+            download.assert_not_called()
+
+    def test_linux_mlx_packages_do_not_install_metal(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            support = Path(tmp)
+            python = support / "mlx-venv/bin/python"
+            python.parent.mkdir(parents=True)
+            python.touch()
+            with mock.patch.object(deploy, "SUPPORT", support), \
+                    mock.patch.object(deploy.platform, "system", return_value="Linux"), \
+                    mock.patch.object(deploy, "run") as run:
+                self.assertEqual(deploy.ensure_mlx_python(), python)
+            command = run.call_args_list[0].args[0]
+            self.assertIn("mlx[cpu]==0.32.3", command)
+            self.assertIn("mlx-lm==0.32.0", command)
+            self.assertNotIn("mlx-metal", str(command))
+
+    def test_uv_bootstrap_needs_no_system_pip_or_venv(self):
+        with tempfile.TemporaryDirectory() as tmp, mock.patch.object(deploy, "STATE", Path(tmp)), \
+                mock.patch.object(deploy.platform, "system", return_value="Linux"), \
+                mock.patch.object(deploy.platform, "machine", return_value="x86_64"):
+            def fetch(url, path, **kwargs):
+                if url.endswith(".sha256"):
+                    path.write_text("a" * 64 + "  uv.tar.gz\n")
+                else:
+                    self.assertEqual(kwargs["sha256"], "a" * 64)
+                    with tarfile.open(path, "w:gz") as tar:
+                        member = tarfile.TarInfo("uv-x86_64-unknown-linux-gnu/uv")
+                        member.size = 6
+                        tar.addfile(member, io.BytesIO(b"binary"))
+            with mock.patch.object(deploy, "download", side_effect=fetch) as download:
+                binary = deploy.install_uv()
+                self.assertEqual(binary.read_bytes(), b"binary")
+                self.assertEqual(binary.stat().st_mode & 0o777, 0o700)
+                self.assertEqual(deploy.install_uv(), binary)
+                self.assertEqual(download.call_count, 2)
+
+    @unittest.skipUnless(sys.platform == "linux", "Прокси Docker bridge нужен только Linux Engine")
+    def test_model_proxy_forwards_bytes_only_to_local_model(self):
+        class Echo(socketserver.BaseRequestHandler):
+            def handle(self):
+                self.request.sendall(self.request.recv(100))
+        with socketserver.TCPServer(("127.0.0.1", 0), Echo) as target:
+            port = target.server_address[1]
+            with deploy.ModelProxyServer(("127.0.0.2", port), deploy.ModelRelay) as proxy:
+                threads = [threading.Thread(target=s.serve_forever, daemon=True) for s in (target, proxy)]
+                for thread in threads:
+                    thread.start()
+                try:
+                    with socket.create_connection(("127.0.0.2", port), timeout=3) as client:
+                        client.sendall(b"local-model-response")
+                        self.assertEqual(client.recv(100), b"local-model-response")
+                finally:
+                    proxy.shutdown()
+                    target.shutdown()
+
+    def test_model_proxy_rejects_public_or_loopback_listener(self):
+        for address in ("0.0.0.0", "8.8.8.8", "127.0.0.1"):
+            with self.subTest(address=address), self.assertRaises(deploy.DeployError):
+                deploy.host_proxy(address)
+
+    def test_linux_docker_desktop_needs_no_host_bridge_proxy(self):
+        with mock.patch.object(deploy.platform, "system", return_value="Linux"), \
+                mock.patch.object(deploy, "run", return_value=subprocess.CompletedProcess([], 0, stdout="Docker Desktop")) as run, \
+                mock.patch.object(deploy.subprocess, "Popen") as spawn:
+            deploy.ensure_host_bridge()
+            self.assertEqual(run.call_count, 1)
+            spawn.assert_not_called()
+
     def test_macos_intel_does_not_silently_select_base_qwen(self):
         with mock.patch.object(deploy.platform, "system", return_value="Darwin"), \
                 mock.patch.object(deploy.platform, "machine", return_value="x86_64"):
@@ -39,6 +144,7 @@ class DeployLocalTests(unittest.TestCase):
 
     def test_cli_without_daemon_or_desktop_still_installs_docker(self):
         with tempfile.TemporaryDirectory() as tmp, mock.patch.object(deploy, "STATE", Path(tmp)), \
+                mock.patch.object(deploy.platform, "system", return_value="Darwin"), \
                 mock.patch.object(deploy.Path, "home", return_value=Path(tmp)), \
                 mock.patch.object(deploy.shutil, "which", return_value="/usr/local/bin/docker"), \
                 mock.patch.object(deploy, "download") as download, \

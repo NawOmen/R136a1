@@ -63,7 +63,8 @@ def compose(*args: str, **kwargs):
     values = configuration()
     env = {key: value for key, value in os.environ.items()
            if key not in values and not key.startswith("COMPOSE_")}
-    return subprocess.run(["docker", "compose", "--project-name", PROJECT, "--env-file", str(ENV),
+    prefix = ["sudo"] if values.get("LOCAL_DOCKER_SUDO") == "true" and os.geteuid() != 0 else []
+    return subprocess.run([*prefix, "docker", "compose", "--project-name", PROJECT, "--env-file", str(ENV),
                            "-f", str(ROOT / "infra/docker-compose.yml"), *args],
                           cwd=ROOT, env=env, check=True, **kwargs)
 

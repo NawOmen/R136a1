@@ -33,9 +33,10 @@ from pathlib import Path
 from typing import Callable, Mapping
 
 LABEL = "ru.porukam.mlx-server"
-SUPPORT_DIR = Path.home() / "Library" / "Application Support" / "PoRukam-LLM"
+SUPPORT_DIR = (Path.home() / "Library/Application Support/PoRukam-LLM" if sys.platform == "darwin"
+               else Path.home() / ".local/share/PoRukam-LLM")
 AGENTS_DIR = Path.home() / "Library" / "LaunchAgents"
-LOG_DIR = Path.home() / "Library" / "Logs" / "PoRukam-LLM"
+LOG_DIR = Path.home() / "Library/Logs/PoRukam-LLM" if sys.platform == "darwin" else SUPPORT_DIR / "logs"
 LOOPBACK = {"127.0.0.1", "localhost", "::1"}
 EX_CONFIG = 2
 
@@ -330,6 +331,8 @@ def tail(path: Path, lines: int) -> str:
 
 
 def agent_loaded(label: str = LABEL) -> bool:
+    if sys.platform != "darwin":
+        return False
     result = subprocess.run(["launchctl", "print", f"gui/{os.getuid()}/{label}"],
                             capture_output=True, text=True, check=False)
     return result.returncode == 0
@@ -337,6 +340,8 @@ def agent_loaded(label: str = LABEL) -> bool:
 
 def agent_pid(label: str = LABEL) -> int | None:
     """PID процесса, которым управляет launchd; None — агент не держит процесс."""
+    if sys.platform != "darwin":
+        return None
     result = subprocess.run(["launchctl", "print", f"gui/{os.getuid()}/{label}"],
                             capture_output=True, text=True, check=False)
     if result.returncode != 0:
@@ -443,13 +448,15 @@ def serve(settings: Settings) -> int:
     return 1
 
 
-def probe_generation(settings: Settings, timeout: float = 90.0) -> str | None:
+def probe_generation(settings: Settings, timeout: float | None = None) -> str | None:
     """Проверить не только список моделей, но и реальную генерацию.
 
     mlx_lm.server может отвечать на /v1/models, роняя поток генерации: тогда
     каждый разбор падает, хотя «модель доступна». Возвращает None при успехе
     и текст ошибки сервера при сбое.
     """
+    if timeout is None:
+        timeout = 1800.0 if sys.platform == "linux" else 90.0
     body = json.dumps({
         "model": "default_model", "stream": False, "temperature": 0, "max_tokens": 16,
         "messages": [{"role": "user", "content": "/no_think ответь: ок"}],

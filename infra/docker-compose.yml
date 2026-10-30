@@ -165,6 +165,7 @@ services:
       # Справка, объяснения и черновики переписки — общая модель: адаптер обучен извлечению фактов.
       ASSISTANT_LLM_BACKEND: ${ASSISTANT_LLM_BACKEND:-ollama}
       MLX_MAX_TOKENS: ${MLX_MAX_TOKENS:-640}
+      MLX_TIMEOUT_SECONDS: ${MLX_TIMEOUT_SECONDS:-180}
       OLLAMA_MODEL: ${OLLAMA_MODEL:-qwen3.5:9b}
       OLLAMA_VISION_MODEL: ${OLLAMA_VISION_MODEL:-qwen3.5:9b}
       LLM_CONTEXT_TOKENS: ${LLM_CONTEXT_TOKENS:-8192}

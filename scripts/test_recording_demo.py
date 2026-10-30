@@ -52,6 +52,13 @@ class RecordingSetupTest(unittest.TestCase):
                 module.snapshot()
             compose.assert_not_called()
 
+    def test_linux_compose_reuses_installer_sudo_mode(self):
+        with mock.patch.object(module, "configuration", return_value={"LOCAL_DOCKER_SUDO": "true"}), \
+                mock.patch.object(module.os, "geteuid", return_value=1000), \
+                mock.patch.object(module.subprocess, "run") as run:
+            module.compose("ps")
+            self.assertEqual(run.call_args.args[0][:2], ["sudo", "docker"])
+
 
 if __name__ == "__main__":
     unittest.main()
