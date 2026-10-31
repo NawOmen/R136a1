@@ -1,5 +1,6 @@
 """Серверные регрессии допуска и обновления КП после изменения потребности."""
 import uuid
+import pytest
 from sqlalchemy import select
 from app.models import Offer
 from conftest import confirmed_quote_terms, grant_capacity, grant_packaging_documents
@@ -30,7 +31,8 @@ async def test_missing_admission_blocks_preview_and_direct_send_without_creating
     assert await db_session.scalar(select(Offer).where(Offer.need_id == uuid.UUID(need_id))) is None
 
 
-async def test_seller_can_reconfirm_stale_offer_against_changed_need(client, db_session):
+@pytest.mark.parametrize("edit_count", [1, 2])
+async def test_seller_can_reconfirm_stale_offer_against_changed_need(client, db_session, edit_count):
     seller, company, seller_token, buyer_token, need_id, body = await setup_proposal(client, db_session)
     await grant_packaging_documents(db_session, company, decision_user_id=seller,
                                    confirms={'material':['крафт-картон'], 'coating':['PE']})
@@ -40,17 +42,18 @@ async def test_seller_can_reconfirm_stale_offer_against_changed_need(client, db_
     need = (await client.get(f'/api/v1/needs/{need_id}', headers=_auth(buyer_token))).json()
     edit = {key: need[key] for key in ('company_id','category','subcategory','characteristics','volume_units',
                                      'budget_rub','deadline_date','delivery_address_id','visibility','valid_until')}
-    edit.update(expected_revision=need['revision'], volume_units=6000)
-    impact = await client.post(f'/api/v3/needs/{need_id}/edit-preview', json=edit, headers=_auth(buyer_token))
-    assert impact.status_code == 200, impact.text
-    changed = await client.put(f'/api/v3/needs/{need_id}', json={**edit,'impact_hash':impact.json()['impact_hash']}, headers=_auth(buyer_token))
-    assert changed.status_code == 200, changed.text
+    for index in range(edit_count):
+        edit.update(expected_revision=need['revision']+index, volume_units=6000+index*1000)
+        impact = await client.post(f'/api/v3/needs/{need_id}/edit-preview', json=edit, headers=_auth(buyer_token))
+        assert impact.status_code == 200, impact.text
+        changed = await client.put(f'/api/v3/needs/{need_id}', json={**edit,'impact_hash':impact.json()['impact_hash']}, headers=_auth(buyer_token))
+        assert changed.status_code == 200, changed.text
     current = (await client.get(f'/api/v1/needs/{need_id}/offers', headers=_auth(seller_token))).json()
     assert current[0]['status'] == 'stale'
     assert 'Спецификация изменилась' in changed.json()['no_match_reason']
     stale_revision = current[0]['revision']
-    assert stale_revision == original['revision'] + 1
-    old_write = await client.patch(f"/api/v1/offers/{original['id']}", json={'expected_revision': original['revision'], 'price_rub':'10.00'}, headers=_auth(seller_token))
+    assert stale_revision == original['revision'] + edit_count
+    old_write = await client.patch(f"/api/v1/offers/{original['id']}", json={'expected_revision': stale_revision - 1, 'price_rub':'10.00'}, headers=_auth(seller_token))
     assert old_write.status_code == 409
     preview = await client.post(f'/api/v1/needs/{need_id}/offers/preview',
         json={**body, 'offer_id': original['id'], 'expected_revision': stale_revision}, headers=_auth(seller_token))
