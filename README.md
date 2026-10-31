@@ -451,7 +451,6 @@ python3 scripts/deploy-local.py
 Пароли сохраняются в `.env.recording`; повторный запуск сохраняет данные.
 При установке Linux может запросить пароль sudo, macOS — подтверждение лицензии Docker.
 На Linux модель работает на CPU и отвечает медленнее, чем на Mac с Metal.
-Инструкция записи: [основной сценарий](docs/contest/final-demo.md).
 
 Подробности и HTTPS-доступ: [развёртывание](DEPLOYMENT.md#secure-deployment).
 
