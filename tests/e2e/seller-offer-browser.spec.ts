@@ -21,10 +21,10 @@ const product = {
   price_tiers: [{ min_units: 10000, unit_price_rub: "4.80" }], images: [], sources: [], is_published: true,
 };
 
-async function prepare(page: Page, options: { initialPath?: string; available?: number; sparse?: boolean; failure?: boolean; delayed?: boolean; warnings?: boolean; price?: string; existing?: boolean; tiered?: boolean; employee?: boolean; stale?: boolean; conflict?: boolean } = {}) {
+async function prepare(page: Page, options: { initialPath?: string; available?: number; sparse?: boolean; failure?: boolean; delayed?: boolean; warnings?: boolean; price?: string; existing?: boolean; tiered?: boolean; employee?: boolean; stale?: boolean; conflict?: boolean; obsoleteOffer?: boolean; admissionBlocked?: boolean } = {}) {
   const drafts: Record<string, unknown>[] = [], previews: Record<string, unknown>[] = [], sends: Record<string, unknown>[] = [];
   const edits: Record<string, unknown>[] = [];
-  let existing: Record<string, unknown> | null = options.existing ? { id: "30000000-0000-4000-8000-000000000007", need_id: needId, company_id: companyId, price_rub: options.price ?? "4.80", available_units: 20000, moq_units: 1000, lead_time_days: 2, delivery_cost_rub: "0", resource_kind: "stock", product_id: productId, revision: 3, status: "sent", price_tiers: options.tiered ? [{min_units:10000,unit_price_rub:"4.00"}] : [], commercial_terms: {delivery_method:"included",tax_basis:"no_vat",delivery_conditions:"Доставка в Москву",expenses:[]} } : null;
+  let existing: Record<string, unknown> | null = options.existing ? { id: "30000000-0000-4000-8000-000000000007", need_id: needId, company_id: companyId, price_rub: options.price ?? "4.80", available_units: 20000, moq_units: 1000, lead_time_days: 2, delivery_cost_rub: "0", resource_kind: "stock", product_id: productId, revision: 3, status: options.obsoleteOffer ? "stale" : "sent", price_tiers: options.tiered ? [{min_units:10000,unit_price_rub:"4.00"}] : [], commercial_terms: {delivery_method:"included",tax_basis:"no_vat",delivery_conditions:"Доставка в Москву",expenses:[]} } : null;
   const comparisons: string[] = [];
   let releaseDraft: (() => void) | undefined;
   const draftGate = new Promise<void>(resolve => { releaseDraft = resolve; });
@@ -55,6 +55,7 @@ async function prepare(page: Page, options: { initialPath?: string; available?: 
     if (path.endsWith("/offers/preview")) {
       const body = request.postDataJSON(); previews.push(body);
       const blockers = options.available && body.available_units > options.available ? ["Недостаточно свободного ресурса"] : [];
+      if (options.admissionBlocked) blockers.push("Допуск продавца не подтверждён: Заключение о спецификации не предоставлено");
       return route.fulfill({ json: { blockers, warnings: [], missing: [], can_send: blockers.length === 0 } });
     }
     if (path.endsWith("/offers") && request.method() === "POST") { sends.push(request.postDataJSON()); existing={...request.postDataJSON(),id:"synthetic-offer",need_id:needId,status:"sent",revision:1}; return route.fulfill({ status: 201, json: { ...existing, sending_warnings: options.warnings ? ["Проверьте подтверждения"] : [] } }); }
@@ -351,4 +352,27 @@ test("only a company administrator can edit a sent proposal",async({page})=>{
  await expect(state.card.getByRole("button",{name:"Изменить условия",exact:true})).toBeDisabled();
  await expect(state.card.getByText("Изменить отправленное КП может администратор компании.")).toBeVisible();
  expect(state.edits).toHaveLength(0);
+});
+
+
+test("stale proposal remains editable and confirms a fresh offer revision", async ({ page }) => {
+  const state = await prepare(page, {existing:true, obsoleteOffer:true});
+  await open(page, state);
+  await expect(state.card.getByText(/Покупатель изменил потребность/)).toBeVisible();
+  await state.card.getByRole("button", {name:"Проверить условия", exact:true}).click();
+  await state.card.getByRole("button", {name:"Подтвердить изменение КП", exact:true}).click();
+  expect(state.edits).toHaveLength(1);
+  expect(state.edits[0].expected_revision).toBe(3);
+  expect(state.sends).toHaveLength(0);
+});
+
+test("admission blocker explains the missing document and links to seller documents", async ({ page }) => {
+  const state = await prepare(page, {admissionBlocked:true});
+  await open(page, state);
+  await deliveryAndTax(state.card);
+  await state.card.getByRole("button", {name:"Проверить условия", exact:true}).click();
+  await expect(state.card.getByText(/Заключение о спецификации не предоставлено/)).toBeVisible();
+  await expect(state.card.getByRole("link", {name:"Проверить документы и допуск →"})).toHaveAttribute("href", "/seller/documents");
+  await expect(state.card.getByRole("button", {name:"Подтвердить отправку КП", exact:true})).toHaveCount(0);
+  expect(state.sends).toHaveLength(0);
 });

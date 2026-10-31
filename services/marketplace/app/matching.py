@@ -198,44 +198,61 @@ async def _active_needs(db: AsyncSession) -> list[Need]:
     return result
 
 
+def _reason_text(message: str) -> str:
+    # Need.no_match_reason is VARCHAR(500); long document checklists must not
+    # abort the rematch transaction or hide its useful leading explanation.
+    return message if len(message) <= 500 else message[:499] + "…"
+
+
 async def _has_direct_match(db: AsyncSession, need: Need) -> tuple[bool, str]:
     offers = (
         await db.execute(
-            select(Offer).where(Offer.need_id == need.id, Offer.status == "sent")
+            select(Offer).where(Offer.need_id == need.id, Offer.status.in_(["sent", "stale"]))
         )
     ).scalars().all()
     days_left = max(0, (need.deadline_date - date.today()).days)
+    reasons: list[str] = []
     for offer in offers:
+        if offer.status == "stale":
+            reasons.append("Спецификация изменилась: продавец должен обновить условия КП")
+            continue
+        rejected: list[str] = []
         quote = offer.commercial_quote
         if not quote or not quote.get('estimate', {}).get('complete'):
-            continue
-        if quote['need']['revision'] != need.revision:
-            continue
+            rejected.append("Не подтверждена полная смета, доставка или налоговая база КП")
+        elif quote['need']['revision'] != need.revision:
+            rejected.append("Спецификация изменилась: продавец должен обновить условия КП")
         from .admission import company_admission
         product = await db.get(Product, offer.product_id) if offer.product_id else None
         if offer.product_id and (product is None or product.company_id != offer.company_id):
-            continue
+            rejected.append("Товар предложения недоступен продавцу")
         company = (await db.execute(text("SELECT verification_status FROM auth.companies WHERE id=:id"),
                                     {"id": offer.company_id})).scalar_one_or_none()
         if company != "verified":
-            continue
+            rejected.append("Компания продавца не прошла проверку")
         admission = await company_admission(db, offer.company_id,
             product.category if product else need.category,
             product.subcategory if product else need.subcategory,
             characteristics=product.characteristics if product else need.characteristics,
             moq_units=offer.moq_units)
         if admission.blocking_open:
-            continue
-        total = decimal(quote['estimate']['total_rub'])
-        if (
-            offer.moq_units <= need.volume_units <= offer.available_units
-            and offer.lead_time_days <= days_left
-            and (offer.valid_until is None or offer.valid_until >= date.today())
-            and (need.budget_rub is None or total <= need.budget_rub)
-        ):
+            rejected.append("Допуск продавца не подтверждён: " + admission.blocking_message)
+        if offer.moq_units > need.volume_units:
+            rejected.append("Объём потребности меньше минимальной партии продавца")
+        if need.volume_units > offer.available_units:
+            rejected.append("Доступный объём предложения меньше потребности")
+        if offer.lead_time_days > days_left:
+            rejected.append("Срок поставки не укладывается в срок потребности")
+        if offer.valid_until is not None and offer.valid_until < date.today():
+            rejected.append("Срок действия КП истёк")
+        if quote and quote.get('estimate', {}).get('complete') and need.budget_rub is not None:
+            if decimal(quote['estimate']['total_rub']) > need.budget_rub:
+                rejected.append("Полная стоимость КП превышает бюджет потребности")
+        if not rejected:
             return True, ""
+        reasons.extend(rejected)
     if offers:
-        return False, "Предложения есть, но они не соблюдают объём, MOQ, бюджет или срок"
+        return False, _reason_text("; ".join(dict.fromkeys(reasons)))
     passports = (
         await db.execute(select(CapabilityPassport))
     ).scalars().all()
@@ -265,10 +282,10 @@ async def _build_coalitions(db: AsyncSession, needs: list[Need]) -> None:
             for item in members:
                 if item.status == "waiting_for_match" and item.no_match_reason \
                         and "прямой подбор" not in item.no_match_reason:
-                    item.no_match_reason += (
+                    item.no_match_reason = _reason_text(item.no_match_reason + (
                         "; совместимых запросов других компаний пока нет — доступен прямой подбор "
                         "предложения, коалиция соберётся при появлении спроса"
-                    )
+                    ))
             continue
         members = sorted(members, key=lambda item: str(item.id))
         # S08.01: у группы должно быть согласуемое окно сроков — производство

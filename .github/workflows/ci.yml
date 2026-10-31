@@ -48,7 +48,7 @@ jobs:
         run: |
           python3 -m unittest discover -s scripts -p 'test_*.py'
           python3 scripts/acceptance-report.py > "$RUNNER_TEMP/acceptance-unverified.json"
-          python3 scripts/business_analysis.py --check-readme README.md
+          python3 scripts/business_analysis.py --check-readme docs/business-analysis.md
       - name: Contest evidence guards and scenario economics
         run: >-
           python3 scripts/run_evidence_tests.py --service scripts

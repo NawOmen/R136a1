@@ -39,7 +39,7 @@ def offer_payload(company):
     return {'company_id': str(company), 'commercial_terms': confirmed_quote_terms(), 'price_rub': 11.5, 'available_units': 6, 'moq_units': 1, 'lead_time_days': 2, 'delivery_cost_rub': 0, 'request_key': str(uuid.uuid4())}
 
 async def test_rollback_created_draft_referenced_by_offer(client, db_session):
-    _, company, token = await _seller_company(db_session)
+    _, company, token = await _seller_company(db_session, admitted=True)
     content = 'Название;Категория;Подкатегория;Цена;Минимум;Срок;Остаток;Внешний ID;Характеристика: unit;Характеристика: volume_ml;Характеристика: coating;Характеристика: material\nСтакан;Упаковка и тара;Бумажные стаканы;12;1;2;100;cup-offer;шт;400;PE;крафт-картон\n'.encode()
     shown = await preview(client, company, token, content)
     imported = await commit(client, company, token, content, shown)
@@ -56,7 +56,7 @@ async def test_rollback_created_draft_referenced_by_offer(client, db_session):
 
 @pytest.mark.parametrize('mode', ['different_key', 'cancelled_need', 'expired_need', 'same_key'])
 async def test_preview_idempotency_matches_create(client, db_session, mode):
-    _, company, token = await _seller_company(db_session)
+    _, company, token = await _seller_company(db_session, admitted=True)
     _, _, buyer_token, need_id = await _buyer_with_published_need(client, db_session, volume=6)
     await grant_capacity(db_session, company, 100)
     payload = offer_payload(company)
@@ -84,7 +84,7 @@ async def test_preview_idempotency_matches_create(client, db_session, mode):
 
 @pytest.mark.parametrize("retry", [False, True])
 async def test_preview_rejects_changed_requirements_source(client, db_session, gateway_contract, retry):
-    _, company, token = await _seller_company(db_session)
+    _, company, token = await _seller_company(db_session, admitted=True)
     buyer_user, buyer, buyer_token, need_id = await _buyer_with_published_need(client, db_session, volume=6)
     await grant_capacity(db_session, company, 100)
     run = uuid.uuid4()
@@ -126,7 +126,7 @@ async def test_capacity_calendar_without_usable_entries(client, db_session, scop
     assert await db_session.scalar(select(func.count(Offer.id))) == 0
 
 async def test_preview_allows_valid_idempotent_draft_retry(client, db_session):
-    _, company, token = await _seller_company(db_session)
+    _, company, token = await _seller_company(db_session, admitted=True)
     await _passport(client, token, company, business_kind='stock_supplier', min_order=1)
     await cup(client, company, token, stock=100)
     _, _, _, need_id = await _buyer_with_published_need(client, db_session, volume=6)
@@ -174,7 +174,7 @@ async def test_unknown_capacity_remains_unknown(client, db_session):
 
 @pytest.mark.parametrize('change,expected_status', [({'request_key': None}, 409), ({'price_rub': 12}, 409), ({'moq_units': 7}, 422), ({'valid_until': str(date.today() - timedelta(days=1))}, 422), ({'draft_id': str(uuid.uuid4())}, 404)])
 async def test_preview_retry_preserves_request_checks(client, db_session, change, expected_status):
-    _, company, token = await _seller_company(db_session)
+    _, company, token = await _seller_company(db_session, admitted=True)
     _, _, _, need_id = await _buyer_with_published_need(client, db_session, volume=6)
     await grant_capacity(db_session, company, 100)
     payload = offer_payload(company)

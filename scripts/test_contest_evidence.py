@@ -103,7 +103,8 @@ class EvidenceTests(unittest.TestCase):
             self.assertEqual(module.build_report([junit])["criteria"][0]["automated_slice_status"], "passed")
             for relative in ("services/marketplace/app/category_registry.json",
                              "services/marketplace/unit/fixtures/category_stage01.json",
-                             "services/marketplace/app/assortment.py"):
+                             "services/marketplace/app/assortment.py",
+                             "docs/acceptance.md", "docs/business-analysis.md"):
                 with self.subTest(input=relative):
                     path = root / relative
                     original = path.read_bytes()

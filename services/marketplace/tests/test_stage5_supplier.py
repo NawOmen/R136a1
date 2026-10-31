@@ -95,7 +95,7 @@ async def test_product_characteristics_limit_and_photo_bounds(client, db_session
 
 
 async def test_offer_request_key_retry_returns_same_or_conflict(client, db_session):
-    user, company, token = await _seller_company(db_session)
+    user, company, token = await _seller_company(db_session, admitted=True)
     _, _, _, need_id = await _buyer_with_published_need(client, db_session, volume=5_000)
     await grant_capacity(db_session, company, 5_000)
     key = str(uuid.uuid4())
@@ -498,7 +498,7 @@ async def test_repeat_import_returns_full_result(client, db_session):
 
 
 async def test_offer_retry_checks_terms_validity_and_included(client, db_session):
-    user, company, token = await _seller_company(db_session)
+    user, company, token = await _seller_company(db_session, admitted=True)
     _, _, _, need_id = await _buyer_with_published_need(client, db_session, volume=5_000)
     await grant_capacity(db_session, company, 5_000)
     key = str(uuid.uuid4())
@@ -551,7 +551,7 @@ async def test_passport_only_feed_filters_compatibility(client, db_session):
     assert len(feed_with_card.json()) == 1
 
 
-async def test_offer_send_rechecks_term_and_warns_admission(client, db_session):
+async def test_offer_send_rechecks_term_and_blocks_admission(client, db_session):
     user, company, token = await _seller_company(db_session)
     _, _, _, need_id = await _buyer_with_published_need(client, db_session, volume=5_000)
     await grant_capacity(db_session, company, 5_000)
@@ -566,8 +566,8 @@ async def test_offer_send_rechecks_term_and_warns_admission(client, db_session):
                                    "price_rub": 11.5, "available_units": 5_000, "moq_units": 1_000,
                                    "delivery_cost_rub": 3_000, "lead_time_days": 9},
                              headers=_auth(token))
-    assert sent.status_code == 201, sent.text
-    assert sent.json()["sending_warnings"], "допуск без документов показывается до отправки"
+    assert sent.status_code == 409, sent.text
+    assert "допуск" in sent.json()["detail"].lower()
 
 
 def json_dumps(value) -> str:
@@ -663,7 +663,7 @@ async def test_offer_resource_kind_capacity_and_freshness(client, db_session):
 
     from conftest import grant_capacity
 
-    user, company, token = await _seller_company(db_session)
+    user, company, token = await _seller_company(db_session, admitted=True)
     base = {"commercial_terms": confirmed_quote_terms(), "company_id": str(company),
             "price_rub": 11.5, "available_units": 6, "moq_units": 1,
             "delivery_cost_rub": 100, "lead_time_days": 9, "resource_kind": "capacity"}
@@ -735,7 +735,7 @@ async def test_required_subject_fields_outside_user_limit(client, db_session):
 
 
 async def test_preview_checks_access_staleness_and_repeat(client, db_session):
-    user, company, token = await _seller_company(db_session)
+    user, company, token = await _seller_company(db_session, admitted=True)
     _, _, _, need_id = await _buyer_with_published_need(client, db_session, volume=5_000)
     await grant_capacity(db_session, company, 5_000)
     base = {"company_id": str(company), "price_rub": 11.5, "available_units": 5_000,
@@ -763,7 +763,7 @@ async def test_preview_checks_access_staleness_and_repeat(client, db_session):
 async def test_preview_rejects_stale_draft(client, db_session):
     from test_offer_draft_and_scorecard import _passport
 
-    user, company, token = await _seller_company(db_session)
+    user, company, token = await _seller_company(db_session, admitted=True)
     await _passport(client, token, company)
     _, _, _, need_id = await _buyer_with_published_need(client, db_session, volume=5_000)
     await grant_capacity(db_session, company, 5_000)
@@ -834,7 +834,7 @@ async def test_capacity_check_subtracts_held_reservations(client, db_session):
     from app.resource_scopes import prepare_conversions
     from app.resources import reserve
 
-    user, company, token = await _seller_company(db_session)
+    user, company, token = await _seller_company(db_session, admitted=True)
     _, _, _, need_id = await _buyer_with_published_need(client, db_session, volume=5_000)
     conversions = prepare_conversions([{"category_id": "packaging.paper-cups", "order_unit": "шт",
                                         "resource_units_per_order_unit": 2}], True)

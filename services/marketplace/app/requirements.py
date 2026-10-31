@@ -151,7 +151,7 @@ async def revision_impact(db, need, data):
         changes["evidence"] = {"before": old_run, "after": new_run}
     if not await evidence_is_current(db, need):
         changes["evidence"] = {"before": old_run, "after": new_run, "reason": "source_stale"}
-    offers = list((await db.scalars(select(Offer).where(Offer.need_id == need.id, Offer.status.in_(["sent", "draft"])))).all())
+    offers = list((await db.scalars(select(Offer).where(Offer.need_id == need.id, Offer.status.in_(["sent", "draft", "stale"])))).all())
     drafts = list((await db.scalars(select(OfferDraft).where(OfferDraft.need_id == need.id, OfferDraft.status == "draft"))).all())
     coalition_ids = list((await db.scalars(select(CoalitionMember.coalition_id).where(CoalitionMember.need_id == need.id))).all())
     coalitions = list((await db.scalars(select(Coalition).where(Coalition.id.in_(coalition_ids), Coalition.status.not_in(["cancelled", "expired"])))).all())
@@ -191,6 +191,7 @@ async def invalidate_dependents(db, need, dependents, user, impact):
         await lock_company(db, company_id)
     for offer in offers:
         offer.status = "stale"
+        offer.revision += 1
         recipients.add(offer.company_id)
     for draft in drafts:
         draft.status = "stale"

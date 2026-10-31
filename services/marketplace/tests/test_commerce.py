@@ -17,7 +17,7 @@ async def order(db_session):
     sc = await make_company(db_session, seller, can_buy=False)
     address = DeliveryAddress(company_id=bc, address="г. Москва, ул. Синтетическая, д. 1", city="Москва", region="Москва")
     db_session.add(address); await db_session.flush()
-    need = Need(company_id=bc, created_by_user_id=buyer, category="Мебель", characteristics={}, volume_units=10,
+    need = Need(company_id=bc, created_by_user_id=buyer, category="Мебель", characteristics={"unit":"шт", "material":"дерево", "dimensions_mm":"1200×600×750", "finish":"лак"}, volume_units=10,
                 budget_rub=20000, deadline_date=date.today()+timedelta(days=20), delivery_address_id=address.id, visibility="public", status="matched")
     db_session.add(need); await db_session.flush()
     offer = Offer(need_id=need.id, company_id=sc, created_by_user_id=seller, price_rub=1000,
@@ -33,6 +33,16 @@ async def order(db_session):
                                        cargo_class="small", classification_note="Тестовый способ получения",
                                        method="self_pickup", buyer_responsible=True,
                                        confirmed_by_user_id=buyer))
+    from app.models import Document
+    from app.category_admission import match_profile
+    from conftest import grant_category_capability
+    profile = match_profile('Мебель', None, {'material':'дерево', 'unit':'шт'})
+    for requirement in profile.requirements:
+        db_session.add(Document(company_id=sc, name='Синтетическое подтверждение для теста КП',
+            document_type=requirement.document_types[0], file_key='tests/furniture-approval',
+            content_type='text/plain', verification_status='verified', scope_category='Мебель',
+            valid_until=date.today()+timedelta(days=30), confirms={'material':['дерево'], 'dimensions_mm':['1200×600×750'], 'finish':['лак']}))
+    await grant_category_capability(db_session, sc, 'business-supplies.furniture', {'material':'дерево', 'dimensions_mm':'1200×600×750', 'finish':'лак'}, min_units=1)
     await db_session.commit()
     return deal.id, bc, sc, {"Authorization": f"Bearer {make_token(buyer)}"}, {"Authorization": f"Bearer {make_token(seller)}"}
 
@@ -133,11 +143,11 @@ async def test_product_patch_preserves_stock(client, order, db_session):
 @pytest.mark.asyncio
 async def test_stock_offer_requires_matching_product_on_send_and_selection(client, order, db_session):
     _, buyer, seller, buyer_headers, seller_headers = order
-    need = Need(company_id=buyer, category="Мебель", characteristics={"material": "дерево", "unit": "шт"},
+    need = Need(company_id=buyer, category="Мебель", characteristics={"material": "дерево", "unit": "шт", "dimensions_mm":"1200×600×750", "finish":"лак"},
                 volume_units=2, deadline_date=date.today() + timedelta(days=20),
                 visibility="open_anonymized", status="open_for_offers")
     product = Product(company_id=seller, name="Стол синтетический", category="Строительство",
-                      characteristics={"material": "дерево", "unit": "шт"}, price_rub=1000,
+                      characteristics={"material": "дерево", "unit": "шт", "dimensions_mm":"1200×600×750", "finish":"лак"}, price_rub=1000,
                       price_tiers=[], moq_units=1, lead_time_days=1, stock_units=5)
     db_session.add_all([need, product]); await db_session.commit()
     payload = {'commercial_terms': confirmed_quote_terms(), "company_id": str(seller), "product_id": str(product.id), "resource_kind": "stock",
