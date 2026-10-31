@@ -20,7 +20,7 @@ CRITERIA = [
         "scripts/test_business_analysis.py::test_all_current_categories_have_exact_profile_and_example_coverage",
         "scripts/test_business_analysis.py::test_full_cost_and_first_use_training_without_waiting_in_labour",
         "scripts/test_business_analysis.py::test_corrections_retries_and_losses_are_retained"],
-     ["README.md"]),
+     ["README.md", "docs/acceptance.md", "docs/business-analysis.md"]),
     ("K2", 20, [
         "services/llm-gateway/tests/test_stage17_trace.py::test_actual_task_trace_denial_recovery_and_artifact",
         "services/marketplace/tests/test_stage12.py::test_role_quality_gates_scoping_and_versions",
@@ -53,6 +53,8 @@ def source_paths(service):
         "services/marketplace/app/assortment.py",
         "services/marketplace/unit/fixtures/category_stage01.json",
         ".github/workflows/ci.yml",
+        "docs/acceptance.md",
+        "docs/business-analysis.md",
     ))
     runtime = "marketplace" if service == "scripts" else service
     service_root = ROOT / "services" / runtime

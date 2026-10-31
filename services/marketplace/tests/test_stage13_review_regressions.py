@@ -146,6 +146,8 @@ async def test_direct_match_excludes_revoked_admission(client,db_session):
     db_session.add(offer);await db_session.commit()
     match,reason=await _has_direct_match(db_session,need)
     assert not match
+    assert "Допуск продавца не подтверждён" in reason
+    assert "MOQ, бюджет или срок" not in reason
 
 
 

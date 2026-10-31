@@ -37,8 +37,7 @@ router = APIRouter(tags=["offers"])
 
 async def _sending_warnings(db: AsyncSession, company_id: uuid.UUID, need: Need,
                             moq_units: int, available_units: int, product_id) -> list[str]:
-    """Недостающие данные допуска перед отправкой: показывает, но не блокирует.
-    Блокируют публикация, выбор покупателя и сделка (тест cups-deal-without-documents)."""
+    """Причины недопуска: preview показывает их, отправка и изменение блокируются."""
     try:
         await require_admission_for_specifications(
             db,
@@ -60,7 +59,8 @@ async def _send_blockers(db: AsyncSession, *, need: Need, company_id: uuid.UUID,
     """Проверка отправки до создания КП: срок, свободный ресурс, допуск.
     Возвращает (блокеры, предупреждения); записи не создаёт."""
     warnings = await _sending_warnings(db, company_id, need, moq_units, available_units, product_id)
-    blockers: list[str] = []
+    blockers: list[str] = list(warnings)
+    warnings = []
     days_left = (need.deadline_date - date.today()).days
     if lead_time_days > max(0, days_left):
         blockers.append("Срок производства не укладывается в срок потребности")
@@ -301,7 +301,7 @@ async def preview_offer_send(
         Offer.need_id == need.id, Offer.company_id == data.company_id))
     if data.offer_id is not None:
         await require_company_admin(data.company_id, user, db)
-        if previous is None or previous.id != data.offer_id or previous.status != 'sent':
+        if previous is None or previous.id != data.offer_id or previous.status not in {'sent', 'stale'}:
             blockers.append('Действующее предложение не найдено: обновите страницу')
         elif previous.revision != data.expected_revision:
             blockers.append('Предложение изменилось. Обновите условия перед подтверждением')
@@ -513,12 +513,13 @@ async def update_offer(
         raise HTTPException(status.HTTP_404_NOT_FOUND, detail="Предложение не найдено")
     await require_company_seller(offer.company_id, user, db)
     await require_company_admin(offer.company_id, user, db)
+    await require_verified_seller(offer.company_id, user, db)
     need = await db.scalar(select(Need).where(Need.id == offer.need_id).with_for_update())
     await db.refresh(offer, with_for_update=True)
     if offer.revision != data.expected_revision:
         raise HTTPException(409, "Предложение изменилось. Обновите условия перед подтверждением")
-    if offer.status != "sent":
-        raise HTTPException(status.HTTP_409_CONFLICT, detail="Можно изменить только действующее предложение")
+    if offer.status not in {"sent", "stale"}:
+        raise HTTPException(status.HTTP_409_CONFLICT, detail="Можно изменить только действующее или устаревшее предложение")
     previous_quote = offer.commercial_quote
     patch = data.model_dump(exclude_unset=True, exclude={"expected_revision"})
     if any(value is None for key, value in patch.items() if key not in {"valid_until","delivery_cost_rub","commercial_terms","product_id"}):
@@ -550,6 +551,7 @@ async def update_offer(
             raise HTTPException(409, f"Товар не соответствует потребности: {reason}")
     if offer.commercial_terms and offer.commercial_terms["delivery_method"] in {"included","self_pickup"} and offer.delivery_cost_rub is None:
         offer.delivery_cost_rub = decimal(0)
+    offer.status = "sent"
     offer.revision += 1
     if offer.moq_units > offer.available_units:
         raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, detail="MOQ превышает доступный объём")

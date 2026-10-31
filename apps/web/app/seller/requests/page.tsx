@@ -208,7 +208,7 @@ export default function SellerRequestsPage() {
       setOpenFormId(null);
       setChecks((current) => { const rest = { ...current }; delete rest[need.id]; return rest; });
       if (warnings.length > 0) {
-        setError(`Предложение отправлено, но проверьте недостающее: ${warnings.join("; ")}. Допуск подтвердят при выборе покупателем.`);
+        setError(`Предложение отправлено, но проверьте недостающее: ${warnings.join("; ")}. Проверьте условия перед дальнейшим согласованием.`);
       }
     } catch (err) {
       if (generation === formGeneration.current) setError(err instanceof ApiError ? russianMessage(err.message) : "Не удалось отправить предложение.");
@@ -226,7 +226,7 @@ export default function SellerRequestsPage() {
     setError(null);
     let existingChecked = false;
     try {
-      const existing = (await marketplace.getOffers(token, need.id)).find(offer => offer.company_id === company.id && offer.status === "sent");
+      const existing = (await marketplace.getOffers(token, need.id)).find(offer => offer.company_id === company.id && ["sent", "stale"].includes(offer.status));
       if (generation !== formGeneration.current) return;
       existingChecked = true;
       if (existing) {
@@ -415,7 +415,8 @@ export default function SellerRequestsPage() {
                     />
                   </div>
                   </fieldset>
-                  <p className="hint seller-offer__wide">Уточните доставку и НДС перед отправкой.</p>
+                  {editingOffer?.status === "stale" && <p className="alert alert-error seller-offer__wide">Покупатель изменил потребность. Сверьте условия с текущей спецификацией и подтвердите новую версию КП.</p>}
+                  <p className="hint seller-offer__wide">Уточните доставку и НДС перед отправкой. Отправка возможна только при подтверждённом допуске. <Link className="text-link" href="/seller/documents">Документы и допуск →</Link></p>
                   <div className="actions seller-offer__wide">
                     <button type="submit" className="btn btn-primary" disabled={submitting || confirming || !resourceReady}>
                       {submitting ? "Проверяем..." : "Проверить условия"}
@@ -438,7 +439,7 @@ export default function SellerRequestsPage() {
                         <ul>{checks[need.id].missing.map((item) => <li key={item}>{item}</li>)}</ul>
                       </>}
                       {checks[need.id].warnings.length > 0 && <>
-                        <p className="hint">Предупреждения (не блокируют, допуск проверят при выборе):</p>
+                        <p className="hint">Дополнительные замечания:</p>
                         <ul>{checks[need.id].warnings.map((item) => <li key={item}>{item}</li>)}</ul>
                       </>}
                       {checks[need.id].inputKey !== inputKey(need) ? (
@@ -449,16 +450,16 @@ export default function SellerRequestsPage() {
                           {confirming ? "Отправляем..." : editingOffer ? "Подтвердить изменение КП" : "Подтвердить отправку КП"}
                         </button>
                       ) : (
-                        <div className="alert alert-error">Отправка заблокирована, исправьте условия выше.</div>
+                        <div className="alert alert-error"><p>{checks[need.id].blockers.join(". ")}</p><Link className="text-link" href="/seller/documents">Проверить документы и допуск →</Link></div>
                       )}
                     </div>
                   )}
                 </form>
               ) : (
                 <div className="demand-actions">
-                  {ownOffers[need.id]?.status === "sent" && !company?.membership?.is_admin && <p className="hint">Изменить отправленное КП может администратор компании.</p>}
-                  <button type="button" className="btn btn-primary btn-sm" disabled={!offersLoaded || draftingId !== null || submitting || confirming || !!(ownOffers[need.id] && (ownOffers[need.id].status !== "sent" || !company?.membership?.is_admin))} onClick={() => void handlePrepareDraft(need)}>
-                    {draftingId === need.id ? "Загружаем условия..." : ownOffers[need.id]?.status === "sent" ? "Изменить условия" : "Предложить условия"}
+                  {["sent", "stale"].includes(ownOffers[need.id]?.status ?? "") && !company?.membership?.is_admin && <p className="hint">Изменить отправленное КП может администратор компании.</p>}
+                  <button type="button" className="btn btn-primary btn-sm" disabled={!offersLoaded || draftingId !== null || submitting || confirming || !!(ownOffers[need.id] && (!["sent", "stale"].includes(ownOffers[need.id].status) || !company?.membership?.is_admin))} onClick={() => void handlePrepareDraft(need)}>
+                    {draftingId === need.id ? "Загружаем условия..." : ["sent", "stale"].includes(ownOffers[need.id]?.status ?? "") ? "Изменить условия" : "Предложить условия"}
                   </button>
                 </div>
               )}

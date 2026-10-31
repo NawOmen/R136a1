@@ -191,6 +191,7 @@ async def invalidate_dependents(db, need, dependents, user, impact):
         await lock_company(db, company_id)
     for offer in offers:
         offer.status = "stale"
+        offer.revision += 1
         recipients.add(offer.company_id)
     for draft in drafts:
         draft.status = "stale"

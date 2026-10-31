@@ -70,26 +70,28 @@ async def test_empty_capacity_is_a_blocker_not_unknown_permission_to_send(monkey
 async def test_patch_requires_current_revision_before_mutating_or_checking_resources(monkeypatch):
     company=uuid.uuid4(); offer=NS(id=uuid.uuid4(),company_id=company,need_id=uuid.uuid4(),revision=4,status='sent',price_rub='4.8')
     db=NS(get=AsyncMock(return_value=offer),scalar=AsyncMock(return_value=NS()),refresh=AsyncMock(),commit=AsyncMock())
-    monkeypatch.setattr(offers,'require_company_seller',AsyncMock());monkeypatch.setattr(offers,'require_company_admin',AsyncMock())
+    monkeypatch.setattr(offers,'require_company_seller',AsyncMock());monkeypatch.setattr(offers,'require_company_admin',AsyncMock());monkeypatch.setattr(offers,'require_verified_seller',AsyncMock())
     with pytest.raises(HTTPException) as error:
         await offers.update_offer(offer.id,OfferPatch(expected_revision=3,price_rub='4.9'),CurrentUser(uuid.uuid4()),db)
     assert error.value.status_code==409 and offer.price_rub=='4.8'
     db.commit.assert_not_awaited()
 
 @pytest.mark.asyncio
-async def test_confirmed_edit_rechecks_resource_and_notifies_buyer_with_new_revision(monkeypatch):
+@pytest.mark.parametrize('initial_status', ['sent', 'stale'])
+async def test_confirmed_edit_rechecks_resource_and_notifies_buyer_with_new_revision(monkeypatch, initial_status):
     company=uuid.uuid4(); buyer=uuid.uuid4()
-    offer=NS(id=uuid.uuid4(),need_id=uuid.uuid4(),company_id=company,revision=3,status='sent',commercial_quote={'old':True},
+    offer=NS(id=uuid.uuid4(),need_id=uuid.uuid4(),company_id=company,revision=3,status=initial_status,commercial_quote={'old':True},
         price_rub='4.80',available_units=20,lead_time_days=1,delivery_cost_rub=0,moq_units=1,price_tiers=[],valid_until=None,
         resource_kind='capacity',product_id=None,commercial_terms={'delivery_method':'self_pickup','tax_basis':'no_vat','delivery_conditions':'Москва, склад продавца'})
     need=NS(status='waiting_for_match',created_by_user_id=buyer,revision=1,id=offer.need_id)
     db=NS(get=AsyncMock(return_value=offer),scalar=AsyncMock(return_value=need),refresh=AsyncMock(),commit=AsyncMock())
-    for name in ['require_company_seller','require_company_admin','require_current_evidence','record_human_approval','run_market_rematch','notify']:
+    for name in ['require_company_seller','require_company_admin','require_verified_seller','require_current_evidence','record_human_approval','run_market_rematch','notify']:
         monkeypatch.setattr(offers,name,AsyncMock())
     monkeypatch.setattr(offers,'need_is_current',lambda _:True)
     check=AsyncMock(return_value=([],[]));monkeypatch.setattr(offers,'_send_blockers',check)
     monkeypatch.setattr(offers,'offer_quote',AsyncMock(return_value={'new':True}))
     updated=await offers.update_offer(offer.id,OfferPatch(expected_revision=3,price_rub='4.90'),CurrentUser(uuid.uuid4()),db)
+    assert updated.status=='sent'
     assert updated.revision==4 and str(updated.price_rub)=='4.90' and updated.commercial_quote=={'new':True}
     check.assert_awaited_once(); db.commit.assert_awaited_once()
     assert offers.notify.await_args.kwargs['href']==f'/needs/{need.id}#offer-{offer.id}'
@@ -108,3 +110,13 @@ async def test_edit_preview_allows_own_proposal_but_reports_a_stale_revision(mon
     result=await offers.preview_offer_send(need.id,OfferSendPreviewIn(**data.model_dump(),offer_id=existing.id,expected_revision=3),CurrentUser(uuid.uuid4()),db)
     assert not result.can_send and any('изменилось' in text for text in result.blockers)
     assert not any('уже отправила' in text for text in result.blockers)
+
+
+@pytest.mark.asyncio
+async def test_admission_failure_blocks_sending_instead_of_warning(monkeypatch):
+    monkeypatch.setattr(offers, '_sending_warnings', AsyncMock(return_value=['Допуск продавца не подтверждён: заключение о спецификации']))
+    monkeypatch.setattr(offers, 'offer_resource', AsyncMock(return_value={'free_units': 20000, 'blockers': []}))
+    blockers, warnings = await offers._send_blockers(None, need=NS(deadline_date=date.today()+timedelta(days=5)),
+        company_id=uuid.uuid4(), moq_units=1, available_units=20000, lead_time_days=1, resource_kind='capacity', product_id=None)
+    assert len(blockers) == 1 and 'заключение о спецификации' in blockers[0]
+    assert warnings == []

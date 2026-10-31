@@ -16,9 +16,15 @@ from conftest import grant_packaging_documents, make_company, make_marketplace_a
 from test_category_admission import _auth
 
 
-async def _seller_company(db_session, *, can_buy=False):
+async def _seller_company(db_session, *, can_buy=False, admitted=False):
     user = await make_user(db_session)
     company = await make_company(db_session, user, can_buy=can_buy, can_sell=True)
+    if admitted:
+        from conftest import grant_category_capability
+        await grant_packaging_documents(db_session, company, decision_user_id=user,
+            confirms={'material':['крафт-картон'], 'coating':['PE']})
+        await grant_category_capability(db_session, company, 'packaging.paper-cups',
+            {'volume_ml':400, 'material':'крафт-картон', 'coating':'PE'})
     return user, company, make_token(user)
 
 
@@ -208,7 +214,7 @@ async def test_offer_draft_without_product_asks_human_for_price(client, db_sessi
 
 async def test_offer_from_draft_records_human_corrections(client, db_session):
     """Предложение из черновика фиксирует, что именно человек изменил."""
-    user, company, token = await _seller_company(db_session)
+    user, company, token = await _seller_company(db_session, admitted=True)
     await _passport(client, token, company)
     await client.post(
         f"/api/v1/companies/{company}/products",
@@ -392,7 +398,7 @@ async def test_draft_characteristic_aliases_do_not_hide_conflicts():
 
 
 async def test_complete_proposal_can_be_edited_but_stale_revision_and_resource_shortage_cannot(client, db_session):
-    _, company, token = await _seller_company(db_session)
+    _, company, token = await _seller_company(db_session, admitted=True)
     _, _, _, need_id = await _buyer_with_published_need(client, db_session, volume=5000)
     endpoint = f'/api/v1/needs/{need_id}/offers'
     payload = {'company_id':str(company),'price_rub':'11.50','available_units':5000,
