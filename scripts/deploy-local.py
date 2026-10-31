@@ -627,8 +627,23 @@ def ensure_lan(values, *, enabled=True, out=print):
         save_configuration(values)
     out("Поднимаю HTTPS-шлюз для локальной сети…", flush=True)
     recording.compose("up", "-d", "--wait", "--wait-timeout", "300", "edge", files=EDGE_FILES)
+    # Сертификат мог перевыпуститься под новый адрес: работающий nginx держит
+    # прежний файл в памяти, поэтому перечитываем конфигурацию без простоя.
+    recording.compose("exec", "-T", "edge", "nginx", "-s", "reload")
     address = addresses[0]
-    verify_lan(address)
+    # Рабочие процессы nginx перечитывают сертификат не мгновенно: ждём,
+    # пока по сетевому адресу начнёт отвечать именно новый сертификат.
+    failure = None
+    for _ in range(15):
+        try:
+            verify_lan(address, timeout=10)
+            failure = None
+            break
+        except DeployError as exc:
+            failure = exc
+            time.sleep(2)
+    if failure is not None:
+        raise failure
     out(f"\nСайт в локальной сети: https://{address}")
     out(f"Сертификат для установки на устройство: {LAN_DIR / 'ca.pem'}")
     out("Остальные порты и база остаются на loopback; HTTP на шлюзе отклоняется.")
