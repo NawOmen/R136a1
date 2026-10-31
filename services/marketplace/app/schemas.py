@@ -768,6 +768,21 @@ class OfferDraftIn(BaseModel):
     company_id: uuid.UUID
 
 
+class OfferSendPreviewIn(OfferIn):
+    offer_id: uuid.UUID | None = None
+    expected_revision: int | None = Field(default=None, gt=0)
+
+
+class OfferResourceOut(BaseModel):
+    resource_kind: Literal["stock", "capacity"]
+    free_units: int
+    unit: str
+    deadline_date: date
+    stock_updated_at: datetime | None = None
+    fresh: bool | None = None
+    blockers: list[str] = Field(default_factory=list)
+
+
 class OfferSendPreviewOut(BaseModel):
     blockers: list[str] = Field(default_factory=list)
     warnings: list[str] = Field(default_factory=list)
@@ -777,6 +792,8 @@ class OfferSendPreviewOut(BaseModel):
 
 
 class OfferPatch(ProductRules):
+    resource_kind: Literal["stock", "capacity"] | None = None
+    product_id: uuid.UUID | None = None
     commercial_terms: CommercialTerms | None = None
     model_config = ConfigDict(allow_inf_nan=False)
     expected_revision: int = Field(gt=0)
@@ -1061,6 +1078,7 @@ class NotificationOut(BaseModel):
     user_id: uuid.UUID
     message: str
     type: str
+    href: str | None = None
     is_read: bool
 
 

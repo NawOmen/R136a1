@@ -660,13 +660,13 @@ class BuyerInvestigationAgent:
         material_warnings = list(warnings)
         review_notes: list[str] = []
         prompt = build_extraction_prompt(sources)
-        extraction, _, _ = await self.provider.structured(
+        extraction, extraction_route, _ = await self.provider.structured(
             SYSTEM_PROMPT, prompt, RawExtraction, prefer_external=False
         )
         extraction = normalize_dimensions(extraction, sources).model_copy(
             update={"category": canonical_category(extraction.category)}
         )
-        route = "local_qwen"
+        route = extraction_route
         fallback = None
         await log_tool(
             db,
@@ -807,6 +807,7 @@ class SellerAgent:
     async def explain(
         self, passport: dict[str, Any], category: str, requirements: dict[str, FactValue]
     ) -> tuple[str, str]:
+        """Объяснение совместимости — разговорная задача, а не извлечение фактов."""
         system = (
             "Ты Seller Agent. Объясни по-русски, почему производственные возможности "
             "подходят или не подходят запросу. Не назначай цену, не резервируй мощность "
@@ -820,7 +821,5 @@ class SellerAgent:
             {"capability_passport": passport, "category": category, "requirements": requirements},
             ensure_ascii=False,
         )
-        result, route, _ = await self.provider.structured(
-            system, prompt, ExplanationDraft, prefer_external=False
-        )
-        return result.explanation, route
+        explanation = await self.provider.assistant.structured(system, prompt, ExplanationDraft)
+        return explanation.explanation, getattr(self.provider.assistant, "route_name", "local_qwen")

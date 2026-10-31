@@ -234,6 +234,7 @@ async def test_offer_from_draft_records_human_corrections(client, db_session):
     draft_id = draft.json()["id"]
     assert draft.json()["payload"]["available_units"] is None  # мощность не заполнена
 
+    await grant_capacity(db_session, company, 5_000)
     offer = await client.post(
         f"/api/v1/needs/{need_id}/offers",
         json={'commercial_terms': confirmed_quote_terms(),
@@ -388,3 +389,34 @@ async def test_draft_characteristic_aliases_do_not_hide_conflicts():
     product.characteristics = {"volume_ml": True}
     need.characteristics = {"volume_ml": 1}
     assert not _matches_need(product, need)[0]
+
+
+async def test_complete_proposal_can_be_edited_but_stale_revision_and_resource_shortage_cannot(client, db_session):
+    _, company, token = await _seller_company(db_session)
+    _, _, _, need_id = await _buyer_with_published_need(client, db_session, volume=5000)
+    endpoint = f'/api/v1/needs/{need_id}/offers'
+    payload = {'company_id':str(company),'price_rub':'11.50','available_units':5000,
+        'moq_units':1000,'lead_time_days':2,'delivery_cost_rub':0,'commercial_terms':confirmed_quote_terms()}
+    missing_resource = await client.post(endpoint,json=payload,headers=_auth(token))
+    assert missing_resource.status_code == 409 and 'мощность' in missing_resource.text
+    await grant_capacity(db_session,company,6000)
+    status = await client.get(f'/api/v1/needs/{need_id}/offer-resource',
+        params={'company_id':str(company),'resource_kind':'capacity'},headers=_auth(token))
+    assert status.status_code == 200 and status.json()['free_units'] == 6000
+    incomplete = await client.post(endpoint,json={**payload,'commercial_terms':{**confirmed_quote_terms(),'delivery_conditions':None}},headers=_auth(token))
+    assert incomplete.status_code == 409 and 'место получения' in incomplete.text
+    sent = await client.post(endpoint,json=payload,headers=_auth(token))
+    assert sent.status_code == 201,sent.text
+    quote = sent.json(); edit = f"/api/v1/offers/{quote['id']}"
+    mine = await client.get('/api/v1/offers/mine',params={'company_id':str(company)},headers=_auth(token))
+    assert mine.status_code == 200 and [row['id'] for row in mine.json()] == [quote['id']]
+    preview = await client.post(endpoint+'/preview',json={**payload,'offer_id':quote['id'],'expected_revision':1,'price_rub':'11.25'},headers=_auth(token))
+    assert preview.status_code == 200 and preview.json()['can_send'],preview.text
+    updated = await client.patch(edit,json={'expected_revision':1,'price_rub':'11.25'},headers=_auth(token))
+    assert updated.status_code == 200 and updated.json()['revision'] == 2,updated.text
+    assert (await client.patch(edit,json={'expected_revision':1,'price_rub':'11.00'},headers=_auth(token))).status_code == 409
+    over = await client.patch(edit,json={'expected_revision':2,'available_units':6001},headers=_auth(token))
+    assert over.status_code == 409 and 'мощность' in over.text
+    unchanged = await client.get(endpoint,headers=_auth(token))
+    assert len(unchanged.json()) == 1 and unchanged.json()[0]['revision'] == 2
+    assert unchanged.json()[0]['available_units'] == 5000

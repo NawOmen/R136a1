@@ -271,8 +271,9 @@ test("address entry uses an accessible dialog, provider selection and retry with
   });
   await page.setViewportSize({ width:390, height:844 });
   await page.getByRole("button", { name:"Заполнить вручную", exact:true }).click();
-  await expect(page.getByText("Настройки видимости", {exact:true})).toBeVisible();
-  await expect(page.locator("#visibility")).toBeHidden();
+  // Режим видимости в проверке закупки не выбирается: им управляет список «Мои потребности».
+  await expect(page.getByText("Настройки видимости", {exact:true})).toHaveCount(0);
+  await expect(page.locator("#visibility")).toHaveCount(0);
   await expect(page.getByRole("combobox", { name:"Характеристика 1: значение", exact:true })).toHaveValue("шт");
   await page.getByRole("button", { name:"+ Добавить адрес", exact:true }).click();
   await expect(page.getByRole("dialog")).toBeVisible();
@@ -324,9 +325,7 @@ test("support chat preserves failed text and notification bell opens full messag
   await expect(page.getByRole("log")).toContainText("Доставка и получение");
   await expect(page.getByLabel("Сообщение поддержке", { exact:true })).toHaveValue("");
   await page.getByRole("button", { name:/Уведомления, новых/ }).click();
-  await page.getByRole("button", { name:notification.message, exact:true }).click();
-  await expect(page.locator(".notification-detail")).toContainText(notification.message);
-  await expect(page.locator(".notification-detail a")).toHaveAttribute("href", "/support");
+  await expect(page.getByRole("link", { name:notification.message, exact:true })).toHaveAttribute("href", "/support");
   await page.keyboard.press("Escape");
   await expect(page.locator(".notification-popover")).toHaveCount(0);
   await expect(page.getByRole("button", { name:/Уведомления/ })).toBeFocused();
@@ -361,8 +360,7 @@ test("a new support message notification directs staff to the support queue", as
   });
   await page.goto("/");
   await page.getByRole("button", { name: "Уведомления", exact: true }).click();
-  await page.getByRole("button", { name: notification.message, exact: true }).click();
-  await expect(page.locator(".notification-detail a")).toHaveAttribute("href", "/admin#tickets");
+  await expect(page.getByRole("link", { name: notification.message, exact: true })).toHaveAttribute("href", "/admin#tickets");
 });
 
 test("AI fills a single review card with compact decimals and stale confirmation cannot publish", async ({ page }) => {
@@ -398,26 +396,15 @@ test("AI fills a single review card with compact decimals and stale confirmation
 });
 
 
-test("closed visibility is selectable and persists without exposing an unfinished selected-producers mode", async ({ page }, testInfo) => {
+test("проверка закупки не предлагает режим видимости: скрытие живёт в списке потребностей", async ({ page }, testInfo) => {
   await prepare(page);
   await page.getByRole("button", { name:"Заполнить вручную", exact:true }).click();
-  await page.getByText("Настройки видимости", {exact:true}).click();
-  const select = page.getByLabel("Кто увидит потребность", {exact:true});
-  await expect(select).toHaveValue("open_anonymized");
-  await expect(select.locator('option[value="selected_producers"]')).toHaveCount(0);
-  await select.selectOption("closed");
-  await expect(page.getByRole("button", {name:"Сохранить закрытую потребность",exact:true})).toBeVisible();
-  await expect(page.getByText("Потребность скрыта из общего подбора.", {exact:false})).toBeVisible();
-  await expect.poll(() => page.evaluate(() => Object.values(sessionStorage).some(value => {
-    try { return JSON.parse(value).visibility === "closed"; } catch { return false; }
-  }))).toBe(true);
-  await page.reload();
-  await page.getByText("Настройки видимости", {exact:true}).click();
-  await expect(select).toHaveValue("closed");
+  await expect(page.getByText("Настройки видимости", {exact:true})).toHaveCount(0);
+  await expect(page.locator("#visibility")).toHaveCount(0);
+  await expect(page.getByRole("button", {name:"Подтвердить и опубликовать",exact:true})).toBeVisible();
+  await expect(page.getByText("Производители увидят требования без реквизитов компании.", {exact:false})).toBeVisible();
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(true);
   await page.locator(".need-review").screenshot({path:`output/procurement-qa/visibility-${testInfo.project.name}.png`,style:".site-header,.skip-link{visibility:hidden!important}"});
-  await page.getByRole("button", {name:"Открыть подбор производителям",exact:true}).click();
-  await expect(select).toHaveValue("open_anonymized");
 });
 
 
@@ -488,9 +475,8 @@ test("AI field aliases and organisational dates cannot silently change seller ma
   await expect(page.getByRole("status").filter({hasText:"обнаружена попытка изменить инструкции агента"})).toBeVisible();
   await expect(page.getByRole("status").filter({hasText:"Дополнительные характеристики вне профиля категории"})).toContainText("обязательны при подборе");
   await expect(page.locator("#deadline_date")).toHaveValue("26.11.26");
-  await page.getByText("Город из материалов",{exact:true}).click();
-  await expect(page.getByText(/Модель нормализовала название города: Москва/)).toBeVisible();
-  await expect(page.getByText(/Доставка в Москву/)).toBeVisible();
+  // Подпись «Город из материалов» убрана из проверки: город приходит в поля формы.
+  await expect(page.getByText("Город из материалов",{exact:true})).toHaveCount(0);
   await expect(page.getByText("До проверки компании закупка сохранится черновиком.")).toHaveCount(0);
   await page.getByRole("button",{name:"Подтвердить и опубликовать",exact:true}).click();
   await expect.poll(()=>submitted).not.toBeNull();

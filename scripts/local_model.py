@@ -33,9 +33,10 @@ from pathlib import Path
 from typing import Callable, Mapping
 
 LABEL = "ru.porukam.mlx-server"
-SUPPORT_DIR = Path.home() / "Library" / "Application Support" / "PoRukam-LLM"
+SUPPORT_DIR = (Path.home() / "Library/Application Support/PoRukam-LLM" if sys.platform == "darwin"
+               else Path.home() / ".local/share/PoRukam-LLM")
 AGENTS_DIR = Path.home() / "Library" / "LaunchAgents"
-LOG_DIR = Path.home() / "Library" / "Logs" / "PoRukam-LLM"
+LOG_DIR = Path.home() / "Library/Logs/PoRukam-LLM" if sys.platform == "darwin" else SUPPORT_DIR / "logs"
 LOOPBACK = {"127.0.0.1", "localhost", "::1"}
 EX_CONFIG = 2
 
@@ -330,6 +331,8 @@ def tail(path: Path, lines: int) -> str:
 
 
 def agent_loaded(label: str = LABEL) -> bool:
+    if sys.platform != "darwin":
+        return False
     result = subprocess.run(["launchctl", "print", f"gui/{os.getuid()}/{label}"],
                             capture_output=True, text=True, check=False)
     return result.returncode == 0
@@ -337,6 +340,8 @@ def agent_loaded(label: str = LABEL) -> bool:
 
 def agent_pid(label: str = LABEL) -> int | None:
     """PID процесса, которым управляет launchd; None — агент не держит процесс."""
+    if sys.platform != "darwin":
+        return None
     result = subprocess.run(["launchctl", "print", f"gui/{os.getuid()}/{label}"],
                             capture_output=True, text=True, check=False)
     if result.returncode != 0:
@@ -443,6 +448,42 @@ def serve(settings: Settings) -> int:
     return 1
 
 
+def probe_generation(settings: Settings, timeout: float | None = None) -> str | None:
+    """Проверить не только список моделей, но и реальную генерацию.
+
+    mlx_lm.server может отвечать на /v1/models, роняя поток генерации: тогда
+    каждый разбор падает, хотя «модель доступна». Возвращает None при успехе
+    и текст ошибки сервера при сбое.
+    """
+    if timeout is None:
+        timeout = 1800.0 if sys.platform == "linux" else 90.0
+    body = json.dumps({
+        "model": "default_model", "stream": False, "temperature": 0, "max_tokens": 16,
+        "messages": [{"role": "user", "content": "/no_think ответь: ок"}],
+    }).encode()
+    request = urllib.request.Request(settings.base_url + "/v1/chat/completions", data=body,
+                                     headers={"Content-Type": "application/json"})
+    opener = urllib.request.build_opener(urllib.request.ProxyHandler({}))
+    try:
+        with opener.open(request, timeout=timeout) as response:
+            payload = json.loads(response.read(1024 * 1024))
+    except (OSError, ValueError, urllib.error.URLError) as exc:
+        return f"{type(exc).__name__}: {exc}"
+    if not isinstance(payload, dict):
+        return "неожиданный ответ сервера"
+    if payload.get("error"):
+        return str(payload["error"])
+    choices = payload.get("choices")
+    if not isinstance(choices, list) or not choices:
+        return "в ответе нет генерации"
+    choice = choices[0]
+    message = choice.get("message") if isinstance(choice, dict) else None
+    content = message.get("content") if isinstance(message, dict) else None
+    if not isinstance(content, str) or not content.strip():
+        return "модель не вернула текст ответа"
+    return None
+
+
 def report_status(settings: Settings, out: Callable[[str], None] = print) -> int:
     ids = probe(settings, timeout=2.0)
     pid = read_pid(settings) or agent_pid()
@@ -464,9 +505,15 @@ def report_status(settings: Settings, out: Callable[[str], None] = print) -> int
         autostart = "включён в системе, но агент не загружен (сервер остановлен вручную)"
     else:
         autostart = "выключен"
+    failure = None
+    if ids:
+        failure = probe_generation(settings)
+        out(f"Генерация:   {'работает' if failure is None else 'сбой — ' + failure}")
+        if failure is not None:
+            out("             перезапустите: scripts/local_model.py restart")
     out(f"Автозапуск:  {autostart}")
     out(f"Журнал:      {settings.log_file}")
-    return 0 if ids else 1
+    return 0 if ids and failure is None else 1
 
 
 def run(argv: list[str], env: Mapping[str, str] | None = None,

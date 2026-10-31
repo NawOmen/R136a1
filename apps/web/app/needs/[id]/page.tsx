@@ -2,6 +2,7 @@
 import { Icon } from "../../components/Icon";
 import { formatDate } from "../../lib/dates";
 import { russianMessage } from "../../lib/russianMessages";
+import { supplierWorkflow } from "../../lib/supplierWorkflow";
 import CommercialEstimate from "../../components/CommercialEstimate";
 
 // Деталь потребности: характеристики, файлы, список предложений.
@@ -12,10 +13,9 @@ import Link from "next/link";
 import ProfileRevisionPanel from "../../components/ProfileRevisionPanel";
 import NeedDraftEditor from "../../components/NeedDraftEditor";
 import NeedRequirements from "../../components/NeedRequirements";
-import SupplierBoard from "../../components/SupplierBoard";
 import OrderExport from "../../components/OrderExport";
 import { useParams } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { getToken } from "../../lib/api";
 import {
   ApiError,
@@ -43,6 +43,7 @@ export default function NeedDetailPage() {
   const me = useMe();
 
   const [need, setNeed] = useState<Need | NeedFeedItem | null>(null);
+  const [requestingTerms, setRequestingTerms] = useState<string | null>(null);
   const [offers, setOffers] = useState<Offer[]>([]);
   const [deal, setDeal] = useState<Deal | null>(null);
   const [loading, setLoading] = useState(true);
@@ -50,8 +51,11 @@ export default function NeedDetailPage() {
   const [notFound, setNotFound] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [selectingId, setSelectingId] = useState<string | null>(null);
+  const [selectionErrors, setSelectionErrors] = useState<Record<string, string>>({});
   const [downloadingId, setDownloadingId] = useState<string | null>(null);
   const [publishing, setPublishing] = useState(false);
+  const [editingNeed, setEditingNeed] = useState(false);
+  const editButton = useRef<HTMLButtonElement>(null);
   const [optimizing, setOptimizing] = useState(false);
   const [variants, setVariants] = useState<OptimizationVariant[]>([]);
   const [preparingResilience, setPreparingResilience] = useState<string | null>(null);
@@ -62,6 +66,24 @@ export default function NeedDetailPage() {
   const ownedNeed = need && "company_id" in need ? need : null;
   const buyerCompany = me.companies.find((company) => company.id === ownedNeed?.company_id);
   const isBuyer = buyerCompany?.membership?.can_buy === true;
+
+  useEffect(() => {
+    if (!offers.length || !window.location.hash.startsWith("#offer-")) return;
+    const target = document.getElementById(window.location.hash.slice(1));
+    target?.scrollIntoView({ block: "start", behavior: "instant" });
+  }, [offers]);
+
+  async function requestTerms(offer: Offer) {
+    const token = getToken(); if (!token || !ownedNeed || requestingTerms) return;
+    setRequestingTerms(offer.id); setError(null);
+    try {
+      const rows = await supplierWorkflow.list(token, ownedNeed.company_id, ownedNeed.id);
+      const row = rows.find(item => item.seller_company_id === offer.company_id && item.need_revision === ownedNeed.revision)
+        ?? await supplierWorkflow.create(token, ownedNeed.id, ownedNeed.company_id, offer.company_id, ownedNeed.revision);
+      window.location.assign(`/needs/${ownedNeed.id}/suppliers?request=${row.id}`);
+    } catch (e) { setError(e instanceof Error ? russianMessage(e.message) : "Не удалось открыть запрос поставщику."); }
+    finally { setRequestingTerms(null); }
+  }
 
   useEffect(() => {
     const token = getToken();
@@ -79,7 +101,8 @@ export default function NeedDetailPage() {
     if (!token || !needId) return;
     let cancelled = false;
     setLoading(true); setError(null); setNotFound(false);
-    setNeed(null); setOffers([]); setDeal(null); setVariants([]);
+    setNeed(null); setOffers([]); setDeal(null); setVariants([]); setSelectionErrors({});
+    setEditingNeed(false);
     Promise.all([marketplace.getNeed(token, needId), marketplace.getOffers(token, needId)])
       .then(([needData, offersData]) => {
         if (cancelled) return;
@@ -114,6 +137,7 @@ export default function NeedDetailPage() {
     }
     setSelectingId(offer.id);
     setError(null);
+    setSelectionErrors(current => { const next = {...current}; delete next[offer.id]; return next; });
     // Стабильный ключ на ревизию КП: повтор после потерянного ответа
     // возвращает ту же сделку, а не новую.
     const storageKey = `offer-select-${offer.id}-v${offer.revision}`;
@@ -132,7 +156,9 @@ export default function NeedDetailPage() {
       setNeed(needData);
       setOffers(offersData);
     } catch (err) {
-      setError(err instanceof ApiError ? russianMessage(err.message) : "Не удалось выбрать предложение.");
+      const message = err instanceof ApiError ? russianMessage(err.message) : "Не удалось выбрать предложение.";
+      setError(message);
+      setSelectionErrors(current => ({...current, [offer.id]: message}));
     } finally {
       setSelectingId(null);
     }
@@ -230,23 +256,42 @@ export default function NeedDetailPage() {
   }
 
   const deliveryAddress = addresses.find(item => item.id === ownedNeed?.delivery_address_id);
+  const canEditNeed = isBuyer && ownedNeed && buyerCompany?.membership?.is_admin &&
+    ["draft", "open_for_offers", "waiting_for_match", "coalition_candidate", "awaiting_approvals"].includes(need.status);
 
   return (
     <div>
-      <div className="need-heading">
-        <h1 className="page-title">{need.category}</h1>
-        {need.subcategory && <p className="hint">Подкатегория: {need.subcategory}</p>}
-        <div className="actions">
+      <header className="need-heading">
+        <div className="need-heading__statuses" aria-label="Статус и видимость потребности">
           <span className={`badge badge-${need.status}`}>{NEED_STATUS_LABELS[need.status]}</span>
           <span className={`badge badge-${need.visibility}`}>{NEED_VISIBILITY_LABELS[need.visibility]}</span>
+        </div>
+        <div className="need-heading__identity">
+          <h1 className="page-title">{need.category}</h1>
+          {need.subcategory && <p className="hint">Подкатегория: {need.subcategory}</p>}
+        </div>
+        <div className="need-heading__actions" role="group" aria-label="Действия с потребностью">
+          {canEditNeed && <button ref={editButton} type="button" className="btn btn-secondary btn-sm" aria-expanded={editingNeed} aria-controls="need-specification-editor" onClick={() => setEditingNeed(value => !value)}>{need.status === "draft" ? "Изменить черновик" : "Изменить спецификацию"}</button>}
+          {isBuyer && ownedNeed && <OrderExport id={need.id} companyId={ownedNeed.company_id} specification />}
           <Link href="/needs" className="btn btn-secondary btn-sm">
             Мои потребности
           </Link>
-          {isBuyer && ownedNeed && <OrderExport id={need.id} companyId={ownedNeed.company_id} specification />}
+          {isBuyer && ownedNeed && <Link href={`/needs/${need.id}/suppliers`} className="btn btn-primary btn-sm">Подбор поставщиков<Icon name="arrow" size={16} /></Link>}
         </div>
-      </div>
+      </header>
 
       {error && <div className="alert alert-error">{error}</div>}
+
+      {canEditNeed && ownedNeed && editingNeed && <section id="need-specification-editor" className="card need-edit-action" aria-label="Изменение спецификации">
+        <NeedDraftEditor key={`${need.id}:${need.revision}`} need={ownedNeed} editing={editingNeed} onEditingChange={value => {
+          setEditingNeed(value);
+          if (!value) editButton.current?.focus();
+        }} onSaved={value => {
+          setNeed(value);
+          const token = getToken();
+          if (token) void marketplace.getOffers(token, value.id).then(setOffers).catch(() => setError("Изменения сохранены, но не удалось обновить предложения. Обновите страницу."));
+        }} />
+      </section>}
 
       <section className="card need-summary" aria-label="Основное о закупке">
         <dl className="need-summary__facts">
@@ -266,13 +311,9 @@ export default function NeedDetailPage() {
 
       {!isBuyer && !!need.requirement_decisions?.length && <section className="card"><h2>Уточнения покупателя</h2><p>В текущей версии покупатель разрешил противоречия в этих требованиях:</p>{need.requirement_decisions.map(item => <p key={item.field}>{formatCharacteristics({ [item.field]: item.confirmed_value }, need.category_profile)}</p>)}</section>}
       {isBuyer && ownedNeed && <details className="card need-disclosure"><summary>Требования, источники и история</summary><NeedRequirements key={`${need.id}:${need.revision}`} need={ownedNeed} addresses={addresses} /></details>}
-      {isBuyer && ownedNeed && buyerCompany?.membership?.is_admin && ["open_for_offers", "waiting_for_match", "coalition_candidate", "awaiting_approvals"].includes(need.status) && (
-        <details className="card need-disclosure"><summary>Изменить требования</summary><NeedDraftEditor key={`${need.id}:${need.revision}`} need={ownedNeed} onSaved={async value => { setNeed(value); const token = getToken(); if (token) setOffers(await marketplace.getOffers(token, value.id)); }} /></details>
-      )}
       {isBuyer && ownedNeed && need.status === "draft" && (
         <section className="card">
           <h2>Черновик потребности</h2>
-          {ownedNeed && buyerCompany?.membership?.is_admin && <NeedDraftEditor key={`${need.id}:${need.revision}`} need={ownedNeed} onSaved={setNeed} />}
           {ownedNeed && buyerCompany?.membership?.is_admin && <ProfileRevisionPanel kind="needs" id={need.id} revision={need.revision} draft={need.status === "draft"} onAdopted={async () => { const token = getToken(); if (token) setNeed(await marketplace.getNeed(token, need.id)); }} />}
           {buyerCompany?.membership?.is_admin && (
             <div className="actions">
@@ -358,7 +399,7 @@ export default function NeedDetailPage() {
         ) : (
           <ul className="company-list">
             {offers.map((offer) => (
-              <li key={offer.id} className="card"><CommercialEstimate value={offer.commercial_quote?.estimate} />
+              <li key={offer.id} id={`offer-${offer.id}`} className="card need-offer"><CommercialEstimate value={offer.commercial_quote?.estimate} />
                 <div className="company-row">
                   <div>
                     <div className="company-item__name">
@@ -379,7 +420,8 @@ export default function NeedDetailPage() {
                     need.status,
                   ) &&
                   offer.status === "sent" && (
-                  <div className="actions">
+                  <div className="offer-decision">
+                    {(!offer.commercial_quote?.estimate.complete || selectionErrors[offer.id]) && <div className="offer-decision__blocked"><p><strong>Выбор пока недоступен</strong></p><p>{selectionErrors[offer.id] || offer.commercial_quote?.estimate.missing?.join(". ") || "Поставщик должен подтвердить полную смету, условия получения и налоговую базу."}</p><button type="button" className="btn btn-secondary" disabled={requestingTerms !== null} onClick={() => void requestTerms(offer)}>{requestingTerms === offer.id ? "Открываем запрос…" : "Запросить условия у продавца"}</button></div>}
                     <button
                       type="button"
                       className="btn btn-success btn-sm"
@@ -397,7 +439,6 @@ export default function NeedDetailPage() {
       </section>
 
       {isBuyer && ownedNeed && <p className="hint">Адресные запросы — для переписки и сравнения ответов. Чтобы оформить сделку, выберите КП в разделе «Предложения» выше.</p>}
-      {isBuyer && ownedNeed && <SupplierBoard key={`${need.id}:${ownedNeed.company_id}`} needId={need.id} companyId={ownedNeed.company_id} needRevision={need.revision} canManage={buyerCompany?.membership?.is_admin === true} />}
 
       {variants.length > 0 && (
         <section className="card">

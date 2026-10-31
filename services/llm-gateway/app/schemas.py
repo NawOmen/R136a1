@@ -176,6 +176,8 @@ class HealthOut(BaseModel):
     status: str
     local_backend: Literal["mlx", "ollama"] = "ollama"
     local_model: str
+    # Разговорные задачи (справка, объяснения, черновики) обслуживает общая модель.
+    assistant_backend: Literal["mlx", "ollama"] = "ollama"
     vision_model: str = ""
     external_enabled: bool
 

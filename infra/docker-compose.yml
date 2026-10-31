@@ -61,6 +61,8 @@ services:
       SEED_DEMO_PASSWORD: ${SEED_DEMO_PASSWORD:-}
       SEED_SELLER_EMAIL: ${SEED_SELLER_EMAIL:-seller@demo.ru}
       SEED_SELLER_PASSWORD: ${SEED_SELLER_PASSWORD:-}
+      SEED_SELLER2_EMAIL: ${SEED_SELLER2_EMAIL:-supplier@demo.ru}
+      SEED_SELLER2_PASSWORD: ${SEED_SELLER2_PASSWORD:-${SEED_SELLER_PASSWORD:-}}
       CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:3000,http://127.0.0.1:3000}
     ports:
       - "127.0.0.1:${GATEWAY_AUTH_PORT:-8001}:8001"
@@ -127,6 +129,7 @@ services:
       OPTIMIZER_TOKEN: ${OPTIMIZER_TOKEN:?Задайте OPTIMIZER_TOKEN}
       ENABLE_DEMO_SEED: ${ENABLE_DEMO_SEED:-false}
       SEED_SELLER_EMAIL: ${SEED_SELLER_EMAIL:-seller@demo.ru}
+      SEED_SELLER_STORIES: ${SEED_SELLER_STORIES:-true}
       CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:3000,http://127.0.0.1:3000}
     ports:
       - "127.0.0.1:${MARKETPLACE_PORT:-8002}:8002"
@@ -159,7 +162,10 @@ services:
       LOCAL_LLM_BACKEND: ${LOCAL_LLM_BACKEND:-mlx}
       MLX_BASE_URL: ${MLX_BASE_URL:-http://host.docker.internal:8080}
       TRAINED_MODEL_VERSION: ${TRAINED_MODEL_VERSION:-porukam-buyer-qwen3.5}
+      # Справка, объяснения и черновики переписки — общая модель: адаптер обучен извлечению фактов.
+      ASSISTANT_LLM_BACKEND: ${ASSISTANT_LLM_BACKEND:-ollama}
       MLX_MAX_TOKENS: ${MLX_MAX_TOKENS:-640}
+      MLX_TIMEOUT_SECONDS: ${MLX_TIMEOUT_SECONDS:-180}
       OLLAMA_MODEL: ${OLLAMA_MODEL:-qwen3.5:9b}
       OLLAMA_VISION_MODEL: ${OLLAMA_VISION_MODEL:-qwen3.5:9b}
       LLM_CONTEXT_TOKENS: ${LLM_CONTEXT_TOKENS:-8192}

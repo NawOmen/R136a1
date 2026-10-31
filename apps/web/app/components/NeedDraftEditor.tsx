@@ -1,4 +1,5 @@
 "use client";
+import MoneyInput from "./MoneyInput";
 import { CharacteristicValue } from "./CharacteristicValue";
 import { DateInput } from "./DateInput";
 
@@ -11,9 +12,16 @@ import { FormEvent, useEffect, useState } from "react";
 import { getToken } from "../lib/api";
 import { DeliveryAddress, marketplace, Need, NeedEditImpact, PRODUCT_CATEGORY_TREE } from "../lib/marketplace";
 
-export default function NeedDraftEditor({ need, onSaved }: { need: Need; onSaved: (need: Need) => void }) {
+export default function NeedDraftEditor({ need, onSaved, editing: controlledEditing, onEditingChange }: {
+  need: Need;
+  onSaved: (need: Need) => void;
+  editing?: boolean;
+  onEditingChange?: (editing: boolean) => void;
+}) {
   const [quantityApproved, setQuantityApproved] = useState(false);
-  const [editing, setEditing] = useState(false);
+  const [localEditing, setLocalEditing] = useState(false);
+  const editing = controlledEditing ?? localEditing;
+  const setEditing = onEditingChange ?? setLocalEditing;
   const [subcategory, setSubcategory] = useState(need.subcategory ?? "");
   const [category, setCategory] = useState(need.category);
   const [quantity, setQuantity] = useState(String(need.volume_units));
@@ -70,7 +78,7 @@ export default function NeedDraftEditor({ need, onSaved }: { need: Need; onSaved
     const address = addresses.find(item => item.id === value);
     return address ? `${address.city}, ${address.address}` : "Адрес недоступен";
   };
-  if (!editing) return <button type="button" className="btn btn-secondary" onClick={() => setEditing(true)}>{need.status === "draft" ? "Изменить черновик" : "Изменить спецификацию"}</button>;
+  if (!editing) return controlledEditing !== undefined ? null : <button type="button" className="btn btn-secondary" onClick={() => setEditing(true)}>{need.status === "draft" ? "Изменить черновик" : "Изменить спецификацию"}</button>;
   return <form onSubmit={save} className="form-grid">
     <p className="hint">Изменения сохраняются новой версией этой потребности. Вложения сохранятся. Версия: {need.revision}.</p>
     {error && <div role="alert" className="alert alert-error">{error}</div>}
@@ -85,7 +93,7 @@ export default function NeedDraftEditor({ need, onSaved }: { need: Need; onSaved
       </div>)}
       <button type="button" className="btn btn-secondary btn-sm" onClick={() => setRows([...rows, { key: "", value: "", original: "" }])}>Добавить характеристику</button>
       <div className="field"><label htmlFor="edit-quantity">Количество единиц</label><input id="edit-quantity" required type="number" min="0.000001" step="any" value={quantity} onChange={e => setQuantity(e.target.value)} /></div>
-      <div className="field"><label htmlFor="edit-budget">Бюджет, ₽</label><input id="edit-budget" type="number" min="0.01" step="0.01" value={budget} onChange={e => setBudget(e.target.value)} /></div>
+      <div className="field"><label htmlFor="edit-budget">Бюджет, ₽</label><MoneyInput id="edit-budget" min="0.01" value={budget} onChange={e => setBudget(e.target.value)} /></div>
       <div className="field"><label htmlFor="edit-deadline">Срок поставки</label><DateInput id="edit-deadline" required value={deadline} onValueChange={e => setDeadline(e)} /></div>
       <div className="field"><label htmlFor="edit-valid">Актуально до</label><DateInput id="edit-valid" required value={validUntil} onValueChange={e => setValidUntil(e)} /></div>
       <div className="field"><label htmlFor="edit-address">Адрес доставки</label><select id="edit-address" value={address} onChange={e => setAddress(e.target.value)}><option value="">Не указан</option>{addresses.map(item => <option key={item.id} value={item.id}>{item.address}</option>)}</select></div>

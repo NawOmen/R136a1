@@ -522,7 +522,7 @@ async def command(deal_id: uuid.UUID, data: Command, user: CurrentUser = Depends
     other = deal.seller_company_id if data.company_id == deal.buyer_company_id else deal.buyer_company_id
     recipients = (await db.execute(text("SELECT user_id FROM auth.company_members WHERE company_id = :company"), {"company": other})).scalars().all()
     for recipient in set(recipients):
-        await notify(db, recipient, f"Обновлено исполнение сделки {deal.id}: {value.note}", "deal_fulfillment_updated")
+        await notify(db, recipient, f"Обновлено исполнение сделки {deal.id}: {value.note}", "deal_fulfillment_updated", href=f"/deals?deal={deal.id}#{'deal-chat' if data.action == 'message' else 'deal-fulfillment'}")
     result = await projection(db, deal, state, revision + 1)
     await db.commit()
     return result

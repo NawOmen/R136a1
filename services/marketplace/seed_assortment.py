@@ -331,6 +331,9 @@ async def seed_seller_stories(db):
     Суммы посчитаны из цен каталога, статусы выставлены событиями исполнения,
     идентификаторы детерминированы — повторный seed ничего не дублирует.
     """
+    import os
+    if os.getenv("SEED_SELLER_STORIES", "true").lower() == "false":
+        return
     seller_id = await _first_seller_id(db)
     if seller_id == "missing-seller":
         return

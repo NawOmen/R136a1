@@ -159,10 +159,16 @@ class PlistTest(unittest.TestCase):
 
 
 class LaunchdTest(unittest.TestCase):
+    def test_linux_never_invokes_launchctl(self):
+        with mock.patch.object(module.sys, "platform", "linux"), mock.patch.object(module.subprocess, "run") as run:
+            self.assertIsNone(module.agent_pid())
+            self.assertFalse(module.agent_loaded())
+            run.assert_not_called()
+
     def test_agent_pid_is_read_from_launchctl(self):
         output = "gui/501/ru.porukam.mlx-server = {\n\tactive count = 1\n\tpid = 4242\n}\n"
         finished = subprocess.CompletedProcess(args=[], returncode=0, stdout=output, stderr="")
-        with mock.patch.object(module.subprocess, "run", return_value=finished):
+        with mock.patch.object(module.sys, "platform", "darwin"), mock.patch.object(module.subprocess, "run", return_value=finished):
             self.assertEqual(module.agent_pid(), 4242)
 
     def test_unloaded_agent_has_no_pid(self):
@@ -187,6 +193,29 @@ class ProbeAndRunTest(unittest.TestCase):
             with isolated(Path(tmp)):
                 self.assertEqual(module.report_status(settings, messages.append), 1)
             self.assertIn("не отвечает", "\n".join(messages))
+
+    def test_status_fails_when_models_endpoint_works_but_generation_is_broken(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            with isolated(root), mock.patch.object(module, "probe", return_value=["default_model"]), \
+                    mock.patch.object(module, "probe_generation", return_value="generation thread died"):
+                messages = []
+                self.assertEqual(module.report_status(settings_for(root), messages.append), 1)
+                self.assertIn("сбой", "\n".join(messages))
+
+    def test_generation_probe_requires_an_actual_text_answer(self):
+        import io
+        with tempfile.TemporaryDirectory() as tmp:
+            for choice in [{},False,{"message":{}},{"message":{"content":""}},{"message":{"content":"  "}},{"message":{"content":17}}]:
+                with self.subTest(choice=choice):
+                    opener=mock.Mock()
+                    opener.open.return_value=io.BytesIO(json.dumps({"choices":[choice]}).encode())
+                    with mock.patch.object(module.urllib.request,"build_opener",return_value=opener):
+                        self.assertIsNotNone(module.probe_generation(settings_for(Path(tmp)),timeout=1))
+            opener=mock.Mock()
+            opener.open.return_value=io.BytesIO(json.dumps({"choices":[{"message":{"content":"ок"}}]}).encode())
+            with mock.patch.object(module.urllib.request,"build_opener",return_value=opener):
+                self.assertIsNone(module.probe_generation(settings_for(Path(tmp)),timeout=1))
 
     def test_start_refuses_broken_checksums_and_does_not_spawn(self):
         with tempfile.TemporaryDirectory() as tmp:

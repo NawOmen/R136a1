@@ -1,4 +1,6 @@
 from ..commercial import offer_quote, require_complete
+from ..offer_resources import offer_resource, commercial_send_blockers
+from typing import Literal
 from ..money import decimal
 import uuid
 from datetime import date, datetime, timedelta, timezone
@@ -24,7 +26,7 @@ from ..deps import (
 from ..models import CapacityEntry, CapabilityPassport, Deal, Need, Offer, OfferDraft, Product
 from ..matching import ACTIVE_NEED_STATUSES, need_is_current, offer_unit_price, order_unit, run_market_rematch
 from ..offer_draft import _matches_need, available_capacity_units, build_offer_draft, changed_fields
-from ..schemas import CommercialTerms, DealOut, OfferDraftIn, OfferDraftOut, OfferIn, OfferOut, OfferPatch, OfferSelectIn, OfferSendPreviewOut
+from ..schemas import CommercialTerms, DealOut, OfferDraftIn, OfferDraftOut, OfferIn, OfferOut, OfferPatch, OfferSelectIn, OfferSendPreviewOut, OfferSendPreviewIn, OfferResourceOut
 from ..resources import reserve, reservations, free_stock, occupies
 from ..trust import append_audit_event, payload_hash, record_human_approval
 
@@ -62,33 +64,11 @@ async def _send_blockers(db: AsyncSession, *, need: Need, company_id: uuid.UUID,
     days_left = (need.deadline_date - date.today()).days
     if lead_time_days > max(0, days_left):
         blockers.append("Срок производства не укладывается в срок потребности")
-    held = await reservations(db, company_id)
-    if resource_kind == "stock":
-        product = await db.get(Product, product_id) if product_id else None
-        if product is not None and product.stock_units is not None:
-            if available_units > await free_stock(db, product, held):
-                blockers.append("Доступный объём превышает свободный остаток склада")
-            if product.stock_updated_at is None or product.stock_updated_at < datetime.now(timezone.utc) - timedelta(days=7):
-                warnings.append("Остаток склада не подтверждён за последние 7 дней: обновите наличие")
-    else:
-        from ..resource_scopes import conversion_for, occupied_units
-        unit = order_unit(need.characteristics)
-        entries = (await db.execute(select(CapacityEntry).where(CapacityEntry.company_id == company_id))).scalars().all()
-        free_capacity = 0
-        for entry in entries:
-            if not date.today() <= entry.date <= need.deadline_date:
-                continue
-            conversion = conversion_for(entry, need.category, need.subcategory, unit)
-            if conversion is None:
-                continue
-            coefficient = conversion["resource_units_per_order_unit"]
-            occupied = sum(occupied_units(row) for row in held
-                           if row.capacity_entry_id == entry.id and occupies(row))
-            free_capacity += max(0, entry.available_units - occupied) // coefficient
-        # Пустой календарь — неизвестный ресурс; известный календарь без
-        # совместимых записей в срок подтверждает нулевую доступность.
-        if entries and available_units > free_capacity:
-            blockers.append("Доступный объём превышает подтверждённую свободную мощность")
+    resource = await offer_resource(db, need, company_id, resource_kind, product_id)
+    blockers.extend(resource['blockers'])
+    if available_units > resource['free_units']:
+        blockers.append("Доступный объём превышает свободный остаток склада" if resource_kind == 'stock'
+                        else "Доступный объём превышает подтверждённую свободную мощность")
     return blockers, warnings
 
 
@@ -180,6 +160,23 @@ async def list_offers(
     return result.scalars().all()
 
 
+@router.get("/offers/mine", response_model=list[OfferOut])
+async def own_offers(company_id: uuid.UUID, user: CurrentUser = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
+    await require_company_seller(company_id, user, db)
+    return (await db.scalars(select(Offer).where(Offer.company_id == company_id).order_by(Offer.created_at.desc()))).all()
+
+
+@router.get("/needs/{need_id}/offer-resource", response_model=OfferResourceOut)
+async def proposal_resource(need_id: uuid.UUID, company_id: uuid.UUID, resource_kind: Literal['stock', 'capacity'],
+                            product_id: uuid.UUID | None = None, user: CurrentUser = Depends(get_current_user),
+                            db: AsyncSession = Depends(get_db)):
+    await require_company_seller(company_id, user, db)
+    need = await db.get(Need, need_id)
+    if need is None or need.company_id == company_id or need.visibility != 'open_anonymized':
+        raise HTTPException(404, 'Потребность недоступна')
+    return await offer_resource(db, need, company_id, resource_kind, product_id)
+
+
 @router.post("/needs/{need_id}/offer-draft", response_model=OfferDraftOut, status_code=status.HTTP_201_CREATED)
 async def prepare_offer_draft(
     need_id: uuid.UUID,
@@ -266,7 +263,7 @@ async def prepare_offer_draft(
 @router.post("/needs/{need_id}/offers/preview", response_model=OfferSendPreviewOut)
 async def preview_offer_send(
     need_id: uuid.UUID,
-    data: OfferIn,
+    data: OfferSendPreviewIn,
     user: CurrentUser = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
@@ -282,7 +279,7 @@ async def preview_offer_send(
     if need.visibility != "open_anonymized":
         raise HTTPException(status.HTTP_403_FORBIDDEN, detail="Потребность недоступна этой компании")
     await require_current_evidence(db, need)
-    blockers: list[str] = []
+    blockers: list[str] = commercial_send_blockers(data)
     if need.status not in ACTIVE_NEED_STATUSES or not need_is_current(need):
         blockers.append("Потребность закрыта или срок её актуальности истёк")
     if data.moq_units > data.available_units:
@@ -302,7 +299,13 @@ async def preview_offer_send(
         product_id = uuid.UUID(draft.payload["product_id"]) if draft.payload.get("product_id") else None
     previous = await db.scalar(select(Offer).where(
         Offer.need_id == need.id, Offer.company_id == data.company_id))
-    if previous is not None:
+    if data.offer_id is not None:
+        await require_company_admin(data.company_id, user, db)
+        if previous is None or previous.id != data.offer_id or previous.status != 'sent':
+            blockers.append('Действующее предложение не найдено: обновите страницу')
+        elif previous.revision != data.expected_revision:
+            blockers.append('Предложение изменилось. Обновите условия перед подтверждением')
+    elif previous is not None:
         if data.request_key is not None and previous.request_key == data.request_key:
             if _same_offer_terms(previous, data, product_id=product_id, resource_kind=resource_kind):
                 # Повтор возвращает сохранённое КП, но не отменяет обязательные
@@ -431,6 +434,7 @@ async def create_offer(
         db, need=need, company_id=data.company_id, moq_units=data.moq_units,
         available_units=data.available_units, lead_time_days=data.lead_time_days,
         resource_kind=resource_kind, product_id=product_id)
+    blockers.extend(commercial_send_blockers(data))
     if blockers:
         from ..denials import BusinessDenied
         raise BusinessDenied(409, "; ".join(blockers), company_id=data.company_id, reason_code="offer_validation", role="offer_validation", entity_type="need", entity_id=need.id)
@@ -490,7 +494,7 @@ async def create_offer(
         explanation='Уполномоченный продавец направил конкретную версию КП; предварительная неполная смета не разрешает согласование')
     await run_market_rematch(db, "offer_created", offer.id, {"need_id": str(need.id)})
     if need.created_by_user_id:
-        await notify(db, need.created_by_user_id, "По вашей потребности поступило новое предложение", "offer_received")
+        await notify(db, need.created_by_user_id, "По вашей потребности поступило новое предложение", "offer_received", href=f"/needs/{need.id}#offer-{offer.id}")
     await db.commit()
     await db.refresh(offer)
     offer.sending_warnings = sending_warnings
@@ -517,13 +521,22 @@ async def update_offer(
         raise HTTPException(status.HTTP_409_CONFLICT, detail="Можно изменить только действующее предложение")
     previous_quote = offer.commercial_quote
     patch = data.model_dump(exclude_unset=True, exclude={"expected_revision"})
-    if any(value is None for key, value in patch.items() if key not in {"valid_until","delivery_cost_rub","commercial_terms"}):
+    if any(value is None for key, value in patch.items() if key not in {"valid_until","delivery_cost_rub","commercial_terms","product_id"}):
         raise HTTPException(422, "Обязательное условие предложения не может быть пустым")
     try:
         merged = {key: getattr(offer, key) for key in ("company_id", "price_rub", "available_units", "lead_time_days", "delivery_cost_rub", "moq_units", "price_tiers", "valid_until", "resource_kind", "product_id", "commercial_terms")}
-        OfferIn.model_validate({**merged, **patch})
+        proposed = OfferIn.model_validate({**merged, **patch})
     except ValidationError as exc:
         raise HTTPException(422, "; ".join(error["msg"] for error in exc.errors())) from exc
+    if need is None or need.status not in ACTIVE_NEED_STATUSES or not need_is_current(need):
+        raise HTTPException(409, 'Потребность закрыта или срок её актуальности истёк')
+    await require_current_evidence(db, need)
+    blockers, warnings = await _send_blockers(db, need=need, company_id=offer.company_id,
+        moq_units=proposed.moq_units, available_units=proposed.available_units,
+        lead_time_days=proposed.lead_time_days, resource_kind=proposed.resource_kind, product_id=proposed.product_id)
+    blockers.extend(commercial_send_blockers(proposed))
+    if blockers:
+        raise HTTPException(409, '; '.join(blockers))
     for field, value in patch.items():
         setattr(offer, field, value)
     if offer.resource_kind == "stock" and not offer.product_id:
@@ -553,6 +566,9 @@ async def update_offer(
         source_refs=[{'type':'need','id':str(need.id),'revision':need.revision}],
         explanation="Продавец подтвердил новую версию условий КП; прежние согласованные сделки сохраняют свою смету.")
     await run_market_rematch(db, "offer_terms_changed", offer.id, {"need_id": str(offer.need_id)})
+    if need.created_by_user_id:
+        await notify(db, need.created_by_user_id, 'Поставщик изменил условия предложения', 'offer_updated',
+                     href=f'/needs/{need.id}#offer-{offer.id}')
     await db.commit()
     await db.refresh(offer)
     return offer
@@ -732,7 +748,7 @@ async def select_offer(
     )
     await run_market_rematch(db, "offer_selected", offer.id, {"need_id": str(need.id)})
     if offer.created_by_user_id:
-        await notify(db, offer.created_by_user_id, "Ваше предложение выбрано покупателем", "offer_selected")
+        await notify(db, offer.created_by_user_id, "Ваше предложение выбрано покупателем", "offer_selected", href=f"/deals?deal={deal.id}")
     await db.commit()
     await db.refresh(deal)
     return deal

@@ -311,7 +311,14 @@ export interface NeedFeedItem {
   valid_until: string | null;
 }
 
+export interface OfferResource {
+  resource_kind: "stock" | "capacity"; free_units: number; unit: string; deadline_date: string;
+  stock_updated_at: string | null; fresh: boolean | null; blockers: string[];
+}
+
 export interface Offer {
+  resource_kind?: "stock" | "capacity";
+  product_id?: string | null;
   commercial_terms?: CommercialTerms | null;
   commercial_quote?: CommercialSnapshot | null;
   revision: number;
@@ -530,6 +537,7 @@ export interface PrimaryObligation {
 export interface Notification {
   id: string;
   user_id: string;
+  href?: string | null;
   message: string;
   type: string;
   is_read: boolean;
@@ -1462,7 +1470,7 @@ export const marketplace = {
     );
   },
 
-  previewOfferSend(token: string, needId: string, input: CreateOfferInput): Promise<{ blockers: string[]; warnings: string[]; missing: string[]; can_send: boolean }> {
+  previewOfferSend(token: string, needId: string, input: CreateOfferInput & {offer_id?: string; expected_revision?: number}): Promise<{ blockers: string[]; warnings: string[]; missing: string[]; can_send: boolean }> {
     return marketplaceFetch(`/api/v1/needs/${needId}/offers/preview`, {
       method: "POST", token, body: JSON.stringify(input),
     });
@@ -1474,6 +1482,20 @@ export const marketplace = {
       token,
       body: JSON.stringify(input),
     });
+  },
+
+  getCompanyOffers(token: string, companyId: string): Promise<Offer[]> {
+    return marketplaceFetch(`/api/v1/offers/mine?company_id=${companyId}`, { token }).then(body => unwrapList<Offer>(body, ["offers", "items"]));
+  },
+
+  updateOffer(token: string, offerId: string, input: Omit<CreateOfferInput, "company_id" | "draft_id" | "request_key" | "product_id"> & {product_id?: string | null; expected_revision: number}): Promise<Offer> {
+    return marketplaceFetch(`/api/v1/offers/${offerId}`, { method: "PATCH", token, body: JSON.stringify(input) });
+  },
+
+  getOfferResource(token: string, needId: string, companyId: string, kind: "stock" | "capacity", productId = ""): Promise<OfferResource> {
+    const query = new URLSearchParams({ company_id: companyId, resource_kind: kind });
+    if (productId) query.set("product_id", productId);
+    return marketplaceFetch(`/api/v1/needs/${needId}/offer-resource?${query}`, { token });
   },
 
   prepareOfferDraft(token: string, needId: string, companyId: string): Promise<OfferDraft> {
@@ -1644,7 +1666,8 @@ export const marketplace = {
   },
 
   markNotificationRead(token: string, notificationId: string): Promise<Notification> {
-    return marketplaceFetch(`/api/v1/notifications/${notificationId}/read`, { method: "POST", token });
+    // Navigation must not cancel this small, non-critical read receipt.
+    return marketplaceFetch(`/api/v1/notifications/${notificationId}/read`, { method: "POST", token, keepalive: true });
   },
 
   markAllNotificationsRead(token: string): Promise<void> {
@@ -1701,8 +1724,8 @@ export interface CommercialTerms {
   exceptions?: string;
   expenses?: {code:"individual_operations"|"reserve_holding"|"switching"|"other";title:string;amount_rub:Money|null;required:boolean;source:string;version:string}[];
 }
-export interface CommercialEstimate {schema_version:number;complete:boolean;missing:string[];total_rub:Money|null;known_total_rub:Money;lines:{code:string;title:string;amount_rub:Money|null;conditional:boolean;source:unknown;tax_basis:string}[];terms:CommercialTerms;benefit_rub?:Money|null;baseline_comparable?:boolean}
-export interface CommercialSnapshot {schema_version:number;estimate:CommercialEstimate;need:{id:string;revision:number};offer:{id:string;revision:number}|null}
+export interface CommercialEstimate {unit_price_rub?:Money;schema_version:number;complete:boolean;missing:string[];total_rub:Money|null;known_total_rub:Money;lines:{code:string;title:string;amount_rub:Money|null;conditional:boolean;source:unknown;tax_basis:string}[];terms:CommercialTerms;benefit_rub?:Money|null;baseline_comparable?:boolean}
+export interface CommercialSnapshot {schema_version:number;estimate:CommercialEstimate;need:{id:string;revision:number;units?:number};offer:{id:string;revision:number}|null}
 
 
 export interface FulfillmentRecord {

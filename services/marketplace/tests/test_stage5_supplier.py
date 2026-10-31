@@ -13,7 +13,7 @@ from sqlalchemy import func, select, text
 
 from app.matching import offer_unit_price
 from app.models import Deal, Need, Offer, Product
-from conftest import confirmed_quote_terms, make_company, make_token, make_user
+from conftest import grant_capacity, confirmed_quote_terms, make_company, make_token, make_user
 
 from test_category_admission import _auth
 from test_offer_draft_and_scorecard import _buyer_with_published_need, _seller_company
@@ -97,6 +97,7 @@ async def test_product_characteristics_limit_and_photo_bounds(client, db_session
 async def test_offer_request_key_retry_returns_same_or_conflict(client, db_session):
     user, company, token = await _seller_company(db_session)
     _, _, _, need_id = await _buyer_with_published_need(client, db_session, volume=5_000)
+    await grant_capacity(db_session, company, 5_000)
     key = str(uuid.uuid4())
     payload = {"commercial_terms": confirmed_quote_terms(), "company_id": str(company),
                "price_rub": 11.5, "available_units": 5_000, "moq_units": 1_000,
@@ -118,19 +119,25 @@ async def test_offer_request_key_retry_returns_same_or_conflict(client, db_sessi
 async def test_unknown_delivery_is_not_zero_and_blocks_select(client, db_session):
     user, company, token = await _seller_company(db_session)
     _, _, _, need_id = await _buyer_with_published_need(client, db_session, volume=5_000)
+    await grant_capacity(db_session, company, 5_000)
     offer = await client.post(f"/api/v1/needs/{need_id}/offers",
                               json={"commercial_terms": confirmed_quote_terms(), "company_id": str(company),
                                     "price_rub": 11.5, "available_units": 5_000, "moq_units": 1_000,
                                     "delivery_cost_rub": None, "lead_time_days": 9},
                               headers=_auth(token))
-    assert offer.status_code == 201, offer.text
-    assert offer.json()["commercial_quote"]["estimate"]["total_rub"] is None
+    assert offer.status_code == 409, offer.text
+    assert "Стоимость доставки не подтверждена" in offer.text
+    # Legacy incomplete proposals still cannot be selected.
+    saved = Offer(need_id=uuid.UUID(need_id),company_id=company,price_rub=11.5,
+        available_units=5000,moq_units=1000,lead_time_days=9,delivery_cost_rub=None,
+        commercial_quote={'estimate':{'complete':False,'missing':['Стоимость доставки не подтверждена']}})
+    db_session.add(saved); await db_session.commit()
     buyer = await make_user(db_session)
     buyer_company = await make_company(db_session, buyer, can_buy=True, can_sell=False)
     need_row = await db_session.get(Need, uuid.UUID(need_id))
     need_row.company_id = buyer_company
     await db_session.commit()
-    selected = await client.post(f"/api/v1/offers/{offer.json()['id']}/select",
+    selected = await client.post(f"/api/v1/offers/{saved.id}/select",
                                  json={"human_approved": True, "expected_revision": 1},
                                  headers=_auth(make_token(buyer)))
     assert selected.status_code == 409
@@ -493,6 +500,7 @@ async def test_repeat_import_returns_full_result(client, db_session):
 async def test_offer_retry_checks_terms_validity_and_included(client, db_session):
     user, company, token = await _seller_company(db_session)
     _, _, _, need_id = await _buyer_with_published_need(client, db_session, volume=5_000)
+    await grant_capacity(db_session, company, 5_000)
     key = str(uuid.uuid4())
     base = {"company_id": str(company), "price_rub": 11.5, "available_units": 5_000,
             "moq_units": 1_000, "lead_time_days": 9, "request_key": key,
@@ -546,6 +554,7 @@ async def test_passport_only_feed_filters_compatibility(client, db_session):
 async def test_offer_send_rechecks_term_and_warns_admission(client, db_session):
     user, company, token = await _seller_company(db_session)
     _, _, _, need_id = await _buyer_with_published_need(client, db_session, volume=5_000)
+    await grant_capacity(db_session, company, 5_000)
     late = await client.post(f"/api/v1/needs/{need_id}/offers",
                              json={"commercial_terms": confirmed_quote_terms(), "company_id": str(company),
                                    "price_rub": 11.5, "available_units": 5_000, "moq_units": 1_000,
@@ -686,7 +695,7 @@ async def test_offer_resource_kind_capacity_and_freshness(client, db_session):
     assert fits.status_code == 201, fits.text
 
 
-async def test_stale_stock_warns_but_does_not_block(client, db_session):
+async def test_stale_stock_blocks_sending_and_explains_resource_status(client, db_session):
     from datetime import datetime as _datetime
     from datetime import timezone as _tz
 
@@ -707,8 +716,13 @@ async def test_stale_stock_warns_but_does_not_block(client, db_session):
                                    "delivery_cost_rub": 100, "lead_time_days": 2,
                                    "resource_kind": "stock", "product_id": created["id"]},
                              headers=_auth(token))
-    assert sent.status_code == 201, sent.text
-    assert any("7 дней" in warning for warning in sent.json()["sending_warnings"])
+    assert sent.status_code == 409, sent.text
+    assert "7 дней" in sent.text
+    assert await db_session.scalar(select(func.count(Offer.id))) == 0
+    resource = await client.get(f"/api/v1/needs/{need_id}/offer-resource",
+        params={"company_id":str(company),"resource_kind":"stock","product_id":created['id']},headers=_auth(token))
+    assert resource.status_code == 200 and resource.json()['fresh'] is False
+    assert resource.json()['free_units'] == 5000 and resource.json()['blockers']
 
 
 async def test_required_subject_fields_outside_user_limit(client, db_session):
@@ -723,6 +737,7 @@ async def test_required_subject_fields_outside_user_limit(client, db_session):
 async def test_preview_checks_access_staleness_and_repeat(client, db_session):
     user, company, token = await _seller_company(db_session)
     _, _, _, need_id = await _buyer_with_published_need(client, db_session, volume=5_000)
+    await grant_capacity(db_session, company, 5_000)
     base = {"company_id": str(company), "price_rub": 11.5, "available_units": 5_000,
             "moq_units": 1_000, "delivery_cost_rub": 100, "lead_time_days": 9,
             "commercial_terms": confirmed_quote_terms(), "resource_kind": "capacity",
@@ -751,13 +766,16 @@ async def test_preview_rejects_stale_draft(client, db_session):
     user, company, token = await _seller_company(db_session)
     await _passport(client, token, company)
     _, _, _, need_id = await _buyer_with_published_need(client, db_session, volume=5_000)
+    await grant_capacity(db_session, company, 5_000)
+    await _product(client,token,company,name="Стакан",category="Упаковка и тара",subcategory="Бумажные стаканы",
+        characteristics={"unit":"шт","material":"крафт-картон","volume_ml":400,"coating":"PE"})
     draft = await client.post(f"/api/v1/needs/{need_id}/offer-draft", json={"company_id": str(company)},
                               headers=_auth(token))
     assert draft.status_code == 201, draft.text
     payload = draft.json()["payload"]
     stale = await client.post(
         f"/api/v1/needs/{need_id}/offers/preview",
-        json={"company_id": str(company), "price_rub": 11.5, "available_units": 5_000,
+        json={"commercial_terms": confirmed_quote_terms(), "company_id": str(company), "price_rub": 11.5, "available_units": 5_000,
               "moq_units": 1_000, "delivery_cost_rub": 100, "lead_time_days": 9,
               "resource_kind": "capacity", "draft_id": draft.json()["id"]},
         headers=_auth(token))
@@ -768,7 +786,7 @@ async def test_preview_rejects_stale_draft(client, db_session):
         await client.patch(f"/api/v1/products/{product_id}", json={"price_rub": 99}, headers=_auth(token))
         changed = await client.post(
             f"/api/v1/needs/{need_id}/offers/preview",
-            json={"company_id": str(company), "price_rub": 11.5, "available_units": 5_000,
+            json={"commercial_terms": confirmed_quote_terms(), "company_id": str(company), "price_rub": 11.5, "available_units": 5_000,
                   "moq_units": 1_000, "delivery_cost_rub": 100, "lead_time_days": 9,
                   "resource_kind": "capacity", "draft_id": draft.json()["id"]},
             headers=_auth(token))

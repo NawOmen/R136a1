@@ -1,5 +1,5 @@
 import { expect, test } from "@playwright/test";
-import { displayMoney, lineAmount, previewLineAmount, scaledMoney } from "../../apps/web/app/lib/money";
+import { displayMoney, lineAmount, previewLineAmount, scaledMoney, moneyInputValue } from "../../apps/web/app/lib/money";
 import { marketplace } from "../../apps/web/app/lib/marketplace";
 import type { Product } from "../../apps/web/app/lib/marketplace";
 import { emptyCatalogFilters, filterCatalog, readCatalogLocation, validateCatalogFilters, writeCatalogLocation } from "../../apps/web/app/lib/catalogFilters";
@@ -63,4 +63,34 @@ test("catalogue validation rejects invalid ranges and URL state retains the sear
   expect(new URLSearchParams(reset).get("q")).toBe("коробка");
   expect(new URLSearchParams(reset).has("price_from")).toBe(false);
   expect(readCatalogLocation("?sort=not-a-sort").sort).toBe("popular");
+});
+
+
+test("new money input rounds decimal strings to kopecks without losing large integer digits", () => {
+  for (const [input, expected] of [
+    ["", ""], ["1.", "1."], ["1.20", "1.20"], ["1,25", "1.25"],
+    ["2.675", "2.68"], ["4.123456789012", "4.12"], ["9.999", "10.00"],
+    ["0.005", "0.01"], ["-2.675", "-2.68"],
+    ["9007199254740993.995", "9007199254740994.00"],
+  ]) expect(moneyInputValue(input)).toBe(expected);
+  expect(moneyInputValue(null)).toBe("");
+  // Formatting a copy must not mutate a saved price or change exact API arithmetic.
+  const original = "4.123456789012";
+  expect(moneyInputValue(original)).toBe("4.12");
+  expect(scaledMoney(original)).toBe(BigInt("4123456789012"));
+});
+
+
+test('supplier comparison uses exact frozen tier prices and rejects outdated or legacy incomplete snapshots',async()=>{
+ const {supplierQuote}=await import('../../apps/web/app/lib/supplierQuote');
+ const need={id:'need',revision:3,volume_units:100};
+ const offer={id:'offer',revision:2,price_rub:'12',price_tiers:[{min_units:100,unit_price_rub:'9.50'}],commercial_quote:{need:{id:'need',revision:3,units:100},offer:{id:'offer',revision:2},estimate:{unit_price_rub:'9.50',lines:[{code:'goods',amount_rub:'950.00',conditional:false}]}}} as unknown as import('../../apps/web/app/lib/marketplace').Offer;
+ expect(supplierQuote(offer,need)).toEqual({unitPrice:'9.50',goodsTotal:'950.00'});
+ expect(supplierQuote(offer,{...need,revision:4})).toBeNull();
+ expect(supplierQuote(offer,{...need,volume_units:200})).toBeNull();
+ expect(supplierQuote({...offer,revision:3},need)).toBeNull();
+ expect(supplierQuote({...offer,commercial_quote:{estimate:{}} as any},need)).toBeNull();
+ offer.commercial_quote!.estimate.unit_price_rub='9007199254.741125';
+ offer.commercial_quote!.estimate.lines[0].amount_rub='900719925474.11';
+ expect(supplierQuote(offer,need)).toEqual({unitPrice:'9007199254.741125',goodsTotal:'900719925474.11'});
 });

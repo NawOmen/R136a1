@@ -14,6 +14,8 @@ async def test_health_reports_trained_mlx_backend(monkeypatch):
     assert health.local_backend == "mlx"
     assert health.local_model == "porukam-buyer-qwen3.5"
     assert health.vision_model == "qwen3.5:9b"
+    # Разговорные задачи идут в общую модель, и это видно в состоянии.
+    assert health.assistant_backend == settings.assistant_llm_backend
 
 
 @pytest.mark.asyncio

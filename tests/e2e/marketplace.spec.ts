@@ -3,8 +3,15 @@ import { canonicalCharacteristicKey } from "../../apps/web/app/lib/categoryProfi
 import { formatDate } from "../../apps/web/app/lib/dates";
 import { expect, test, type Page } from "@playwright/test";
 
+const recording = process.env.E2E_RECORDING_SCENARIO === "bolt-20000";
+const units = recording ? 20000 : 200;
+const budget = recording ? 100000 : 5000;
+const price = recording ? 4 : 12;
+const unitCost = recording ? 3 : 8;
+const otherCosts = recording ? 1000 : 100;
+
 function password(role: "BUYER" | "SELLER" | "ADMIN"): string {
-  if (process.env.E2E_TEST_PROJECT !== "r136-fulltest") {
+  if (process.env.E2E_TEST_PROJECT !== "r136-fulltest" && !(recording && process.env.E2E_TEST_PROJECT === "r136-recording")) {
     throw new Error("Запускать только на выделенном синтетическом стенде r136-fulltest.");
   }
   const value = process.env[`E2E_${role}_PASSWORD`];
@@ -119,7 +126,7 @@ async function checkSyntheticStock(seller: Page) {
   const body = await response.json();
   const product = (Array.isArray(body) ? body : body.items).find((item: {name:string}) => item.name === "Болт М8×40, класс 8.8");
   expect(product, "Для маршрута нужен синтетический болт из seed-каталога").toBeTruthy();
-  expect(product.stock_units, "Каждый прогон расходует 200 шт. Подготовьте остаток на отдельном стенде; повторный seed его не восстанавливает.").toBeGreaterThanOrEqual(200);
+  expect(product.stock_units, "Каждый прогон расходует 200 шт. Подготовьте остаток на отдельном стенде; повторный seed его не восстанавливает.").toBeGreaterThanOrEqual(units);
 }
 
 for (const mode of ["manual", "classified", "live-ai"] as const) {
@@ -127,7 +134,7 @@ const classified = mode === "classified";
 test(`${mode === "live-ai" ? "Живая локальная модель" : classified ? "Точная классификация через API" : "Категория и подкатегория из формы"}: заказ → отгрузка → приёмка → прибыль`, async ({ page, browser }) => {
   test.skip(mode === "live-ai" && process.env.RUN_LIVE_CORE_FLOW !== "1", "Для живой модели нужен RUN_LIVE_CORE_FLOW=1 и отдельный синтетический стенд");
   test.setTimeout(mode === "live-ai" ? 600_000 : 180_000);
-  const sellerContext = await browser.newContext({ baseURL: process.env.BASE_URL || "http://localhost:3000", recordVideo: mode === "live-ai" ? {dir: test.info().outputPath("seller-video")} : undefined });
+  const sellerContext = await browser.newContext({ baseURL: process.env.BASE_URL || "http://localhost:3000", recordVideo: mode === "live-ai" || recording ? {dir: test.info().outputPath("seller-video")} : undefined });
   const seller = await sellerContext.newPage();
   try {
     await login(seller, "SELLER");
@@ -147,7 +154,7 @@ test(`${mode === "live-ai" ? "Живая локальная модель" : clas
       const deadline = new Date(); deadline.setUTCDate(deadline.getUTCDate() + 30);
       const created = await page.request.post("http://localhost:8002/api/v1/needs", { headers, data: {
         company_id: company.id, category: "Строительство", subcategory: "Крепёж", characteristics: boltSpecification,
-        volume_units: 200, budget_rub: 5000, deadline_date: deadline.toISOString().slice(0, 10),
+        volume_units: units, budget_rub: budget, deadline_date: deadline.toISOString().slice(0, 10),
         delivery_address_id: (Array.isArray(addresses) ? addresses : addresses.items)[0].id, visibility: "open_anonymized",
       } });
       expect(created.status()).toBe(201);
@@ -158,23 +165,25 @@ test(`${mode === "live-ai" ? "Живая локальная модель" : clas
     await page.goto("/needs/new");
     const deadline = new Date(); deadline.setDate(deadline.getDate() + 30);
     const day = `${deadline.getFullYear()}-${String(deadline.getMonth()+1).padStart(2,"0")}-${String(deadline.getDate()).padStart(2,"0")}`;
+    if (recording && mode === "manual") await page.getByLabel("Что требуется купить", {exact:true}).fill("Болт М8×40 - 20000 шт, класс прочности 8.8\nСталь. Доставка в Москву.\nБюджет 100 000 ₽.");
     if (mode === "live-ai") {
-      await page.getByLabel("Что требуется купить", {exact:true}).fill(`Нужно купить 200 болтов М8×40, класс прочности 8.8, материал сталь, диаметр 8 мм, длина 40 мм. Стандарт: синтетическая спецификация Б-01. Единица заказа: шт. Бюджет 5000 рублей. Получить до ${formatDate(day)}. Категория Строительство, Крепёж.`);
+      await page.getByLabel("Что требуется купить", {exact:true}).fill(recording ? "Болт М8×40 - 20000 шт, класс прочности 8.8\nСталь. Доставка в Москву.\nБюджет 100 000 ₽." : `Нужно купить ${units} болтов М8×40, класс прочности 8.8, материал сталь, диаметр 8 мм, длина 40 мм. Стандарт: синтетическая спецификация Б-01. Единица заказа: шт. Бюджет ${budget} рублей. Получить до ${formatDate(day)}. Категория Строительство, Крепёж.`);
       const analysis = page.waitForResponse(response => response.request().method() === "POST" && /\/buyer-agent\/runs$/.test(new URL(response.url()).pathname), {timeout:240_000});
       await page.getByRole("button", {name:"Заполнить с ИИ",exact:true}).click();
       const response = await analysis;
       expect(response.status(), "Живой Gateway должен успешно разобрать запрос; ручной fallback не является прохождением").toBe(201);
       const run = await response.json();
-      expect(run.used_route).toBe("local_qwen");
-      const review = await completeLiveClarifications(page, run);
+      expect(["local_qwen", "local_general"]).toContain(run.used_route);
+      await test.info().attach("Фактический маршрут модели", {body:JSON.stringify({used_route:run.used_route,model_version:run.model_version}),contentType:"application/json"});
+      const review = await completeLiveClarifications(page, run, units);
       await test.info().attach("Уточнения покупателя", { body: JSON.stringify({
         quantity_extracted_initially: review.quantityExtractedInitially,
         manual_answers: review.manualAnswers,
         note: "Ручные ответы не являются автоматически извлечёнными фактами; это проверка полного маршрута.",
       }, null, 2), contentType: "application/json" });
       await expect(page.getByRole("heading", {name:"Детали закупки",exact:true})).toBeVisible();
-      await expect(page.locator("#volume_units")).toHaveValue("200");
-      await expect(page.locator("#budget_rub")).toHaveValue("5000");
+      await expect(page.locator("#volume_units")).toHaveValue(String(units));
+      await expect(page.locator("#budget_rub")).toHaveValue(String(budget));
       await expect(page.locator("#category")).toHaveValue("Строительство");
       await expect(page.locator("#subcategory")).toHaveValue("Крепёж");
     } else {
@@ -184,8 +193,8 @@ test(`${mode === "live-ai" ? "Живая локальная модель" : clas
     }
     // Buyer review is explicit and applies to the extracted or manually entered specification.
     await fillBoltFields(page);
-    await page.getByLabel("Количество", { exact: true }).fill("200");
-    await page.getByLabel("Бюджет, ₽", { exact: true }).fill("5000");
+    await page.getByLabel("Количество", { exact: true }).fill(String(units));
+    await page.getByLabel("Бюджет, ₽", { exact: true }).fill(String(budget));
     await page.getByLabel("Получить до", { exact: true }).fill(formatDate(day));
     const address = page.getByLabel("Адрес доставки", { exact: false });
     await expect(address.locator('option:not([value=""])').first()).toBeAttached();
@@ -196,6 +205,23 @@ test(`${mode === "live-ai" ? "Живая локальная модель" : clas
     }
     const needId = new URL(needUrl).pathname.split("/").at(-1)!;
 
+    if (recording) {
+      await page.goto(`${needUrl}/suppliers`);
+      await page.getByRole("tab", {name:/Доска запросов/}).click();
+      const recipient=page.getByLabel("Получатель запроса");
+      const supplierOption=recipient.locator("option").filter({hasText:"ООО «Урал Комплект»"});
+      await expect(supplierOption).toHaveCount(1);
+      await recipient.selectOption(await supplierOption.getAttribute("value") as string);
+      await page.getByRole("button",{name:"Подготовить запрос",exact:true}).click();
+      const workspace=page.getByRole("region",{name:"Работа с поставщиком"});
+      await workspace.getByLabel("Запрос коммерческого предложения").fill("Просим КП: болт М8×40, класс 8.8, сталь, 20 000 шт. Доставка в Москву. Бюджет 100 000 ₽. Укажите цену, НДС и срок.");
+      await workspace.getByRole("button",{name:"Отправить поставщику",exact:true}).click();
+      await seller.goto("/seller/inquiries");
+      const reply=seller.getByRole("region",{name:"Работа с поставщиком"});
+      await reply.getByLabel("Ваше сообщение").fill("Поставим 20 000 болтов М8×40, класс 8.8, сталь. Цена 4 ₽/шт., всего 80 000 ₽, без НДС. Доставка в Москву включена. Срок 2 дня. Официальное КП отправляем отдельно.");
+      await reply.getByRole("button",{name:"Отправить покупателю",exact:true}).click();
+      await expect(reply.getByText("Сообщение отправлено.",{exact:true})).toBeVisible();
+    }
     await reviewSyntheticBoltSpecification(seller);
     if (classified) {
       // КП готовится API-fixture: отдельный тест проверяет полноту ленты продавца.
@@ -208,7 +234,7 @@ test(`${mode === "live-ai" ? "Живая локальная модель" : clas
       const product = (Array.isArray(body) ? body : body.items).find((item: { name: string }) => item.name === "Болт М8×40, класс 8.8");
       expect((await seller.request.post(`http://localhost:8002/api/v1/needs/${needId}/offers`, { headers, data: {
         company_id: company.id, resource_kind: "stock", product_id: product.id,
-        price_rub: 12, available_units: 200, moq_units: 200, delivery_cost_rub: 0, lead_time_days: 2,
+        price_rub: price, available_units: units, moq_units: units, delivery_cost_rub: 0, lead_time_days: 2,
         commercial_terms: {delivery_method: "separate", tax_basis: "no_vat", vat_rate_pct: null, delivery_conditions: "Синтетический адрес получателя, Россия", expenses: []},
       } })).status()).toBe(201);
     } else {
@@ -235,16 +261,16 @@ test(`${mode === "live-ai" ? "Живая локальная модель" : clas
     const card = seller.locator(`li.demand-card[data-need-id="${needId}"]`);
     await expect(card, "Продавец должен видеть карточку опубликованной потребности").toBeVisible();
     await card.getByRole("button", { name: "Предложить условия", exact: true }).click();
-    await seller.locator(`#offer_price_${needId}`).fill("12");
+    await seller.locator(`#offer_price_${needId}`).fill(String(price));
     await seller.locator(`#offer_resource_${needId}`).selectOption("stock");
     await seller.locator(`#offer_product_${needId}`).selectOption({ label: "Болт М8×40, класс 8.8" });
-    await seller.locator(`#offer_units_${needId}`).fill("200");
-    await seller.locator(`#offer_moq_${needId}`).fill("200");
+    await seller.locator(`#offer_units_${needId}`).fill(String(units));
+    await seller.locator(`#offer_moq_${needId}`).fill(String(units));
     await seller.locator(`#offer_lead_${needId}`).fill("2");
     await card.getByRole("combobox", {name: /^Условия доставки/}).selectOption("separate");
     await seller.locator(`#offer_delivery_${needId}`).fill("0");
     await card.getByRole("combobox", {name: /^Налоговая база/}).selectOption("no_vat");
-    await card.getByLabel("Условия и место получения", {exact: true}).fill("Синтетический адрес получателя, Россия");
+    await card.getByLabel("Условия и место получения", {exact: true}).fill(recording ? "Доставка в Москву включена в цену товара, без дополнительной платы" : "Синтетический адрес получателя, Россия");
     await card.getByRole("button", { name: "Проверить условия", exact: true }).click();
     await card.getByRole("button", { name: "Подтвердить отправку КП", exact: true }).click();
     await expect(card.getByText("Предложение отправлено. Ожидайте решения покупателя.", { exact: true })).toBeVisible();
@@ -265,7 +291,7 @@ test(`${mode === "live-ai" ? "Живая локальная модель" : clas
     await expect(seller.getByText("Операций пока нет. Заказ ещё не считается продажей.", { exact: true })).toBeVisible();
     await recordFulfillment(seller, "prepare", "Сохранить параметры отгрузки", {
       "Адрес отгрузки в России": "г. Москва, ул. Синтетическая, д. 1", "Город": "Москва", "Регион": "Москва",
-      "Упаковка": "Коробка", "Вес, кг": "5", "Объём, м³": "0.1", "Количество мест": "1",
+      "Упаковка": "Коробка", "Вес, кг": recording ? "800" : "5", "Объём, м³": recording ? "1" : "0.1", "Количество мест": recording ? "20" : "1",
     });
     await recordFulfillment(seller, "production", "Начать производство");
     await page.goto("/deals");
@@ -273,28 +299,28 @@ test(`${mode === "live-ai" ? "Живая локальная модель" : clas
     await recordFulfillment(page, "logistics", "Согласовать получение", {"Подтверждённый тариф, ₽ (0 — без платы)": "0"});
     await seller.reload();
     await seller.locator(`[data-deal-id="${dealId}"]`).click();
-    await recordFulfillment(seller, "shipment", "Записать отгрузку", {"Название или номер партии": "Партия E2E", "Количество отгрузки": "200"});
+    await recordFulfillment(seller, "shipment", "Записать отгрузку", {"Название или номер партии": "Партия E2E", "Количество отгрузки": String(units)});
     await page.reload();
     await page.locator(`[data-deal-id="${dealId}"]`).click();
     await page.getByRole("button", {name: "Записать получение", exact: true}).click();
-    await recordFulfillment(page, "receipt", "Записать получение партии", {"Фактически получено": "200", "Не поставлено из этой партии": "0"});
+    await recordFulfillment(page, "receipt", "Записать получение партии", {"Фактически получено": String(units), "Не поставлено из этой партии": "0"});
     await page.getByRole("button", {name: "Проверить полученное", exact: true}).click();
-    await recordFulfillment(page, "inspection", "Сохранить результат проверки", {"Принято после проверки": "200", "Отклонено, требуется решение": "0"});
+    await recordFulfillment(page, "inspection", "Сохранить результат проверки", {"Принято после проверки": String(units), "Отклонено, требуется решение": "0"});
     const execution = page.locator("section").filter({has: page.getByRole("heading", {name: "Исполнение и расчёты", exact: true})});
-    await expect(execution.locator(".stats-grid > div").filter({has: page.getByText("Принято", {exact: true})}).locator("dd")).toHaveText("200");
+    await expect(execution.locator(".stats-grid > div").filter({has: page.getByText("Принято", {exact: true})}).locator("dd")).toHaveText(String(units));
     await expect(page.getByLabel("Себестоимость единицы, ₽", { exact: true })).toHaveCount(0);
 
     await seller.reload();
     await seller.locator(`[data-deal-id="${dealId}"]`).click();
     await seller.getByText("Себестоимость и прибыль — только для вашей компании", { exact: true }).click();
-    await seller.getByLabel("Себестоимость единицы, ₽", { exact: true }).fill("8");
-    await seller.getByLabel("Прочие затраты заказа, ₽", { exact: true }).fill("100");
+    await seller.getByLabel("Себестоимость единицы, ₽", { exact: true }).fill(String(unitCost));
+    await seller.getByLabel("Прочие затраты заказа, ₽", { exact: true }).fill(String(otherCosts));
     await seller.getByLabel("Налоговая база затрат", { exact: true }).selectOption("no_vat");
     await seller.getByLabel("Источник расчёта затрат", { exact: true }).fill("Синтетическая смета E2E");
     await seller.getByLabel("Подтверждаю затраты для расчёта", { exact: false }).check();
     await seller.getByRole("button", { name: "Сохранить затраты", exact: true }).click();
-    await expect(seller.getByText(/Валовая прибыль:/)).toContainText(/800\s*₽/);
-    await expect(seller.getByText(/После указанных затрат:/)).toContainText(/700\s*₽/);
+    await expect.poll(async () => (await seller.getByText(/Валовая прибыль:/).innerText()).replace(/\s/g, "")).toContain(`${(price-unitCost)*units}₽`);
+    await expect.poll(async () => (await seller.getByText(/После указанных затрат:/).innerText()).replace(/\s/g, "")).toContain(`${(price-unitCost)*units-otherCosts}₽`);
   } finally {
     await sellerContext.close();
   }

@@ -1,9 +1,58 @@
+import json
+
 import pytest
 from pydantic import BaseModel, Field
 
 from app.config import settings
 from app.providers import ModelUnavailable, OllamaProvider, _ollama_schema
 from app.schemas import PlatformAssistantOut, RawExtraction
+
+
+@pytest.mark.parametrize("local,assistant", [("mlx", "ollama"), ("ollama", "mlx"), ("ollama", "ollama"), ("mlx", "mlx")])
+def test_assistant_backend_and_route_match_the_actual_model(monkeypatch, local, assistant):
+    from app.providers import RoutedProvider, TrainedMLXProvider
+    monkeypatch.setattr(settings, "local_llm_backend", local)
+    monkeypatch.setattr(settings, "assistant_llm_backend", assistant)
+    provider = RoutedProvider()
+    assert isinstance(provider.assistant, OllamaProvider if assistant == "ollama" else TrainedMLXProvider)
+    assert (provider.assistant is provider.local) == (local == assistant)
+    if local == "mlx" and assistant == "ollama":
+        assert provider.assistant.route_name == "local_general"
+    if local == "ollama" and assistant == "mlx":
+        assert provider.assistant.route_name == "local_trained"
+
+
+@pytest.mark.asyncio
+async def test_trained_failure_uses_general_model_and_reports_fallback(monkeypatch):
+    from app.providers import RoutedProvider
+    monkeypatch.setattr(settings, "local_llm_backend", "mlx")
+    monkeypatch.setattr(settings, "assistant_llm_backend", "ollama")
+    provider = RoutedProvider()
+    async def broken(*args):
+        raise ModelUnavailable("синтетический сбой адаптера")
+    async def general(*args):
+        return RawExtraction(category="Крепёж", facts=[])
+    monkeypatch.setattr(provider.local, "structured", broken)
+    monkeypatch.setattr(provider.assistant, "structured", general)
+    result, route, reason = await provider.structured("system", "prompt", RawExtraction, False)
+    assert result.category == "Крепёж" and route == "local_general"
+    assert "сбой адаптера" in reason
+
+
+@pytest.mark.asyncio
+async def test_same_ollama_backend_is_not_retried_as_a_different_model(monkeypatch):
+    from app.providers import RoutedProvider
+    monkeypatch.setattr(settings, "local_llm_backend", "ollama")
+    monkeypatch.setattr(settings, "assistant_llm_backend", "ollama")
+    provider = RoutedProvider()
+    calls = []
+    async def broken(*args):
+        calls.append(True)
+        raise ModelUnavailable("синтетический сбой")
+    monkeypatch.setattr(provider.local, "structured", broken)
+    with pytest.raises(ModelUnavailable):
+        await provider.structured("system", "prompt", RawExtraction, False)
+    assert len(calls) == 1
 
 
 class FakeResponse:
@@ -177,40 +226,31 @@ async def test_trained_mlx_always_disables_thinking(monkeypatch):
             return MLXResponse("ok")
     Client.payloads = []
     monkeypatch.setattr("app.providers.httpx.AsyncClient", Client)
-    monkeypatch.setattr("app.providers._MLX_ACCEPTS_TEMPLATE_KWARGS", True)
     await TrainedMLXProvider().structured("s", "p", RawExtraction)
     payload = Client.payloads[0]
-    assert payload["chat_template_kwargs"] == {"enable_thinking": False}
+    # Размышления выключены серверным --chat-template-args и мягким /no_think.
     assert payload["messages"][0]["content"].rstrip().endswith("/no_think")
-    assert "enable_thinking" not in payload and payload["max_tokens"] == settings.mlx_max_tokens
+    assert payload["max_tokens"] == settings.mlx_max_tokens
     assert not hasattr(settings, "mlx_enable_thinking")
 
 
 @pytest.mark.asyncio
-async def test_trained_mlx_retries_without_template_kwargs_on_old_server(monkeypatch):
-    import httpx
+async def test_trained_mlx_never_sends_chat_template_kwargs(monkeypatch):
+    """mlx_lm.server 0.32 на этом поле роняет поток генерации и отвечает 404 до перезапуска."""
     from app.providers import TrainedMLXProvider
-    class Ok(FakeResponse):
+    class MLXResponse(FakeResponse):
         def json(self):
             return {"choices": [{"message": {"content": '{"category":"Крепёж","facts":[]}'}}]}
-    class StrictResponse(FakeResponse):
-        status_code = 422
-        def raise_for_status(self):
-            request = httpx.Request("POST", "http://mlx/v1/chat/completions")
-            raise httpx.HTTPStatusError("unknown field", request=request, response=self)
     class Client(RecordingClient):
         async def post(self, url, json):
-            # Копия: провайдер удаляет chat_template_kwargs из того же словаря при повторе.
             self.payloads.append(dict(json))
-            return StrictResponse("no") if "chat_template_kwargs" in json else Ok("ok")
+            return MLXResponse("ok")
     Client.payloads = []
     monkeypatch.setattr("app.providers.httpx.AsyncClient", Client)
-    monkeypatch.setattr("app.providers._MLX_ACCEPTS_TEMPLATE_KWARGS", True)
-    result = await TrainedMLXProvider().structured("s", "p", RawExtraction)
-    assert result.category == "Крепёж"
-    assert len(Client.payloads) == 2
-    assert "chat_template_kwargs" in Client.payloads[0] and "chat_template_kwargs" not in Client.payloads[1]
-    assert "/no_think" in Client.payloads[1]["messages"][0]["content"]
+    await TrainedMLXProvider().structured("s", "p", RawExtraction)
+    assert len(Client.payloads) == 1
+    assert "chat_template_kwargs" not in Client.payloads[0]
+    assert "enable_thinking" not in json.dumps(Client.payloads[0])
 
 
 @pytest.mark.asyncio

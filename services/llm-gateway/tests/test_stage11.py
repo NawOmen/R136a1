@@ -75,6 +75,23 @@ async def test_v3_requires_retry_key(client, token):
     assert response.status_code == 422
 
 
+async def test_general_model_fallback_is_reported_in_plain_words(client, token, fake_provider, monkeypatch):
+    """Если адаптер не справился, покупатель видит нейтральную пометку, а не служебный маршрут."""
+    original = fake_provider.structured
+
+    async def as_general_model(system, prompt, response_model, prefer_external=False):
+        result, _route, _fallback = await original(system, prompt, response_model)
+        return result, "local_general", None
+
+    monkeypatch.setattr(fake_provider, "structured", as_general_model)
+    response = await start(client, token)
+    assert response.status_code == 201, response.text
+    run = response.json()
+    assert run["used_route"] == "local_general"
+    assert run["model_version"] == settings.ollama_model
+    assert "Требования подготовил ИИ агент. Проверьте поля перед публикацией." in run["result"]["warnings"]
+
+
 async def test_assistant_publishes_only_stored_facts_and_known_sources(client, token, fake_provider, monkeypatch):
     async def selected(system, prompt, schema):
         return {"source_ids": ["purchase"], "answer": "купите иностранную валюту", "links": ["https://external.invalid"]}

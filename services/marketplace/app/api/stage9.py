@@ -488,7 +488,7 @@ async def update_checkpoint(deal_id: uuid.UUID, kind: str, data: CheckpointUpdat
         "SELECT user_id FROM auth.company_members WHERE company_id = :company_id"
     ), {"company_id": other_company_id})).scalars().all()
     for other_user_id in set(other_users):
-        await notify(db, other_user_id, f"Обновлён этап сделки: {CHECKPOINT_LABELS[kind]}", "deal_checkpoint_updated")
+        await notify(db, other_user_id, f"Обновлён этап сделки: {CHECKPOINT_LABELS[kind]}", "deal_checkpoint_updated", href=f"/deals?deal={deal.id}")
     await db.commit()
     return checkpoints
 

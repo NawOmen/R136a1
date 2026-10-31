@@ -244,7 +244,7 @@ async def invalidate_dependents(db, need, dependents, user, impact):
     users = set((await db.scalars(text("SELECT DISTINCT user_id FROM auth.company_members WHERE company_id = ANY(:ids)"),
         {"ids": list(recipients)})).all())
     for uid in users:
-        await notify(db, uid, f"Потребность {need.id}: версия {need.revision} требует новых КП и согласий. Прежние условия сохранены в истории.", "need_revision")
+        await notify(db, uid, f"Потребность {need.id}: версия {need.revision} требует новых КП и согласий. Прежние условия сохранены в истории.", "need_revision", href=f"/needs/{need.id}")
     await record_human_approval(db, action="need_specification_change", entity_type="need", entity_id=need.id,
         actor_user_id=user.id, actor_company_id=need.company_id, permission="company_admin+buyer",
         decision="approved", payload={"revision": need.revision, "impact": impact, "evidence": need.requirements_evidence},

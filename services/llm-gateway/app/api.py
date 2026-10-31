@@ -84,6 +84,10 @@ def _model_version(used_route: str) -> str:
         return f"{_local_model_version()}+{settings.deepseek_model}"
     if used_route == "rules_only":
         return "rules_only"
+    if used_route == "local_general":
+        return settings.ollama_model
+    if used_route == "local_trained":
+        return settings.trained_model_version
     return _local_model_version()
 
 
@@ -139,6 +143,7 @@ async def health() -> HealthOut:
         status="ok",
         local_backend=settings.local_llm_backend,
         local_model=_local_model_version(),
+        assistant_backend=settings.assistant_llm_backend,
         vision_model=settings.ollama_vision_model,
         external_enabled=bool(settings.deepseek_api_key),
     )
@@ -201,7 +206,7 @@ async def platform_assistant(
               "из него. Не создавай источники, ссылки или финансовые рекомендации. СПРАВКА: "
               + json.dumps(RECORDS, ensure_ascii=False))
     try:
-        result = await _provider(request).local.structured(system, data.question, KnowledgeSelection)
+        result = await _provider(request).assistant.structured(system, data.question, KnowledgeSelection)
         selection = KnowledgeSelection.model_validate(result)
     except ModelUnavailable as exc:
         raise HTTPException(503, "Локальный помощник временно недоступен; воспользуйтесь FAQ") from exc
@@ -386,6 +391,12 @@ async def analyze_buyer_request(
             "prompt_version": PROMPT_VERSION,
             "schema_version": task_contract.SCHEMA_VERSION,
         }
+        # Ответ общей модели нельзя переиспользовать после смены её версии
+        # или отключения fallback, даже если версия адаптера не изменилась.
+        generation["model_version"] += (
+            f";assistant={settings.assistant_llm_backend}:"
+            f"{settings.ollama_model if settings.assistant_llm_backend == 'ollama' else settings.trained_model_version}"
+        )
         cache_binding = {
             "cache_key": task_contract.extraction_cache_key("buyer_investigation", **generation),
             "input_hash": task_contract.canonical_hash(
@@ -449,6 +460,17 @@ async def analyze_buyer_request(
                 "DeepSeek",
                 f"Выполнен возврат к локальной модели: {fallback}",
             )
+        if used_route == "local_general":
+            # Маршрут виден в трассе прогона, а покупателю показываем нейтральную
+            # пометку: служебная разница между двумя локальными моделями не его дело.
+            result.warnings = [
+                *result.warnings,
+                "Требования подготовил ИИ агент. Проверьте поля перед публикацией.",
+            ]
+            await log_tool(
+                db, run.id, "trained_model_fallback", "success",
+                "обученный адаптер", "Разбор выполнен общей локальной моделью", actor="system",
+            )
         unreadable = (await db.scalars(select(AgentSource).where(
             AgentSource.run_id == run.id, AgentSource.active.is_(False), AgentSource.extracted_text == ""
         ))).all()
@@ -463,7 +485,7 @@ async def analyze_buyer_request(
         run.initial_result = result.model_dump(mode="json")
         run.duration_ms = round((perf_counter() - started_at) * 1000)
         run.output_chars = len(json.dumps(run.result, ensure_ascii=False))
-        if used_route in {"local", "local_qwen"}:
+        if used_route in {"local", "local_qwen", "local_general"}:
             run.estimated_cost_rub = (Decimal(run.duration_ms)/Decimal(60_000)*settings.local_inference_cost_rub_per_minute).quantize(Decimal("0.0001"),rounding=ROUND_HALF_UP)
             run.cost_basis = "Оценка времени локального инференса по настраиваемому тарифу эксплуатации"
         else:
@@ -803,7 +825,7 @@ async def explain_seller_match(
     run.error = failure
     run.result = {"eligible": eligible, "reasons": reasons, "explanation": explanation}
     run.initial_result = dict(run.result)
-    if used_route in {"local", "local_qwen"}:
+    if used_route in {"local", "local_qwen", "local_general", "local_trained"}:
         run.estimated_cost_rub = (Decimal(run.duration_ms)/Decimal(60_000)*settings.local_inference_cost_rub_per_minute).quantize(Decimal("0.0001"),rounding=ROUND_HALF_UP)
         run.cost_basis = "Оценка локального выполнения, не подтверждённый биллинг"
     await db.commit()

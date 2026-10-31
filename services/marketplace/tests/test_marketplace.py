@@ -90,7 +90,7 @@ async def test_unverified_buyer_can_create_and_publish(client, db_session):
     company = await make_company(db_session, user, can_buy=True, can_sell=False, verified=False)
     r = await client.post(
         "/api/v1/needs",
-        json={"company_id": str(company), "category": "бумажные стаканы", "characteristics": {}, "volume_units": 1000, "deadline_date": "2026-10-30", "visibility": "open_anonymized"},
+        json={"company_id": str(company), "category": "бумажные стаканы", "characteristics": {}, "volume_units": 1000, "deadline_date": (date.today() + timedelta(days=30)).isoformat(), "visibility": "open_anonymized"},
         headers=_auth(make_token(user)),
     )
     assert r.status_code == 201
@@ -135,7 +135,7 @@ async def test_open_feed_is_anonymized(client, db_session):
     company = await make_company(db_session, user, can_buy=True, can_sell=False)
     created = await client.post(
         "/api/v1/needs",
-        json={"company_id": str(company), "category": "бумажные стаканы", "characteristics": {}, "volume_units": 1000, "budget_rub": 20000, "deadline_date": "2026-10-30", "visibility": "open_anonymized"},
+        json={"company_id": str(company), "category": "бумажные стаканы", "characteristics": {}, "volume_units": 1000, "budget_rub": 20000, "deadline_date": (date.today() + timedelta(days=30)).isoformat(), "visibility": "open_anonymized"},
         headers=_auth(make_token(user)),
     )
     await client.post(
@@ -179,7 +179,7 @@ async def test_need_file_download_is_available_only_to_buyer(
     company = await make_company(db_session, buyer, can_buy=True, can_sell=False)
     created = await client.post(
         "/api/v1/needs",
-        json={"company_id": str(company), "category": "бумажные стаканы", "characteristics": {}, "volume_units": 1000, "deadline_date": "2026-10-30", "visibility": "open_anonymized"},
+        json={"company_id": str(company), "category": "бумажные стаканы", "characteristics": {}, "volume_units": 1000, "deadline_date": (date.today() + timedelta(days=30)).isoformat(), "visibility": "open_anonymized"},
         headers=_auth(make_token(buyer)),
     )
     need_id = created.json()["id"]
@@ -229,7 +229,7 @@ async def test_need_file_rejects_unsupported_type(client, db_session):
     company = await make_company(db_session, buyer, can_buy=True, can_sell=False)
     created = await client.post(
         "/api/v1/needs",
-        json={"company_id": str(company), "category": "бумажные стаканы", "characteristics": {}, "volume_units": 1000, "deadline_date": "2026-10-30", "visibility": "open_anonymized"},
+        json={"company_id": str(company), "category": "бумажные стаканы", "characteristics": {}, "volume_units": 1000, "deadline_date": (date.today() + timedelta(days=30)).isoformat(), "visibility": "open_anonymized"},
         headers=_auth(make_token(buyer)),
     )
     uploaded = await client.post(

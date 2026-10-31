@@ -28,6 +28,9 @@ class Settings(BaseSettings):
     # как технический обход для стенда без Apple Silicon (см. docs/ml-trained-deployment.md).
     local_llm_backend: Literal["mlx", "ollama"] = "mlx"
     mlx_base_url: str = "http://host.docker.internal:8080"
+    # Беседа и выбор источников справки — задача общей модели: адаптер обучен
+    # извлечению фактов и на вопросах «что выбрать» возвращает пустой список.
+    assistant_llm_backend: Literal["ollama", "mlx"] = "ollama"
     trained_model_version: str = "porukam-buyer-qwen3.5"
     mlx_timeout_seconds: float = 180.0
     mlx_max_tokens: int = Field(default=640, ge=1, le=2048)

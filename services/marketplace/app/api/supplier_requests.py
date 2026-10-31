@@ -261,7 +261,11 @@ async def send_message(request_id: uuid.UUID, data: MessageIn, user: CurrentUser
     recipients = (await db.scalars(recipient_query, {"id": recipient})).all()
     for user_id in recipients:
         if user_id != user.id:
-            await notify(db, user_id, f"Новое сообщение по запросу КП: {row.specification['category']}. Откройте переписку с {'покупателем' if recipient == row.seller_company_id else 'поставщиком'}.")
+            destination = (f"/seller/inquiries?company={recipient}&request={row.id}"
+                           if recipient == row.seller_company_id else
+                           f"/needs/{row.need_id}/suppliers?request={row.id}")
+            await notify(db, user_id, f"Новое сообщение по запросу КП: {row.specification['category']}",
+                         "supplier_message_received", href=destination)
     await record_human_approval(db, action="supplier_message_send", entity_type="supplier_request", entity_id=row.id,
         actor_user_id=user.id, actor_company_id=data.company_id, permission="can_buy" if data.company_id == row.buyer_company_id else "can_sell", decision="approved",
         payload={"request_key": str(data.request_key), "message_sha256": hashlib.sha256(data.message.encode()).hexdigest()}, explanation="Пользователь проверил и отправил сообщение")
